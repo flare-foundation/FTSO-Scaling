@@ -1,6 +1,6 @@
 import fs from "fs";
 import { Web3 } from "hardhat";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../../typechain-truffle";
+import { FTSOCalculatorInstance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../../typechain-truffle";
 import { toBN } from "../../utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { PriceFeed, PriceFeedConfig } from "./PriceFeed";
@@ -40,14 +40,14 @@ export class FTSOClient {
   voterRegistryContractAddress!: string;
   priceOracleContractAddress!: string;
   votingManagerContractAddress!: string;
-  
+  ftsoCalculatorContractAddress!: string;
 
   votingRewardManagerContract!: VotingRewardManagerInstance;
   votingContract!: VotingInstance;
   voterRegistryContract!: VoterRegistryInstance;
   priceOracleContract!: PriceOracleInstance;
   votingManagerContract!: VotingManagerInstance;
-
+  ftsoCalculatorContract!: FTSOCalculatorInstance;
 
   elasticBandWidthPPM: number = 5000;
 
@@ -114,6 +114,7 @@ export class FTSOClient {
     let Voting = artifacts.require("Voting");
     let VoterRegistry = artifacts.require("VoterRegistry");
     let PriceOracle = artifacts.require("PriceOracle");
+    let FTSOCalculator = artifacts.require("FTSOCalculator");
     let VotingManager = artifacts.require("VotingManager");
 
     this.votingRewardManagerContract = await VotingRewardManager.at(this.votingRewardManagerContractAddress);
@@ -122,6 +123,8 @@ export class FTSOClient {
     this.voterRegistryContractAddress = await this.votingContract.voterRegistry();
     this.voterRegistryContract = await VoterRegistry.at(this.voterRegistryContractAddress);
     this.priceOracleContract = await PriceOracle.at(this.priceOracleContractAddress);
+    this.ftsoCalculatorContractAddress = await this.priceOracleContract.ftsoCalculator();
+    this.ftsoCalculatorContract = await FTSOCalculator.at(this.ftsoCalculatorContractAddress);
     this.votingManagerContract = await VotingManager.at(await this.votingContract.votingManager());
     // this.startProcessing();
   }
@@ -352,8 +355,7 @@ export class FTSOClient {
     let results: MedianCalculationResult[] = [];
     for (let i = 0; i < numberOfFeeds; i++) {
       let prices = pricesForVoters.map(allPrices => allPrices[i]);
-      // TODO: call TS median function
-      // let data = await this.ftsoCalculatorContract.calculateMedian(epochId, voters, prices, this.elasticBandWidthPPM) as unknown as MedianCalculationResult;
+      let data = await this.ftsoCalculatorContract.calculateMedian(epochId, voters, prices, this.elasticBandWidthPPM) as unknown as MedianCalculationResult;
       // augment data with voter addresses in the same order
       data.voters = voters;
       data.prices = prices;

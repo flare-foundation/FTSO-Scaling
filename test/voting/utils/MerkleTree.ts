@@ -174,7 +174,7 @@ export class MerkleTree {
     if (count == 0) return null;
     while (count > 1) {
       // Invariants: low < high, 2 <= count == high - low == [low .. high].length
-      let mid = low + count/2; // low < mid < high _strictly_
+      let mid = low + Math.floor(count/2); // low < mid < high _strictly_
       hash < this.sortedHashes[mid] ? high = mid : low = mid; // low < high still
       count = high - low; // preserves invariant
     }
