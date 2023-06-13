@@ -1,6 +1,7 @@
 import { VotingManagerInstance, VotingRewardManagerInstance } from "../../../typechain-truffle";
 import { toBN } from "../../utils/test-helpers";
-import { ClaimReward, MedianCalculationResult, VoterWithWeight } from "./voting-interfaces";
+import { RewardCalculator } from "./RewardCalculator";
+import { ClaimReward, MedianCalculationResult, RewardOffer, VoterWithWeight } from "./voting-interfaces";
 
 
 export interface PriceEpochRewardParameters {
@@ -19,72 +20,30 @@ export interface SlotRewardData {
   tokenContract: string;
 }
 
+
 export class RewardCalculatorForPriceEpoch {
   priceEpoch: number = 0;
-  rewardEpoch!: BN;
-  votingRewardManager!: VotingRewardManagerInstance;
-  votingManager!: VotingManagerInstance;
-  activePools: string[] = [];
-  // slotId => poolId => reward
-  slotRewardsPerPools: Map<number, Map<string, SlotRewardData>> = new Map<number, Map<string, SlotRewardData>>();
-  // slotId => list of claims
-  slotRewards: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
-  maxRewardedSlotIndex: number = 0;
+  rewardCalculator!: RewardCalculator;
+
+  // // slotId => poolId => reward
+  // slotRewardsPerPools: Map<number, Map<string, SlotRewardData>> = new Map<number, Map<string, SlotRewardData>>();
+  // // slotId => list of claims
+  // slotRewards: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
+  // maxRewardedSlotIndex: number = 0;
 
   constructor(
     priceEpoch: number,
-    votingRewardManager: VotingRewardManagerInstance,
-    votingManager: VotingManagerInstance
+    rewardCalculator: RewardCalculator
   ) {
     this.priceEpoch = priceEpoch;
-    this.votingRewardManager = votingRewardManager;
-    this.votingManager = votingManager;
+    this.rewardCalculator = rewardCalculator;
   }
 
-  // TODO: move rewarding configs initialization to RewardCalculator
-  // Adapt to new idea of slot identification.
-  async initialize() {
-    this.rewardEpoch = await this.votingManager.getRewardEpochIdForEpoch(this.priceEpoch);
-    this.activePools = await this.votingRewardManager.getActiveRewardPoolsForRewardEpoch(this.rewardEpoch);
-    let poolRewardsPromises: any[] = [];
-    let poolInfoPromises: any[] = [];
-
-    for (let poolId of this.activePools) {
-      poolRewardsPromises.push(this.votingRewardManager.rewardsInPriceEpoch(poolId, this.priceEpoch));
-      poolInfoPromises.push(this.votingRewardManager.rewardPools(poolId));
-    }
-
-    let awaitedPromises = await Promise.all([...poolRewardsPromises, ...poolInfoPromises]);
-    let poolRewardDataForActivePools = awaitedPromises.slice(0, this.activePools.length) as unknown as PriceEpochRewardParameters[];
-    let poolInfoForActivePools = awaitedPromises.slice(this.activePools.length, this.activePools.length * 2) as unknown as PoolInfo[];
-
-    for (let poolIndex = 0; poolIndex < this.activePools.length; poolIndex++) {
-      let poolId = this.activePools[poolIndex];
-      let poolRewardData = poolRewardDataForActivePools[poolIndex];
-      let slotRewardReminder = poolRewardData.slotRewardReminder.toNumber();
-      let index = 0;  // index of a slot
-      let count = 0;  // sequential index of the rewarded slot in a given bitmask
-      // processing each 4 bytes of hex string separately
-      for (let hexHalfByte of poolRewardData.slotBitmask) {
-        let halfByteToBits = parseInt(hexHalfByte, 16).toString(2).padStart(4, "0").split("");   // 4 bits in form ["0", "1", ..., "1"]
-        for (let bit of halfByteToBits) {
-          if (bit === "1") {
-            let poolReward = this.slotRewardsPerPools.get(index) || new Map<string, SlotRewardData>();
-            this.slotRewardsPerPools.set(index, poolReward);
-            let slotReward = poolRewardData.baseSlotReward.add(toBN(count < slotRewardReminder ? 1 : 0));
-            poolReward.set(poolId, {
-              totalReward: slotReward,
-              tokenContract: poolInfoForActivePools[poolIndex].tokenContract
-            } as SlotRewardData
-            );
-            // this indicates the highest slot index to be rewarded by some active pool
-            this.maxRewardedSlotIndex = Math.max(this.maxRewardedSlotIndex, index);
-            count++;
-          }
-          index++;
-        }
-      }
-    }
+  /**
+   * Returns the reward epoch for the price epoch.
+   */
+  get rewardEpochId() {
+    return this.rewardCalculator.rewardEpochIdForPriceEpoch(this.priceEpoch);
   }
 
   /**
@@ -95,12 +54,12 @@ export class RewardCalculatorForPriceEpoch {
    * @param voterAddress 
    * @returns 
    */
-  randomSelect(slotId: number, priceEpoch: number, voterAddress: string) {
+  randomSelect(symbol: string, priceEpoch: number, voterAddress: string) {
     return toBN(
       web3.utils.soliditySha3(
         web3.eth.abi.encodeParameters(
-          ["uint256", "uint256", "address"],
-          [slotId, priceEpoch, voterAddress]
+          ["string", "uint256", "address"],
+          [symbol, priceEpoch, voterAddress]
         )
       )!
     ).mod(toBN(2)).eq(toBN(1));
@@ -114,27 +73,31 @@ export class RewardCalculatorForPriceEpoch {
    * @param pctShare 
    * @returns 
    */
-  calculateClaimsForSlot(slotId: number, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
+  calculateClaimsForOffer(offer: RewardOffer, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
     let voterRecords: VoterWithWeight[] = [];
-    let lowIQR = parseInt(calculationResult.data.quartile1Price);
-    let highIQR = parseInt(calculationResult.data.quartile3Price);
-    let lowPCT = parseInt(calculationResult.data.lowElasticBandPrice);
-    let highPCT = parseInt(calculationResult.data.highElasticBandPrice);
+    // establish boundaries
+    let lowIQR = calculationResult.data.quartile1Price;
+    let highIQR = calculationResult.data.quartile3Price;
+    let lowPCT = calculationResult.data.lowElasticBandPrice;
+    let highPCT = calculationResult.data.highElasticBandPrice;
 
+    if (offer.priceEpochId !== this.priceEpoch) {
+      throw new Error("Offer price epoch does not match the current price epoch");
+    }
+    // assemble voter records
     for (let i = 0; i < calculationResult.voters!.length; i++) {
-      let voter = calculationResult.voters![i];
-      let weight = calculationResult.weights![i];
+      let voterAddress = calculationResult.voters![i];
       let price = calculationResult.prices![i];
       voterRecords.push({
-        voterAddress: voter,
-        weight: weight,
-        iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(slotId, this.priceEpoch, voter)),
+        voterAddress,
+        weight: calculationResult.weights![i],
+        iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(offer.symbol, this.priceEpoch, voterAddress)),
         pct: price > lowPCT && price < highPCT
       });
     }
-    // Sort by voters' addresses
+    // Sort by voters' addresses since results have to be in the canonical order
     voterRecords.sort((a, b) => {
       if (a.voterAddress < b.voterAddress) {
         return -1;
@@ -144,6 +107,7 @@ export class RewardCalculatorForPriceEpoch {
       return 0;
     });
 
+    // calculate iqr and pct sums
     let iqrSum: BN = toBN(0);
     let pctSum: BN = toBN(0);
     for (let voterRecord of voterRecords) {
@@ -154,6 +118,8 @@ export class RewardCalculatorForPriceEpoch {
         pctSum = pctSum.add(voterRecord.weight);
       }
     }
+
+    // calculate total rewarded weight
     let totalRewardedWeight = toBN(0);
     for (let voterRecord of voterRecords) {
       let newWeight = toBN(0);
@@ -166,28 +132,21 @@ export class RewardCalculatorForPriceEpoch {
       voterRecord.weight = newWeight;
       totalRewardedWeight = totalRewardedWeight.add(newWeight);
     }
-    // calculate claims for the slot from all pools
-    let slotRewards = this.slotRewardsPerPools.get(slotId);
-    if (!slotRewards) {
-      return [];
-    }
+
     let rewardClaims: ClaimReward[] = [];
 
-    for (let poolId of slotRewards.keys()) {
-      let poolReward = slotRewards.get(poolId)!;
-      for (let voterRecord of voterRecords) {
-        let reward = voterRecord.weight.mul(poolReward.totalReward).div(totalRewardedWeight);
-        let claimReward = {
-          merkleProof: [],
-          chainId: 0,
-          epochId: this.priceEpoch,
-          voterAddress: voterRecord.voterAddress,
-          poolId: poolId,
-          amount: reward,
-          tokenContract: poolReward.tokenContract
-        } as ClaimReward;
-        rewardClaims.push(claimReward);
-      }
+    for (let voterRecord of voterRecords) {
+      let reward = voterRecord.weight.mul(offer.amount).div(totalRewardedWeight);
+      let claimReward = {
+        merkleProof: [],
+        chainId: 0,
+        epochId: this.priceEpoch,
+        voterAddress: voterRecord.voterAddress,
+        offerTransactionId: offer.transactionId,
+        amount: reward,
+        tokenContract: offer.tokenContract
+      } as ClaimReward;
+      rewardClaims.push(claimReward);
     }
     return rewardClaims;
   }
@@ -203,26 +162,26 @@ export class RewardCalculatorForPriceEpoch {
    * @returns 
    */
   mergeClaims(previousClaims: ClaimReward[], newClaims: ClaimReward[]): ClaimReward[] {
-    // address => poolId => ClaimReward
+    // address => currency => ClaimReward
     let claimsMap = new Map<string, Map<string, ClaimReward>>();
     // init map from previous claims
     for (let claim of previousClaims) {
       let voterClaims = claimsMap.get(claim.voterAddress) || new Map<string, ClaimReward>();
       claimsMap.set(claim.voterAddress, voterClaims);
-      if (voterClaims.has(claim.poolId)) {
-        throw new Error("Duplicate claim for the same pool and voter");
+      if (voterClaims.has(claim.tokenContract)) {
+        throw new Error(`Duplicate claim for ${claim.voterAddress} and ${claim.tokenContract}`);
       }
-      voterClaims.set(claim.poolId, claim);
+      voterClaims.set(claim.tokenContract, claim);
     }
     // merge with new claims by adding amounts
     for (let claim of newClaims) {
       let voterClaims = claimsMap.get(claim.voterAddress) || new Map<string, ClaimReward>();
       claimsMap.set(claim.voterAddress, voterClaims);
-      let previousClaim = voterClaims.get(claim.poolId);
+      let previousClaim = voterClaims.get(claim.tokenContract);
       if (previousClaim) {
         previousClaim.amount = previousClaim.amount.add(claim.amount);
       } else {
-        voterClaims.set(claim.poolId, claim);
+        voterClaims.set(claim.tokenContract, claim);
       }
     }
     // unpacking the merged map to a list of claims
@@ -242,10 +201,12 @@ export class RewardCalculatorForPriceEpoch {
    * @param pctShare 
    * @returns 
    */
-  claimsForSlots(calculationResults: MedianCalculationResult[], iqrShare: BN, pctShare: BN): ClaimReward[] {
+  claimsForSymbols(calculationResults: MedianCalculationResult[], iqrShare: BN, pctShare: BN): ClaimReward[] {
     let claims: ClaimReward[] = [];
-    for (let [slotId, calculationResult] of calculationResults.entries()) {
-      claims = this.mergeClaims(claims, this.calculateClaimsForSlot(slotId, calculationResult, iqrShare, pctShare));
+    for (let calculationResult of calculationResults) {
+      for(let offer of calculationResult.offers!) {
+        claims = this.mergeClaims(claims, this.calculateClaimsForOffer(offer, calculationResult, iqrShare, pctShare));
+      }      
     }
     return claims;
   }

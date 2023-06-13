@@ -2,7 +2,7 @@ import { VotingManagerInstance, VotingRewardManagerInstance } from "../../../typ
 import { toBN } from "../../utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
-import { ClaimReward, MedianCalculationResult } from "./voting-interfaces";
+import { ClaimReward, MedianCalculationResult, RewardOffer } from "./voting-interfaces";
 import { hashClaimReward } from "./voting-utils";
 
 /**
@@ -29,6 +29,15 @@ export class RewardCalculator {
   currentUnprocessedPriceEpoch: number = 0;
   // Current reward epoch that is being processed.
   currentRewardEpoch: number = 0;
+  // whether the calculator is initialized
+  initialized = false;
+
+  ////////////// Offer data //////////////
+  // rewardEpochId => list of reward offers
+  rewardOffers: Map<number, RewardOffer[]> = new Map<number, RewardOffer[]>();
+  // rewardEpochId => symbol => list of reward offers
+  // The offers in the same currency are accumulated
+  rewardOffersBySymbol: Map<number, Map<string, RewardOffer[]>> = new Map<number, Map<string, RewardOffer[]>>();
 
   ////////////// Claim data //////////////
   // priceEpochId => list of claims
@@ -65,20 +74,111 @@ export class RewardCalculator {
   /**
    * Initializes the reward calculator.
    */
-  async initialize() {
+  public async initialize() {
+    if(this.initialized) {
+      return;
+    }
     // Epoch settings from smart contracts
     this.firstRewardedPriceEpoch = (await this.votingManager.firstRewardedPriceEpoch()).toNumber();
     this.rewardEpochDurationInEpochs = (await this.votingManager.rewardEpochDurationInEpochs()).toNumber();
 
     // Initial processing boundaries
     this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
-    
+
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
     this.currentRewardEpoch = this.initialRewardEpoch;
     this.firstPriceEpochInNextRewardEpoch = this.initialPriceEpoch + this.rewardEpochDurationInEpochs;
+
+    this.initialized = true;
   }
 
+  /**
+   * Sets the reward offers for the given reward epoch.
+   * This can be done only once for each reward epoch.
+   * @param rewardEpoch 
+   * @param rewardOffers 
+   */
+  public setRewardOffers(rewardEpoch: number, rewardOffers: RewardOffer[]) {
+    if(this.rewardOffers.has(rewardEpoch)) {
+      throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
+    }
+    this.rewardOffers.set(rewardEpoch, rewardOffers);
+    this.buildRewardOffersForRewardEpoch(rewardEpoch);
+    this.buildSymbolSequence(rewardEpoch)
+  }
+
+  /**
+   * Returns the reward epoch for the given price epoch.
+   * @param priceEpoch 
+   * @returns 
+   */
+  public rewardEpochIdForPriceEpoch(priceEpoch: number) {
+    if(!this.initialized) {
+      throw new Error("Reward calculator is not initialized");
+    }
+    return Math.floor((priceEpoch - this.firstRewardedPriceEpoch) / this.rewardEpochDurationInEpochs);
+  }
+
+  /**
+   * Returns the first price epoch in the given reward epoch.
+   * @param rewardEpoch 
+   * @returns 
+   */
+  public firstPriceEpochInRewardEpoch(rewardEpoch: number) {
+    if(!this.initialized) {
+      throw new Error("Reward calculator is not initialized");
+    }
+    return this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * rewardEpoch;
+  }
+  /**
+   * Returns customized reward offer with the share of the reward for the given price epoch.
+   * @param priceEpoch 
+   * @param offer 
+   * @returns 
+   */
+  public rewardOfferForPriceEpoch(priceEpoch: number, offer: RewardOffer): RewardOffer {
+    let rewardEpoch = this.rewardEpochIdForPriceEpoch(priceEpoch);
+    let reward = offer.amount.div(toBN(this.rewardEpochDurationInEpochs));
+    let remainder = offer.amount.mod(toBN(this.rewardEpochDurationInEpochs)).toNumber();
+    let firstPriceEpochInRewardEpoch = this.firstPriceEpochInRewardEpoch(rewardEpoch);
+    if(priceEpoch - firstPriceEpochInRewardEpoch < remainder) {
+      reward = reward.add(toBN(1));
+    }
+    return {
+      ...offer,
+      priceEpochId: priceEpoch,
+      amount: reward
+    } as RewardOffer;
+  }
+
+  /**
+   * Rearranges the reward offers into a map of reward offers by symbol.
+   * @param rewardEpoch 
+   */
+  private buildRewardOffersForRewardEpoch(rewardEpoch: number) {
+    if (this.rewardOffersBySymbol.has(rewardEpoch)) {
+      throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
+    }
+    let rewardOffers = this.rewardOffers.get(rewardEpoch);
+    if (rewardOffers === undefined) {
+      throw new Error(`Reward offers are not defined for reward epoch ${rewardEpoch}`);
+    }
+    let result: Map<string, RewardOffer[]> = new Map<string, RewardOffer[]>();
+    for (let offer of rewardOffers) {
+      let offers = result.get(offer.symbol);
+      if (offers === undefined) {
+        offers = [];
+        result.set(offer.symbol, offers);
+      }
+      offers.push(offer);
+    }
+    this.rewardOffersBySymbol.set(rewardEpoch, result);
+  }
+
+  private buildSymbolSequence(rewardEpoch: number) {
+    // TODO: implement
+  }
   /**
    * Calculates the claims for the given price epoch.
    * These claims are then stored for each price epoch in the priceEpochClaims map.
@@ -97,10 +197,9 @@ export class RewardCalculator {
     if (priceEpoch !== this.currentUnprocessedPriceEpoch) {
       throw new Error("Price epoch is not the current unprocessed price epoch");
     }
-    let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpoch, this.votingRewardManager, this.votingManager);
-    await epochCalculator.initialize();
+    let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpoch, this);
 
-    let claims = epochCalculator.claimsForSlots(calculationResults, this.iqrShare, this.pctShare);
+    let claims = epochCalculator.claimsForSymbols(calculationResults, this.iqrShare, this.pctShare);
     // regular price epoch in the current reward epoch
     if (priceEpoch < this.firstPriceEpochInNextRewardEpoch) {
       if (priceEpoch === this.initialPriceEpoch) {

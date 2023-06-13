@@ -6,7 +6,7 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import fs from "fs";
 import { web3 } from "hardhat";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance, } from "../../typechain-truffle";
+import { FTSOCalculatorInstance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance, } from "../../typechain-truffle";
 import { getTestFile } from "../utils/constants";
 import { increaseTimeTo, toBN } from "../utils/test-helpers";
 import { FTSOClient } from "./utils/FTSOClient";
@@ -19,6 +19,7 @@ const VoterRegistry = artifacts.require("VoterRegistry");
 const VotingManager = artifacts.require("VotingManager");
 const VotingRewardManager = artifacts.require("VotingRewardManager");
 const PriceOracle = artifacts.require("PriceOracle");
+const FTSOCalculator = artifacts.require("FTSOCalculator");
 
 contract(`End to end; ${getTestFile(__filename)}`, async () => {
   let voting: VotingInstance;
@@ -26,6 +27,7 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
   let votingManager: VotingManagerInstance;
   let votingRewardManager: VotingRewardManagerInstance;
   let priceOracle: PriceOracleInstance;
+  let ftsoCalculator: FTSOCalculatorInstance;
 
   let governance: string;
   let firstRewardedPriceEpoch: BN;
@@ -62,6 +64,7 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
     voterRegistry = await VoterRegistry.new(governance, votingManager.address, THRESHOLD);
     voting = await Voting.new(voterRegistry.address, votingManager.address);
     priceOracle = await PriceOracle.new(governance);
+    ftsoCalculator = await FTSOCalculator.new(voting.address);
     votingRewardManager = await VotingRewardManager.new(governance);
 
     // Reward epoch configuration
@@ -81,6 +84,7 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
 
     // price oracle configuration
     await priceOracle.setVotingManager(votingManager.address);
+    await priceOracle.setFTSOCalculator(ftsoCalculator.address);
     await priceOracle.setVoting(voting.address);
     await priceOracle.setNumberOfFeedsForRewardEpoch(1, NUMBER_OF_FEEDS);
     for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
