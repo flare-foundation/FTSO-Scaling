@@ -9,3 +9,12 @@ typechain-types
 cache
 artifacts
 
+# Typescript 
+dist
+typechain
+typechain-truffle
+typechain-web3
+
+# misc
+nul
+.DS_Store

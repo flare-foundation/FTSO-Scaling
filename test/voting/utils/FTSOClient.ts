@@ -62,12 +62,14 @@ export class FTSOClient {
     privateKey: string,
     votingRewardManagerContractAddress: string,
     priceOracleContractAddress: string,
+    ftsoCalculatorContractAddress: string,
     firstEpochStartSec: number,
     epochDurationSec: number
   ) {
     this.wallet = web3.eth.accounts.privateKeyToAccount(privateKey)
     this.votingRewardManagerContractAddress = votingRewardManagerContractAddress;
     this.priceOracleContractAddress = priceOracleContractAddress;
+    this.ftsoCalculatorContractAddress = ftsoCalculatorContractAddress;
     this.firstEpochStartSec = firstEpochStartSec;
     this.epochDurationSec = epochDurationSec;
   }
@@ -123,7 +125,6 @@ export class FTSOClient {
     this.voterRegistryContractAddress = await this.votingContract.voterRegistry();
     this.voterRegistryContract = await VoterRegistry.at(this.voterRegistryContractAddress);
     this.priceOracleContract = await PriceOracle.at(this.priceOracleContractAddress);
-    this.ftsoCalculatorContractAddress = await this.priceOracleContract.ftsoCalculator();
     this.ftsoCalculatorContract = await FTSOCalculator.at(this.ftsoCalculatorContractAddress);
     this.votingManagerContract = await VotingManager.at(await this.votingContract.votingManager());
     // this.startProcessing();

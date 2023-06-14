@@ -109,7 +109,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     // tx = await voting.finalize(signEpochId.sub(epochDurationSec.mul(toBN(1))), merkleRoot, signatures, { from: accounts[0] });
     // expectEvent(tx, "MerkleRootConfirmationFailed", { epochId: epochId, merkleRoot }); // no vote power
 
-    await expect(voting.finalize(signEpochId, merkleRoot, signatures, { from: accounts[0] })).to.be.revertedWith("signing too early");
+    await expect(voting.finalize(signEpochId, merkleRoot, signatures, { from: accounts[0] })).to.be.rejectedWith("signing too early");
 
     await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(1))).toNumber());
 
@@ -119,7 +119,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
 
     await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(6))).toNumber());
 
-    await expect(voting.finalize(signEpochId.sub(toBN(2)), merkleRoot, signatures, { from: accounts[0] })).to.be.revertedWith("signing too late");
+    await expect(voting.finalize(signEpochId.sub(toBN(2)), merkleRoot, signatures, { from: accounts[0] })).to.be.rejectedWith("signing too late");
 
   });
 

@@ -1,12 +1,12 @@
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.18;
 
 import "./../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
 import "../../userInterfaces/IRewardManager.sol";
 // import {MerkleProof} from "../lib/MerkleProof.sol";
-import {MerkleProof} from "@openzeppelin/contracts/cryptography/MerkleProof.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 // import "hardhat/console.sol";
 

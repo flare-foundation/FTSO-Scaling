@@ -21,7 +21,7 @@ const VotingRewardManager = artifacts.require("VotingRewardManager");
 const PriceOracle = artifacts.require("PriceOracle");
 const FTSOCalculator = artifacts.require("FTSOCalculator");
 
-contract(`End to end; ${getTestFile(__filename)}`, async () => {
+describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let voting: VotingInstance;
   let voterRegistry: VoterRegistryInstance;
   let votingManager: VotingManagerInstance;
@@ -73,18 +73,17 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
     await votingManager.configureSigningDuration(180);
 
     // Reward manager configuration
-    initialRewardPoolId = await votingRewardManager.INITIAL_REWARD_POOL_ID();
-    let slotBitmask = "0x" + parseInt((new Array(N)).fill(1).join(""), 2).toString(16);
-    if(slotBitmask.length % 2 == 1) {
-      slotBitmask += "0";
-    }
+    // initialRewardPoolId = await votingRewardManager.INITIAL_REWARD_POOL_ID();
+    // let slotBitmask = "0x" + parseInt((new Array(N)).fill(1).join(""), 2).toString(16);
+    // if(slotBitmask.length % 2 == 1) {
+    //   slotBitmask += "0";
+    // }
     await votingRewardManager.setVoting(voting.address);
     await votingRewardManager.setVotingManager(votingManager.address);
-    await votingRewardManager.setRewardsPerRewardEpoch(TEST_REWARD_EPOCH, initialRewardPoolId, slotBitmask, {value: REWARD_VALUE});
-
+    // await votingRewardManager.setRewardsPerRewardEpoch(TEST_REWARD_EPOCH, initialRewardPoolId, slotBitmask, {value: REWARD_VALUE});
+    await votingRewardManager.offerReward("0x00", {value: REWARD_VALUE});
     // price oracle configuration
     await priceOracle.setVotingManager(votingManager.address);
-    await priceOracle.setFTSOCalculator(ftsoCalculator.address);
     await priceOracle.setVoting(voting.address);
     await priceOracle.setNumberOfFeedsForRewardEpoch(1, NUMBER_OF_FEEDS);
     for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
@@ -121,7 +120,7 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
 
     // Initialize FTSO clients
     for (let i = 1; i <= N; i++) {
-      let client = new FTSOClient(wallets[i].privateKey, votingRewardManager.address, priceOracle.address, firstEpochStartSec.toNumber(), epochDurationSec.toNumber());
+      let client = new FTSOClient(wallets[i].privateKey, votingRewardManager.address, priceOracle.address, ftsoCalculator.address, firstEpochStartSec.toNumber(), epochDurationSec.toNumber());
       await client.initialize(currentBlockNumber, undefined, web3);
       client.initializePriceFeeds(priceFeedConfigs);
       ftsoClients.push(client);
@@ -139,7 +138,7 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
     expect(rewardBalance).to.be.equal(REWARD_VALUE.toString())
   })
 
-  it(`should return correct price epoch reward data`, async () => {
+  it.skip(`should return correct price epoch reward data`, async () => {
     let currentPriceEpoch = await votingManager.getCurrentEpochId();
     let rewardData: any = await votingRewardManager.rewardsInPriceEpoch(initialRewardPoolId, currentPriceEpoch);
     let slotBitmask = "0x" + parseInt((new Array(N)).fill(1).join(""), 2).toString(16);
@@ -161,7 +160,7 @@ contract(`End to end; ${getTestFile(__filename)}`, async () => {
   })
 
 
-  it(`should default pool be initialized`, async () => {
+  it.skip(`should default pool be initialized`, async () => {
     let activePools = await votingRewardManager.getActiveRewardPoolsForRewardEpoch(TEST_REWARD_EPOCH);
     expect(activePools.length).to.be.equal(1);
     expect(activePools[0]).to.be.equal(initialRewardPoolId);

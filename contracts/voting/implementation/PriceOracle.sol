@@ -1,13 +1,13 @@
-pragma solidity 0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.18;
 
 import "../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
+import "./Voting.sol";
 
 contract PriceOracle is Governed {
     // VotingManager contract
     VotingManager public votingManager;
-
 
     Voting public voting;
 

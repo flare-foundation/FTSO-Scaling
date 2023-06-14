@@ -95,7 +95,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   it("Should not be able to add voter weight for running reward epoch", async () => {
     let weight = toBN(1000);
     let rewardEpochId = 0;
-    await expect(voterRegistry.addVoterWeightForRewardEpoch(accounts[1], rewardEpochId, weight)).to.be.revertedWith("rewardEpochId too low");
+    await expect(voterRegistry.addVoterWeightForRewardEpoch(accounts[1], rewardEpochId, weight)).to.be.rejectedWith("rewardEpochId too low");
   });
 
   it("Should commit data", async () => {
