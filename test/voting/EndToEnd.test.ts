@@ -6,7 +6,7 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import fs from "fs";
 import { web3 } from "hardhat";
-import { FTSOCalculatorInstance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance, } from "../../typechain-truffle";
+import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { getTestFile } from "../utils/constants";
 import { increaseTimeTo, toBN } from "../utils/test-helpers";
 import { FTSOClient } from "./utils/FTSOClient";
@@ -19,7 +19,6 @@ const VoterRegistry = artifacts.require("VoterRegistry");
 const VotingManager = artifacts.require("VotingManager");
 const VotingRewardManager = artifacts.require("VotingRewardManager");
 const PriceOracle = artifacts.require("PriceOracle");
-const FTSOCalculator = artifacts.require("FTSOCalculator");
 
 describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let voting: VotingInstance;
@@ -27,7 +26,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let votingManager: VotingManagerInstance;
   let votingRewardManager: VotingRewardManagerInstance;
   let priceOracle: PriceOracleInstance;
-  let ftsoCalculator: FTSOCalculatorInstance;
 
   let governance: string;
   let firstRewardedPriceEpoch: BN;
@@ -42,6 +40,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let N = 10;
   let accounts: string[];
   let wallets: any[];
+  let symbols: string[];
 
   let ftsoClients: FTSOClient[];
   let initialPriceEpoch: number;
@@ -64,7 +63,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     voterRegistry = await VoterRegistry.new(governance, votingManager.address, THRESHOLD);
     voting = await Voting.new(voterRegistry.address, votingManager.address);
     priceOracle = await PriceOracle.new(governance);
-    ftsoCalculator = await FTSOCalculator.new(voting.address);
     votingRewardManager = await VotingRewardManager.new(governance);
 
     // Reward epoch configuration
@@ -109,6 +107,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // all FTSO clients will have the same price feed configs.
     // though, each client will have different price feeds due to randomness noise
     let priceFeedConfigs: PriceFeedConfig[] = [];
+    symbols = [];
     for (let j = 1; j <= NUMBER_OF_FEEDS; j++) {
       let priceFeedConfig = {
         period: 10,
@@ -116,11 +115,12 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         variance: 100,
       } as PriceFeedConfig;
       priceFeedConfigs.push(priceFeedConfig);
+      symbols.push(`FL${j}`);
     }
 
     // Initialize FTSO clients
     for (let i = 1; i <= N; i++) {
-      let client = new FTSOClient(wallets[i].privateKey, votingRewardManager.address, priceOracle.address, ftsoCalculator.address, firstEpochStartSec.toNumber(), epochDurationSec.toNumber());
+      let client = new FTSOClient(wallets[i].privateKey, votingRewardManager.address, priceOracle.address, firstEpochStartSec.toNumber(), epochDurationSec.toNumber(), firstRewardedPriceEpoch.toNumber(), REWARD_EPOCH_DURATION, 0);
       await client.initialize(currentBlockNumber, undefined, web3);
       client.initializePriceFeeds(priceFeedConfigs);
       ftsoClients.push(client);
@@ -251,7 +251,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let highElasticBandPrice = [];
 
     for (let client of ftsoClients) {
-      await client.calculateResults(calculateEpoch);
+      await client.calculateResults(calculateEpoch, symbols);
       let data = client.epochResults.get(calculateEpoch)!;
       finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
       quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
@@ -277,7 +277,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
   it("should FTSO client send signed message hash and finalize", async () => {
     for (let client of ftsoClients) {
-      await client.onSign(initialPriceEpoch);
+      await client.onSign(initialPriceEpoch, symbols);
     }
     let client = ftsoClients[0];
     await client.processNewBlocks();

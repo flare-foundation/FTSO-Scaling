@@ -65,4 +65,17 @@ contract VoterRegistry is Governed {
             (totalWeightPerRewardEpoch[_rewardEpochId] * thresholdBIPS) /
             MAX_BIPS;
     }
+
+    function voterWeightsInPriceEpoch(
+        uint256 _rewardEpochId,
+        address[] calldata _voters
+    ) public view returns (uint256[] memory weights) {
+        weights = new uint256[](_voters.length);
+        for (uint256 i = 0; i < _voters.length; i++) {
+            weights[i] = getVoterWeightForRewardEpoch(
+                _voters[i],
+                _rewardEpochId
+            );
+        }
+    }
 }

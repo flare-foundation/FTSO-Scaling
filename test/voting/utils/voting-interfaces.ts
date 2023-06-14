@@ -4,7 +4,7 @@ export interface ClaimReward {
   epochId: number;
   voterAddress: string;
   amount: BN;
-  poolId: string;
+  offerTransactionId: string;
   tokenContract: string;
 }
 
@@ -65,28 +65,41 @@ export interface EpochResult {
 }
 
 export interface MedianCalculationResult {
+  symbol: string;
   voters?: string[];
   prices?: number[];
-  index: BN[];
+  // index: BN[];
   data: MedianCalculationSummary;
   weights: BN[];
+  offers?: RewardOffer[];
 }
 
 export interface MedianCalculationSummary {
-  medianIndex: string;
-  quartile1Index: string;
-  quartile3Index: string;
-  leftSum: string;
-  rightSum: string;
-  medianWeight: string;
-  lowWeightSum: string;
-  rewardedWeightSum: string;
-  highWeightSum: string;
-  finalMedianPrice: string;
-  quartile1Price: string;
-  quartile3Price: string;
-  lowElasticBandPrice: string;
-  highElasticBandPrice: string;
+  // medianIndex: string;
+  // quartile1Index: string;
+  // quartile3Index: string;
+  // leftSum: string;
+  // rightSum: string;
+  // medianWeight: string;
+  // lowWeightSum: string;
+  // rewardedWeightSum: string;
+  // highWeightSum: string;
+  finalMedianPrice: number;
+  quartile1Price: number;
+  quartile3Price: number;
+  lowElasticBandPrice: number;
+  highElasticBandPrice: number;
+}
+
+export interface RewardOffer {
+  priceEpochId?: number;
+  transactionId: string;
+  rewardEpochId: number;
+  symbol: string;
+  amount: BN;
+  tokenContract: string; // address of the token contract. If zero address, then it is the native token.
+  trustedProviders: string[]; // list of trusted providers
+  rewardBeltPPM: number; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
 }
 
 export interface VoterWithWeight {
