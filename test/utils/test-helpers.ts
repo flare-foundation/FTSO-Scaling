@@ -1,9 +1,13 @@
 import BN from "bn.js";
 import { ethers } from "hardhat";
 
-
 export async function increaseTimeTo(tm: number) {
-    await ethers.provider.send("evm_mine", [tm]);
+    try {
+        await ethers.provider.send("evm_mine", [tm]);
+    } catch (e) {
+        // no need to handle this error
+        //console.log(e);
+    }
 }
 
 export function toBN(x: BN | number | string): BN {

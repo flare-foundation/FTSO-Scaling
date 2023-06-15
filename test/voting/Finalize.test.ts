@@ -1,5 +1,5 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { expectEvent, time } from "@openzeppelin/test-helpers";
+import { expectEvent } from "@openzeppelin/test-helpers";
 import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
@@ -9,6 +9,7 @@ import { getTestFile } from "../utils/constants";
 import { increaseTimeTo, toBN } from "../utils/test-helpers";
 import fs from "fs";
 import { BareSignature } from "./utils/voting-interfaces";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 chai.use(chaiBN(BN));
 
@@ -88,7 +89,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
 
   it("Should vote be successful", async () => {
     let epochId = await voting.getCurrentEpochId();
-    let currentTime = await time.latest();
+    let currentTime = toBN(await time.latest());
     
     let signEpochId = epochId;
     let merkleRoot = "0x0000000000000000000000000000000000000000000000000000000000000002";
@@ -101,7 +102,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
       // let signature = await signers[i].signMessage(ethers.utils.arrayify(merkleRoot));
       // let sigSplit = ethers.utils.splitSignature(signature);
       let sigSplit = wallets[i].sign(merkleRoot);
-      console.log(sigSplit);
+      // console.log(sigSplit);
       signatures.push({ v: sigSplit.v, r: sigSplit.r, s: sigSplit.s });
     }
 
@@ -112,10 +113,13 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     await expect(voting.finalize(signEpochId, merkleRoot, signatures, { from: accounts[0] })).to.be.rejectedWith("signing too early");
 
     await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(1))).toNumber());
+    await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(1))).toNumber());
 
     tx = await voting.finalize(signEpochId, merkleRoot, signatures, { from: accounts[0] });
     console.log(`Finalize gas used: ${tx.receipt.gasUsed}`);
+
     expectEvent(tx, "MerkleRootConfirmed", { epochId: epochId, merkleRoot });
+    
 
     await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(6))).toNumber());
 
