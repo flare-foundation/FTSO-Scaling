@@ -5,7 +5,7 @@ import { toBN } from "../../utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { PriceFeed, PriceFeedConfig } from "./PriceFeed";
 import { calculateMedian } from "./median-calculation-utils";
-import { BareSignature, ClaimReward, EpochData, EpochResult, MedianCalculationResult, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { BareSignature, ClaimReward, ClaimRewardBody, CurrencyRewards, EpochData, EpochResult, Feed, FeedRewards, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
 import { hashClaimReward, sortedHashPair } from "./voting-utils";
 
 const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -31,16 +31,21 @@ export class FTSOClient {
   epochCommits = new Map<number, Map<string, string>>()
   epochReveals = new Map<number, Map<string, RevealBitvoteData>>();
   epochSignatures = new Map<number, Map<string, SignatureData>>();
+  epochOffers = new Map<number, FeedRewards>();
   epochData = new Map<number, EpochData>();
   epochResults = new Map<number, EpochResult>();
   web3!: Web3;
   commitABI: any;
   revealABI: any;
   signABI: any;
+  offerABI: any;
+  claimRewardBodyABI: any;
 
   commitFSig!: string;
   revealFSig!: string;
   signFSig!: string;
+  offerFSig!: string;
+
   votingRewardManagerContractAddress!: string;
   votingContractAddress!: string;
   voterRegistryContractAddress!: string;
@@ -108,13 +113,19 @@ export class FTSOClient {
 
   async initialize(startBlockNumber: number, rpcLink?: string, providedWeb3?: Web3, logger?: any) {
     let votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json"
+    let rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
     // let voterRegistryAbiPath = "artifacts/contracts/voting/implementation/VoterRegistry.sol/VoterRegistry.json";
-    let votingABI = JSON.parse(fs.readFileSync(votingAbiPath).toString()).abi as AbiItem[];
 
+    let votingABI = JSON.parse(fs.readFileSync(votingAbiPath).toString()).abi as AbiItem[];
+    let rewardsABI = JSON.parse(fs.readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
     // let voterRegistryABI = JSON.parse(fs.readFileSync(votingAbiPath).toString()).abi as AbiItem[];
+
     this.commitABI = votingABI.find((x: any) => x.name === "commit");
     this.revealABI = votingABI.find((x: any) => x.name === "revealBitvote");
     this.signABI = votingABI.find((x: any) => x.name === "signResult");
+    this.offerABI = rewardsABI.find((x: any) => x.name === "offerReward");
+    this.claimRewardBodyABI = rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0];
+    // ?.inputs?.find((x: any) => x.name === "_data")?.components.
 
     this.startBlockNumber = startBlockNumber;
     this.lastProcessedBlockNumber = startBlockNumber - 1;
@@ -125,6 +136,7 @@ export class FTSOClient {
     this.commitFSig = this.web3.eth.abi.encodeFunctionSignature(this.commitABI);
     this.revealFSig = this.web3.eth.abi.encodeFunctionSignature(this.revealABI);
     this.signFSig = this.web3.eth.abi.encodeFunctionSignature(this.signABI);
+    this.offerFSig = this.web3.eth.abi.encodeFunctionSignature(this.offerABI);
 
     // contracts
     let VotingRewardManager = artifacts.require("VotingRewardManager");
@@ -203,8 +215,26 @@ export class FTSOClient {
           return this.extractReveal(tx);
         } else if (prefix === this.signFSig) {
           return this.extractSignature(tx);
+        } else if (prefix === this.offerFSig) {
+          return this.extractOffers(tx);
         }
       }
+    }
+  }
+
+  private extractOffers(tx: TxData): void {
+    let offers: Offer[] = this.web3.eth.abi.decodeParameter(this.offerABI.inputs, tx.input!) as Offer[];
+    let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
+
+    let offersInEpoch = this.epochOffers.get(epochId) ?? new Map<Feed, CurrencyRewards>();
+    this.epochOffers.set(epochId, offersInEpoch)
+
+    for (let offer of offers) {
+      let offersForFeed = offersInEpoch.get(offer) ?? toBN(0); //new Map<{ currencyAddress: string }, BN>();
+      offersInEpoch.set(offer, offersForFeed);
+
+      // let offerForCurrency = offersForFeed.get(offer) ?? toBN(0);
+      // offersForFeed.set(offer, offerForCurrency.add(offer.amount))
     }
   }
 
@@ -215,7 +245,7 @@ export class FTSOClient {
     let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let commitsInEpoch = this.epochCommits.get(epochId) || new Map<string, string>();
     this.epochCommits.set(epochId, commitsInEpoch);
-    commitsInEpoch.set(from, hash);
+    commitsInEpoch.set(from.toLowerCase(), hash);
   }
 
   // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices) 
@@ -232,7 +262,7 @@ export class FTSOClient {
     if (epochId !== undefined) {
       let revealsInEpoch = this.epochReveals.get(epochId) || new Map<string, RevealBitvoteData>();
       this.epochReveals.set(epochId, revealsInEpoch);
-      revealsInEpoch.set(from, result);
+      revealsInEpoch.set(from.toLowerCase(), result);
     }
   }
 
@@ -251,7 +281,7 @@ export class FTSOClient {
     // let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let signaturesInEpoch = this.epochSignatures.get(result.epochId) || new Map<string, SignatureData>();
     this.epochSignatures.set(result.epochId, signaturesInEpoch);
-    signaturesInEpoch.set(from, result);
+    signaturesInEpoch.set(from.toLowerCase(), result);
   }
 
   async startProcessing() {
@@ -304,7 +334,7 @@ export class FTSOClient {
     await this.votingContract.revealBitvote(epochData.random!, epochData.merkleRoot!, epochData.bitVote!, epochData.pricesHex!, { from: this.wallet.address });
   }
 
-  async onSign(epochId: number, symbolSequence: string[], skipCalculation = false) {
+  async onSign(epochId: number, symbolSequence: Feed[], skipCalculation = false) {
     if (!skipCalculation) {
       await this.calculateResults(epochId, symbolSequence);
     }
@@ -336,11 +366,11 @@ export class FTSOClient {
     }
     let senders = [...commits.keys()];
     return senders.filter(sender => {
-      let revealData = reveals!.get(sender);
+      let revealData = reveals!.get(sender.toLowerCase());
       if (!revealData) {
         return false;
       }
-      let commitHash = this.epochCommits.get(epochId)?.get(sender);
+      let commitHash = this.epochCommits.get(epochId)?.get(sender.toLowerCase());
       return commitHash === this.hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
     });
   }
@@ -356,8 +386,8 @@ export class FTSOClient {
    * @param symbolMap 
    * @returns 
    */
-  async calculateResults(priceEpochId: number, symbolSequence: string[]) {
-    const symbolMap = new Map<number, string>();
+  async calculateResults(priceEpochId: number, symbolSequence: Feed[]) {
+    const symbolMap = new Map<number, Feed>();
     let rewardEpoch = this.rewardEpochIdForPriceEpochId(priceEpochId);
     for (let i = 0; i < symbolSequence.length; i++) {
       symbolMap.set(i, symbolSequence[i]);
@@ -370,7 +400,7 @@ export class FTSOClient {
     // TODO: do this only once per reward epoch
     let weights = await this.voterRegistryContract.voterWeightsInPriceEpoch(rewardEpoch, voters);
     let pricesForVoters = voters.map(voter => {
-      let revealData = this.epochReveals.get(priceEpochId)!.get(voter)!;
+      let revealData = this.epochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
       let feeds = revealData.prices.slice(2).match(/(.{1,8})/g)?.map(hex => parseInt(hex, 16)) || [];
       feeds = feeds.slice(0, numberOfFeeds);
       return padEndArray(feeds, numberOfFeeds, 0);
@@ -397,20 +427,19 @@ export class FTSOClient {
       [sender,
         {
           merkleProof: [],
-          amount: toBN(100),
-          poolId: "0x000000000000000000000000000000f1a4e00000000000000000000000000000",
-          voterAddress: sender,
-          chainId: 0,
-          epochId: priceEpochId,
-          offerTransactionId: "0x0000000000",
-          tokenContract: "0x0000000000000000000000000000000000000000"
+          claimRewardBody: {
+            amount: toBN(100),
+            currencyAddress: "0x0000000000000000000000000000000000000000",
+            voterAddress: sender,
+            epochId: priceEpochId,
+          } as ClaimRewardBody
         } as ClaimReward
       ]
     ))
     let clientRewardHash: string | null = null;
     let rewardClaimHashes = [...rewards.values()].map((value) => {
-      let hash = hashClaimReward(value);
-      if (value.voterAddress == this.wallet.address) { clientRewardHash = hash; }
+      let hash = hashClaimReward(value, this.claimRewardBodyABI);
+      if (value.claimRewardBody.voterAddress.toLowerCase() === this.wallet.address.toLowerCase()) { clientRewardHash = hash; }
       return hash;
     });
     let dataMerkleTree = new MerkleTree(rewardClaimHashes);
@@ -495,7 +524,7 @@ export class FTSOClient {
 
   async claimReward(epochId: number) {
     let result = this.epochResults.get(epochId)!;
-    let rewardClaim = result.rewards.get(this.wallet.address);
+    let rewardClaim = result.rewards.get(this.wallet.address.toLowerCase());
     let proof = result.dataMerkleProof;
     if (rewardClaim && proof) {
       rewardClaim.merkleProof = proof;
@@ -504,5 +533,9 @@ export class FTSOClient {
     else {
       return null;
     }
+  }
+
+  async offerRewards(offers: Offer[]) {
+    await this.votingRewardManagerContract.offerRewards(offers);
   }
 }

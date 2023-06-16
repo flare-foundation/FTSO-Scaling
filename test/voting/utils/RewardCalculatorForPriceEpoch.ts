@@ -1,8 +1,6 @@
-import { VotingManagerInstance, VotingRewardManagerInstance } from "../../../typechain-truffle";
 import { toBN } from "../../utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
-import { ClaimReward, MedianCalculationResult, RewardOffer, VoterWithWeight } from "./voting-interfaces";
-
+import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffer, VoterWithWeight } from "./voting-interfaces";
 
 export interface PriceEpochRewardParameters {
   slotBitmask: string;
@@ -139,17 +137,20 @@ export class RewardCalculatorForPriceEpoch {
       let reward = voterRecord.weight.mul(offer.amount).div(totalRewardedWeight);
       let claimReward = {
         merkleProof: [],
-        chainId: 0,
-        epochId: this.priceEpoch,
-        voterAddress: voterRecord.voterAddress,
-        offerTransactionId: offer.transactionId,
-        amount: reward,
-        tokenContract: offer.tokenContract
+        claimRewardBody: {
+          amount: reward,
+          currencyAddress: offer.tokenContract,
+          voterAddress: voterRecord.voterAddress,
+          epochId: this.priceEpoch,
+          // offerTransactionId: offer.transactionId,
+        } as ClaimRewardBody
       } as ClaimReward;
       rewardClaims.push(claimReward);
     }
     return rewardClaims;
   }
+
+
 
   /**
    * Merges new claims with previous claims where previous claims are the cumulative 
@@ -166,22 +167,22 @@ export class RewardCalculatorForPriceEpoch {
     let claimsMap = new Map<string, Map<string, ClaimReward>>();
     // init map from previous claims
     for (let claim of previousClaims) {
-      let voterClaims = claimsMap.get(claim.voterAddress) || new Map<string, ClaimReward>();
-      claimsMap.set(claim.voterAddress, voterClaims);
-      if (voterClaims.has(claim.tokenContract)) {
-        throw new Error(`Duplicate claim for ${claim.voterAddress} and ${claim.tokenContract}`);
+      let voterClaims = claimsMap.get(claim.claimRewardBody.voterAddress) || new Map<string, ClaimReward>();
+      claimsMap.set(claim.claimRewardBody.voterAddress, voterClaims);
+      if (voterClaims.has(claim.claimRewardBody.currencyAddress)) {
+        throw new Error(`Duplicate claim for ${claim.claimRewardBody.voterAddress} and ${claim.claimRewardBody.currencyAddress}`);
       }
-      voterClaims.set(claim.tokenContract, claim);
+      voterClaims.set(claim.claimRewardBody.currencyAddress, claim);
     }
     // merge with new claims by adding amounts
     for (let claim of newClaims) {
-      let voterClaims = claimsMap.get(claim.voterAddress) || new Map<string, ClaimReward>();
-      claimsMap.set(claim.voterAddress, voterClaims);
-      let previousClaim = voterClaims.get(claim.tokenContract);
+      let voterClaims = claimsMap.get(claim.claimRewardBody.voterAddress) || new Map<string, ClaimReward>();
+      claimsMap.set(claim.claimRewardBody.voterAddress, voterClaims);
+      let previousClaim = voterClaims.get(claim.claimRewardBody.currencyAddress);
       if (previousClaim) {
-        previousClaim.amount = previousClaim.amount.add(claim.amount);
+        previousClaim.claimRewardBody.amount = previousClaim.claimRewardBody.amount.add(claim.claimRewardBody.amount);
       } else {
-        voterClaims.set(claim.tokenContract, claim);
+        voterClaims.set(claim.claimRewardBody.currencyAddress, claim);
       }
     }
     // unpacking the merged map to a list of claims
@@ -204,9 +205,9 @@ export class RewardCalculatorForPriceEpoch {
   claimsForSymbols(calculationResults: MedianCalculationResult[], iqrShare: BN, pctShare: BN): ClaimReward[] {
     let claims: ClaimReward[] = [];
     for (let calculationResult of calculationResults) {
-      for(let offer of calculationResult.offers!) {
+      for (let offer of calculationResult.offers!) {
         claims = this.mergeClaims(claims, this.calculateClaimsForOffer(offer, calculationResult, iqrShare, pctShare));
-      }      
+      }
     }
     return claims;
   }

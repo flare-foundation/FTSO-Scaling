@@ -66,32 +66,38 @@ contract VotingRewardManager is Governed, IRewardManager {
         currentRewardEpochId = votingManager.getCurrentRewardEpochId();
     }
 
-    // This function's argument is strictly for off-chain reference.  This contract does not have any concept of
-    // symbols/price feeds and it is entirely up to the clients to keep track of the total amount allocated to them
-    // and determine the correct distribution of rewards to voters.  Ultimately, of course, only the actual amount
-    // of value stored for an epoch's rewards can be claimed.
+    // This contract does not have any concept of symbols/price feeds and it is
+    // entirely up to the clients to keep track of the total amount allocated to
+    // them and determine the correct distribution of rewards to voters.
+    // Ultimately, of course, only the actual amount of value stored for an
+    // epoch's rewards can be claimed.
+    //
+    // TODO: support token currencies    
     function offerReward(
-        bytes calldata offers
-    ) override public payable maybePushRewardBalance updateBalance {}
-
-    // This has only one purpose: to make `offerReward` have an empty body, suppressing the unused argument warning.
-    modifier updateBalance {
+        Offer[] calldata offers
+    ) override public payable maybePushRewardBalance {
+        uint totalOffered = 0;
+        for (uint i = 0; i < offers.length; ++i) {
+            totalOffered += offers[i].amount;
+        }
+        require(msg.value == totalOffered, "total amount offered must equal value sent");
         storedRewardEpochBalances[nextRewardEpochBalanceIndex] += msg.value;
-        _;
     }
  
     function claimReward(
         ClaimReward calldata _data
     ) override public maybePushRewardBalance {
-        require(_data.epochId < currentRewardEpochId,
+        ClaimRewardBody memory claim = _data.claimRewardBody;
+
+        require(claim.epochId < currentRewardEpochId,
                 "can only claim rewards for previous epochs");
 
-        uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(_data.epochId);
+        uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(claim.epochId);
                 
-        require(_data.amount > 0,
+        require(claim.amount > 0,
                 "claimed amount must be greater than 0");
 
-        require(_data.amount <= storedRewardEpochBalances[previousRewardEpochBalanceIndex],
+        require(claim.amount <= storedRewardEpochBalances[previousRewardEpochBalanceIndex],
                 "claimed amount greater than reward balance");
 
         bytes32 claimHash = _hashClaimReward(_data);
@@ -99,30 +105,21 @@ contract VotingRewardManager is Governed, IRewardManager {
         require(!processedRewardClaims[claimHash],
                 "reward has already been claimed");
 
-        require(_data.merkleProof.verify(voting.getMerkleRoot(_data.epochId), claimHash),
+        require(_data.merkleProof.verify(voting.getMerkleRoot(claim.epochId), claimHash),
                 "Merkle proof for reward failed");
 
         processedRewardClaims[claimHash] = true;
-        storedRewardEpochBalances[previousRewardEpochBalanceIndex] -= _data.amount;
+        storedRewardEpochBalances[previousRewardEpochBalanceIndex] -= claim.amount;
 
         /* solhint-disable avoid-low-level-calls */
-        (bool success, ) = _data.voterAddress.call{value: _data.amount}("");
+        (bool success, ) = claim.voterAddress.call{value: claim.amount}("");
         /* solhint-enable avoid-low-level-calls */
         require(success, "failed to transfer claimed balance");
     }
 
     function _hashClaimReward(
-        ClaimReward calldata _data
+        ClaimReward calldata claim
     ) private pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    "voter_aggregate",
-                    _data.chainId,
-                    _data.epochId,
-                    _data.voterAddress,
-                    _data.amount
-                )
-            );
+        return keccak256(abi.encode(claim.claimRewardBody));
     }
 }

@@ -235,7 +235,7 @@ export class RewardCalculator {
    * @param priceEpoch 
    * @returns 
    */
-  merkleTreeForPriceEpoch(priceEpoch: number) {
+  merkleTreeForPriceEpoch(priceEpoch: number, abi: any) {
     if (priceEpoch < this.initialPriceEpoch) {
       throw new Error("Price epoch is before the initial price epoch");
     }
@@ -247,7 +247,7 @@ export class RewardCalculator {
     if (claims === undefined) {
       throw new Error("Claims are undefined");
     }
-    let rewardClaimHashes = claims.map((value) => hashClaimReward(value));
+    let rewardClaimHashes = claims.map((value) => hashClaimReward(value, abi));
     return new MerkleTree(rewardClaimHashes);
   }
 

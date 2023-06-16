@@ -1,12 +1,27 @@
 export interface ClaimReward {
   merkleProof: string[];
-  chainId: number;
-  epochId: number;
+  claimRewardBody: ClaimRewardBody;
+};
+
+export interface ClaimRewardBody {
+  amount: BN; // 256-bit
+  currencyAddress: string;
   voterAddress: string;
-  amount: BN;
-  offerTransactionId: string;
-  tokenContract: string;
+  epochId: number;
 }
+
+export interface Feed {
+  offerSymbol: string, // 4 characters/bytes
+  quoteSymbol: string, // 4 characters/bytes  
+}
+
+export interface Offer extends Feed {
+  amount: BN; // 256-bit
+  currencyAddress: string;
+}
+
+export type CurrencyRewards = BN; // Map<{ currencyAddress: string }, BN>;
+export type FeedRewards = Map<Feed, CurrencyRewards>;
 
 export interface BareSignature {
   v: number;
@@ -38,10 +53,6 @@ export interface TxData {
   value?: string;
 }
 
-// interface BlockData {
-//   blockNumber: number;
-//   timestamp: number;
-// }
 export interface EpochData {
   epochId: number;
   merkleRoot?: string;
@@ -50,6 +61,7 @@ export interface EpochData {
   pricesHex?: string;
   bitVote?: string;
 }
+
 export type EpochRewards = Map<string, ClaimReward>;
 
 export interface EpochResult {
@@ -65,25 +77,15 @@ export interface EpochResult {
 }
 
 export interface MedianCalculationResult {
-  symbol: string;
+  symbol: Feed;  
   voters?: string[];
   prices?: number[];
-  // index: BN[];
   data: MedianCalculationSummary;
   weights: BN[];
   offers?: RewardOffer[];
 }
 
 export interface MedianCalculationSummary {
-  // medianIndex: string;
-  // quartile1Index: string;
-  // quartile3Index: string;
-  // leftSum: string;
-  // rightSum: string;
-  // medianWeight: string;
-  // lowWeightSum: string;
-  // rewardedWeightSum: string;
-  // highWeightSum: string;
   finalMedianPrice: number;
   quartile1Price: number;
   quartile3Price: number;
