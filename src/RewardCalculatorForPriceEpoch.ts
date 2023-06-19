@@ -1,4 +1,4 @@
-import { toBN } from "../../utils/test-helpers";
+import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
 import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffer, VoterWithWeight } from "./voting-interfaces";
 

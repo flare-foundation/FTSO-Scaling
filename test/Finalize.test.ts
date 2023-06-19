@@ -4,11 +4,11 @@ import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { ethers, web3 } from "hardhat";
-import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../../typechain-truffle";
-import { getTestFile } from "../utils/constants";
-import { increaseTimeTo, toBN } from "../utils/test-helpers";
+import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../typechain-truffle";
+import { getTestFile } from "../test-utils/utils/constants";
+import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import fs from "fs";
-import { BareSignature } from "./utils/voting-interfaces";
+import { BareSignature } from "../src/voting-interfaces";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 chai.use(chaiBN(BN));

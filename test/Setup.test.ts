@@ -2,9 +2,9 @@ import { expectEvent } from "@openzeppelin/test-helpers";
 import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
-import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../../typechain-truffle";
-import { getTestFile } from "../utils/constants";
-import { increaseTimeTo, toBN } from "../utils/test-helpers";
+import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../typechain-truffle";
+import { getTestFile } from "../test-utils/utils/constants";
+import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -133,7 +133,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
       await voting.commit(data, { from: accounts[1], gas: 21515 });
       nonce = await web3.eth.getTransactionCount(accounts[1]);
     } catch (e) {
-      console.log(e)
+      expect((e as any).message).to.contain("Transaction ran out of gas");
     }
 
     console.log(`Nonce-3: ${nonce}`)

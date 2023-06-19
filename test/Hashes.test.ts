@@ -1,9 +1,9 @@
 import BN from "bn.js";
 import chai from "chai";
 import chaiBN from "chai-bn";
-import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../../typechain-truffle";
-import { getTestFile } from "../utils/constants";
-import { increaseTimeTo, toBN } from "../utils/test-helpers";
+import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../typechain-truffle";
+import { getTestFile } from "../test-utils/utils/constants";
+import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");

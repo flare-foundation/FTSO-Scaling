@@ -87,7 +87,13 @@ const config: HardhatUserConfig = {
       url: 'http://127.0.0.1:8545',
       chainId: 31337
     }
-  }
+  },
+  paths: {
+    sources: "./contracts/",
+    tests: process.env.TEST_PATH || "test",
+    cache: "./cache",
+    artifacts: "./artifacts",
+  }  
 };
 
 export default config;

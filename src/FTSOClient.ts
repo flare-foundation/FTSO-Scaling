@@ -1,7 +1,7 @@
 import fs from "fs";
 import { Web3 } from "hardhat";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../../typechain-truffle";
-import { toBN } from "../../utils/test-helpers";
+import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
+import { toBN } from "../test-utils/utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { PriceFeed, PriceFeedConfig } from "./PriceFeed";
 import { calculateMedian } from "./median-calculation-utils";

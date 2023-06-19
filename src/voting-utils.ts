@@ -1,5 +1,5 @@
-import { VotingManagerInstance } from "../../../typechain-truffle";
-import { increaseTimeTo, toBN } from "../../utils/test-helpers";
+import { VotingManagerInstance } from "../typechain-truffle";
+import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { ClaimReward, Feed } from "./voting-interfaces";
 import Web3 from "web3";
 import BN from "bn.js";

@@ -1,5 +1,5 @@
-import { VotingManagerInstance, VotingRewardManagerInstance } from "../../../typechain-truffle";
-import { toBN } from "../../utils/test-helpers";
+import { VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
+import { toBN } from "../test-utils/utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
 import { ClaimReward, MedianCalculationResult, RewardOffer } from "./voting-interfaces";
