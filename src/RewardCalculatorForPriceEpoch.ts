@@ -1,34 +1,15 @@
 import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
 import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffer, VoterWithWeight } from "./voting-interfaces";
-
-export interface PriceEpochRewardParameters {
-  slotBitmask: string;
-  baseSlotReward: BN;
-  slotRewardReminder: BN;
-}
-
-export interface PoolInfo {
-  owner: string;
-  tokenContract: string;
-}
-
-export interface SlotRewardData {
-  totalReward: BN;
-  tokenContract: string;
-}
+import BN from "bn.js";
+import Web3 from "web3";
 
 
 export class RewardCalculatorForPriceEpoch {
   priceEpoch: number = 0;
   rewardCalculator!: RewardCalculator;
-
-  // // slotId => poolId => reward
-  // slotRewardsPerPools: Map<number, Map<string, SlotRewardData>> = new Map<number, Map<string, SlotRewardData>>();
-  // // slotId => list of claims
-  // slotRewards: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
-  // maxRewardedSlotIndex: number = 0;
-
+  web3: Web3 = new Web3();
+  
   constructor(
     priceEpoch: number,
     rewardCalculator: RewardCalculator
@@ -54,8 +35,8 @@ export class RewardCalculatorForPriceEpoch {
    */
   randomSelect(symbol: string, priceEpoch: number, voterAddress: string) {
     return toBN(
-      web3.utils.soliditySha3(
-        web3.eth.abi.encodeParameters(
+      this.web3.utils.soliditySha3(
+        this.web3.eth.abi.encodeParameters(
           ["string", "uint256", "address"],
           [symbol, priceEpoch, voterAddress]
         )

@@ -13,10 +13,12 @@
     ]
   },
   "include": [
+    "./src",
     "./test", 
     "./typechain", 
     "./typechain-truffle", 
-    "./typechain-web3"
+    "./typechain-web3", 
+    "./test-utils/types"
   ],
   "files": ["./hardhat.config.ts"]  
 }

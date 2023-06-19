@@ -1,10 +1,9 @@
-import fs from "fs";
 import { Web3 } from "hardhat";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
 import { toBN } from "../test-utils/utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { PriceFeed, PriceFeedConfig } from "./PriceFeed";
 import { calculateMedian } from "./median-calculation-utils";
+import { IVotingProvider } from "./providers/IVotingProvider";
 import { BareSignature, ClaimReward, ClaimRewardBody, CurrencyRewards, EpochData, EpochResult, Feed, FeedRewards, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
 import { hashClaimReward, sortedHashPair } from "./voting-utils";
 
@@ -16,13 +15,7 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
 }
 
 export class FTSOClient {
-  firstEpochStartSec: number = 0;
-  epochDurationSec: number = 0;
-
-  firstRewardedPriceEpoch: number = 0;
-  rewardEpochDurationInEpochs: number = 0;
-  signingDurationSec: number = 0;
-
+  provider: IVotingProvider;
 
   startBlock: number = 0;
   lastProcessedBlockNumber: number = 0;
@@ -35,28 +28,6 @@ export class FTSOClient {
   epochData = new Map<number, EpochData>();
   epochResults = new Map<number, EpochResult>();
   web3!: Web3;
-  commitABI: any;
-  revealABI: any;
-  signABI: any;
-  offerABI: any;
-  claimRewardBodyABI: any;
-
-  commitFSig!: string;
-  revealFSig!: string;
-  signFSig!: string;
-  offerFSig!: string;
-
-  votingRewardManagerContractAddress!: string;
-  votingContractAddress!: string;
-  voterRegistryContractAddress!: string;
-  priceOracleContractAddress!: string;
-  votingManagerContractAddress!: string;
-
-  votingRewardManagerContract!: VotingRewardManagerInstance;
-  votingContract!: VotingInstance;
-  voterRegistryContract!: VoterRegistryInstance;
-  priceOracleContract!: PriceOracleInstance;
-  votingManagerContract!: VotingManagerInstance;
 
   elasticBandWidthPPM: number = 5000;
 
@@ -69,22 +40,10 @@ export class FTSOClient {
 
   constructor(
     privateKey: string,
-    votingRewardManagerContractAddress: string,
-    priceOracleContractAddress: string,
-    firstEpochStartSec: number,
-    epochDurationSec: number,
-    firstRewardedPriceEpoch: number,
-    rewardEpochDurationInEpochs: number,
-    signingDurationSec: number
+    provider: IVotingProvider,
   ) {
-    this.wallet = web3.eth.accounts.privateKeyToAccount(privateKey)
-    this.votingRewardManagerContractAddress = votingRewardManagerContractAddress;
-    this.priceOracleContractAddress = priceOracleContractAddress;
-    this.firstEpochStartSec = firstEpochStartSec;
-    this.epochDurationSec = epochDurationSec;
-    this.firstRewardedPriceEpoch = firstRewardedPriceEpoch;
-    this.rewardEpochDurationInEpochs = rewardEpochDurationInEpochs;
-    this.signingDurationSec = signingDurationSec;
+    this.wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+    this.provider = provider;
   }
 
   get senderAddress(): string {
@@ -92,12 +51,12 @@ export class FTSOClient {
   }
 
   epochIdForTime(timestamp: number): number {
-    return Math.floor((timestamp - this.firstEpochStartSec) / this.epochDurationSec);
+    return Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
   }
 
   revealEpochIdForTime(timestamp: number): number | undefined {
-    let epochId = Math.floor((timestamp - this.firstEpochStartSec) / this.epochDurationSec);
-    let revealDeadline = this.firstEpochStartSec + epochId * this.epochDurationSec + this.epochDurationSec / 2;
+    let epochId = Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
+    let revealDeadline = this.provider.firstEpochStartSec + epochId * this.provider.epochDurationSec + this.provider.epochDurationSec / 2;
     if (timestamp > revealDeadline) {
       return undefined;
     }
@@ -105,54 +64,17 @@ export class FTSOClient {
   }
 
   rewardEpochIdForPriceEpochId(priceEpochId: number): number {
-    if (priceEpochId < this.firstRewardedPriceEpoch) {
+    if (priceEpochId < this.provider.firstRewardedPriceEpoch) {
       throw new Error("Price epoch is too low");
     }
-    return Math.floor((priceEpochId - this.firstRewardedPriceEpoch) / this.rewardEpochDurationInEpochs);
+    return Math.floor((priceEpochId - this.provider.firstRewardedPriceEpoch) / this.provider.rewardEpochDurationInEpochs);
   }
 
   async initialize(startBlockNumber: number, rpcLink?: string, providedWeb3?: Web3, logger?: any) {
-    let votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json"
-    let rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
-    // let voterRegistryAbiPath = "artifacts/contracts/voting/implementation/VoterRegistry.sol/VoterRegistry.json";
-
-    let votingABI = JSON.parse(fs.readFileSync(votingAbiPath).toString()).abi as AbiItem[];
-    let rewardsABI = JSON.parse(fs.readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
-    // let voterRegistryABI = JSON.parse(fs.readFileSync(votingAbiPath).toString()).abi as AbiItem[];
-
-    this.commitABI = votingABI.find((x: any) => x.name === "commit");
-    this.revealABI = votingABI.find((x: any) => x.name === "revealBitvote");
-    this.signABI = votingABI.find((x: any) => x.name === "signResult");
-    this.offerABI = rewardsABI.find((x: any) => x.name === "offerReward");
-    this.claimRewardBodyABI = rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0];
-    // ?.inputs?.find((x: any) => x.name === "_data")?.components.
-
     this.startBlockNumber = startBlockNumber;
     this.lastProcessedBlockNumber = startBlockNumber - 1;
 
     this.initializeWeb3(rpcLink, providedWeb3, logger);
-
-    // function signatures
-    this.commitFSig = this.web3.eth.abi.encodeFunctionSignature(this.commitABI);
-    this.revealFSig = this.web3.eth.abi.encodeFunctionSignature(this.revealABI);
-    this.signFSig = this.web3.eth.abi.encodeFunctionSignature(this.signABI);
-    this.offerFSig = this.web3.eth.abi.encodeFunctionSignature(this.offerABI);
-
-    // contracts
-    let VotingRewardManager = artifacts.require("VotingRewardManager");
-    let Voting = artifacts.require("Voting");
-    let VoterRegistry = artifacts.require("VoterRegistry");
-    let PriceOracle = artifacts.require("PriceOracle");
-    let VotingManager = artifacts.require("VotingManager");
-
-    this.votingRewardManagerContract = await VotingRewardManager.at(this.votingRewardManagerContractAddress);
-    this.votingContractAddress = await this.votingRewardManagerContract.voting();
-    this.votingContract = await Voting.at(this.votingContractAddress);
-    this.voterRegistryContractAddress = await this.votingContract.voterRegistry();
-    this.voterRegistryContract = await VoterRegistry.at(this.voterRegistryContractAddress);
-    this.priceOracleContract = await PriceOracle.at(this.priceOracleContractAddress);
-    this.votingManagerContract = await VotingManager.at(await this.votingContract.votingManager());
-    // this.startProcessing();
   }
 
   private initializeWeb3(rpcLink?: string, providedWeb3?: Web3, logger?: any) {
@@ -206,16 +128,16 @@ export class FTSOClient {
   }
 
   processTx(tx: TxData) {
-    if (tx.to?.toLowerCase() === this.votingContractAddress.toLowerCase()) {
+    if (tx.to?.toLowerCase() === this.provider.votingContractAddress.toLowerCase()) {
       let prefix = tx.input?.slice(0, 10);
       if (prefix && prefix.length === 10) {
-        if (prefix === this.commitFSig) {
+        if (prefix === this.provider.functionSignature("commit")) {
           return this.extractCommit(tx);
-        } else if (prefix === this.revealFSig) {
+        } else if (prefix === this.provider.functionSignature("revealBitvote")) {
           return this.extractReveal(tx);
-        } else if (prefix === this.signFSig) {
+        } else if (prefix === this.provider.functionSignature("signResult")) {
           return this.extractSignature(tx);
-        } else if (prefix === this.offerFSig) {
+        } else if (prefix === this.provider.functionSignature("offerReward")) {
           return this.extractOffers(tx);
         }
       }
@@ -223,7 +145,7 @@ export class FTSOClient {
   }
 
   private extractOffers(tx: TxData): void {
-    let offers: Offer[] = this.web3.eth.abi.decodeParameter(this.offerABI.inputs, tx.input!) as Offer[];
+    let offers: Offer[] = this.web3.eth.abi.decodeParameter(this.provider.abiForName.get("claimRewardBodyDefinition")!.inputs, tx.input!) as Offer[];
     let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
 
     let offersInEpoch = this.epochOffers.get(epochId) ?? new Map<Feed, CurrencyRewards>();
@@ -240,7 +162,7 @@ export class FTSOClient {
 
   // commit(bytes32 _commitHash)
   private extractCommit(tx: TxData): void {
-    let hash = this.web3.eth.abi.decodeParameters(this.commitABI.inputs, tx.input?.slice(10)!)?._commitHash;
+    let hash = this.web3.eth.abi.decodeParameters(this.provider.abiForName.get("commit")!.inputs, tx.input?.slice(10)!)?._commitHash;
     let from = tx.from.toLowerCase();
     let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let commitsInEpoch = this.epochCommits.get(epochId) || new Map<string, string>();
@@ -250,7 +172,7 @@ export class FTSOClient {
 
   // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices) 
   private extractReveal(tx: TxData): void {
-    const resultTmp = this.web3.eth.abi.decodeParameters(this.revealABI.inputs, tx.input?.slice(10)!);
+    const resultTmp = this.web3.eth.abi.decodeParameters(this.provider.abiForName.get("revealBitvote")!.inputs, tx.input?.slice(10)!);
     const result = {
       random: resultTmp._random,
       merkleRoot: resultTmp._merkleRoot,
@@ -269,7 +191,7 @@ export class FTSOClient {
   // function signResult(bytes32 _merkleRoot, Signature calldata signature)  
   private extractSignature(tx: TxData): void {
 
-    const resultTmp = this.web3.eth.abi.decodeParameters(this.signABI.inputs, tx.input?.slice(10)!);
+    const resultTmp = this.web3.eth.abi.decodeParameters(this.provider.abiForName.get("signResult")!.inputs, tx.input?.slice(10)!);
     const result = {
       epochId: parseInt(resultTmp._epochId, 10),
       merkleRoot: resultTmp._merkleRoot,
@@ -323,7 +245,7 @@ export class FTSOClient {
       throw new Error("Epoch data not found");
     }
     let hash = this.hashForCommit(this.senderAddress, epochData.random!, epochData.merkleRoot!, epochData.pricesHex!);
-    await this.votingContract.commit(hash, { from: this.wallet.address });
+    await this.provider.commit(hash, this.wallet.address);
   }
 
   async onReveal(epochId: number) {
@@ -331,7 +253,7 @@ export class FTSOClient {
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
-    await this.votingContract.revealBitvote(epochData.random!, epochData.merkleRoot!, epochData.bitVote!, epochData.pricesHex!, { from: this.wallet.address });
+    await this.provider.revealBitvote(epochData, this.wallet.address);
   }
 
   async onSign(epochId: number, symbolSequence: Feed[], skipCalculation = false) {
@@ -346,13 +268,15 @@ export class FTSOClient {
     // const message = this.messageForSign(epochId);
     // let messageHash = this.web3.utils.soliditySha3(message);
     let signature = await this.wallet.sign(result.merkleRoot);
-    await this.votingContract.signResult(epochId,
+    await this.provider.signResult(epochId,
       result.merkleRoot!,
       {
         v: signature.v,
         r: signature.r,
         s: signature.s
-      }, { from: this.wallet.address });
+      },
+      this.wallet.address
+    );
   }
 
   // Encoding of signed result
@@ -375,11 +299,6 @@ export class FTSOClient {
     });
   }
 
-  // not used
-  private async getWeightsForEpoch(epochId: number, senders: string[]) {
-    return this.votingContract.getVoterWeightsForEpoch(epochId, senders);
-  }
-
   /**
    * 
    * @param priceEpochId 
@@ -398,7 +317,7 @@ export class FTSOClient {
     }
     let numberOfFeeds = symbolSequence.length;
     // TODO: do this only once per reward epoch
-    let weights = await this.voterRegistryContract.voterWeightsInPriceEpoch(rewardEpoch, voters);
+    let weights = await this.provider.voterWeightsInRewardEpoch(rewardEpoch, voters);
     let pricesForVoters = voters.map(voter => {
       let revealData = this.epochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
       let feeds = revealData.prices.slice(2).match(/(.{1,8})/g)?.map(hex => parseInt(hex, 16)) || [];
@@ -438,7 +357,7 @@ export class FTSOClient {
     ))
     let clientRewardHash: string | null = null;
     let rewardClaimHashes = [...rewards.values()].map((value) => {
-      let hash = hashClaimReward(value, this.claimRewardBodyABI);
+      let hash = hashClaimReward(value, this.provider.abiForName.get("claimRewardBodyDefinition")!);
       if (value.claimRewardBody.voterAddress.toLowerCase() === this.wallet.address.toLowerCase()) { clientRewardHash = hash; }
       return hash;
     });
@@ -510,7 +429,7 @@ export class FTSOClient {
           s: sig.s
         } as BareSignature
       })
-    return await this.votingContract.finalize(epochId, mySignatureHash, signatures, { from: this.wallet.address });
+    return await this.provider.finalize(epochId, mySignatureHash, signatures, this.wallet.address);
   }
 
   async publishPriceFeeds(epochId: number) {
@@ -519,7 +438,7 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
     // console.log(result.dataMerkleRoot, result.fullPriceMessage, result.merkleRoot)
-    return await this.priceOracleContract.publishPrices(result.dataMerkleRoot, result.fullPriceMessage, { from: this.wallet.address });
+    return await this.provider.publishPrices(result, this.wallet.address);
   }
 
   async claimReward(epochId: number) {
@@ -528,7 +447,7 @@ export class FTSOClient {
     let proof = result.dataMerkleProof;
     if (rewardClaim && proof) {
       rewardClaim.merkleProof = proof;
-      return this.votingRewardManagerContract.claimReward(rewardClaim);
+      return this.provider.claimReward(rewardClaim);
     }
     else {
       return null;
@@ -536,6 +455,6 @@ export class FTSOClient {
   }
 
   async offerRewards(offers: Offer[]) {
-    await this.votingRewardManagerContract.offerRewards(offers);
+    await this.provider.offerRewards(offers);
   }
 }

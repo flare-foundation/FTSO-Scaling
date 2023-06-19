@@ -13,6 +13,7 @@ import { FTSOClient } from "../src/FTSOClient";
 import { PriceFeedConfig } from "../src/PriceFeed";
 import { moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
 import { Feed, FeedRewards, Offer } from "../src/voting-interfaces";
+import { TruffleProvider } from "../src/providers/TruffleProvider";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -136,9 +137,17 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       priceFeedConfigs.push(priceFeedConfig);
     }
 
+    let provider = new TruffleProvider(
+      voting.address,
+      votingRewardManager.address,
+      voterRegistry.address,
+      priceOracle.address,
+      votingManager.address,
+    );
+    await provider.initialize();
     // Initialize FTSO clients
     for (let i = 1; i <= N; i++) {
-      let client = new FTSOClient(wallets[i].privateKey, votingRewardManager.address, priceOracle.address, firstEpochStartSec.toNumber(), epochDurationSec.toNumber(), firstRewardedPriceEpoch.toNumber(), REWARD_EPOCH_DURATION, 0);
+      let client = new FTSOClient(wallets[i].privateKey, provider);
       await client.initialize(currentBlockNumber, undefined, web3);
       client.initializePriceFeeds(priceFeedConfigs);
       ftsoClients.push(client);
@@ -156,36 +165,12 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     expect(rewardBalance).to.be.equal(REWARD_VALUE.toString())
   })
 
-  it(`should return correct price epoch reward data`, async () => {
+  it.skip(`should return correct price epoch reward data`, async () => {
     let currentPriceEpoch = await votingManager.getCurrentEpochId();
     for (let client of ftsoClients) {
       let rewardData: FeedRewards = client.epochOffers.get(currentPriceEpoch)!;
     }
-    // let rewardData: any = await votingRewardManager.rewardsInPriceEpoch(initialRewardPoolId, currentPriceEpoch);
-    // let slotBitmask = "0x" + parseInt((new Array(N)).fill(1).join(""), 2).toString(16);
-    // if(slotBitmask.length % 2 == 1) {
-    // slotBitmask += "0";
-    // }
-    // expect(rewardData.slotBitmask).to.be.equal(slotBitmask);
-    // let basePriceEpochReward = REWARD_VALUE.div(toBN(REWARD_EPOCH_DURATION));
-    // let priceEpochRewardReminder = REWARD_VALUE.mod(toBN(REWARD_EPOCH_DURATION));
-    // let priceEpochReward = basePriceEpochReward;
-    // if(currentPriceEpoch.lt(priceEpochRewardReminder)) {
-    // priceEpochReward = basePriceEpochReward.add(toBN(1));
-    // } 
-    // let baseSlotReward = priceEpochReward.div(toBN(N));
-    // let slotRewardReminder = priceEpochReward.mod(toBN(N));
-    // 
-    // expect(rewardData.baseSlotReward).to.be.bignumber.equal(baseSlotReward);
-    // expect(rewardData.slotRewardReminder).to.be.bignumber.equal(slotRewardReminder);
   })
-
-
-  // it(`should default pool be initialized`, async () => {
-  //   let activePools = await votingRewardManager.getActiveRewardPoolsForRewardEpoch(TEST_REWARD_EPOCH);
-  //   expect(activePools.length).to.be.equal(1);
-  //   expect(activePools[0]).to.be.equal(initialRewardPoolId);
-  // })
 
   it("should feeds be configured", async () => {
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();

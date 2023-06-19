@@ -66,7 +66,7 @@ contract VoterRegistry is Governed {
             MAX_BIPS;
     }
 
-    function voterWeightsInPriceEpoch(
+    function voterWeightsInRewardEpoch(
         uint256 _rewardEpochId,
         address[] calldata _voters
     ) public view returns (uint256[] memory weights) {

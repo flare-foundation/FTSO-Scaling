@@ -104,22 +104,3 @@ export function calculateMedian(voters: string[], prices: BN[], weights: BN[], e
     highElasticBandPrice: medianPrice!.add(elasticBandDiff).toNumber()
   }
 }
-
-
-
-// export interface MedianCalculationSummary {
-//   medianIndex: string;
-//   quartile1Index: string;
-//   quartile3Index: string;
-//   leftSum: string;
-//   rightSum: string;
-//   medianWeight: string;
-//   lowWeightSum: string;
-//   rewardedWeightSum: string;
-//   highWeightSum: string;
-//   finalMedianPrice: string;
-//   quartile1Price: string;
-//   quartile3Price: string;
-//   lowElasticBandPrice: string;
-//   highElasticBandPrice: string;
-// }
