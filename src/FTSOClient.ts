@@ -150,7 +150,7 @@ export class FTSOClient {
   }
 
   private extractOffers(tx: TxData): void {
-    let offers: Offer[] = this.web3.eth.abi.decodeParameter(this.provider.abiForName.get("offerRewards")!.inputs, tx.input!) as Offer[];
+    let offers: Offer[] = this.web3.eth.abi.decodeParameter(this.provider.abiForName.get("offerRewards")!.inputs[0], tx.input!.slice(10)) as Offer[];
     let rewardEpochId = this.rewardEpochIdForPriceEpochId(this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!));
 
     let offersInEpoch = this.rewardEpochOffers.get(rewardEpochId) ?? new Map<Feed, CurrencyRewards>();
