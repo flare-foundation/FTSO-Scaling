@@ -1,9 +1,8 @@
-import { VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
 import { toBN } from "../test-utils/utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
-import { ClaimReward, MedianCalculationResult, RewardOffer } from "./voting-interfaces";
-import { hashClaimReward } from "./voting-utils";
+import { ClaimReward, MedianCalculationResult, Offer } from "./voting-interfaces";
+import { feedId, hashClaimReward } from "./voting-utils";
 
 /**
  * Reward calculator for sequence of reward epochs.
@@ -34,20 +33,16 @@ export class RewardCalculator {
 
   ////////////// Offer data //////////////
   // rewardEpochId => list of reward offers
-  rewardOffers: Map<number, RewardOffer[]> = new Map<number, RewardOffer[]>();
-  // rewardEpochId => symbol => list of reward offers
+  rewardOffers: Map<number, Offer[]> = new Map<number, Offer[]>();
+  // rewardEpochId => feedId => list of reward offers
   // The offers in the same currency are accumulated
-  rewardOffersBySymbol: Map<number, Map<string, RewardOffer[]>> = new Map<number, Map<string, RewardOffer[]>>();
+  rewardOffersBySymbol: Map<number, Map<string, Offer[]>> = new Map<number, Map<string, Offer[]>>();
 
   ////////////// Claim data //////////////
   // priceEpochId => list of claims
   priceEpochClaims: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
   // rewardEpochId => list of cumulative claims
   rewardEpochCumulativeRewards: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
-
-  ///////////// Contracts //////////////
-  votingManager!: VotingManagerInstance;
-  votingRewardManager!: VotingRewardManagerInstance;
 
   ///////////// IQR and PCT weights //////////////
   // Should be nominators of fractions with the same denominator. Eg. if in BIPS with denominator 100, then 30 means 30%
@@ -58,15 +53,15 @@ export class RewardCalculator {
   pctShare: BN = toBN(0);
 
   constructor(
+    firstRewardedPriceEpoch: number,
+    rewardEpochDurationInEpochs: number,    
     initialRewardEpoch: number,
-    votingManager: VotingManagerInstance,
-    votingRewardManager: VotingRewardManagerInstance,
     iqrShare: BN,
     pctShare: BN
   ) {
     this.initialRewardEpoch = initialRewardEpoch;
-    this.votingManager = votingManager;
-    this.votingRewardManager = votingRewardManager;
+    this.firstRewardedPriceEpoch = firstRewardedPriceEpoch;
+    this.rewardEpochDurationInEpochs = rewardEpochDurationInEpochs;
     this.iqrShare = iqrShare;
     this.pctShare = pctShare;
   }
@@ -78,9 +73,6 @@ export class RewardCalculator {
     if(this.initialized) {
       return;
     }
-    // Epoch settings from smart contracts
-    this.firstRewardedPriceEpoch = (await this.votingManager.firstRewardedPriceEpoch()).toNumber();
-    this.rewardEpochDurationInEpochs = (await this.votingManager.rewardEpochDurationInEpochs()).toNumber();
 
     // Initial processing boundaries
     this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
@@ -99,7 +91,7 @@ export class RewardCalculator {
    * @param rewardEpoch 
    * @param rewardOffers 
    */
-  public setRewardOffers(rewardEpoch: number, rewardOffers: RewardOffer[]) {
+  public setRewardOffers(rewardEpoch: number, rewardOffers: Offer[]) {
     if(this.rewardOffers.has(rewardEpoch)) {
       throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
     }
@@ -137,7 +129,7 @@ export class RewardCalculator {
    * @param offer 
    * @returns 
    */
-  public rewardOfferForPriceEpoch(priceEpoch: number, offer: RewardOffer): RewardOffer {
+  public rewardOfferForPriceEpoch(priceEpoch: number, offer: Offer): Offer {
     let rewardEpoch = this.rewardEpochIdForPriceEpoch(priceEpoch);
     let reward = offer.amount.div(toBN(this.rewardEpochDurationInEpochs));
     let remainder = offer.amount.mod(toBN(this.rewardEpochDurationInEpochs)).toNumber();
@@ -149,7 +141,7 @@ export class RewardCalculator {
       ...offer,
       priceEpochId: priceEpoch,
       amount: reward
-    } as RewardOffer;
+    } as Offer;
   }
 
   /**
@@ -164,12 +156,12 @@ export class RewardCalculator {
     if (rewardOffers === undefined) {
       throw new Error(`Reward offers are not defined for reward epoch ${rewardEpoch}`);
     }
-    let result: Map<string, RewardOffer[]> = new Map<string, RewardOffer[]>();
+    let result: Map<string, Offer[]> = new Map<string, Offer[]>();
     for (let offer of rewardOffers) {
-      let offers = result.get(offer.symbol);
+      let offers = result.get(feedId(offer));
       if (offers === undefined) {
         offers = [];
-        result.set(offer.symbol, offers);
+        result.set(feedId(offer), offers);
       }
       offers.push(offer);
     }
@@ -179,6 +171,7 @@ export class RewardCalculator {
   private buildSymbolSequence(rewardEpoch: number) {
     // TODO: implement
   }
+  
   /**
    * Calculates the claims for the given price epoch.
    * These claims are then stored for each price epoch in the priceEpochClaims map.

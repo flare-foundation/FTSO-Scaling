@@ -5,6 +5,7 @@ import chaiBN from "chai-bn";
 import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../typechain-truffle";
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
+import { ZERO_BYTES32 } from "../src/voting-utils";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -146,8 +147,8 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
 
   it("Should reveal data", async () => {
     let weight = toBN(1000);
-    let random = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    let merkleRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    let random = ZERO_BYTES32;
+    let merkleRoot = ZERO_BYTES32;
     let bitvote = "0x1234567890";
     let prices = "0x001234567890";
     let epochId = await votingManager.getCurrentEpochId();

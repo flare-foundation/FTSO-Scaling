@@ -18,6 +18,11 @@ export interface Feed {
 export interface Offer extends Feed {
   amount: BN; // 256-bit
   currencyAddress: string;
+  priceEpochId?: number;
+  transactionId?: string;
+  trustedProviders?: string[]; // list of trusted providers
+  rewardBeltPPM?: number; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
+  value: BN;   // Value of the offer in the native currency (calculated on offer submission) 
 }
 
 export type FeedRewards = Map<string, Offer[]>;
@@ -81,7 +86,7 @@ export interface MedianCalculationResult {
   prices?: number[];
   data: MedianCalculationSummary;
   weights: BN[];
-  offers?: RewardOffer[];
+  offers?: Offer[];
 }
 
 export interface MedianCalculationSummary {
@@ -90,17 +95,6 @@ export interface MedianCalculationSummary {
   quartile3Price: number;
   lowElasticBandPrice: number;
   highElasticBandPrice: number;
-}
-
-export interface RewardOffer {
-  priceEpochId?: number;
-  transactionId: string;
-  rewardEpochId: number;
-  symbol: string;
-  amount: BN;
-  tokenContract: string; // address of the token contract. If zero address, then it is the native token.
-  trustedProviders: string[]; // list of trusted providers
-  rewardBeltPPM: number; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
 }
 
 export interface VoterWithWeight {

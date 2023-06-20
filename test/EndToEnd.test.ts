@@ -10,7 +10,7 @@ import { FTSOClient } from "../src/FTSOClient";
 import { PriceFeedConfig } from "../src/PriceFeed";
 import { TruffleProvider } from "../src/providers/TruffleProvider";
 import { Feed, FeedRewards } from "../src/voting-interfaces";
-import { feedId, moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
+import { ZERO_ADDRESS, feedId, moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
@@ -194,7 +194,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       [
         {
           amount: REWARD_VALUE.toNumber(),
-          currencyAddress: "0x0000000000000000000000000000000000000000",
+          currencyAddress: ZERO_ADDRESS,
           offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
           quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
         }

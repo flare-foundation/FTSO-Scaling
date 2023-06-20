@@ -4,6 +4,8 @@ import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { VotingManagerInstance } from "../typechain-truffle";
 import { ClaimReward, Feed, Offer } from "./voting-interfaces";
 
+export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 /**
  * Moves time to the start of the next epoch.
  * If firstRewardedPriceEpoch and REWARD_EPOCH_DURATION are provided, it will move time to the start of the next reward epoch

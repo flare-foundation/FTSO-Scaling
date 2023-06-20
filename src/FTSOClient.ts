@@ -5,9 +5,8 @@ import { PriceFeed, PriceFeedConfig } from "./PriceFeed";
 import { calculateMedian } from "./median-calculation-utils";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import { BareSignature, ClaimReward, ClaimRewardBody, EpochData, EpochResult, Feed, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
-import { feedId, hashClaimReward, sortedHashPair } from "./voting-utils";
+import { ZERO_ADDRESS, ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair } from "./voting-utils";
 
-const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const EPOCH_BYTES = 8;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
@@ -340,7 +339,7 @@ export class FTSOClient {
           merkleProof: [],
           claimRewardBody: {
             amount: toBN(100),
-            currencyAddress: "0x0000000000000000000000000000000000000000",
+            currencyAddress: ZERO_ADDRESS,
             voterAddress: sender,
             epochId: priceEpochId,
           } as ClaimRewardBody
