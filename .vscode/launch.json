@@ -16,7 +16,7 @@
         "env": {
           "NODE_ENV": "development"
         },
-        "runtimeArgs": ["hardhat", "test", "test/voting/EndToEnd.test.ts"]
+        "runtimeArgs": ["hardhat", "test", "test/EndToEnd.test.ts"]
       }
   ]
 }

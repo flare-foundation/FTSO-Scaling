@@ -89,17 +89,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // Reward manager configuration
     await votingRewardManager.setVoting(voting.address);
     await votingRewardManager.setVotingManager(votingManager.address);
-    await votingRewardManager.offerReward(
-      [
-        {
-          amount: REWARD_VALUE.toNumber(),
-          currencyAddress: "0x0000000000000000000000000000000000000000",
-          offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
-          quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
-        }
-      ],
-      { value: REWARD_VALUE }
-    );
 
     // price oracle configuration
     await priceOracle.setVotingManager(votingManager.address);
@@ -165,13 +154,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     expect(rewardBalance).to.be.equal(REWARD_VALUE.toString())
   })
 
-  it.skip(`should return correct price epoch reward data`, async () => {
-    let currentPriceEpoch = await votingManager.getCurrentEpochId();
-    for (let client of ftsoClients) {
-      let rewardData: FeedRewards = client.epochOffers.get(currentPriceEpoch)!;
-    }
-  })
-
   it("should feeds be configured", async () => {
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
     let numberOfFeeds = (await priceOracle.numberOfFeedsPerRewardEpoch(currentRewardEpochId)).toNumber();
@@ -201,13 +183,37 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     initialPriceEpoch = currentEpoch;
     for (let client of ftsoClients) {
       client.preparePriceFeedsForEpoch(currentEpoch);
-      let epochData = client.epochData.get(currentEpoch);
+      let epochData = client.priceEpochData.get(currentEpoch);
       expect(epochData).to.not.be.undefined;
       expect(epochData?.epochId).to.be.equal(currentEpoch);
       expect(epochData?.prices?.length).to.be.equal(NUMBER_OF_FEEDS);
       expect(epochData?.pricesHex?.length! - 2).to.be.equal(NUMBER_OF_FEEDS * 4 * 2);
       expect(epochData?.random?.length).to.be.equal(66);
       expect(epochData?.bitVote).to.be.equal("0x00");
+    }
+  });
+
+  it.only(`should track correct reward offers`, async () => {
+    let currentPriceEpoch = await votingManager.getCurrentEpochId();
+    await votingRewardManager.offerRewards(
+      [
+        {
+          amount: REWARD_VALUE.toNumber(),
+          currencyAddress: "0x0000000000000000000000000000000000000000",
+          offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
+          quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
+        }
+      ],
+      { value: REWARD_VALUE }
+    );
+    let balance = await web3.eth.getBalance(votingRewardManager.address);
+    expect(balance).to.equal(REWARD_VALUE);
+    for (let client of ftsoClients) {
+      client.setVerbose(true);
+      await client.processNewBlocks();
+      let rewardData: FeedRewards = client.rewardEpochOffers.get(client.rewardEpochIdForPriceEpochId(currentPriceEpoch))!;
+      let rewardValue: BN = rewardData.get({offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL})!;
+      expect(rewardValue).to.equal(REWARD_VALUE);
     }
   });
 
@@ -228,7 +234,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     }
     for (let client of ftsoClients) {
       await client.processNewBlocks();
-      expect(client.epochCommits.get(currentEpoch)?.size).to.be.equal(N);
+      expect(client.priceEpochCommits.get(currentEpoch)?.size).to.be.equal(N);
     }
   });
 
@@ -241,7 +247,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     }
     for (let client of ftsoClients) {
       await client.processNewBlocks();
-      expect(client.epochReveals.get(revealEpoch)?.size).to.be.equal(N);
+      expect(client.priceEpochReveals.get(revealEpoch)?.size).to.be.equal(N);
     }
     // console.log(ftsoClients[0].epochReveals.get(revealEpoch));
   });
@@ -258,7 +264,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
     for (let client of ftsoClients) {
       await client.calculateResults(calculateEpoch, symbols);
-      let data = client.epochResults.get(calculateEpoch)!;
+      let data = client.priceEpochResults.get(calculateEpoch)!;
       finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
       quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
       quartile3Price.push(data.medianData.map(res => res.data.quartile3Price));
@@ -287,7 +293,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     }
     let client = ftsoClients[0];
     await client.processNewBlocks();
-    let signaturesTmp = [...client.epochSignatures.get(initialPriceEpoch)!.values()];
+    let signaturesTmp = [...client.priceEpochSignatures.get(initialPriceEpoch)!.values()];
     let merkleRoots = [...(new Set(signaturesTmp.map(sig => sig.merkleRoot))).values()];
     let merkleRoot = merkleRoots[0];
     expect(merkleRoots.length).to.be.equal(1);
@@ -305,7 +311,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         epochId: toBN(initialPriceEpoch),
         symbol: web3.utils.rightPad(web3.utils.fromAscii(`FL${i}`), 64),
         slotId: toBN(i),
-        price: toBN(client.epochResults.get(initialPriceEpoch)!.medianData[i].data.finalMedianPrice)
+        price: toBN(client.priceEpochResults.get(initialPriceEpoch)!.medianData[i].data.finalMedianPrice)
       });
     }
 
@@ -316,7 +322,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // but also the correctness of the construction of the Merkle proof in all possible cases.
     ftsoClients.forEach(async (client) => {
       let originalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
-      let rewardValue = client.epochResults.get(initialPriceEpoch)?.rewards?.get(client.wallet.address.toLowerCase())?.claimRewardBody?.amount;
+      let rewardValue = client.priceEpochResults.get(initialPriceEpoch)?.rewards?.get(client.wallet.address.toLowerCase())?.claimRewardBody?.amount;
       let response = await client.claimReward(initialPriceEpoch);
       let finalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
       // This is a black-box test: it checks that if a client thinks they should get a reward,

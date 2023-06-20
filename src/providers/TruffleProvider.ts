@@ -31,13 +31,13 @@ export class TruffleProvider extends IVotingProvider {
       this.abiForName.set("commit", votingABI.find((x: any) => x.name === "commit"));
       this.abiForName.set("revealBitvote", votingABI.find((x: any) => x.name === "revealBitvote"));
       this.abiForName.set("signResult", votingABI.find((x: any) => x.name === "signResult"));
-      this.abiForName.set("offerReward", rewardsABI.find((x: any) => x.name === "offerReward"));
+      this.abiForName.set("offerRewards", rewardsABI.find((x: any) => x.name === "offerRewards"));
       this.abiForName.set("claimRewardBodyDefinition", rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0]);
 
       this.functionSignatures.set("commit", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("commit")));
       this.functionSignatures.set("revealBitvote", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("revealBitvote")));
       this.functionSignatures.set("signResult", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("signResult")));
-      this.functionSignatures.set("offerReward", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("offerReward")));
+      this.functionSignatures.set("offerRewards", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("offerRewards")));
 
       // contracts
 

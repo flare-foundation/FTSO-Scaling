@@ -32,7 +32,7 @@ contract VotingRewardManager is Governed, IRewardManager {
     }
 
     function rewardEpochIdAsStoredBalanceIndex(uint256 epochId) internal view returns (uint256) {
-        require(epochId >= currentRewardEpochId - STORED_PREVIOUS_BALANCES, 
+        require(epochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId, 
                 "reward balance not preserved for epoch too far in the past");
         // Have to add the modulus to get a nonnegative answer: -a % m == -(a % m)
         return (nextRewardEpochBalanceIndex + (epochId - currentRewardEpochId) + STORED_PREVIOUS_BALANCES)
@@ -73,7 +73,7 @@ contract VotingRewardManager is Governed, IRewardManager {
     // epoch's rewards can be claimed.
     //
     // TODO: support token currencies    
-    function offerReward(
+    function offerRewards(
         Offer[] calldata offers
     ) override public payable maybePushRewardBalance {
         uint totalOffered = 0;

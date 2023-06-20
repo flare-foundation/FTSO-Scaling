@@ -31,7 +31,9 @@ abstract contract IRewardManager {
     function setVotingManager(address votingManagerContract) external virtual;
 
     function claimReward(ClaimReward calldata _data) external virtual;
-    function offerReward(Offer[] calldata offers) external payable virtual;
+    function offerRewards(Offer[] calldata offers) external payable virtual;
 
+    // These functions are not for calling, but for exporting the type definitions in the metadata
     function claimRewardBodyDefinition(ClaimRewardBody calldata _data) external {}
+    function offerDefinition(Offer calldata _data) external {}
 }
