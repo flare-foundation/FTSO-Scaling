@@ -20,8 +20,7 @@ export interface Offer extends Feed {
   currencyAddress: string;
 }
 
-export type CurrencyRewards = BN; // Map<{ currencyAddress: string }, BN>;
-export type FeedRewards = Map<Feed, CurrencyRewards>;
+export type FeedRewards = Map<string, Offer[]>;
 
 export interface BareSignature {
   v: number;

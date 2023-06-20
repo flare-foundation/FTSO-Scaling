@@ -4,8 +4,8 @@ import { MerkleTree } from "./MerkleTree";
 import { PriceFeed, PriceFeedConfig } from "./PriceFeed";
 import { calculateMedian } from "./median-calculation-utils";
 import { IVotingProvider } from "./providers/IVotingProvider";
-import { BareSignature, ClaimReward, ClaimRewardBody, CurrencyRewards, EpochData, EpochResult, Feed, FeedRewards, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
-import { hashClaimReward, sortedHashPair } from "./voting-utils";
+import { BareSignature, ClaimReward, ClaimRewardBody, EpochData, EpochResult, Feed, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { feedId, hashClaimReward, sortedHashPair } from "./voting-utils";
 
 const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const EPOCH_BYTES = 8;
@@ -26,8 +26,8 @@ export class FTSOClient {
   priceEpochSignatures = new Map<number, Map<string, SignatureData>>();
   priceEpochData = new Map<number, EpochData>();
   priceEpochResults = new Map<number, EpochResult>();
-  rewardEpochOffers = new Map<number, FeedRewards>();
-  web3!: Web3;
+  // rewardEpoch => feeId => offers
+  rewardEpochOffers = new Map<number, Map<string, Offer[]>>();
 
   elasticBandWidthPPM: number = 5000;
 
@@ -74,40 +74,40 @@ export class FTSOClient {
     this.startBlockNumber = startBlockNumber;
     this.lastProcessedBlockNumber = startBlockNumber - 1;
 
-    this.initializeWeb3(rpcLink, providedWeb3, logger);
+    // this.initializeWeb3(rpcLink, providedWeb3, logger);
   }
 
-  private initializeWeb3(rpcLink?: string, providedWeb3?: Web3, logger?: any) {
-    if (!rpcLink) {
-      this.web3 = providedWeb3!;
-      return;
-    }
-    const web3 = new Web3();
-    if (rpcLink.startsWith("http")) {
-      web3.setProvider(new Web3.providers.HttpProvider(rpcLink));
-    } else if (rpcLink.startsWith("ws")) {
-      const provider = new Web3.providers.WebsocketProvider(rpcLink, {
-        // @ts-ignore
-        clientConfig: {
-          keepalive: true,
-          keepaliveInterval: 60000, // milliseconds
-        },
-        reconnect: {
-          auto: true,
-          delay: 2500,
-          onTimeout: true,
-        },
-      });
-      provider.on("close", () => {
-        if (logger) {
-          logger.error(` ! Network WS connection closed.`);
-        }
-      });
-      web3.setProvider(provider);
-    }
-    web3.eth.handleRevert = true;
-    this.web3 = web3;
-  }
+  // private initializeWeb3(rpcLink?: string, providedWeb3?: Web3, logger?: any) {
+  //   if (!rpcLink) {
+  //     this.web3 = providedWeb3!;
+  //     return;
+  //   }
+  //   const web3 = new Web3();
+  //   if (rpcLink.startsWith("http")) {
+  //     web3.setProvider(new Web3.providers.HttpProvider(rpcLink));
+  //   } else if (rpcLink.startsWith("ws")) {
+  //     const provider = new Web3.providers.WebsocketProvider(rpcLink, {
+  //       // @ts-ignore
+  //       clientConfig: {
+  //         keepalive: true,
+  //         keepaliveInterval: 60000, // milliseconds
+  //       },
+  //       reconnect: {
+  //         auto: true,
+  //         delay: 2500,
+  //         onTimeout: true,
+  //       },
+  //     });
+  //     provider.on("close", () => {
+  //       if (logger) {
+  //         logger.error(` ! Network WS connection closed.`);
+  //       }
+  //     });
+  //     web3.setProvider(provider);
+  //   }
+  //   web3.eth.handleRevert = true;
+  //   this.web3 = web3;
+  // }
 
   setVerbose(verbose: boolean) {
     this.verbose = verbose;
@@ -130,7 +130,6 @@ export class FTSOClient {
   processTx(tx: TxData) {
     let prefix = tx.input?.slice(0, 10);
     if (tx.to?.toLowerCase() === this.provider.votingContractAddress.toLowerCase()) {
-      console.log("prefix: " + prefix)
       if (prefix && prefix.length === 10) {
         if (prefix === this.provider.functionSignature("commit")) {
           return this.extractCommit(tx);
@@ -138,36 +137,38 @@ export class FTSOClient {
           return this.extractReveal(tx);
         } else if (prefix === this.provider.functionSignature("signResult")) {
           return this.extractSignature(tx);
-        } 
+        }
       }
-    } else 
-    if (tx.to?.toLowerCase() === this.provider.votingRewardManagerContractAddress.toLowerCase()) {
-      if (prefix === this.provider.functionSignature("offerRewards")) {
-          console.log("Extracting offers")
+    } else
+      if (tx.to?.toLowerCase() === this.provider.votingRewardManagerContractAddress.toLowerCase()) {
+        if (prefix === this.provider.functionSignature("offerRewards")) {
           return this.extractOffers(tx);
+        }
       }
-    }
   }
 
+  /**
+   * Extract offers from transaction input.
+   * Assumption: the transaction is a call to `offerRewards` function.
+   * @param tx 
+   */
   private extractOffers(tx: TxData): void {
-    let offers: Offer[] = this.web3.eth.abi.decodeParameter(this.provider.abiForName.get("offerRewards")!.inputs[0], tx.input!.slice(10)) as Offer[];
+    let offers: Offer[] = this.provider.extractOffers(tx);
     let rewardEpochId = this.rewardEpochIdForPriceEpochId(this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!));
 
-    let offersInEpoch = this.rewardEpochOffers.get(rewardEpochId) ?? new Map<Feed, CurrencyRewards>();
+    let offersInEpoch = this.rewardEpochOffers.get(rewardEpochId) ?? new Map<string, Offer[]>();
     this.rewardEpochOffers.set(rewardEpochId, offersInEpoch)
 
     for (let offer of offers) {
-      let offersForFeed = offersInEpoch.get(offer) ?? toBN(0); //new Map<{ currencyAddress: string }, BN>();
-      offersInEpoch.set(offer, offersForFeed);
-
-      // let offerForCurrency = offersForFeed.get(offer) ?? toBN(0);
-      // offersForFeed.set(offer, offerForCurrency.add(offer.amount))
+      let offersForFeed = offersInEpoch.get(feedId(offer)) ?? [];
+      offersInEpoch.set(feedId(offer), offersForFeed);
+      offersForFeed.push(offer);      
     }
   }
 
   // commit(bytes32 _commitHash)
   private extractCommit(tx: TxData): void {
-    let hash = this.web3.eth.abi.decodeParameters(this.provider.abiForName.get("commit")!.inputs, tx.input?.slice(10)!)?._commitHash;
+    let hash = this.provider.extractCommitHash(tx);
     let from = tx.from.toLowerCase();
     let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<string, string>();
@@ -177,13 +178,7 @@ export class FTSOClient {
 
   // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices) 
   private extractReveal(tx: TxData): void {
-    const resultTmp = this.web3.eth.abi.decodeParameters(this.provider.abiForName.get("revealBitvote")!.inputs, tx.input?.slice(10)!);
-    const result = {
-      random: resultTmp._random,
-      merkleRoot: resultTmp._merkleRoot,
-      bitVote: resultTmp._bitVote,
-      prices: resultTmp._prices
-    } as RevealBitvoteData;
+    const result = this.provider.extractRevealBitvoteData(tx);
     let from = tx.from.toLowerCase();
     let epochId = this.revealEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     if (epochId !== undefined) {
@@ -195,15 +190,7 @@ export class FTSOClient {
 
   // function signResult(bytes32 _merkleRoot, Signature calldata signature)  
   private extractSignature(tx: TxData): void {
-
-    const resultTmp = this.web3.eth.abi.decodeParameters(this.provider.abiForName.get("signResult")!.inputs, tx.input?.slice(10)!);
-    const result = {
-      epochId: parseInt(resultTmp._epochId, 10),
-      merkleRoot: resultTmp._merkleRoot,
-      v: parseInt(resultTmp.signature.v, 10),
-      r: resultTmp.signature.r,
-      s: resultTmp.signature.s
-    } as SignatureData;
+    let result = this.provider.extractSignatureData(tx);
     let from = tx.from.toLowerCase();
     // let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let signaturesInEpoch = this.priceEpochSignatures.get(result.epochId) || new Map<string, SignatureData>();
@@ -212,12 +199,12 @@ export class FTSOClient {
   }
 
   async startProcessing() {
-    let currentBlockNumber = await this.web3.eth.getBlockNumber();
+    let currentBlockNumber = await this.provider.getBlockNumber();
     this.lastProcessedBlockNumber = currentBlockNumber - 1;
   }
 
   async processNewBlocks() {
-    let currentBlockNumber = await this.web3.eth.getBlockNumber();
+    let currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
       try {
         await this.processBlock(this.lastProcessedBlockNumber + 1);
@@ -376,7 +363,7 @@ export class FTSOClient {
 
     let message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage;
 
-    let priceMessageHash = this.web3.utils.soliditySha3("0x" + message)!;
+    let priceMessageHash = this.provider.hashMessage("0x" + message);
     let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
     this.priceEpochResults.set(priceEpochId, {
       epochId: priceEpochId,

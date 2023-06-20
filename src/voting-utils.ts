@@ -1,8 +1,8 @@
-import { VotingManagerInstance } from "../typechain-truffle";
-import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
-import { ClaimReward, Feed } from "./voting-interfaces";
-import Web3 from "web3";
 import BN from "bn.js";
+import Web3 from "web3";
+import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
+import { VotingManagerInstance } from "../typechain-truffle";
+import { ClaimReward, Feed, Offer } from "./voting-interfaces";
 
 /**
  * Moves time to the start of the next epoch.
@@ -96,12 +96,45 @@ export function feedToBytes4(feed: Feed): Feed {
 
 export function feedToText(feed: Feed): Feed {
   return {
+    ...feed,
     offerSymbol: bytes4ToText(feed.offerSymbol),
     quoteSymbol: bytes4ToText(feed.quoteSymbol),
   } as Feed;
 }
 
-export function symbolIdentifier(feed: Feed) {
+/**
+ * Removes annoying index fields from an object.
+ * @param obj 
+ * @returns 
+ */
+export function removeIndexFields<T>(obj: T): T {
+  return Object.keys(obj as any)
+    .filter((key) => !key!.match(/^[0-9]+$/))
+    .reduce((result: any, key: string) => {
+      return Object.assign(result, {
+        [key]: (obj as any)[key]
+      });
+    }, {}) as T;
+}
+
+/**
+ * Converts an offer from web3 response to a more usable format, matching
+ * the Offer interface.
+ * @param offer 
+ * @returns 
+ */
+export function convertOfferFromWeb3Response(offer: Offer): Offer {
+  let tmp = feedToText(removeIndexFields(offer)) as Offer;
+  tmp.amount = toBN(tmp.amount);
+  return tmp;
+}
+
+/**
+ * Id of a feed is a string of the form `offerSymbol-quoteSymbol`.
+ * @param feed 
+ * @returns 
+ */
+export function feedId(feed: Feed) {
   return `${feed.offerSymbol}-${feed.quoteSymbol}`;
 }
 

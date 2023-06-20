@@ -3,8 +3,9 @@ import fs from "fs";
 import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
-import { BareSignature, ClaimReward, EpochData, EpochResult, Offer } from "../voting-interfaces";
+import { BareSignature, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import { IVotingProvider } from "./IVotingProvider";
+import { convertOfferFromWeb3Response } from "../voting-utils";
 
 let VotingRewardManager = artifacts.require("VotingRewardManager");
 let Voting = artifacts.require("Voting");
@@ -52,7 +53,6 @@ export class TruffleProvider extends IVotingProvider {
       this.firstRewardedPriceEpoch = await this.votingManagerContract.firstRewardedPriceEpoch();
       this.rewardEpochDurationInEpochs = await this.votingManagerContract.rewardEpochDurationInEpochs();
       this.signingDurationSec = await this.votingManagerContract.signingDurationSec();
-      
    }
 
    async claimReward(claim: ClaimReward): Promise<any> {
@@ -101,5 +101,41 @@ export class TruffleProvider extends IVotingProvider {
       return this.functionSignatures.get(name)!;
    }
 
+   hashMessage(message: string): string {
+      if (!message.startsWith("0x")) {
+         throw new Error("Message must be hex string prefixed with 0x");
+      }
+      return web3.utils.soliditySha3(message)!;
+   }
+
+   extractOffers(tx: TxData): Offer[] {
+      let offers: Offer[] = web3.eth.abi.decodeParameter(this.abiForName.get("offerRewards")!.inputs[0], tx.input!.slice(10)) as Offer[];
+      return offers.map(offer => convertOfferFromWeb3Response(offer));
+   }
+
+   extractCommitHash(tx: TxData): string {
+      return web3.eth.abi.decodeParameters(this.abiForName.get("commit")!.inputs, tx.input?.slice(10)!)?._commitHash;
+   }
+
+   extractRevealBitvoteData(tx: TxData): RevealBitvoteData {
+      const resultTmp = web3.eth.abi.decodeParameters(this.abiForName.get("revealBitvote")!.inputs, tx.input?.slice(10)!);
+      return {
+         random: resultTmp._random,
+         merkleRoot: resultTmp._merkleRoot,
+         bitVote: resultTmp._bitVote,
+         prices: resultTmp._prices
+      } as RevealBitvoteData;
+   }
+
+   extractSignatureData(tx: TxData): SignatureData {
+      const resultTmp = web3.eth.abi.decodeParameters(this.abiForName.get("signResult")!.inputs, tx.input?.slice(10)!);
+      return {
+         epochId: parseInt(resultTmp._epochId, 10),
+         merkleRoot: resultTmp._merkleRoot,
+         v: parseInt(resultTmp.signature.v, 10),
+         r: resultTmp.signature.r,
+         s: resultTmp.signature.s
+      } as SignatureData;
+   }
 
 }

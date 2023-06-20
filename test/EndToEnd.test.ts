@@ -6,14 +6,14 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import fs from "fs";
 import { web3 } from "hardhat";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
-import { getTestFile } from "../test-utils/utils/constants";
-import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { FTSOClient } from "../src/FTSOClient";
 import { PriceFeedConfig } from "../src/PriceFeed";
-import { moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
-import { Feed, FeedRewards, Offer } from "../src/voting-interfaces";
 import { TruffleProvider } from "../src/providers/TruffleProvider";
+import { Feed, FeedRewards } from "../src/voting-interfaces";
+import { feedId, moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
+import { getTestFile } from "../test-utils/utils/constants";
+import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
+import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -149,11 +149,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     expect(currentRewardEpochId).to.be.bignumber.equal(toBN(TEST_REWARD_EPOCH));
   })
 
-  it(`should reward manager balance be ${REWARD_VALUE}`, async () => {
-    let rewardBalance = await web3.eth.getBalance(votingRewardManager.address);
-    expect(rewardBalance).to.be.equal(REWARD_VALUE.toString())
-  })
-
   it("should feeds be configured", async () => {
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
     let numberOfFeeds = (await priceOracle.numberOfFeedsPerRewardEpoch(currentRewardEpochId)).toNumber();
@@ -193,7 +188,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     }
   });
 
-  it.only(`should track correct reward offers`, async () => {
+  it(`should track correct reward offers`, async () => {
     let currentPriceEpoch = await votingManager.getCurrentEpochId();
     await votingRewardManager.offerRewards(
       [
@@ -209,11 +204,12 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let balance = await web3.eth.getBalance(votingRewardManager.address);
     expect(balance).to.equal(REWARD_VALUE);
     for (let client of ftsoClients) {
-      client.setVerbose(true);
+      // client.setVerbose(true);
       await client.processNewBlocks();
       let rewardData: FeedRewards = client.rewardEpochOffers.get(client.rewardEpochIdForPriceEpochId(currentPriceEpoch))!;
-      let rewardValue: BN = rewardData.get({offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL})!;
-      expect(rewardValue).to.equal(REWARD_VALUE);
+      let offers = rewardData.get(feedId({offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL}))!;
+      expect(offers.length).to.equal(1);
+      expect(offers[0].amount).to.equal(REWARD_VALUE);
     }
   });
 
