@@ -5,6 +5,7 @@ import "./../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
 import "../../userInterfaces/IRewardManager.sol";
+import "./types/StoredBalances.sol";
 // import {MerkleProof} from "../lib/MerkleProof.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -19,17 +20,12 @@ contract VotingRewardManager is Governed, IRewardManager {
     // The set of (hashes of) claims that have _ever_ been processed successfully.
     mapping(bytes32 => bool) processedRewardClaims;
 
-    // The epoch in which `nextRewardEpochBalance` is accumulated and `previousRewardEpochBalance` is debited.
     uint256 currentRewardEpochId;
 
     // The total remaining amount of rewards for the most recent reward epochs, from which claims are taken.
-    uint256 constant STORED_PREVIOUS_BALANCES = 26;
-    uint256[STORED_PREVIOUS_BALANCES] storedRewardEpochBalances;
+    uint constant STORED_PREVIOUS_BALANCES = 26;
+    StoredBalances[STORED_PREVIOUS_BALANCES] storedRewardEpochBalances;
     uint256 nextRewardEpochBalanceIndex;
-
-    function nextRewardEpochBalance() internal view returns (uint256) {
-        return storedRewardEpochBalances[nextRewardEpochBalanceIndex];
-    }
 
     function rewardEpochIdAsStoredBalanceIndex(uint256 epochId) internal view returns (uint256) {
         require(epochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId, 
@@ -46,7 +42,7 @@ contract VotingRewardManager is Governed, IRewardManager {
         if (_currentRewardEpochId > currentRewardEpochId) {
             nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(_currentRewardEpochId);
             currentRewardEpochId = _currentRewardEpochId;
-            storedRewardEpochBalances[nextRewardEpochBalanceIndex] = 0;
+            storedRewardEpochBalances[nextRewardEpochBalanceIndex].reset();
         }
         _;
     }
@@ -76,12 +72,16 @@ contract VotingRewardManager is Governed, IRewardManager {
     function offerRewards(
         Offer[] calldata offers
     ) override public payable maybePushRewardBalance {
-        uint totalOffered = 0;
+        StoredBalances storage balances = storedRewardEpochBalances[nextRewardEpochBalanceIndex];
+        uint256 totalNativeOffer = 0;
         for (uint i = 0; i < offers.length; ++i) {
-            totalOffered += offers[i].amount;
+            Offer calldata offer = offers[i];
+            if (offer.currencyAddress == address(0)) {
+                totalNativeOffer += offer.amount;
+            }
+            balances.credit(offer.currencyAddress, address(this), offer.amount);
         }
-        require(msg.value == totalOffered, "total amount offered must equal value sent");
-        storedRewardEpochBalances[nextRewardEpochBalanceIndex] += msg.value;
+        require(totalNativeOffer >= msg.value, "native currency amount offered is less than value sent");
     }
  
     function claimReward(
@@ -93,14 +93,17 @@ contract VotingRewardManager is Governed, IRewardManager {
                 "can only claim rewards for previous epochs");
 
         uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(claim.epochId);
-                
-        require(claim.amount > 0,
+        StoredBalances storage balances = storedRewardEpochBalances[previousRewardEpochBalanceIndex];
+        address addr = claim.currencyAddress;
+        uint256 amt = claim.amount;
+
+        require(amt > 0,
                 "claimed amount must be greater than 0");
 
-        require(claim.amount <= storedRewardEpochBalances[previousRewardEpochBalanceIndex],
+        require(amt <= balances.currencyBalance(addr),
                 "claimed amount greater than reward balance");
 
-        bytes32 claimHash = _hashClaimReward(_data);
+        bytes32 claimHash = _data.hash();
 
         require(!processedRewardClaims[claimHash],
                 "reward has already been claimed");
@@ -109,17 +112,6 @@ contract VotingRewardManager is Governed, IRewardManager {
                 "Merkle proof for reward failed");
 
         processedRewardClaims[claimHash] = true;
-        storedRewardEpochBalances[previousRewardEpochBalanceIndex] -= claim.amount;
-
-        /* solhint-disable avoid-low-level-calls */
-        (bool success, ) = claim.voterAddress.call{value: claim.amount}("");
-        /* solhint-enable avoid-low-level-calls */
-        require(success, "failed to transfer claimed balance");
-    }
-
-    function _hashClaimReward(
-        ClaimReward calldata claim
-    ) private pure returns (bytes32) {
-        return keccak256(abi.encode(claim.claimRewardBody));
+        balances.debit(addr, claim.voterAddress, amt);
     }
 }
