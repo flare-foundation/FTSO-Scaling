@@ -1,8 +1,9 @@
 import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
-import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffer, VoterWithWeight } from "./voting-interfaces";
+import { ClaimReward, ClaimRewardBody, MedianCalculationResult, Offer, VoterWithWeight } from "./voting-interfaces";
 import BN from "bn.js";
 import Web3 from "web3";
+import { feedId } from "./voting-utils";
 
 
 export class RewardCalculatorForPriceEpoch {
@@ -52,7 +53,7 @@ export class RewardCalculatorForPriceEpoch {
    * @param pctShare 
    * @returns 
    */
-  calculateClaimsForOffer(offer: RewardOffer, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
+  calculateClaimsForOffer(offer: Offer, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
     let voterRecords: VoterWithWeight[] = [];
@@ -72,7 +73,7 @@ export class RewardCalculatorForPriceEpoch {
       voterRecords.push({
         voterAddress,
         weight: calculationResult.weights![i],
-        iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(offer.symbol, this.priceEpoch, voterAddress)),
+        iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(feedId(offer), this.priceEpoch, voterAddress)),
         pct: price > lowPCT && price < highPCT
       });
     }
@@ -113,15 +114,14 @@ export class RewardCalculatorForPriceEpoch {
     }
 
     let rewardClaims: ClaimReward[] = [];
-
     for (let voterRecord of voterRecords) {
       let reward = voterRecord.weight.mul(offer.amount).div(totalRewardedWeight);
       let claimReward = {
         merkleProof: [],
         claimRewardBody: {
           amount: reward,
-          currencyAddress: offer.tokenContract,
-          voterAddress: voterRecord.voterAddress,
+          currencyAddress: offer.currencyAddress,
+          voterAddress: voterRecord.voterAddress,  // it is already lowercased
           epochId: this.priceEpoch,
           // offerTransactionId: offer.transactionId,
         } as ClaimRewardBody
@@ -186,7 +186,8 @@ export class RewardCalculatorForPriceEpoch {
   claimsForSymbols(calculationResults: MedianCalculationResult[], iqrShare: BN, pctShare: BN): ClaimReward[] {
     let claims: ClaimReward[] = [];
     for (let calculationResult of calculationResults) {
-      for (let offer of calculationResult.offers!) {
+      let priceEpochOffers = this.rewardCalculator.offersForPriceEpochAndSymbol(this.priceEpoch, calculationResult.feed);
+      for (let offer of priceEpochOffers) {
         claims = this.mergeClaims(claims, this.calculateClaimsForOffer(offer, calculationResult, iqrShare, pctShare));
       }
     }

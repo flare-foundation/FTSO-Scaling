@@ -1,14 +1,22 @@
-export interface PriceFeedConfig {
+import { Feed } from "../voting-interfaces";
+import { IPriceFeed } from "./IPriceFeed";
+
+export interface RandomPriceFeedConfig {
   period: number;
   factor: number;
   variance: number;
+  feedInfo: Feed;
 }
 
-export class PriceFeed {
-  priceFeedConfig!: PriceFeedConfig;
+export class RandomPriceFeed implements IPriceFeed{
+  priceFeedConfig!: RandomPriceFeedConfig;
 
-  constructor(config: PriceFeedConfig) {
+  constructor(config: RandomPriceFeedConfig) {
     this.priceFeedConfig = config;
+  }
+
+  getFeedInfo(): Feed {
+    return this.priceFeedConfig.feedInfo;
   }
 
   getPriceForEpoch(epochId: number) {

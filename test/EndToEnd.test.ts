@@ -7,10 +7,10 @@ import chaiBN from "chai-bn";
 import fs from "fs";
 import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
-import { PriceFeedConfig } from "../src/PriceFeed";
+import { RandomPriceFeed, RandomPriceFeedConfig } from "../src/price-feeds/RandomPriceFeed";
 import { TruffleProvider } from "../src/providers/TruffleProvider";
-import { Feed, FeedRewards } from "../src/voting-interfaces";
-import { ZERO_ADDRESS, feedId, moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
+import { Feed, Offer } from "../src/voting-interfaces";
+import { ZERO_ADDRESS, feedId, hexlifyBN, moveToNextEpochStart, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
@@ -37,6 +37,10 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   const REWARD_EPOCH_DURATION = 10;
   const THRESHOLD = 5000;
   const NUMBER_OF_FEEDS = 8;
+  const IQR_SHARE = toBN(70);
+  const PCT_SHARE = toBN(30);
+  const DEFAULT_REWARD_BELT_PPM = toBN(10000); // 1%
+
   let WEIGHT = toBN(1000);
 
   let firstEpochStartSec: BN;
@@ -93,11 +97,11 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // price oracle configuration
     await priceOracle.setVotingManager(votingManager.address);
     await priceOracle.setVoting(voting.address);
-    await priceOracle.setNumberOfFeedsForRewardEpoch(1, NUMBER_OF_FEEDS);
-    for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
-      let symbol = `FL${i}`;
-      await priceOracle.setSlotForRewardEpoch(1, i, governance, web3.utils.rightPad(web3.utils.fromAscii(symbol), 8));
-    }
+    // await priceOracle.setNumberOfFeedsForRewardEpoch(1, NUMBER_OF_FEEDS);
+    // for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
+    //   let symbol = `FL${i}`;
+    //   await priceOracle.setSlotForRewardEpoch(1, i, governance, web3.utils.rightPad(web3.utils.fromAscii(symbol), 8));
+    // }
 
     // vote time configuration
     firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
@@ -116,13 +120,14 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // initialize price feed configs
     // all FTSO clients will have the same price feed configs.
     // though, each client will have different price feeds due to randomness noise
-    let priceFeedConfigs: PriceFeedConfig[] = [];
-    for (let j = 1; j <= NUMBER_OF_FEEDS; j++) {
+    let priceFeedConfigs: RandomPriceFeedConfig[] = [];
+    for (let j = 0; j < NUMBER_OF_FEEDS; j++) {
       let priceFeedConfig = {
         period: 10,
-        factor: 1000 * j,
+        factor: 1000 * (j + 1),
         variance: 100,
-      } as PriceFeedConfig;
+        feedInfo: symbols[j]
+      } as RandomPriceFeedConfig;
       priceFeedConfigs.push(priceFeedConfig);
     }
 
@@ -138,9 +143,12 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     for (let i = 1; i <= N; i++) {
       let client = new FTSOClient(wallets[i].privateKey, provider);
       await client.initialize(currentBlockNumber, undefined, web3);
-      client.initializePriceFeeds(priceFeedConfigs);
+      let priceFeedsForClient = priceFeedConfigs.map(config => new RandomPriceFeed(config));
+      client.registerPriceFeeds(priceFeedsForClient);
+      client.initializeRewardCalculator(firstRewardedPriceEpoch.toNumber(), REWARD_EPOCH_DURATION, TEST_REWARD_EPOCH, IQR_SHARE, PCT_SHARE);
       ftsoClients.push(client);
     }
+
     await moveToNextEpochStart(votingManager, firstRewardedPriceEpoch, REWARD_EPOCH_DURATION);
   });
 
@@ -149,17 +157,18 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     expect(currentRewardEpochId).to.be.bignumber.equal(toBN(TEST_REWARD_EPOCH));
   })
 
-  it("should feeds be configured", async () => {
-    let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
-    let numberOfFeeds = (await priceOracle.numberOfFeedsPerRewardEpoch(currentRewardEpochId)).toNumber();
-    expect(numberOfFeeds).to.be.equal(NUMBER_OF_FEEDS);
-    for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
-      let symbol = web3.utils.hexToAscii(await priceOracle.symbolForSlot(i, currentRewardEpochId)).replace(/\u0000/g, "");
-      expect(symbol).to.be.equal(`FL${i}`);
-      let owner = await priceOracle.slotOwnersPerRewardEpoch(currentRewardEpochId, i);
-      expect(owner).to.be.equal(governance);
-    }
-  });
+  // it("should feeds be configured", async () => {
+  //   let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
+  //   console.log("REW EP", TEST_REWARD_EPOCH, currentRewardEpochId.toNumber())
+  //   let numberOfFeeds = (await priceOracle.numberOfFeedsPerRewardEpoch(currentRewardEpochId)).toNumber();
+  //   expect(numberOfFeeds).to.be.equal(NUMBER_OF_FEEDS);
+  //   for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
+  //     let symbol = web3.utils.hexToAscii(await priceOracle.symbolForSlot(i, currentRewardEpochId)).replace(/\u0000/g, "");
+  //     expect(symbol).to.be.equal(`FL${i}`);
+  //     let owner = await priceOracle.slotOwnersPerRewardEpoch(currentRewardEpochId, i);
+  //     expect(owner).to.be.equal(governance);
+  //   }
+  // });
 
   it("should vote powers be set for the reward epoch", async () => {
     let rewardEpochId = await votingManager.getCurrentRewardEpochId();
@@ -172,44 +181,56 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     expect(await voterRegistry.thresholdForRewardEpoch(rewardEpochId)).to.be.bignumber.eq(totalWeight.mul(toBN(THRESHOLD)).div(toBN(10000)));
   });
 
+  it(`should track correct reward offers`, async () => {
+    let currentPriceEpoch = await votingManager.getCurrentEpochId();
+    let totalAmount = toBN(0);
+
+    let offersSent: Offer[] = [];
+    for (let i = 0; i < symbols.length; i++) {
+      let amount = REWARD_VALUE.add(toBN(i));
+      totalAmount = totalAmount.add(amount);
+      offersSent.push(
+        {
+          amount: amount,
+          currencyAddress: ZERO_ADDRESS,
+          offerSymbol: toBytes4(symbols[i].offerSymbol),
+          quoteSymbol: toBytes4(symbols[i].quoteSymbol),
+          trustedProviders: [accounts[1]],
+          rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
+          flrValue: amount,
+        } as Offer
+      );
+    }
+    let hexlifiedOffers = hexlifyBN(offersSent)
+    await votingRewardManager.offerRewards(hexlifiedOffers, { value: totalAmount });
+    let balance = await web3.eth.getBalance(votingRewardManager.address);
+    expect(balance).to.equal(totalAmount);
+    for (let client of ftsoClients) {
+      // client.setVerbose(true);
+      await client.processNewBlocks();
+      client.registerRewardsForRewardEpoch(TEST_REWARD_EPOCH);
+      let rewardData: Map<string, Offer[]> = client.rewardCalculator.rewardOffersBySymbol.get(TEST_REWARD_EPOCH)!;
+      for (let i = 0; i < symbols.length; i++) {
+        let offers = rewardData.get(feedId(symbols[i]))!;
+        expect(offers.length).to.equal(1);
+        expect(offers[0].amount).to.equal(REWARD_VALUE.add(toBN(i)));
+      }
+    }
+  });
+
   it("should FTSO clients prepare price feeds for the next epoch", async () => {
     await moveToNextEpochStart(votingManager);
-    let currentEpoch = (await votingManager.getCurrentEpochId()).toNumber();
-    initialPriceEpoch = currentEpoch;
+    let currentPriceEpoch = (await votingManager.getCurrentEpochId()).toNumber();
+    initialPriceEpoch = currentPriceEpoch;
     for (let client of ftsoClients) {
-      client.preparePriceFeedsForEpoch(currentEpoch);
-      let epochData = client.priceEpochData.get(currentEpoch);
+      client.preparePriceFeedsForPriceEpoch(currentPriceEpoch);
+      let epochData = client.priceEpochData.get(currentPriceEpoch);
       expect(epochData).to.not.be.undefined;
-      expect(epochData?.epochId).to.be.equal(currentEpoch);
+      expect(epochData?.epochId).to.be.equal(currentPriceEpoch);
       expect(epochData?.prices?.length).to.be.equal(NUMBER_OF_FEEDS);
       expect(epochData?.pricesHex?.length! - 2).to.be.equal(NUMBER_OF_FEEDS * 4 * 2);
       expect(epochData?.random?.length).to.be.equal(66);
       expect(epochData?.bitVote).to.be.equal("0x00");
-    }
-  });
-
-  it(`should track correct reward offers`, async () => {
-    let currentPriceEpoch = await votingManager.getCurrentEpochId();
-    await votingRewardManager.offerRewards(
-      [
-        {
-          amount: REWARD_VALUE.toNumber(),
-          currencyAddress: ZERO_ADDRESS,
-          offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
-          quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
-        }
-      ],
-      { value: REWARD_VALUE }
-    );
-    let balance = await web3.eth.getBalance(votingRewardManager.address);
-    expect(balance).to.equal(REWARD_VALUE);
-    for (let client of ftsoClients) {
-      // client.setVerbose(true);
-      await client.processNewBlocks();
-      let rewardData: FeedRewards = client.rewardEpochOffers.get(client.rewardEpochIdForPriceEpochId(currentPriceEpoch))!;
-      let offers = rewardData.get(feedId({offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL}))!;
-      expect(offers.length).to.equal(1);
-      expect(offers[0].amount).to.equal(REWARD_VALUE);
     }
   });
 
@@ -259,7 +280,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let highElasticBandPrice = [];
 
     for (let client of ftsoClients) {
-      await client.calculateResults(calculateEpoch, symbols);
+      await client.calculateResults(calculateEpoch);
       let data = client.priceEpochResults.get(calculateEpoch)!;
       finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
       quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
@@ -285,7 +306,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
   it("should FTSO client send signed message hash and finalize", async () => {
     for (let client of ftsoClients) {
-      await client.onSign(initialPriceEpoch, symbols);
+      await client.onSign(initialPriceEpoch);
     }
     let client = ftsoClients[0];
     await client.processNewBlocks();
@@ -300,17 +321,17 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
   it("should a client publish price feeds for an epoch", async () => {
     let client = ftsoClients[0];
-    let receipt = await client.publishPriceFeeds(initialPriceEpoch);
+    let receipt = await client.publishPrices(initialPriceEpoch, [...Array(NUMBER_OF_FEEDS).keys()]);
     // console.log(receipt.logs);
     for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
+      console.dir(receipt.logs[0].args)
       expectEvent(receipt, "PriceFeedPublished", {
-        epochId: toBN(initialPriceEpoch),
-        symbol: web3.utils.rightPad(web3.utils.fromAscii(`FL${i}`), 64),
-        slotId: toBN(i),
+        priceEpochId: toBN(initialPriceEpoch),
+        // offerSymbol: toBytes4(symbols[i].offerSymbol),
+        // quoteSymbol: toBytes4(symbols[i].quoteSymbol),
         price: toBN(client.priceEpochResults.get(initialPriceEpoch)!.medianData[i].data.finalMedianPrice)
       });
     }
-
   });
 
   it("should claim rewards when available", async () => {

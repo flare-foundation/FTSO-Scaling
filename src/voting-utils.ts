@@ -96,6 +96,10 @@ export function feedToBytes4(feed: Feed): Feed {
   } as Feed;
 }
 
+export function unprefixedSymbolBytes(feed: Feed) {
+  return `${toBytes4(feed.offerSymbol).slice(2)}${toBytes4(feed.quoteSymbol).slice(2)}`;
+}
+
 export function feedToText(feed: Feed): Feed {
   return {
     ...feed,
@@ -128,6 +132,8 @@ export function removeIndexFields<T>(obj: T): T {
 export function convertOfferFromWeb3Response(offer: Offer): Offer {
   let tmp = feedToText(removeIndexFields(offer)) as Offer;
   tmp.amount = toBN(tmp.amount);
+  tmp.flrValue = toBN(tmp.flrValue);
+  tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
   return tmp;
 }
 

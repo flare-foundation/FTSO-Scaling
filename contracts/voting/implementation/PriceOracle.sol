@@ -11,35 +11,26 @@ contract PriceOracle is Governed {
 
     Voting public voting;
 
-    // multiple of 8 (one bytes32 = 8 x 4-byte prices)
-    // rewardEpochId => numberOfFeeds
-    mapping(uint256 => uint256) public numberOfFeedsPerRewardEpoch;
+    mapping(bytes32 => AnchorPrice) public anchorPrices;
 
-    // epochId => slotGroupId => symbol
-    mapping(uint256 => mapping(uint256 => bytes32))
-        public symbolsPerRewardEpoch;
-
-    // rewardEpochId => slotId => slotOwner
-    mapping(uint256 => mapping(uint256 => address))
-        public slotOwnersPerRewardEpoch;
-
-    // rewardEpochId => slotGroupId => slotBytes
-    mapping(uint256 => mapping(uint256 => bytes32))
-        public priceFeedsPerPriceEpoch;
-
-    // epochId => timestamp
-    mapping(uint256 => uint256) public publicationTimes;
+    struct AnchorPrice {
+        uint32 price;
+        uint32 timestamp;
+        uint32 price1;
+        uint32 timestamp1;
+        uint32 price2;
+        uint32 timestamp2;
+        uint32 priceEpochId;
+    }
 
     // events
     event PriceFeedPublished(
-        uint256 indexed epochId,
-        bytes4 indexed symbol,
-        uint256 indexed slotId,
+        uint256 indexed priceEpochId,
+        bytes4 indexed offerSymbol,
+        bytes4 indexed quoteSymbol,
         uint32 price,
-        uint256 timestamp
+        uint32 timestamp
     );
-
-    uint256 lastPublishedPriceEpochId;
 
     constructor(address _governance) Governed(_governance) {}
 
@@ -53,109 +44,82 @@ contract PriceOracle is Governed {
         voting = _voting;
     }
 
-    function setNumberOfFeedsForRewardEpoch(
-        uint256 _rewardEpochId,
-        uint256 _numberOfFeeds
-    ) public onlyGovernance {
-        require(
-            votingManager.getCurrentRewardEpochId() < _rewardEpochId,
-            "rewardEpochId too low"
-        );
-        require(_numberOfFeeds % 8 == 0, "numberOfFeeds must be multiple of 8");
-        numberOfFeedsPerRewardEpoch[_rewardEpochId] = _numberOfFeeds;
-    }
-
-    function symbolForSlot(
-        uint256 _slotId,
-        uint256 _rewardEpochId
-    ) public view returns (bytes4) {
-        require(
-            _slotId < numberOfFeedsPerRewardEpoch[_rewardEpochId],
-            "slotId too high"
-        );
-        return
-            bytes4(
-                symbolsPerRewardEpoch[_rewardEpochId][_slotId / 8] <<
-                    (32 * (_slotId % 8))
-            );
-    }
-
-    function setSlotForRewardEpoch(
-        uint256 _rewardEpochId,
-        uint256 _slotId,
-        address _slotOwner,
-        bytes4 _symbol
-    ) public onlyGovernance {
-        require(
-            votingManager.getCurrentRewardEpochId() < _rewardEpochId,
-            "rewardEpochId too low"
-        );
-        require(
-            _slotId < numberOfFeedsPerRewardEpoch[_rewardEpochId],
-            "slotId too high"
-        );
-        slotOwnersPerRewardEpoch[_rewardEpochId][_slotId] = _slotOwner;
-        bytes32 zeroMask = ~bytes32(
-            uint256(0xffffffff) << (32 * (7 - (_slotId % 8)))
-        );
-        bytes32 symbolMask = bytes32(_symbol) >> (32 * (_slotId % 8));
-
-        symbolsPerRewardEpoch[_rewardEpochId][_slotId / 8] =
-            (symbolsPerRewardEpoch[_rewardEpochId][_slotId / 8] & zeroMask) |
-            symbolMask;
-    }
-
     function publishPrices(
-        bytes32 dataMerkleRoot,
-        bytes calldata _priceMessage
+        bytes32 _dataMerkleRoot, // one step Merkle proof
+        uint32 _priceEpochId,
+        bytes calldata _allPrices,
+        bytes calldata _allSymbols,
+        uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) public {
-        require(_priceMessage.length >= 40, "invalid price message");
-        uint256 epochId;
-        uint256 rewardEpoch;
-        assembly {
-            epochId := shr(192, calldataload(100))
-        }
-        rewardEpoch = votingManager.getRewardEpochIdForEpoch(epochId);
+        // hash for prices includes (priceEpochId, allPrices, allSymbols)
         require(
-            _priceMessage.length - 8 ==
-                numberOfFeedsPerRewardEpoch[rewardEpoch] * 4,
-            "invalid number of prices"
+            _allPrices.length * 2 == _allSymbols.length,
+            "lengths do not match"
         );
-        require(epochId > lastPublishedPriceEpochId, "epochId too low");
+        bytes32 priceHash = keccak256(
+            bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols)
+        );
 
-        bytes32 priceHash = keccak256(_priceMessage);
-        bytes32 merkleRoot = dataMerkleRoot;
+        bytes32 merkleRoot = _dataMerkleRoot;
         if (merkleRoot < priceHash) {
             merkleRoot = keccak256(abi.encode(merkleRoot, priceHash));
         } else {
             merkleRoot = keccak256(abi.encode(priceHash, merkleRoot));
         }
-        require(merkleRoot == voting.getMerkleRoot(epochId), "invalid data");
-        for (uint256 i = 0; i < numberOfFeedsPerRewardEpoch[rewardEpoch] / 8; i++) {
-            bytes32 pricesForSlot;
-            assembly {
-                pricesForSlot := calldataload(add(108, mul(32, i)))
-            }
-            priceFeedsPerPriceEpoch[epochId][i] = pricesForSlot;
-            for (uint256 j = 0; j < 8; j++) {
-                bytes4 symbol = bytes4(
-                    symbolsPerRewardEpoch[rewardEpoch][i] << (32 * j)
-                );
-                bytes32 priceShift = pricesForSlot >> (32 * (7 - j));
-                uint32 price;
-                assembly {
-                    price := priceShift
-                }
-                emit PriceFeedPublished(
-                    epochId,
-                    symbol,
-                    (i * 8) + j,
+        require(
+            merkleRoot == voting.getMerkleRoot(_priceEpochId),
+            "invalid data"
+        );
+        for (uint256 i = 0; i < _symbolsIndicesToPublish.length; i++) {
+            uint256 symbolIndex = _symbolsIndicesToPublish[i];
+            bytes8 symbol = bytes8(_allSymbols[symbolIndex * 8]);
+            uint32 price = uint32(bytes4(_allPrices[symbolIndex * 4]));
+
+            if (
+                publishAnchorPrice(
+                    anchorPrices[symbol],
+                    _priceEpochId,
                     price,
-                    block.timestamp
+                    uint32(block.timestamp)
+                )
+            ) {
+                emit PriceFeedPublished(
+                    _priceEpochId,
+                    bytes4(_allSymbols[symbolIndex * 8]),
+                    bytes4(_allSymbols[symbolIndex * 8 + 4]),
+                    price,
+                    uint32(block.timestamp)
                 );
             }
         }
-        publicationTimes[epochId] = block.timestamp;
-        lastPublishedPriceEpochId = epochId;
+    }
+
+    function anchorPriceShift(AnchorPrice storage _anchorPrice) internal {
+        _anchorPrice.price2 = _anchorPrice.price1;
+        _anchorPrice.timestamp2 = _anchorPrice.timestamp1;
+        _anchorPrice.price1 = _anchorPrice.price;
+        _anchorPrice.timestamp1 = _anchorPrice.timestamp;
+    }
+
+    function publishAnchorPrice(
+        AnchorPrice storage _anchorPrice,
+        uint32 _priceEpochId,
+        uint32 _price,
+        uint32 _timestamp
+    ) internal returns (bool) {
+        uint32 currentPriceEpochId = _anchorPrice.priceEpochId;
+        if (currentPriceEpochId >= _priceEpochId) {
+            return false;
+        }
+        uint256 numberOfShifts = _priceEpochId - currentPriceEpochId;
+        numberOfShifts = numberOfShifts > 2 ? 2 : numberOfShifts;
+        while (numberOfShifts > 0) {
+            anchorPriceShift(_anchorPrice);
+            numberOfShifts--;
+        }
+        _anchorPrice.price = _price;
+        _anchorPrice.timestamp = _timestamp;
+        _anchorPrice.priceEpochId = _priceEpochId;
+        return true;
     }
 }

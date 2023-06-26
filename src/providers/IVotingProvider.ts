@@ -39,7 +39,7 @@ export abstract class IVotingProvider {
    abstract revealBitvote(epochData: EpochData, from?: string | undefined): Promise<any>;
    abstract signResult(epochId: number, merkleRoot: string, signature: BareSignature, from?: string): Promise<any>;
    abstract finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[], from?: string): Promise<any>;
-   abstract publishPrices(epochResult: EpochResult, from?: string | undefined): Promise<any>;
+   abstract publishPrices(epochResult: EpochResult, symbolIndices: number[], from?: string | undefined): Promise<any>;
    abstract voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]>;
 
    abstract getBlockNumber(): Promise<number>;

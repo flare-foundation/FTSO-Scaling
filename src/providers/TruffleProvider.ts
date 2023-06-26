@@ -2,10 +2,10 @@ import BN from "bn.js";
 import fs from "fs";
 import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { BareSignature, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import { IVotingProvider } from "./IVotingProvider";
 import { convertOfferFromWeb3Response } from "../voting-utils";
+import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 
 let VotingRewardManager = artifacts.require("VotingRewardManager");
 let Voting = artifacts.require("Voting");
@@ -48,11 +48,11 @@ export class TruffleProvider extends IVotingProvider {
       this.priceOracleContract = await PriceOracle.at(this.priceOracleContractAddress);
       this.votingManagerContract = await VotingManager.at(this.votingManagerContractAddress);
 
-      this.firstEpochStartSec = await this.votingManagerContract.BUFFER_TIMESTAMP_OFFSET();
-      this.epochDurationSec = await this.votingManagerContract.BUFFER_WINDOW();
-      this.firstRewardedPriceEpoch = await this.votingManagerContract.firstRewardedPriceEpoch();
-      this.rewardEpochDurationInEpochs = await this.votingManagerContract.rewardEpochDurationInEpochs();
-      this.signingDurationSec = await this.votingManagerContract.signingDurationSec();
+      this.firstEpochStartSec = (await this.votingManagerContract.BUFFER_TIMESTAMP_OFFSET()).toNumber();
+      this.epochDurationSec = (await this.votingManagerContract.BUFFER_WINDOW()).toNumber();
+      this.firstRewardedPriceEpoch = (await this.votingManagerContract.firstRewardedPriceEpoch()).toNumber();
+      this.rewardEpochDurationInEpochs = (await this.votingManagerContract.rewardEpochDurationInEpochs()).toNumber();
+      this.signingDurationSec = (await this.votingManagerContract.signingDurationSec()).toNumber();
    }
 
    async claimReward(claim: ClaimReward): Promise<any> {
@@ -85,8 +85,9 @@ export class TruffleProvider extends IVotingProvider {
       return this.votingContract.finalize(epochId, mySignatureHash, signatures, { from });
    }
 
-   async publishPrices(epochResult: EpochResult, from?: string | undefined): Promise<any> {
-      return this.priceOracleContract.publishPrices(epochResult.dataMerkleRoot, epochResult.fullPriceMessage, { from });
+   async publishPrices(epochResult: EpochResult, symbolIndices: number[], from?: string | undefined): Promise<any> {
+      console.dir(epochResult);
+      return this.priceOracleContract.publishPrices(epochResult.dataMerkleRoot, epochResult.priceEpochId, epochResult.priceMessage, epochResult.symbolMessage, symbolIndices, { from });
    }
 
    async voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]> {

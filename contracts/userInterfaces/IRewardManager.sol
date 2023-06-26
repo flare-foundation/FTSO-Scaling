@@ -25,6 +25,9 @@ abstract contract IRewardManager {
         address currencyAddress; // 0 for native currency
         bytes4 quoteSymbol;
         bytes4 offerSymbol;
+        address[] trustedProviders; // list of trusted providers
+        uint256 rewardBeltPPM;  // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
+        uint256 flrValue;
     }
 
     function setVoting(address votingContract) external virtual;

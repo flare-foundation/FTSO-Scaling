@@ -1,13 +1,15 @@
 import { toBN } from "../test-utils/utils/test-helpers";
+import { FTSOClient } from "./FTSOClient";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
-import { ClaimReward, MedianCalculationResult, Offer } from "./voting-interfaces";
+import { ClaimReward, Feed, FeedValue, MedianCalculationResult, Offer } from "./voting-interfaces";
 import { feedId, hashClaimReward } from "./voting-utils";
 
 /**
  * Reward calculator for sequence of reward epochs.
  */
 export class RewardCalculator {
+  
   ////////////// Reward epoch settings //////////////
   // First rewarded price epoch
   firstRewardedPriceEpoch: number = 0;
@@ -43,6 +45,10 @@ export class RewardCalculator {
   priceEpochClaims: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
   // rewardEpochId => list of cumulative claims
   rewardEpochCumulativeRewards: Map<number, ClaimReward[]> = new Map<number, ClaimReward[]>();
+  // rewardEpochId => canonical list of feeds in the reward epoch
+  feedSequenceForRewardEpoch: Map<number, FeedValue[]> = new Map<number, FeedValue[]>();
+  // rewardEpochId => feedId => index of the feed in the reward epoch
+  indexForFeedInRewardEpoch: Map<number, Map<string, number>> = new Map<number, Map<string, number>>();
 
   ///////////// IQR and PCT weights //////////////
   // Should be nominators of fractions with the same denominator. Eg. if in BIPS with denominator 100, then 30 means 30%
@@ -52,36 +58,29 @@ export class RewardCalculator {
   // PCT weight
   pctShare: BN = toBN(0);
 
+  client: FTSOClient;
+  
   constructor(
+    client: FTSOClient,
     firstRewardedPriceEpoch: number,
     rewardEpochDurationInEpochs: number,    
     initialRewardEpoch: number,
     iqrShare: BN,
     pctShare: BN
   ) {
+    this.client = client;
     this.initialRewardEpoch = initialRewardEpoch;
     this.firstRewardedPriceEpoch = firstRewardedPriceEpoch;
     this.rewardEpochDurationInEpochs = rewardEpochDurationInEpochs;
     this.iqrShare = iqrShare;
     this.pctShare = pctShare;
-  }
 
-  /**
-   * Initializes the reward calculator.
-   */
-  public async initialize() {
-    if(this.initialized) {
-      return;
-    }
-
-    // Initial processing boundaries
-    this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
+    this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch + 1; // ???
 
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
     this.currentRewardEpoch = this.initialRewardEpoch;
     this.firstPriceEpochInNextRewardEpoch = this.initialPriceEpoch + this.rewardEpochDurationInEpochs;
-
     this.initialized = true;
   }
 
@@ -96,7 +95,7 @@ export class RewardCalculator {
       throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
     }
     this.rewardOffers.set(rewardEpoch, rewardOffers);
-    this.buildRewardOffersForRewardEpoch(rewardEpoch);
+    this.buildSymbolToOffersMaps(rewardEpoch);
     this.buildSymbolSequence(rewardEpoch)
   }
 
@@ -110,6 +109,17 @@ export class RewardCalculator {
       throw new Error("Reward calculator is not initialized");
     }
     return Math.floor((priceEpoch - this.firstRewardedPriceEpoch) / this.rewardEpochDurationInEpochs);
+  }
+
+  public getFeedSequenceForRewardEpoch(rewardEpoch: number): FeedValue[] {
+    if(!this.initialized) {
+      throw new Error("Reward calculator is not initialized");
+    }
+    let result = this.feedSequenceForRewardEpoch.get(rewardEpoch);
+    if(result === undefined) {
+      throw new Error(`Feed sequence is not defined for reward epoch ${rewardEpoch}`);
+    }
+    return result;
   }
 
   /**
@@ -144,11 +154,24 @@ export class RewardCalculator {
     } as Offer;
   }
 
+  public offersForPriceEpochAndSymbol(priceEpoch: number, feed: Feed): Offer[] {
+    let rewardEpoch = this.rewardEpochIdForPriceEpoch(priceEpoch);
+    let offersBySymbol = this.rewardOffersBySymbol.get(rewardEpoch);
+    if(offersBySymbol === undefined) {
+      throw new Error(`Reward offers are not defined for reward epoch ${rewardEpoch}`);
+    }
+    let offers = offersBySymbol.get(feedId(feed));
+    if(offers === undefined) {
+      throw new Error(`Reward offers are not defined for symbol ${feedId} in reward epoch ${rewardEpoch}`);
+    }
+    return offers.map(offer => this.rewardOfferForPriceEpoch(priceEpoch, offer));
+  }
+
   /**
    * Rearranges the reward offers into a map of reward offers by symbol.
    * @param rewardEpoch 
    */
-  private buildRewardOffersForRewardEpoch(rewardEpoch: number) {
+  private buildSymbolToOffersMaps(rewardEpoch: number) {
     if (this.rewardOffersBySymbol.has(rewardEpoch)) {
       throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
     }
@@ -167,11 +190,53 @@ export class RewardCalculator {
     }
     this.rewardOffersBySymbol.set(rewardEpoch, result);
   }
-
+ 
   private buildSymbolSequence(rewardEpoch: number) {
-    // TODO: implement
+    if(this.feedSequenceForRewardEpoch.has(rewardEpoch)) {
+      throw new Error(`Feed sequence is already defined for reward epoch ${rewardEpoch}`);
+    }
+    let rewardOffers = this.rewardOffers.get(rewardEpoch);
+    if(rewardOffers === undefined) {
+      throw new Error(`Reward offers are not defined for reward epoch ${rewardEpoch}`);
+    }
+    let feedValues = new Map<string, FeedValue>();
+    for(let offer of rewardOffers) {
+      let feedValue = feedValues.get(feedId(offer));
+      if(feedValue === undefined) {
+        feedValue = {
+          feedId: feedId(offer),
+          offerSymbol: offer.offerSymbol,
+          quoteSymbol: offer.quoteSymbol,
+          flrValue: toBN(0)        
+        };
+        feedValues.set(feedValue.feedId, feedValue);
+      }
+      feedValue.flrValue = feedValue.flrValue.add(offer.flrValue);
+    }
+
+    let feedSequence = Array.from(feedValues.values());
+    feedSequence.sort((a: FeedValue, b: FeedValue) => {
+      // sort decreasing by value and on same value increasing by feedId
+      if(a.flrValue.lt(b.flrValue)) {
+        return 1;
+      } else if(a.flrValue.gt(b.flrValue)) {
+        return -1;
+      }
+      if(feedId(a) < feedId(b)) {
+        return -1;
+      } else if(feedId(a) > feedId(b)) {
+        return 1;
+      }
+      return 0;
+    });
+    this.feedSequenceForRewardEpoch.set(rewardEpoch, feedSequence);
+    let indexForFeed = new Map<string, number>();
+    for(let i = 0; i < feedSequence.length; i++) {
+      indexForFeed.set(feedSequence[i].feedId, i);
+    }
+    this.indexForFeedInRewardEpoch.set(rewardEpoch, indexForFeed);
   }
-  
+
   /**
    * Calculates the claims for the given price epoch.
    * These claims are then stored for each price epoch in the priceEpochClaims map.
@@ -186,9 +251,9 @@ export class RewardCalculator {
    * @param priceEpoch 
    * @param calculationResults 
    */
-  async calculateClaimsForPriceEpoch(priceEpoch: number, calculationResults: MedianCalculationResult[]) {
+  calculateClaimsForPriceEpoch(priceEpoch: number, calculationResults: MedianCalculationResult[]) {
     if (priceEpoch !== this.currentUnprocessedPriceEpoch) {
-      throw new Error("Price epoch is not the current unprocessed price epoch");
+      throw new Error(`Price epoch ${priceEpoch} is not the current unprocessed price epoch ${this.currentUnprocessedPriceEpoch}`);
     }
     let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpoch, this);
 
@@ -215,14 +280,33 @@ export class RewardCalculator {
       }
       let cumulativeClaims = epochCalculator.mergeClaims(previousClaims, claims);
       this.priceEpochClaims.set(priceEpoch, claims);
-      // last (claiming) cummulative claim records
+      // last (claiming) cumulative claim records
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, cumulativeClaims);
       this.currentRewardEpoch++;
-      // initialize empty cummulative claims for the new reward epoch
+      // initialize empty cumulative claims for the new reward epoch
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, []);
     }
   }
 
+  getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward> {
+    if(!this.initialized) {
+      throw new Error("Reward calculator is not initialized");
+    }
+    let result = this.rewardEpochCumulativeRewards.get(this.rewardEpochIdForPriceEpoch(priceEpoch));
+    if(result === undefined) {
+      throw new Error(`Reward mapping is not defined for price epoch ${priceEpoch}`);
+    }
+    let rewardMapping = new Map<string, ClaimReward>();
+    for(let claim of result) {
+      let address = claim.claimRewardBody.voterAddress;
+      if(rewardMapping.has(address)) {
+        throw new Error(`Duplicate claim for address ${address}`);
+      }
+      rewardMapping.set(address, claim);
+    }
+    return rewardMapping;
+  }
+  
   /**
    * Calculates the merkle tree for the given price epoch.
    * @param priceEpoch 

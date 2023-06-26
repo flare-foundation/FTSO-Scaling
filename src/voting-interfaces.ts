@@ -20,12 +20,15 @@ export interface Offer extends Feed {
   currencyAddress: string;
   priceEpochId?: number;
   transactionId?: string;
-  trustedProviders?: string[]; // list of trusted providers
-  rewardBeltPPM?: number; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
-  value: BN;   // Value of the offer in the native currency (calculated on offer submission) 
+  trustedProviders: string[]; // list of trusted providers
+  rewardBeltPPM: BN; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
+  flrValue: BN;   // Value of the offer in the native currency (calculated on offer submission) 
 }
 
-export type FeedRewards = Map<string, Offer[]>;
+export interface FeedValue extends Feed {
+  feedId: string;
+  flrValue: BN;
+}
 
 export interface BareSignature {
   v: number;
@@ -66,27 +69,26 @@ export interface EpochData {
   bitVote?: string;
 }
 
-export type EpochRewards = Map<string, ClaimReward>;
-
 export interface EpochResult {
-  epochId: number;
-  medianData: any[];
+  priceEpochId: number;
+  medianData: MedianCalculationResult[];
   priceMessage: string;
+  symbolMessage: string;
   fullPriceMessage: string;
   dataMerkleRoot: string;
   dataMerkleProof: string[] | null;
-  rewards: EpochRewards;
+  // voter => claim
+  rewards: Map<string, ClaimReward>;
   fullMessage: string;
   merkleRoot: string;
 }
 
 export interface MedianCalculationResult {
-  symbol: Feed;  
+  feed: Feed;  
   voters?: string[];
   prices?: number[];
   data: MedianCalculationSummary;
   weights: BN[];
-  offers?: Offer[];
 }
 
 export interface MedianCalculationSummary {

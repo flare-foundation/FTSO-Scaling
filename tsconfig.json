@@ -13,10 +13,10 @@
     ]
   },
   "include": [
-    "./src",
+    "./src/**/*",
     "./test", 
-    "./typechain", 
-    "./typechain-truffle", 
+    "./typechain/**/*", 
+    "./typechain-truffle/**/*", 
     "./typechain-web3", 
     "./test-utils/types"
   ],
