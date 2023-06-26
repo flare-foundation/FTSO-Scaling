@@ -288,7 +288,7 @@ export class RewardCalculator {
     }
   }
 
-  getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward> {
+  getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward[]> {
     if(!this.initialized) {
       throw new Error("Reward calculator is not initialized");
     }
@@ -296,13 +296,20 @@ export class RewardCalculator {
     if(result === undefined) {
       throw new Error(`Reward mapping is not defined for price epoch ${priceEpoch}`);
     }
-    let rewardMapping = new Map<string, ClaimReward>();
+    let rewardMapping = new Map<string, ClaimReward[]>();
+    let currencyAddresses = new Map<string, Set<string>>();
     for(let claim of result) {
       let address = claim.claimRewardBody.voterAddress;
-      if(rewardMapping.has(address)) {
-        throw new Error(`Duplicate claim for address ${address}`);
+      let currencyAddress = claim.claimRewardBody.currencyAddress;
+      let addressClaims = rewardMapping.get(address) || [];
+      let addressCurrencyAddresses = currencyAddresses.get(address) || new Set<string>();
+      rewardMapping.set(address, addressClaims);
+      currencyAddresses.set(address, addressCurrencyAddresses);
+      addressClaims.push(claim);
+      addressCurrencyAddresses.add(currencyAddress);
+      if(addressClaims.length !== addressCurrencyAddresses.size) {
+        throw new Error(`Duplicate claim for ${address} and ${currencyAddress}`);
       }
-      rewardMapping.set(address, claim);
     }
     return rewardMapping;
   }

@@ -78,7 +78,7 @@ export interface EpochResult {
   dataMerkleRoot: string;
   dataMerkleProof: string[] | null;
   // voter => claim
-  rewards: Map<string, ClaimReward>;
+  rewards: Map<string, ClaimReward[]>;
   fullMessage: string;
   merkleRoot: string;
 }

@@ -30,8 +30,7 @@ export class FTSOClient {
   priceEpochSignatures = new Map<number, Map<string, SignatureData>>();
   priceEpochData = new Map<number, EpochData>();
   priceEpochResults = new Map<number, EpochResult>();
-  // rewardEpoch => feeId => offers
-  // rewardEpochOffers = new Map<number, Map<string, Offer[]>>();
+
   rewardEpochOffers = new Map<number, Offer[]>();
   rewardEpochOffersClosed = new Map<number, boolean>();
 
@@ -105,7 +104,7 @@ export class FTSOClient {
     if (!rewardOffers) {
       throw new Error(`Reward offers for reward epoch ${rewardEpochId} not found`);
     }
-    if(this.rewardEpochOffersClosed.get(rewardEpochId)) {
+    if (this.rewardEpochOffersClosed.get(rewardEpochId)) {
       throw new Error("Reward epoch is already closed");
     }
     this.rewardCalculator.setRewardOffers(rewardEpochId, rewardOffers);
@@ -197,8 +196,8 @@ export class FTSOClient {
   private extractOffers(tx: TxData): void {
     let offers: Offer[] = this.provider.extractOffers(tx);
     let rewardEpochId = this.rewardEpochIdForPriceEpochId(this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!));
-    if(offers && offers.length > 0) {
-      if(this.rewardEpochOffersClosed.get(rewardEpochId)) {
+    if (offers && offers.length > 0) {
+      if (this.rewardEpochOffersClosed.get(rewardEpochId)) {
         throw new Error("Reward epoch is closed");
       }
     }
@@ -397,16 +396,16 @@ export class FTSOClient {
     //   ]
     // ))
     let clientRewardHash: string | null = null;
-    let rewardClaimHashes = [...rewards.values()].map((value) => {
-      let hash = hashClaimReward(value, this.provider.abiForName.get("claimRewardBodyDefinition")!);
-      if (value.claimRewardBody.voterAddress.toLowerCase() === this.wallet.address.toLowerCase()) { clientRewardHash = hash; }
-      return hash;
-    });
+    let rewardClaimHashes: string[] = [];
+    for (let offerList of rewards.values()) {
+      for (let offer of offerList) {
+        let hash = hashClaimReward(offer, this.provider.abiForName.get("claimRewardBodyDefinition")!);
+        rewardClaimHashes.push(hash);
+      }
+    }
+
     let dataMerkleTree = new MerkleTree(rewardClaimHashes);
     let dataMerkleRoot = dataMerkleTree.root!;
-
-
-
 
     let priceMessage = "";
     let symbolMessage = "";
@@ -495,14 +494,17 @@ export class FTSOClient {
 
   async claimReward(epochId: number) {
     let result = this.priceEpochResults.get(epochId)!;
-    let rewardClaim = result.rewards.get(this.wallet.address.toLowerCase());
-    let proof = result.dataMerkleProof;
-    if (rewardClaim && proof) {
-      rewardClaim.merkleProof = proof;
-      return this.provider.claimReward(rewardClaim);
-    }
-    else {
-      return null;
+
+    let rewardClaims = result.rewards.get(this.wallet.address.toLowerCase()) || [];
+    for (let rewardClaim of rewardClaims) {
+      let proof = result.dataMerkleProof;
+      if (rewardClaim && proof) {
+        rewardClaim.merkleProof = proof;
+        return this.provider.claimReward(rewardClaim);
+      }
+      else {
+        return null;
+      }
     }
   }
 

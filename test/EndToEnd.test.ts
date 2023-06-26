@@ -14,6 +14,7 @@ import { ZERO_ADDRESS, feedId, hexlifyBN, moveToNextEpochStart, toBytes4, unpref
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
+import { DummyERC20Instance } from "../typechain-truffle/contracts/testSrc/DummyERC20";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -21,6 +22,7 @@ const VoterRegistry = artifacts.require("VoterRegistry");
 const VotingManager = artifacts.require("VotingManager");
 const VotingRewardManager = artifacts.require("VotingRewardManager");
 const PriceOracle = artifacts.require("PriceOracle");
+const DummyERC20 = artifacts.require("DummyERC20");
 
 describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let voting: VotingInstance;
@@ -28,6 +30,9 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let votingManager: VotingManagerInstance;
   let votingRewardManager: VotingRewardManagerInstance;
   let priceOracle: PriceOracleInstance;
+
+  let dummyCoin1: DummyERC20Instance;
+  let dummyCoin2: DummyERC20Instance;
 
   let governance: string;
   let firstRewardedPriceEpoch: BN;
@@ -39,7 +44,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   const NUMBER_OF_FEEDS = 8;
   const IQR_SHARE = toBN(70);
   const PCT_SHARE = toBN(30);
-  const DEFAULT_REWARD_BELT_PPM = toBN(10000); // 1%
+  const DEFAULT_REWARD_BELT_PPM = toBN(500000); // 50%
 
   let WEIGHT = toBN(1000);
 
@@ -71,6 +76,12 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     voting = await Voting.new(voterRegistry.address, votingManager.address);
     priceOracle = await PriceOracle.new(governance);
     votingRewardManager = await VotingRewardManager.new(governance);
+
+    // Dummy ERC20 currencies
+    dummyCoin1 = await DummyERC20.new("DummyCoin1", "DC1");
+    dummyCoin2 = await DummyERC20.new("DummyCoin2", "DC2");
+    await dummyCoin1.mint(governance, REWARD_VALUE);
+    await dummyCoin2.mint(governance, REWARD_VALUE);
 
     // Reward epoch configuration
     firstRewardedPriceEpoch = await votingManager.getCurrentEpochId();
@@ -152,6 +163,15 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     await moveToNextEpochStart(votingManager, firstRewardedPriceEpoch, REWARD_EPOCH_DURATION);
   });
 
+  it(`should mint dummy ERC20 currencies`, async () => {
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      let totalSupply = await coin.totalSupply();
+      let accountBalance = await coin.balanceOf(governance);
+      expect(totalSupply).to.equal(REWARD_VALUE);
+      expect(accountBalance).to.equal(REWARD_VALUE);
+    }
+  })
+
   it(`should reward epoch be ${TEST_REWARD_EPOCH}`, async () => {
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
     expect(currentRewardEpochId).to.be.bignumber.equal(toBN(TEST_REWARD_EPOCH));
@@ -183,37 +203,106 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
   it(`should track correct reward offers`, async () => {
     let currentPriceEpoch = await votingManager.getCurrentEpochId();
-    let totalAmount = toBN(0);
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      await coin.approve(votingRewardManager.address, REWARD_VALUE);
+      expect(await coin.allowance(governance, votingRewardManager.address)).to.bignumber.equal(REWARD_VALUE);
+    }
 
+    let totalAmount = toBN(0);
     let offersSent: Offer[] = [];
     for (let i = 0; i < symbols.length; i++) {
       let amount = REWARD_VALUE.add(toBN(i));
-      totalAmount = totalAmount.add(amount);
-      offersSent.push(
-        {
-          amount: amount,
-          currencyAddress: ZERO_ADDRESS,
-          offerSymbol: toBytes4(symbols[i].offerSymbol),
-          quoteSymbol: toBytes4(symbols[i].quoteSymbol),
-          trustedProviders: [accounts[1]],
-          rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
-          flrValue: amount,
-        } as Offer
-      );
+
+      let basicOffer = {
+        amount: amount,
+        currencyAddress: ZERO_ADDRESS,
+        offerSymbol: toBytes4(symbols[i].offerSymbol),
+        quoteSymbol: toBytes4(symbols[i].quoteSymbol),
+        trustedProviders: [accounts[1]],
+        rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
+        flrValue: amount,
+      } as Offer
+      if (i == 0) {
+        offersSent.push(
+          { ...basicOffer, currencyAddress: dummyCoin1.address, amount: REWARD_VALUE },
+        );
+      } else if (i == 1) {
+        offersSent.push(
+          { ...basicOffer, currencyAddress: dummyCoin2.address, amount: REWARD_VALUE },
+        );
+      } else {
+        totalAmount = totalAmount.add(amount);
+        offersSent.push(basicOffer);
+      }
     }
     let hexlifiedOffers = hexlifyBN(offersSent)
     await votingRewardManager.offerRewards(hexlifiedOffers, { value: totalAmount });
     let balance = await web3.eth.getBalance(votingRewardManager.address);
     expect(balance).to.equal(totalAmount);
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      expect(await votingRewardManager.getNextRewardEpochBalance(coin.address)).to.equal(REWARD_VALUE);
+      expect(await coin.balanceOf(governance)).to.bignumber.equal(toBN(0));
+      expect(await coin.balanceOf(votingRewardManager.address)).to.bignumber.equal(REWARD_VALUE);
+    }
+
     for (let client of ftsoClients) {
-      // client.setVerbose(true);
       await client.processNewBlocks();
       client.registerRewardsForRewardEpoch(TEST_REWARD_EPOCH);
       let rewardData: Map<string, Offer[]> = client.rewardCalculator.rewardOffersBySymbol.get(TEST_REWARD_EPOCH)!;
+      expect([...rewardData.values()].length).to.equal(symbols.length);
+
       for (let i = 0; i < symbols.length; i++) {
         let offers = rewardData.get(feedId(symbols[i]))!;
         expect(offers.length).to.equal(1);
-        expect(offers[0].amount).to.equal(REWARD_VALUE.add(toBN(i)));
+        if (i == 0 || i == 1) {
+          expect(offers[0].amount).to.equal(REWARD_VALUE);
+        } else {
+          expect(offers[0].amount).to.equal(REWARD_VALUE.add(toBN(i)));
+        }
+        expect(offers[0].currencyAddress).to.equal(offersSent[i].currencyAddress);
+      }
+    }
+  });
+
+  it.skip(`should track correct reward offers token`, async () => {
+    let currentPriceEpoch = await votingManager.getCurrentEpochId();
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      await coin.approve(votingRewardManager.address, REWARD_VALUE);
+      expect(await coin.allowance(governance, votingRewardManager.address)).to.bignumber.equal(REWARD_VALUE);
+    }
+    let amount = REWARD_VALUE;
+    let basicOffer = {
+      amount,
+      offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
+      quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
+      trustedProviders: [accounts[1]],
+      rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
+      flrValue: amount,
+    } as Offer;
+    let offerings = [
+      { ...basicOffer, currencyAddress: ZERO_ADDRESS },
+      { ...basicOffer, currencyAddress: dummyCoin1.address },
+      { ...basicOffer, currencyAddress: dummyCoin2.address }
+    ];
+    await votingRewardManager.offerRewards(offerings, { value: REWARD_VALUE });
+    let balance = await web3.eth.getBalance(votingRewardManager.address);
+    expect(balance).to.equal(REWARD_VALUE);
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      expect(await votingRewardManager.getNextRewardEpochBalance(coin.address)).to.equal(REWARD_VALUE);
+      expect(await coin.balanceOf(governance)).to.bignumber.equal(toBN(0));
+      expect(await coin.balanceOf(votingRewardManager.address)).to.bignumber.equal(REWARD_VALUE);
+    }
+    for (let client of ftsoClients) {
+      await client.processNewBlocks();
+      // let rewardData = client.rewardEpochOffers.get(client.rewardEpochIdForPriceEpochId(currentPriceEpoch.toNumber()))!;
+      // let offers = rewardData.get(feedId({offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL}))!;
+      let offers = client.rewardCalculator.rewardOffersBySymbol
+        .get(client.rewardEpochIdForPriceEpochId(currentPriceEpoch.toNumber()))!
+        .get(feedId({ offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL }))!;
+      expect(offers.length).to.equal(3); // One native and two token
+      for (let i in offers) {
+        expect(offers[i].amount).to.bignumber.equal(REWARD_VALUE);
+        expect(offers[i].currencyAddress).to.equal(offerings[i].currencyAddress);
       }
     }
   });
@@ -337,22 +426,25 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   it("should claim rewards when available", async () => {
     // By checking each client, we not only test the correctness of the behavior of claimReward(),
     // but also the correctness of the construction of the Merkle proof in all possible cases.
-    ftsoClients.forEach(async (client) => {
+    for (let client of ftsoClients) {
       let originalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
-      let rewardValue = client.priceEpochResults.get(initialPriceEpoch)?.rewards?.get(client.wallet.address.toLowerCase())?.claimRewardBody?.amount;
-      let response = await client.claimReward(initialPriceEpoch);
-      let finalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
-      // This is a black-box test: it checks that if a client thinks they should get a reward,
-      // then they get that reward, and if they don't, then they won't get any.
-      if (rewardValue === undefined) {
+      let rewardClaims = client.priceEpochResults.get(initialPriceEpoch)?.rewards?.get(client.wallet.address.toLowerCase());
+      if (rewardClaims === undefined) {
+        let response = await client.claimReward(initialPriceEpoch);
+        let finalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
         expect(response).to.be.null;
         expect(finalBalance).to.be.bignumber.equal(originalBalance);
+        continue;
       }
-      else {
+
+      for (let claim of rewardClaims) {
+        let rewardValue = claim.claimRewardBody?.amount;
+        let response = await client.claimReward(initialPriceEpoch);
+        let finalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
         expect(response).not.to.be.null;
         expect(rewardValue).to.be.bignumber.equal(finalBalance.sub(originalBalance));
       }
-    });
+    };
   });
 
 });

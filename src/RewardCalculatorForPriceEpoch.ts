@@ -103,16 +103,26 @@ export class RewardCalculatorForPriceEpoch {
     let totalRewardedWeight = toBN(0);
     for (let voterRecord of voterRecords) {
       let newWeight = toBN(0);
-      if (voterRecord.iqr) {
-        newWeight = newWeight.add(iqrShare.mul(voterRecord.weight).mul(pctSum));
-      }
-      if (voterRecord.pct) {
-        newWeight = newWeight.add(pctShare.mul(voterRecord.weight).mul(iqrSum));
+      if(pctSum.eq(toBN(0))) {
+        if(voterRecord.iqr) {
+          newWeight = voterRecord.weight;
+        }         
+      } else {
+        if (voterRecord.iqr) {
+          newWeight = newWeight.add(iqrShare.mul(voterRecord.weight).mul(pctSum));
+        }
+        if (voterRecord.pct) {
+          newWeight = newWeight.add(pctShare.mul(voterRecord.weight).mul(iqrSum));
+        }  
       }
       voterRecord.weight = newWeight;
       totalRewardedWeight = totalRewardedWeight.add(newWeight);
     }
 
+    if(totalRewardedWeight.eq(toBN(0))) {
+      return [];
+    }
+    
     let rewardClaims: ClaimReward[] = [];
     for (let voterRecord of voterRecords) {
       let reward = voterRecord.weight.mul(offer.amount).div(totalRewardedWeight);

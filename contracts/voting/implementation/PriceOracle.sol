@@ -5,6 +5,8 @@ import "../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
 
+// import "hardhat/console.sol";
+
 contract PriceOracle is Governed {
     // VotingManager contract
     VotingManager public votingManager;
@@ -72,9 +74,8 @@ contract PriceOracle is Governed {
         );
         for (uint256 i = 0; i < _symbolsIndicesToPublish.length; i++) {
             uint256 symbolIndex = _symbolsIndicesToPublish[i];
-            bytes8 symbol = bytes8(_allSymbols[symbolIndex * 8]);
-            uint32 price = uint32(bytes4(_allPrices[symbolIndex * 4]));
-
+            bytes8 symbol = bytes8(_allSymbols[symbolIndex * 8: symbolIndex * 8 + 8]);
+            uint32 price = uint32(bytes4(_allPrices[symbolIndex * 4: symbolIndex * 4 + 4]));
             if (
                 publishAnchorPrice(
                     anchorPrices[symbol],
@@ -85,8 +86,8 @@ contract PriceOracle is Governed {
             ) {
                 emit PriceFeedPublished(
                     _priceEpochId,
-                    bytes4(_allSymbols[symbolIndex * 8]),
-                    bytes4(_allSymbols[symbolIndex * 8 + 4]),
+                    bytes4(_allSymbols[symbolIndex * 8: symbolIndex * 8 + 4]),
+                    bytes4(_allSymbols[symbolIndex * 8 + 4: symbolIndex * 8 + 8]),
                     price,
                     uint32(block.timestamp)
                 );

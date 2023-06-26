@@ -109,17 +109,22 @@ export class TruffleProvider extends IVotingProvider {
       return web3.utils.soliditySha3(message)!;
    }
 
+   private decodeFunctionCall(tx: TxData, name: string) {
+      const encodedParameters = tx.input!.slice(10); // Drop the function signature
+      const parametersEncodingABI = this.abiForName.get(name)!.inputs;
+      return web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
+   }
+
    extractOffers(tx: TxData): Offer[] {
-      let offers: Offer[] = web3.eth.abi.decodeParameter(this.abiForName.get("offerRewards")!.inputs[0], tx.input!.slice(10)) as Offer[];
-      return offers.map(offer => convertOfferFromWeb3Response(offer));
+      return this.decodeFunctionCall(tx, "offerRewards").offers.map(convertOfferFromWeb3Response);
    }
 
    extractCommitHash(tx: TxData): string {
-      return web3.eth.abi.decodeParameters(this.abiForName.get("commit")!.inputs, tx.input?.slice(10)!)?._commitHash;
+      return this.decodeFunctionCall(tx, "commit")._commitHash;
    }
 
    extractRevealBitvoteData(tx: TxData): RevealBitvoteData {
-      const resultTmp = web3.eth.abi.decodeParameters(this.abiForName.get("revealBitvote")!.inputs, tx.input?.slice(10)!);
+      const resultTmp = this.decodeFunctionCall(tx, "revealBitvote");
       return {
          random: resultTmp._random,
          merkleRoot: resultTmp._merkleRoot,
@@ -129,7 +134,7 @@ export class TruffleProvider extends IVotingProvider {
    }
 
    extractSignatureData(tx: TxData): SignatureData {
-      const resultTmp = web3.eth.abi.decodeParameters(this.abiForName.get("signResult")!.inputs, tx.input?.slice(10)!);
+      const resultTmp = this.decodeFunctionCall(tx, "signResult");
       return {
          epochId: parseInt(resultTmp._epochId, 10),
          merkleRoot: resultTmp._merkleRoot,
