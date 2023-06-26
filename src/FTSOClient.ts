@@ -25,7 +25,7 @@ export class FTSOClient {
   priceEpochSignatures = new Map<number, Map<string, SignatureData>>();
   priceEpochData = new Map<number, EpochData>();
   priceEpochResults = new Map<number, EpochResult>();
-  // rewardEpoch => feeId => offers
+  // rewardEpoch => feedId => offers
   rewardEpochOffers = new Map<number, Map<string, Offer[]>>();
 
   elasticBandWidthPPM: number = 5000;
