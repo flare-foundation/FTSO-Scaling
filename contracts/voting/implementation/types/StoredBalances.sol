@@ -25,7 +25,7 @@ view returns (uint256)
 function credit(StoredBalances storage storedBalances, address tokenAddr, address thisAddr, uint256 amount) {
     if (tokenAddr != address(0)) {
         IERC20 token = IERC20(tokenAddr);
-        require(token.transferFrom(tokenAddr, thisAddr, amount),
+        require(token.transferFrom(msg.sender, thisAddr, amount),
             "couldn't transfer currency amount to reward manager");
     }
 

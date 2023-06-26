@@ -14,6 +14,7 @@ import { ZERO_ADDRESS, feedId, moveToNextEpochStart, toBytes4 } from "../src/vot
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
+import { DummyERC20Instance } from "../typechain-truffle/contracts/testSrc/DummyERC20";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -21,6 +22,7 @@ const VoterRegistry = artifacts.require("VoterRegistry");
 const VotingManager = artifacts.require("VotingManager");
 const VotingRewardManager = artifacts.require("VotingRewardManager");
 const PriceOracle = artifacts.require("PriceOracle");
+const DummyERC20 = artifacts.require("DummyERC20");
 
 describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let voting: VotingInstance;
@@ -28,6 +30,9 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let votingManager: VotingManagerInstance;
   let votingRewardManager: VotingRewardManagerInstance;
   let priceOracle: PriceOracleInstance;
+
+  let dummyCoin1: DummyERC20Instance;
+  let dummyCoin2: DummyERC20Instance;
 
   let governance: string;
   let firstRewardedPriceEpoch: BN;
@@ -67,6 +72,12 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     voting = await Voting.new(voterRegistry.address, votingManager.address);
     priceOracle = await PriceOracle.new(governance);
     votingRewardManager = await VotingRewardManager.new(governance);
+
+    // Dummy ERC20 currencies
+    dummyCoin1 = await DummyERC20.new("DummyCoin1", "DC1");
+    dummyCoin2 = await DummyERC20.new("DummyCoin2", "DC2");
+    await dummyCoin1.mint(governance, REWARD_VALUE);
+    await dummyCoin2.mint(governance, REWARD_VALUE);
 
     // Reward epoch configuration
     firstRewardedPriceEpoch = await votingManager.getCurrentEpochId();
@@ -144,6 +155,15 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     await moveToNextEpochStart(votingManager, firstRewardedPriceEpoch, REWARD_EPOCH_DURATION);
   });
 
+  it(`should mint dummy ERC20 currencies`, async () => {
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      let totalSupply = await coin.totalSupply();
+      let accountBalance = await coin.balanceOf(governance);
+      expect(totalSupply).to.equal(REWARD_VALUE);
+      expect(accountBalance).to.equal(REWARD_VALUE);
+    }
+  })
+
   it(`should reward epoch be ${TEST_REWARD_EPOCH}`, async () => {
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
     expect(currentRewardEpochId).to.be.bignumber.equal(toBN(TEST_REWARD_EPOCH));
@@ -190,26 +210,37 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
   it(`should track correct reward offers`, async () => {
     let currentPriceEpoch = await votingManager.getCurrentEpochId();
-    await votingRewardManager.offerRewards(
-      [
-        {
-          amount: REWARD_VALUE.toNumber(),
-          currencyAddress: ZERO_ADDRESS,
-          offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
-          quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
-        }
-      ],
-      { value: REWARD_VALUE }
-    );
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      await coin.approve(votingRewardManager.address, REWARD_VALUE);
+      expect(await coin.allowance(governance, votingRewardManager.address)).to.bignumber.equal(REWARD_VALUE);
+    }
+    let basicOffer = {
+      amount: REWARD_VALUE.toNumber(),
+      offerSymbol: toBytes4(REWARD_OFFER_SYMBOL),
+      quoteSymbol: toBytes4(REWARD_QUOTE_SYMBOL),
+    };
+    let offerings = [
+      {...basicOffer, currencyAddress: ZERO_ADDRESS },
+      {...basicOffer, currencyAddress: dummyCoin1.address },
+      {...basicOffer, currencyAddress: dummyCoin2.address }
+    ];
+    await votingRewardManager.offerRewards(offerings, { value: REWARD_VALUE });
     let balance = await web3.eth.getBalance(votingRewardManager.address);
     expect(balance).to.equal(REWARD_VALUE);
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      expect(await votingRewardManager.getNextRewardEpochBalance(coin.address)).to.equal(REWARD_VALUE);
+      expect(await coin.balanceOf(governance)).to.bignumber.equal(toBN(0));
+      expect(await coin.balanceOf(votingRewardManager.address)).to.bignumber.equal(REWARD_VALUE);
+    }
     for (let client of ftsoClients) {
-      // client.setVerbose(true);
       await client.processNewBlocks();
       let rewardData: FeedRewards = client.rewardEpochOffers.get(client.rewardEpochIdForPriceEpochId(currentPriceEpoch))!;
       let offers = rewardData.get(feedId({offerSymbol: REWARD_OFFER_SYMBOL, quoteSymbol: REWARD_QUOTE_SYMBOL}))!;
-      expect(offers.length).to.equal(1);
-      expect(offers[0].amount).to.equal(REWARD_VALUE);
+      expect(offers.length).to.equal(3); // One native and two token
+      for (let i in offers) {
+        expect(offers[i].amount).to.bignumber.equal(REWARD_VALUE);
+        expect(offers[i].currencyAddress).to.equal(offerings[i].currencyAddress);
+      }
     }
   });
 

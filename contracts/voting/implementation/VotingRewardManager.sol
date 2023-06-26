@@ -27,6 +27,14 @@ contract VotingRewardManager is Governed, IRewardManager {
     StoredBalances[STORED_PREVIOUS_BALANCES] storedRewardEpochBalances;
     uint256 nextRewardEpochBalanceIndex;
 
+    function getNextRewardEpochBalance(address tokenAddress) public view returns (uint balance) {
+        balance = storedRewardEpochBalances[nextRewardEpochBalanceIndex].balanceForTokenContract[tokenAddress];
+    }
+
+    function getRemainingEpochBalance(address tokenAddress, uint epochId) public view returns (uint balance) {
+        balance = storedRewardEpochBalances[rewardEpochIdAsStoredBalanceIndex(epochId)].balanceForTokenContract[tokenAddress];
+    }
+
     function rewardEpochIdAsStoredBalanceIndex(uint256 epochId) internal view returns (uint256) {
         require(epochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId, 
                 "reward balance not preserved for epoch too far in the past");
