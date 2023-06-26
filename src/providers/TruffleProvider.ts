@@ -86,7 +86,7 @@ export class TruffleProvider extends IVotingProvider {
    }
 
    async publishPrices(epochResult: EpochResult, symbolIndices: number[], from?: string | undefined): Promise<any> {
-      console.dir(epochResult);
+      // console.dir(epochResult);
       return this.priceOracleContract.publishPrices(epochResult.dataMerkleRoot, epochResult.priceEpochId, epochResult.priceMessage, epochResult.symbolMessage, symbolIndices, { from });
    }
 

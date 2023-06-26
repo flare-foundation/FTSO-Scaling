@@ -413,7 +413,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let receipt = await client.publishPrices(initialPriceEpoch, [...Array(NUMBER_OF_FEEDS).keys()]);
     // console.log(receipt.logs);
     for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
-      console.dir(receipt.logs[0].args)
+      // console.dir(receipt.logs[0].args)
       expectEvent(receipt, "PriceFeedPublished", {
         priceEpochId: toBN(initialPriceEpoch),
         // offerSymbol: toBytes4(symbols[i].offerSymbol),
