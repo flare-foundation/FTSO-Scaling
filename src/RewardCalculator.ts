@@ -74,9 +74,7 @@ export class RewardCalculator {
     this.rewardEpochDurationInEpochs = rewardEpochDurationInEpochs;
     this.iqrShare = iqrShare;
     this.pctShare = pctShare;
-
-    this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch + 1; // ???
-
+    this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
     this.currentRewardEpoch = this.initialRewardEpoch;

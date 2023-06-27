@@ -155,8 +155,8 @@ contract Voting {
     }
 
     // Returns the current epoch id
-    function getCurrentEpochId() public view returns (uint256) {
-        return votingManager.getCurrentEpochId();
+    function getCurrentPriceEpochId() public view returns (uint256) {
+        return votingManager.getCurrentPriceEpochId();
     }
 
     function firstSigningTimeForEpoch(

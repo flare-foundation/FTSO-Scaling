@@ -29,7 +29,7 @@ export async function moveToNextEpochStart(votingManager: VotingManagerInstance,
     ).toNumber()
 
   } else {
-    let currentEpoch = await votingManager.getCurrentEpochId();
+    let currentEpoch = await votingManager.getCurrentPriceEpochId();
     time = firstEpochStartSec.add(
       epochDurationSec.mul(
         currentEpoch.add(
@@ -57,12 +57,6 @@ export function sortedHashPair(x: string, y: string) {
 // TODO: take the parameter type from the generated ABI
 // web3.eth.abi.encodeParameters
 export function hashClaimReward(data: ClaimReward, abi: any): string {
-  // let encoded = web3.eth.abi.encodeParameter(abi, hexlifyBN(data.claimRewardBody));
-  // let decoded = web3.eth.abi.decodeParameter(abi, encoded);
-  // console.log("INPUT");
-  // console.dir(data.claimRewardBody);
-  // console.log("DECODE");
-  // console.dir(decoded);
   return web3.utils.soliditySha3(web3.eth.abi.encodeParameter(abi, hexlifyBN(data.claimRewardBody)))!;
 }
 

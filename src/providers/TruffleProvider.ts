@@ -4,8 +4,9 @@ import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
 import { BareSignature, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import { IVotingProvider } from "./IVotingProvider";
-import { convertOfferFromWeb3Response } from "../voting-utils";
+import { ZERO_ADDRESS, convertOfferFromWeb3Response, hexlifyBN } from "../voting-utils";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
+import { toBN } from "../../test-utils/utils/test-helpers";
 
 let VotingRewardManager = artifacts.require("VotingRewardManager");
 let Voting = artifacts.require("Voting");
@@ -56,11 +57,17 @@ export class TruffleProvider extends IVotingProvider {
    }
 
    async claimReward(claim: ClaimReward): Promise<any> {
-      return this.votingRewardManagerContract.claimReward(claim);
+      return this.votingRewardManagerContract.claimReward(hexlifyBN(claim));
    }
 
    async offerRewards(offers: Offer[]): Promise<any> {
-      return this.votingRewardManagerContract.offerRewards(offers);
+      let totalAmount = toBN(0);
+      offers.forEach((offer) => {
+         if(offer.currencyAddress === ZERO_ADDRESS) {
+            totalAmount = totalAmount.add(offer.amount);
+         }
+      });
+      return this.votingRewardManagerContract.offerRewards(hexlifyBN(offers), { value: totalAmount });
    }
 
    async commit(hash: string, from?: string | undefined): Promise<any> {

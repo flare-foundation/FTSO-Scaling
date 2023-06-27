@@ -76,7 +76,7 @@ export class FTSOClient {
     return this.wallet.address;
   }
 
-  epochIdForTime(timestamp: number): number {
+  priceEpochIdForTime(timestamp: number): number {
     return Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
   }
 
@@ -195,14 +195,16 @@ export class FTSOClient {
    */
   private extractOffers(tx: TxData): void {
     let offers: Offer[] = this.provider.extractOffers(tx);
-    let rewardEpochId = this.rewardEpochIdForPriceEpochId(this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!));
+    let currentPriceEpochId = this.priceEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
+    let currentRewardEpochId = this.rewardEpochIdForPriceEpochId(currentPriceEpochId);
+    let nextRewardEpoch = currentRewardEpochId + 1;
     if (offers && offers.length > 0) {
-      if (this.rewardEpochOffersClosed.get(rewardEpochId)) {
+      if (this.rewardEpochOffersClosed.get(nextRewardEpoch)) {
         throw new Error("Reward epoch is closed");
       }
     }
-    let offersInEpoch = this.rewardEpochOffers.get(rewardEpochId) ?? [];
-    this.rewardEpochOffers.set(rewardEpochId, offersInEpoch)
+    let offersInEpoch = this.rewardEpochOffers.get(nextRewardEpoch) ?? [];
+    this.rewardEpochOffers.set(nextRewardEpoch, offersInEpoch)
 
     for (let offer of offers) {
       offersInEpoch.push(offer);
@@ -213,7 +215,7 @@ export class FTSOClient {
   private extractCommit(tx: TxData): void {
     let hash = this.provider.extractCommitHash(tx);
     let from = tx.from.toLowerCase();
-    let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
+    let epochId = this.priceEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<string, string>();
     this.priceEpochCommits.set(epochId, commitsInEpoch);
     commitsInEpoch.set(from.toLowerCase(), hash);
@@ -395,12 +397,11 @@ export class FTSOClient {
     //     } as ClaimReward
     //   ]
     // ))
-    let clientRewardHash: string | null = null;
     let rewardClaimHashes: string[] = [];
-    for (let offerList of rewards.values()) {
-      for (let offer of offerList) {
-        let hash = hashClaimReward(offer, this.provider.abiForName.get("claimRewardBodyDefinition")!);
-        rewardClaimHashes.push(hash);
+    for (let claimRewardList of rewards.values()) {
+      for (let claim of claimRewardList) {
+        claim.hash = hashClaimReward(claim, this.provider.abiForName.get("claimRewardBodyDefinition")!);
+        rewardClaimHashes.push(claim.hash);
       }
     }
 
@@ -418,6 +419,21 @@ export class FTSOClient {
 
     let priceMessageHash = this.provider.hashMessage("0x" + message);
     let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
+
+    // add merkle proofs to the claims for this FTSO client
+    rewards.get(this.wallet.address.toLowerCase())?.forEach(claim => {
+      if (!claim.hash) {
+        throw new Error("Assert: Claim hash must be calculated.");
+      }
+      let merkleProof = dataMerkleTree.getProof(claim.hash!);
+      if (!merkleProof) {
+        throw new Error("Assert: Merkle proof must be set. ");
+      }
+      claim.merkleProof = merkleProof;
+      // Adding the price message hash to the merkle proof, due to construction of the tree
+      claim.merkleProof.push(priceMessageHash);
+    });
+
     this.priceEpochResults.set(priceEpochId, {
       priceEpochId: priceEpochId,
       medianData: results,
@@ -426,7 +442,7 @@ export class FTSOClient {
       fullPriceMessage: "0x" + message,
       fullMessage: dataMerkleRoot + message,
       dataMerkleRoot,
-      dataMerkleProof: dataMerkleTree.getProof(clientRewardHash),
+      dataMerkleProof: priceMessageHash,
       rewards,
       merkleRoot
     } as EpochResult);
@@ -496,16 +512,12 @@ export class FTSOClient {
     let result = this.priceEpochResults.get(epochId)!;
 
     let rewardClaims = result.rewards.get(this.wallet.address.toLowerCase()) || [];
+    let receipts = [];
     for (let rewardClaim of rewardClaims) {
-      let proof = result.dataMerkleProof;
-      if (rewardClaim && proof) {
-        rewardClaim.merkleProof = proof;
-        return this.provider.claimReward(rewardClaim);
-      }
-      else {
-        return null;
-      }
+      let receipt = await this.provider.claimReward(rewardClaim);
+      receipts.push(receipt);
     }
+    return receipts;
   }
 
   async offerRewards(offers: Offer[]) {

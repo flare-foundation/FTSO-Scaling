@@ -1,5 +1,6 @@
 export interface ClaimReward {
   merkleProof: string[];
+  hash?: string;
   claimRewardBody: ClaimRewardBody;
 };
 
@@ -76,7 +77,7 @@ export interface EpochResult {
   symbolMessage: string;
   fullPriceMessage: string;
   dataMerkleRoot: string;
-  dataMerkleProof: string[] | null;
+  dataMerkleProof: string;
   // voter => claim
   rewards: Map<string, ClaimReward[]>;
   fullMessage: string;

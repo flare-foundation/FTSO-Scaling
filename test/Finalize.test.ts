@@ -47,7 +47,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     votingManager = await VotingManager.new(governance);
     voterRegistry = await VoterRegistry.new(governance, votingManager.address, THRESHOLD);
     voting = await Voting.new(voterRegistry.address, votingManager.address);
-    currentEpoch = await votingManager.getCurrentEpochId();
+    currentEpoch = await votingManager.getCurrentPriceEpochId();
     await votingManager.configureRewardEpoch(currentEpoch, REWARD_EPOCH_DURATION);
     await votingManager.configureSigningDuration(180);
 
@@ -76,7 +76,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     let rewardEpochId = 1;
     let weight = toBN(1000);
     let totalWeight = weight.mul(toBN(N));
-    let epochId = await voting.getCurrentEpochId();
+    let epochId = await voting.getCurrentPriceEpochId();
     expect(await voterRegistry.totalWeightPerRewardEpoch(rewardEpochId)).to.be.bignumber.eq(totalWeight);
     for (let i = 1; i <= N; i++) {
       let sWeight = await voterRegistry.getVoterWeightForRewardEpoch(accounts[i], rewardEpochId)
@@ -88,7 +88,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   });
 
   it("Should vote be successful", async () => {
-    let epochId = await voting.getCurrentEpochId();
+    let epochId = await voting.getCurrentPriceEpochId();
     let currentTime = toBN(await time.latest());
     
     let signEpochId = epochId;

@@ -36,13 +36,13 @@ contract VotingManager is Governed {
         signingDurationSec = _signingDurationSec;
     }
 
-    function getCurrentEpochId() public view returns (uint256) {
+    function getCurrentPriceEpochId() public view returns (uint256) {
         return (block.timestamp - BUFFER_TIMESTAMP_OFFSET) / BUFFER_WINDOW;
     }
 
     function getCurrentRewardEpochId() public view returns (uint256) {
         return
-            (getCurrentEpochId() - firstRewardedPriceEpoch) /
+            (getCurrentPriceEpochId() - firstRewardedPriceEpoch) /
             rewardEpochDurationInEpochs;
     }
 

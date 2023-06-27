@@ -30,7 +30,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     votingManager = await VotingManager.new(governance);
     voterRegistry = await VoterRegistry.new(governance, votingManager.address, THRESHOLD);
     voting = await Voting.new(voterRegistry.address, votingManager.address);
-    currentEpoch = await votingManager.getCurrentEpochId();
+    currentEpoch = await votingManager.getCurrentPriceEpochId();
     await votingManager.configureRewardEpoch(currentEpoch, REWARD_EPOCH_DURATION);
 
     firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
@@ -113,7 +113,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
         )
       ).toNumber()
     );
-    let epochId = await votingManager.getCurrentEpochId();
+    let epochId = await votingManager.getCurrentPriceEpochId();
     let tx = await voting.commit(data, { from: accounts[1] });
     console.log(`Commit gas: ${tx.receipt.gasUsed}`);
     // expectEvent(tx, "HashSubmitted", { submitter: accounts[1], epochId: epochId, hash: data });
@@ -151,7 +151,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     let merkleRoot = ZERO_BYTES32;
     let bitvote = "0x1234567890";
     let prices = "0x001234567890";
-    let epochId = await votingManager.getCurrentEpochId();
+    let epochId = await votingManager.getCurrentPriceEpochId();
     let tx = await voting.revealBitvote(random, merkleRoot, bitvote, prices, { from: accounts[1] });
     console.log(`Reveal gas: ${tx.receipt.gasUsed}`);
     // expectEvent(tx, "RevealAndBitvote", { submitter: accounts[1], epochId: epochId.sub(toBN(1)), random, merkleRoot, bitvote, prices });

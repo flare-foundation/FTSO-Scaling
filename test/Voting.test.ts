@@ -29,7 +29,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     votingManager = await VotingManager.new(governance);
     voterRegistry = await VoterRegistry.new(governance, votingManager.address, THRESHOLD);
     voting = await Voting.new(voterRegistry.address, votingManager.address);
-    currentEpoch = await votingManager.getCurrentEpochId();
+    currentEpoch = await votingManager.getCurrentPriceEpochId();
     await votingManager.configureRewardEpoch(currentEpoch, REWARD_EPOCH_DURATION);
 
     firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
