@@ -1,4 +1,4 @@
-import { BareSignature, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import BN from "bn.js";
 
 export abstract class IVotingProvider {
@@ -43,6 +43,7 @@ export abstract class IVotingProvider {
    abstract voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]>;
 
    abstract getBlockNumber(): Promise<number>;
+   abstract getBlock(blockNumber: number): Promise<BlockData>;
    abstract functionSignature(name: string): string;
    abstract hashMessage(message: string): string;
 

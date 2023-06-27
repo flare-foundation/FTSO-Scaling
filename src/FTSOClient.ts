@@ -1,17 +1,20 @@
-import { Web3 } from "hardhat";
+
+import BN from "bn.js";
+import Web3 from "web3";
 import { toBN } from "../test-utils/utils/test-helpers";
 import { MerkleTree } from "./MerkleTree";
+import { RewardCalculator } from "./RewardCalculator";
 import { calculateMedian } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
-import { BareSignature, ClaimReward, ClaimRewardBody, EpochData, EpochResult, Feed, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
-import { ZERO_ADDRESS, ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, unprefixedSymbolBytes } from "./voting-utils";
-import { RewardCalculator } from "./RewardCalculator";
+import { BareSignature, EpochData, EpochResult, Feed, MedianCalculationResult, Offer, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, unprefixedSymbolBytes } from "./voting-utils";
 
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 
 const NON_EXISTENT_PRICE = 0;
+const web3 = new Web3();
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
@@ -118,50 +121,13 @@ export class FTSOClient {
     // this.initializeWeb3(rpcLink, providedWeb3, logger);
   }
 
-  // private initializeWeb3(rpcLink?: string, providedWeb3?: Web3, logger?: any) {
-  //   if (!rpcLink) {
-  //     this.web3 = providedWeb3!;
-  //     return;
-  //   }
-  //   const web3 = new Web3();
-  //   if (rpcLink.startsWith("http")) {
-  //     web3.setProvider(new Web3.providers.HttpProvider(rpcLink));
-  //   } else if (rpcLink.startsWith("ws")) {
-  //     const provider = new Web3.providers.WebsocketProvider(rpcLink, {
-  //       // @ts-ignore
-  //       clientConfig: {
-  //         keepalive: true,
-  //         keepaliveInterval: 60000, // milliseconds
-  //       },
-  //       reconnect: {
-  //         auto: true,
-  //         delay: 2500,
-  //         onTimeout: true,
-  //       },
-  //     });
-  //     provider.on("close", () => {
-  //       if (logger) {
-  //         logger.error(` ! Network WS connection closed.`);
-  //       }
-  //     });
-  //     web3.setProvider(provider);
-  //   }
-  //   web3.eth.handleRevert = true;
-  //   this.web3 = web3;
-  // }
-
   setVerbose(verbose: boolean) {
     this.verbose = verbose;
   }
 
   async processBlock(blockNumber: number) {
-    let block = await web3.eth.getBlock(blockNumber, true);
-    this.blockTimestamps.set(block.number, parseInt("" + block.timestamp));
-    // let txPromises = [];
-    // for (let txId of block.transactions) {
-    //   txPromises.push(web3.eth.getTransaction(txId));
-    // }
-    // let result = await Promise.all(txPromises);
+    let block = await this.provider.getBlock(blockNumber);
+    this.blockTimestamps.set(block.number, block.timestamp);
     for (let tx of block.transactions) {
       this.processTx(tx as any as TxData);
     }
@@ -243,11 +209,6 @@ export class FTSOClient {
     signaturesInEpoch.set(from.toLowerCase(), result);
   }
 
-  async startProcessing() {
-    let currentBlockNumber = await this.provider.getBlockNumber();
-    this.lastProcessedBlockNumber = currentBlockNumber - 1;
-  }
-
   async processNewBlocks() {
     let currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
@@ -298,8 +259,6 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
 
-    // const message = this.messageForSign(epochId);
-    // let messageHash = this.web3.utils.soliditySha3(message);
     let signature = await this.wallet.sign(result.merkleRoot);
     await this.provider.signResult(epochId,
       result.merkleRoot!,
@@ -348,7 +307,7 @@ export class FTSOClient {
     }
     let orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
     let numberOfFeeds = orderedPriceFeeds.length;
-    // TODO: do this only once per reward epoch
+  
     let weights = await this.provider.voterWeightsInRewardEpoch(rewardEpoch, voters);
     let pricesForVoters = voters.map(voter => {
       let revealData = this.priceEpochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
@@ -519,8 +478,5 @@ export class FTSOClient {
     }
     return receipts;
   }
-
-  async offerRewards(offers: Offer[]) {
-    await this.provider.offerRewards(offers);
-  }
+  
 }

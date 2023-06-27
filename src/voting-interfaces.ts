@@ -61,6 +61,12 @@ export interface TxData {
   value?: string;
 }
 
+export interface BlockData {
+  number: number;   
+  timestamp: number;
+  transactions: TxData[];
+}
+
 export interface EpochData {
   epochId: number;
   merkleRoot?: string;

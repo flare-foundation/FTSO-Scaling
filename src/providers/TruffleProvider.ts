@@ -2,7 +2,7 @@ import BN from "bn.js";
 import fs from "fs";
 import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
-import { BareSignature, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import { IVotingProvider } from "./IVotingProvider";
 import { ZERO_ADDRESS, convertOfferFromWeb3Response, hexlifyBN } from "../voting-utils";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
@@ -98,11 +98,18 @@ export class TruffleProvider extends IVotingProvider {
    }
 
    async voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]> {
+      // TODO: cache the result for a reward epoch.
       return this.voterRegistryContract.voterWeightsInRewardEpoch(rewardEpoch, voters);
    }
 
    async getBlockNumber(): Promise<number> {
       return web3.eth.getBlockNumber();
+   }
+
+   async getBlock(blockNumber: number): Promise<BlockData> {
+      let result = await web3.eth.getBlock(blockNumber, true);
+      result.timestamp = parseInt('' + result.timestamp, 10);
+      return result as any as BlockData;
    }
 
    functionSignature(name: string): string {

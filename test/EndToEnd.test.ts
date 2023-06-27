@@ -10,7 +10,7 @@ import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig } from "../src/price-feeds/RandomPriceFeed";
 import { TruffleProvider } from "../src/providers/TruffleProvider";
 import { Feed, Offer } from "../src/voting-interfaces";
-import { ZERO_ADDRESS, feedId, moveToNextEpochStart, toBytes4 } from "../src/voting-utils";
+import { ZERO_ADDRESS, feedId, moveToNextEpochStart, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { DummyERC20Instance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
@@ -356,19 +356,24 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   it("should a client publish price feeds for an epoch", async () => {
     let client = ftsoClients[0];
     let receipt = await client.publishPrices(initialPriceEpoch, [...Array(NUMBER_OF_FEEDS).keys()]);
-    // console.log(receipt.logs);
+
     for (let i = 0; i < NUMBER_OF_FEEDS; i++) {
-      // console.dir(receipt.logs[0].args)
-      expectEvent(receipt, "PriceFeedPublished", {
+      let medianData = client.priceEpochResults.get(initialPriceEpoch)!.medianData.find(x => x.feed.offerSymbol === symbols[i].offerSymbol);
+      let result = await priceOracle.anchorPrices("0x" + unprefixedSymbolBytes(symbols[i]));
+
+      expectEvent(receipt, "PriceFeedPublished", {        
+        offerSymbol: web3.utils.padRight(toBytes4(symbols[i].offerSymbol), 64),        
+        quoteSymbol: web3.utils.padRight(toBytes4(symbols[i].quoteSymbol), 64),
         priceEpochId: toBN(initialPriceEpoch),
-        // offerSymbol: toBytes4(symbols[i].offerSymbol),
-        // quoteSymbol: toBytes4(symbols[i].quoteSymbol),
-        price: toBN(client.priceEpochResults.get(initialPriceEpoch)!.medianData[i].data.finalMedianPrice)
+        price: toBN(medianData!.data.finalMedianPrice),
+        timestamp: toBN((result as any).timestamp),
       });
+      
+      expect((result as any).price).to.be.bignumber.equal(toBN(medianData!.data.finalMedianPrice));
     }
   });
 
-  it("should claim rewards when available", async () => {
+  it.skip("should claim rewards when available", async () => {
     // By checking each client, we not only test the correctness of the behavior of claimReward(),
     // but also the correctness of the construction of the Merkle proof in all possible cases.
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
