@@ -99,13 +99,17 @@ export class FTSOClient {
     return Math.floor((priceEpochId - this.provider.firstRewardedPriceEpoch) / this.provider.rewardEpochDurationInEpochs);
   }
 
-  registerRewardsForRewardEpoch(rewardEpochId: number) {
+  registerRewardsForRewardEpoch(rewardEpochId: number, forceClosure = false) {
     if (!this.rewardCalculator) {
       throw new Error("Reward calculator not initialized");
     }
     let rewardOffers = this.rewardEpochOffers.get(rewardEpochId);
     if (!rewardOffers) {
-      throw new Error(`Reward offers for reward epoch ${rewardEpochId} not found`);
+      if (forceClosure) {
+        rewardOffers = [];
+      } else {
+        throw new Error(`Reward offers for reward epoch ${rewardEpochId} not found`);
+      }
     }
     if (this.rewardEpochOffersClosed.get(rewardEpochId)) {
       throw new Error("Reward epoch is already closed");
@@ -307,7 +311,7 @@ export class FTSOClient {
     }
     let orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
     let numberOfFeeds = orderedPriceFeeds.length;
-  
+
     let weights = await this.provider.voterWeightsInRewardEpoch(rewardEpoch, voters);
     let pricesForVoters = voters.map(voter => {
       let revealData = this.priceEpochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
@@ -467,8 +471,9 @@ export class FTSOClient {
     return await this.provider.publishPrices(result, symbolIndices, this.wallet.address);
   }
 
-  async claimReward(epochId: number) {
-    let result = this.priceEpochResults.get(epochId)!;
+  async claimReward(rewardEpochId: number) {
+    let claimPriceEpochId = this.rewardCalculator.firstRewardedPriceEpoch + this.rewardCalculator.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
+    let result = this.priceEpochResults.get(claimPriceEpochId)!;
 
     let rewardClaims = result.rewards.get(this.wallet.address.toLowerCase()) || [];
     let receipts = [];
@@ -478,5 +483,5 @@ export class FTSOClient {
     }
     return receipts;
   }
-  
+
 }

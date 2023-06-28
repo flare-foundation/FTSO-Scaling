@@ -13,31 +13,47 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
  * @param firstRewardedPriceEpoch 
  * @param REWARD_EPOCH_DURATION 
  */
-export async function moveToNextEpochStart(votingManager: VotingManagerInstance, firstRewardedPriceEpoch?: BN, REWARD_EPOCH_DURATION?: number) {
+export async function moveToNextPriceEpochStart(votingManager: VotingManagerInstance) {
+  let firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
+  let epochDurationSec = await votingManager.BUFFER_WINDOW();
+
+  let currentPriceEpochId = await votingManager.getCurrentPriceEpochId();
+  let time = firstEpochStartSec.add(
+    epochDurationSec.mul(
+      currentPriceEpochId.add(
+        toBN(1)
+      )
+    )
+  ).toNumber();
+  await increaseTimeTo(time);
+}
+
+export async function moveToCurrentRewardEpochRevealEnd(votingManager: VotingManagerInstance) {
   let firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
   let epochDurationSec = await votingManager.BUFFER_WINDOW();
 
   let time;
-  if (firstRewardedPriceEpoch && REWARD_EPOCH_DURATION) {
-    let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
-    time = firstEpochStartSec.add(
-      epochDurationSec.mul(
-        firstRewardedPriceEpoch.add(
-          toBN(REWARD_EPOCH_DURATION).mul(currentRewardEpochId.add(toBN(1)))
-        )
-      )
-    ).toNumber()
+  let currentEpoch = await votingManager.getCurrentPriceEpochId();
+  time = firstEpochStartSec.add(
+    epochDurationSec.mul(
+      currentEpoch
+    )
+  ).add(epochDurationSec.div(toBN(2)).add(toBN(1))).toNumber()
+  await increaseTimeTo(time);
+}
 
-  } else {
-    let currentEpoch = await votingManager.getCurrentPriceEpochId();
-    time = firstEpochStartSec.add(
-      epochDurationSec.mul(
-        currentEpoch.add(
-          toBN(1)
-        )
+export async function moveToNextRewardEpochStart(votingManager: VotingManagerInstance, firstRewardedPriceEpoch: BN, rewardEpochDurationInEpochs: number) {
+  let firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
+  let epochDurationSec = await votingManager.BUFFER_WINDOW();
+
+  let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
+  let time = firstEpochStartSec.add(
+    epochDurationSec.mul(
+      firstRewardedPriceEpoch.add(
+        toBN(rewardEpochDurationInEpochs).mul(currentRewardEpochId.add(toBN(1)))
       )
-    ).toNumber()
-  }
+    )
+  ).toNumber()
   await increaseTimeTo(time);
 }
 

@@ -257,7 +257,7 @@ export class RewardCalculator {
 
     let claims = epochCalculator.claimsForSymbols(calculationResults, this.iqrShare, this.pctShare);
     // regular price epoch in the current reward epoch
-    if (priceEpoch < this.firstPriceEpochInNextRewardEpoch) {
+    if (priceEpoch < this.firstPriceEpochInNextRewardEpoch - 1) {
       if (priceEpoch === this.initialPriceEpoch) {
         this.priceEpochClaims.set(priceEpoch, claims);
         this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, claims);
@@ -271,7 +271,7 @@ export class RewardCalculator {
         this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, cumulativeClaims);
       }
     } else {
-      // first price epoch in the next reward epoch
+      // we are in the last price epoch of the current reward epoch
       let previousClaims = this.priceEpochClaims.get(priceEpoch - 1);
       if (previousClaims === undefined) {
         throw new Error("Previous claims are undefined");
@@ -284,6 +284,7 @@ export class RewardCalculator {
       // initialize empty cumulative claims for the new reward epoch
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, []);
     }
+    this.currentUnprocessedPriceEpoch++;
   }
 
   getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward[]> {
