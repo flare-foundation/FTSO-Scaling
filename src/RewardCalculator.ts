@@ -235,6 +235,21 @@ export class RewardCalculator {
     this.indexForFeedInRewardEpoch.set(rewardEpoch, indexForFeed);
   }
 
+  private adjustClaimsForClaiming(claims: ClaimReward[]) {
+    if(claims.length === 0) {
+      return claims;
+    }
+    let priceEpochId = claims[0].claimRewardBody.epochId;
+    let rewardEpochId = this.rewardEpochIdForPriceEpoch(priceEpochId);
+    for(let claim of claims) {
+      if(claim.claimRewardBody.epochId !== priceEpochId) {
+        throw new Error(`Claim epoch ${claim.claimRewardBody.epochId} is not equal to price epoch ${priceEpochId}`);
+      }
+      claim.claimRewardBody.epochId = rewardEpochId;
+    }
+    return claims;
+  }
+
   /**
    * Calculates the claims for the given price epoch.
    * These claims are then stored for each price epoch in the priceEpochClaims map.
@@ -246,39 +261,41 @@ export class RewardCalculator {
    * the cumulative claims for the reward epoch are stored in the rewardEpochCumulativeRewards map.
    * 
    * The function must be called for sequential price epochs.
-   * @param priceEpoch 
+   * @param priceEpochId 
    * @param calculationResults 
    */
-  calculateClaimsForPriceEpoch(priceEpoch: number, calculationResults: MedianCalculationResult[]) {
-    if (priceEpoch !== this.currentUnprocessedPriceEpoch) {
-      throw new Error(`Price epoch ${priceEpoch} is not the current unprocessed price epoch ${this.currentUnprocessedPriceEpoch}`);
+  calculateClaimsForPriceEpoch(priceEpochId: number, calculationResults: MedianCalculationResult[]) {
+    if (priceEpochId !== this.currentUnprocessedPriceEpoch) {
+      throw new Error(`Price epoch ${priceEpochId} is not the current unprocessed price epoch ${this.currentUnprocessedPriceEpoch}`);
     }
-    let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpoch, this);
+    let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpochId, this);
 
     let claims = epochCalculator.claimsForSymbols(calculationResults, this.iqrShare, this.pctShare);
     // regular price epoch in the current reward epoch
-    if (priceEpoch < this.firstPriceEpochInNextRewardEpoch - 1) {
-      if (priceEpoch === this.initialPriceEpoch) {
-        this.priceEpochClaims.set(priceEpoch, claims);
+    if (priceEpochId < this.firstPriceEpochInNextRewardEpoch - 1) {
+      if (priceEpochId === this.initialPriceEpoch) {
+        this.priceEpochClaims.set(priceEpochId, claims);
         this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, claims);
       } else {
-        let previousClaims = this.priceEpochClaims.get(priceEpoch - 1);
+        let previousClaims = this.priceEpochClaims.get(priceEpochId - 1);
         if (previousClaims === undefined) {
           throw new Error("Previous claims are undefined");
         }
-        let cumulativeClaims = epochCalculator.mergeClaims(previousClaims, claims);
-        this.priceEpochClaims.set(priceEpoch, claims);
+        let cumulativeClaims = epochCalculator.mergeClaims(previousClaims, claims, priceEpochId);
+        this.priceEpochClaims.set(priceEpochId, claims);
         this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, cumulativeClaims);
       }
     } else {
       // we are in the last price epoch of the current reward epoch
-      let previousClaims = this.priceEpochClaims.get(priceEpoch - 1);
+      let previousClaims = this.priceEpochClaims.get(priceEpochId - 1);
       if (previousClaims === undefined) {
         throw new Error("Previous claims are undefined");
       }
-      let cumulativeClaims = epochCalculator.mergeClaims(previousClaims, claims);
-      this.priceEpochClaims.set(priceEpoch, claims);
+      let cumulativeClaims = epochCalculator.mergeClaims(previousClaims, claims, priceEpochId);
+      this.priceEpochClaims.set(priceEpochId, claims);
       // last (claiming) cumulative claim records
+      // adjust the epochId to the reward epoch for claiming
+      // this.adjustClaimsForClaiming(cumulativeClaims)
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, cumulativeClaims);
       this.currentRewardEpoch++;
       // initialize empty cumulative claims for the new reward epoch
@@ -286,6 +303,7 @@ export class RewardCalculator {
     }
     this.currentUnprocessedPriceEpoch++;
   }
+
 
   getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward[]> {
     if(!this.initialized) {
@@ -307,6 +325,7 @@ export class RewardCalculator {
       addressClaims.push(claim);
       addressCurrencyAddresses.add(currencyAddress);
       if(addressClaims.length !== addressCurrencyAddresses.size) {
+        console.dir(result);
         throw new Error(`Duplicate claim for ${address} and ${currencyAddress}`);
       }
     }

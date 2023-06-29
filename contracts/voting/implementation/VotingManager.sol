@@ -74,10 +74,10 @@ contract VotingManager is Governed {
         return firstSigningTimestampForEpoch(_epochId) + signingDurationSec - 1;
     }
 
-    function firstPriceEpochOfRewardEpoch(
+    function lastPriceEpochOfRewardEpoch(
         uint256 _rewardEpochId
     ) public view returns (uint256) {
         return
-            firstRewardedPriceEpoch + _rewardEpochId * rewardEpochDurationInEpochs;
+            firstRewardedPriceEpoch + (_rewardEpochId + 1) * rewardEpochDurationInEpochs - 1;
     }
 }

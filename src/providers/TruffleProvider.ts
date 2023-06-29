@@ -2,7 +2,7 @@ import BN from "bn.js";
 import fs from "fs";
 import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData, deepCopyClaim } from "../voting-interfaces";
 import { IVotingProvider } from "./IVotingProvider";
 import { ZERO_ADDRESS, convertOfferFromWeb3Response, hexlifyBN } from "../voting-utils";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
@@ -57,7 +57,12 @@ export class TruffleProvider extends IVotingProvider {
    }
 
    async claimReward(claim: ClaimReward): Promise<any> {
-      return this.votingRewardManagerContract.claimReward(hexlifyBN(claim));
+      let claimReward = deepCopyClaim(claim);
+      console.log("HASH", claimReward.hash);
+      delete claimReward.hash;
+      console.dir(hexlifyBN(claimReward));
+      
+      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward));
    }
 
    async offerRewards(offers: Offer[]): Promise<any> {

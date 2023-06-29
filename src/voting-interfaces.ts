@@ -4,6 +4,16 @@ export interface ClaimReward {
   claimRewardBody: ClaimRewardBody;
 };
 
+export function deepCopyClaim(claim: ClaimReward): ClaimReward {
+  return {
+    ...claim,
+    merkleProof: [...claim.merkleProof],
+    claimRewardBody: {
+      ...claim.claimRewardBody
+    }
+  }
+}
+
 export interface ClaimRewardBody {
   amount: BN; // 256-bit
   currencyAddress: string;

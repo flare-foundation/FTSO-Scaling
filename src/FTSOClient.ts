@@ -396,7 +396,7 @@ export class FTSOClient {
       // Adding the price message hash to the merkle proof, due to construction of the tree
       claim.merkleProof.push(priceMessageHash);
     });
-
+    
     this.priceEpochResults.set(priceEpochId, {
       priceEpochId: priceEpochId,
       medianData: results,

@@ -39,17 +39,18 @@ contract VotingRewardManager is Governed, IRewardManager {
         require(epochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId, 
                 "reward balance not preserved for epoch too far in the past");
         // Have to add the modulus to get a nonnegative answer: -a % m == -(a % m)
-        return (nextRewardEpochBalanceIndex + (epochId - currentRewardEpochId) + STORED_PREVIOUS_BALANCES)
-                % STORED_PREVIOUS_BALANCES;
+        // return (nextRewardEpochBalanceIndex + epochId + STORED_PREVIOUS_BALANCES - currentRewardEpochId)
+        //         % STORED_PREVIOUS_BALANCES;
+        return epochId % STORED_PREVIOUS_BALANCES;
     }
 
     // Bookkeeping semantics for anything that affects the reward balances.
     modifier maybePushRewardBalance() {
         uint256 _currentRewardEpochId = votingManager.getCurrentRewardEpochId();
         require (_currentRewardEpochId >= currentRewardEpochId, "(panic) epoch not monotonic");
-        if (_currentRewardEpochId > currentRewardEpochId) {
-            nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(_currentRewardEpochId);
+        if (_currentRewardEpochId > currentRewardEpochId) {            
             currentRewardEpochId = _currentRewardEpochId;
+            nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(currentRewardEpochId + 1);
             storedRewardEpochBalances[nextRewardEpochBalanceIndex].reset();
         }
         _;
@@ -67,7 +68,13 @@ contract VotingRewardManager is Governed, IRewardManager {
     function setVotingManager(address _votingManager) override public onlyGovernance {
         require(address(votingManager) == address(0), "voting manager already initialized");
         votingManager = VotingManager(_votingManager);
+        // currentRewardEpochId = votingManager.getCurrentRewardEpochId();
+        initialize();
+    }
+
+    function initialize() internal {
         currentRewardEpochId = votingManager.getCurrentRewardEpochId();
+        nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(currentRewardEpochId + 1);
     }
 
     // This contract does not have any concept of symbols/price feeds and it is
@@ -96,11 +103,13 @@ contract VotingRewardManager is Governed, IRewardManager {
         ClaimReward calldata _data
     ) override public maybePushRewardBalance {
         ClaimRewardBody memory claim = _data.claimRewardBody;
-
-        require(claim.epochId < currentRewardEpochId,
+        uint256 claimRewardEpoch = votingManager.getRewardEpochIdForEpoch(claim.epochId);
+        require(claim.epochId == votingManager.lastPriceEpochOfRewardEpoch(claimRewardEpoch), 
+                "claim epoch is not the last price epoch of the reward epoch");
+        require(claimRewardEpoch < currentRewardEpochId,
                 "can only claim rewards for previous epochs");
+        uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(claimRewardEpoch);
 
-        uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(claim.epochId);
         StoredBalances storage balances = storedRewardEpochBalances[previousRewardEpochBalanceIndex];
         address addr = claim.currencyAddress;
         uint256 amt = claim.amount;

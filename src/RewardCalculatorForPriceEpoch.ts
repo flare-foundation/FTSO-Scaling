@@ -1,6 +1,6 @@
 import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
-import { ClaimReward, ClaimRewardBody, MedianCalculationResult, Offer, VoterWithWeight } from "./voting-interfaces";
+import { ClaimReward, ClaimRewardBody, MedianCalculationResult, Offer, VoterWithWeight, deepCopyClaim } from "./voting-interfaces";
 import BN from "bn.js";
 import Web3 from "web3";
 import { feedId } from "./voting-utils";
@@ -141,19 +141,18 @@ export class RewardCalculatorForPriceEpoch {
     return rewardClaims;
   }
 
-
-
   /**
    * Merges new claims with previous claims where previous claims are the cumulative 
    * claims for all previous price epochs withing the same reward epoch.
    * Merging is done by the key (address, poolId).
    * This function can be used to accumulate claims for all slots in the same reward epoch 
    * as well as to accumulate claims for all price epochs in the same reward epoch.
+   * All claim objects in parameters remain unchanged and new objects are created.
    * @param previousClaims 
    * @param newClaims 
    * @returns 
    */
-  mergeClaims(previousClaims: ClaimReward[], newClaims: ClaimReward[]): ClaimReward[] {
+  mergeClaims(previousClaims: ClaimReward[], newClaims: ClaimReward[], enforcePriceEpochId?: number): ClaimReward[] {
     // address => currency => ClaimReward
     let claimsMap = new Map<string, Map<string, ClaimReward>>();
     // init map from previous claims
@@ -163,8 +162,9 @@ export class RewardCalculatorForPriceEpoch {
       if (voterClaims.has(claim.claimRewardBody.currencyAddress)) {
         throw new Error(`Duplicate claim for ${claim.claimRewardBody.voterAddress} and ${claim.claimRewardBody.currencyAddress}`);
       }
-      voterClaims.set(claim.claimRewardBody.currencyAddress, claim);
+      voterClaims.set(claim.claimRewardBody.currencyAddress, deepCopyClaim(claim));
     }
+
     // merge with new claims by adding amounts
     for (let claim of newClaims) {
       let voterClaims = claimsMap.get(claim.claimRewardBody.voterAddress) || new Map<string, ClaimReward>();
@@ -173,14 +173,19 @@ export class RewardCalculatorForPriceEpoch {
       if (previousClaim) {
         previousClaim.claimRewardBody.amount = previousClaim.claimRewardBody.amount.add(claim.claimRewardBody.amount);
       } else {
-        voterClaims.set(claim.claimRewardBody.currencyAddress, claim);
+        voterClaims.set(claim.claimRewardBody.currencyAddress, deepCopyClaim(claim));
       }
     }
     // unpacking the merged map to a list of claims
     let mergedClaims: ClaimReward[] = [];
     for (let voterClaims of claimsMap.values()) {
       for (let claim of voterClaims.values()) {
-        mergedClaims.push(claim);
+        if(enforcePriceEpochId !== undefined) {
+          claim.claimRewardBody.epochId = enforcePriceEpochId;
+        }
+        if(claim.claimRewardBody.amount.gt(toBN(0))) {
+          mergedClaims.push(claim);
+        }        
       }
     }
     return mergedClaims;
