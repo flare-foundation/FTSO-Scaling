@@ -17,6 +17,11 @@ let VotingManager = artifacts.require("VotingManager");
 export interface TruffleProviderOptions {
    privateKey: string;
 }
+
+/**
+ * Implements IVotingProvider using Truffle library. 
+ * Intended for testing in hardhat environment.
+ */
 export class TruffleProvider extends IVotingProvider {
    votingRewardManagerContract!: VotingRewardManagerInstance;
    votingContract!: VotingInstance;
@@ -73,7 +78,7 @@ export class TruffleProvider extends IVotingProvider {
    async claimReward(claim: ClaimReward): Promise<any> {
       let claimReward = deepCopyClaim(claim);
       delete claimReward.hash;
-      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward), {from: this.wallet.address});
+      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward), { from: this.wallet.address });
    }
 
    async offerRewards(offers: Offer[]): Promise<any> {
@@ -137,7 +142,7 @@ export class TruffleProvider extends IVotingProvider {
       return result as any as BlockData;
    }
 
-   functionSignature(name: string): string {
+   functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
       return this.functionSignatures.get(name)!;
    }
 

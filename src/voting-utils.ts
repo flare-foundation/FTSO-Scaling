@@ -1,61 +1,10 @@
 import BN from "bn.js";
 import Web3 from "web3";
-import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
-import { VotingManagerInstance } from "../typechain-truffle";
+import { toBN } from "../test-utils/utils/test-helpers";
 import { ClaimReward, Feed, Offer } from "./voting-interfaces";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-/**
- * Moves time to the start of the next epoch.
- * If firstRewardedPriceEpoch and REWARD_EPOCH_DURATION are provided, it will move time to the start of the next reward epoch
- * @param votingManager 
- * @param firstRewardedPriceEpoch 
- * @param REWARD_EPOCH_DURATION 
- */
-export async function moveToNextPriceEpochStart(votingManager: VotingManagerInstance) {
-  let firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
-  let epochDurationSec = await votingManager.BUFFER_WINDOW();
-
-  let currentPriceEpochId = await votingManager.getCurrentPriceEpochId();
-  let time = firstEpochStartSec.add(
-    epochDurationSec.mul(
-      currentPriceEpochId.add(
-        toBN(1)
-      )
-    )
-  ).toNumber();
-  await increaseTimeTo(time);
-}
-
-export async function moveToCurrentRewardEpochRevealEnd(votingManager: VotingManagerInstance) {
-  let firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
-  let epochDurationSec = await votingManager.BUFFER_WINDOW();
-
-  let time;
-  let currentEpoch = await votingManager.getCurrentPriceEpochId();
-  time = firstEpochStartSec.add(
-    epochDurationSec.mul(
-      currentEpoch
-    )
-  ).add(epochDurationSec.div(toBN(2)).add(toBN(1))).toNumber()
-  await increaseTimeTo(time);
-}
-
-export async function moveToNextRewardEpochStart(votingManager: VotingManagerInstance, firstRewardedPriceEpoch: BN, rewardEpochDurationInEpochs: number) {
-  let firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
-  let epochDurationSec = await votingManager.BUFFER_WINDOW();
-
-  let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
-  let time = firstEpochStartSec.add(
-    epochDurationSec.mul(
-      firstRewardedPriceEpoch.add(
-        toBN(rewardEpochDurationInEpochs).mul(currentRewardEpochId.add(toBN(1)))
-      )
-    )
-  ).toNumber()
-  await increaseTimeTo(time);
-}
 
 /**
  * A sorted hash of two 32-byte strings
@@ -70,12 +19,21 @@ export function sortedHashPair(x: string, y: string) {
   return web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes32", "bytes32"], [y, x]));
 }
 
-// TODO: take the parameter type from the generated ABI
-// web3.eth.abi.encodeParameters
+/**
+ * Hashing ClaimReward struct.
+ * @param data 
+ * @param abi 
+ * @returns 
+ */
 export function hashClaimReward(data: ClaimReward, abi: any): string {
   return web3.utils.soliditySha3(web3.eth.abi.encodeParameter(abi, hexlifyBN(data.claimRewardBody)))!;
 }
 
+/**
+ * Converts text representation of a symbol to bytes4.
+ * @param text 
+ * @returns 
+ */
 export function toBytes4(text: string) {
   if (!text || text.length === 0) {
     throw new Error(`Text should be non-null and non-empty`);
@@ -89,6 +47,11 @@ export function toBytes4(text: string) {
   return web3.utils.padRight(web3.utils.asciiToHex(text), 8);
 }
 
+/**
+ * Converts bytes4 representation of a symbol to text.
+ * @param bytes4 
+ * @returns 
+ */
 export function bytes4ToText(bytes4: string) {
   if (!bytes4 || bytes4.length === 0) {
     throw new Error(`Bytes4 should be non-null and non-empty`);
@@ -99,6 +62,11 @@ export function bytes4ToText(bytes4: string) {
   return web3.utils.hexToAscii(bytes4).replace(/\u0000/g, '');
 }
 
+/**
+ * Converts feed symbols withing the Feed from text to bytes.
+ * @param feed 
+ * @returns 
+ */
 export function feedToBytes4(feed: Feed): Feed {
   return {
     offerSymbol: toBytes4(feed.offerSymbol),
@@ -110,6 +78,11 @@ export function unprefixedSymbolBytes(feed: Feed) {
   return `${toBytes4(feed.offerSymbol).slice(2)}${toBytes4(feed.quoteSymbol).slice(2)}`;
 }
 
+/**
+ * Converts feed symbols withing the Feed from bytes to text.
+ * @param feed 
+ * @returns 
+ */
 export function feedToText(feed: Feed): Feed {
   return {
     ...feed,

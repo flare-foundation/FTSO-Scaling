@@ -20,6 +20,10 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
   return Object.assign(new Array(minLength).fill(fillValue), array);
 }
 
+/**
+ * A generic class for FTSO client implementation.
+ * It supports pluggable price feeds and voting providers (Truffle for testing, Web3 for production).
+ */
 export class FTSOClient {
   provider: IVotingProvider;
   rewardCalculator!: RewardCalculator;
@@ -51,31 +55,25 @@ export class FTSOClient {
     this.provider = provider;
   }
 
-  registerPriceFeeds(priceFeeds: IPriceFeed[]) {
+  public registerPriceFeeds(priceFeeds: IPriceFeed[]) {
     for (let priceFeed of priceFeeds) {
       this.priceFeeds.set(feedId(priceFeed.getFeedInfo()), priceFeed);
     }
   }
 
-  unregisterAllPriceFeeds() {
-    this.priceFeeds.clear();
-  }
-
-  initializeRewardCalculator(
-    firstRewardedPriceEpoch: number,
-    rewardEpochDurationInEpochs: number,
+  public initializeRewardCalculator(
     initialRewardEpoch: number,
     iqrShare: BN,
     pctShare: BN
   ) {
-    this.rewardCalculator = new RewardCalculator(this, firstRewardedPriceEpoch, rewardEpochDurationInEpochs, initialRewardEpoch, iqrShare, pctShare);
+    this.rewardCalculator = new RewardCalculator(this, initialRewardEpoch, iqrShare, pctShare);
   }
 
-  priceEpochIdForTime(timestamp: number): number {
+  private priceEpochIdForTime(timestamp: number): number {
     return Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
   }
 
-  revealEpochIdForTime(timestamp: number): number | undefined {
+  private revealEpochIdForTime(timestamp: number): number | undefined {
     let epochId = Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
     let revealDeadline = this.provider.firstEpochStartSec + epochId * this.provider.epochDurationSec + this.provider.epochDurationSec / 2;
     if (timestamp > revealDeadline) {
@@ -334,27 +332,6 @@ export class FTSOClient {
     this.rewardCalculator.calculateClaimsForPriceEpoch(priceEpochId, results);
     let rewards = this.rewardCalculator.getRewardMappingForPriceEpoch(priceEpochId);
 
-    // console.log("REWARDS");
-    // console.dir(rewards);
-
-
-    // let rewardedSenders = [...this.priceEpochCommits.get(priceEpochId)!.keys()];
-    // // Fake choice of senders to receive rewards
-    // rewardedSenders = rewardedSenders.slice(0, rewardedSenders.length / 2);
-    // // Fake computation of rewards
-    // let rewards = new Map(rewardedSenders.map((sender) =>
-    //   [sender,
-    //     {
-    //       merkleProof: [],
-    //       claimRewardBody: {
-    //         amount: toBN(100),
-    //         currencyAddress: ZERO_ADDRESS,
-    //         voterAddress: sender,
-    //         epochId: priceEpochId,
-    //       } as ClaimRewardBody
-    //     } as ClaimReward
-    //   ]
-    // ))
     let rewardClaimHashes: string[] = [];
     for (let claimRewardList of rewards.values()) {
       for (let claim of claimRewardList) {

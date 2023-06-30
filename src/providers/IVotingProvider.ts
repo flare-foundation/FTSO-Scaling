@@ -1,6 +1,12 @@
 import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import BN from "bn.js";
 
+/**
+ * An abstract class of a Voting provider. The role of a Voting provider is to
+ * provide a generic interface to blockchain calls needed by the FTSO providers 
+ * hence abstracting away specifics of the blockchain interacting implementation 
+ * and wallet usage.
+ */
 export abstract class IVotingProvider {
    votingContractAddress: string;
    votingRewardManagerContractAddress: string;   
@@ -31,8 +37,13 @@ export abstract class IVotingProvider {
       this.votingManagerContractAddress = votingManagerContractAddress;
    }
 
+   /**
+    * Carries out initialization of the Voting provider.
+    * @param options 
+    */
    abstract initialize(options?: any): Promise<void>;
 
+   ////////////// Contract calls //////////////
    abstract claimReward(claim: ClaimReward): Promise<any>;
    abstract offerRewards(offer: Offer[]): Promise<any>;
    abstract commit(hash: string): Promise<any>;
@@ -41,12 +52,23 @@ export abstract class IVotingProvider {
    abstract finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
    abstract publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
    abstract voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]>;
+
+
+   ////////////// Signing //////////////
    abstract signMessage(message: string): Promise<BareSignature>;
 
+   ////////////// Block calls //////////////
    abstract getBlockNumber(): Promise<number>;
    abstract getBlock(blockNumber: number): Promise<BlockData>;
-   abstract functionSignature(name: string): string;
 
+   ////////////// Auxiliary //////////////
+   abstract functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string;
+
+   /**
+    * Hashes a message. 
+    * @param message 
+    * @returns 
+    */
    hashMessage(message: string): string {
       if (!message.startsWith("0x")) {
          throw new Error("Message must be hex string prefixed with 0x");
@@ -54,10 +76,13 @@ export abstract class IVotingProvider {
       return web3.utils.soliditySha3(message)!;
    }
 
+   abstract get senderAddressLowercase(): string;
+
+   ////////////// Transaction and event data extraction methods //////////////
 
    abstract extractOffers(tx: TxData): Offer[];
    abstract extractCommitHash(tx: TxData): string;
    abstract extractRevealBitvoteData(tx: TxData): RevealBitvoteData;
    abstract extractSignatureData(tx: TxData): SignatureData;
-   abstract get senderAddressLowercase(): string;
+
 }
