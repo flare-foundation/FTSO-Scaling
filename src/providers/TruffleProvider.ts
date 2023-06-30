@@ -14,14 +14,22 @@ let VoterRegistry = artifacts.require("VoterRegistry");
 let PriceOracle = artifacts.require("PriceOracle");
 let VotingManager = artifacts.require("VotingManager");
 
+export interface TruffleProviderOptions {
+   privateKey: string;
+}
 export class TruffleProvider extends IVotingProvider {
    votingRewardManagerContract!: VotingRewardManagerInstance;
    votingContract!: VotingInstance;
    voterRegistryContract!: VoterRegistryInstance;
    priceOracleContract!: PriceOracleInstance;
    votingManagerContract!: VotingManagerInstance;
+   wallet: any;
 
-   async initialize(): Promise<void> {
+   async initialize(options: TruffleProviderOptions): Promise<void> {
+      if (!options.privateKey) {
+         throw new Error("privateKey not provided");
+      }
+      this.wallet = web3.eth.accounts.privateKeyToAccount(options.privateKey);
       let votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json"
       let rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
       // let voterRegistryAbiPath = "artifacts/contracts/voting/implementation/VoterRegistry.sol/VoterRegistry.json";
@@ -56,50 +64,62 @@ export class TruffleProvider extends IVotingProvider {
       this.signingDurationSec = (await this.votingManagerContract.signingDurationSec()).toNumber();
    }
 
+   assertWallet() {
+      if (!this.wallet) {
+         throw new Error("wallet not initialized");
+      }
+   }
+
    async claimReward(claim: ClaimReward): Promise<any> {
       let claimReward = deepCopyClaim(claim);
-      console.log("HASH", claimReward.hash);
       delete claimReward.hash;
-      console.dir(hexlifyBN(claimReward));
-      
-      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward));
+      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward), {from: this.wallet.address});
    }
 
    async offerRewards(offers: Offer[]): Promise<any> {
       let totalAmount = toBN(0);
       offers.forEach((offer) => {
-         if(offer.currencyAddress === ZERO_ADDRESS) {
+         if (offer.currencyAddress === ZERO_ADDRESS) {
             totalAmount = totalAmount.add(offer.amount);
          }
       });
-      return this.votingRewardManagerContract.offerRewards(hexlifyBN(offers), { value: totalAmount });
+      return this.votingRewardManagerContract.offerRewards(hexlifyBN(offers), { from: this.wallet.address, value: totalAmount });
    }
 
-   async commit(hash: string, from?: string | undefined): Promise<any> {
-      return this.votingContract.commit(hash, { from });
+   async commit(hash: string): Promise<any> {
+      this.assertWallet();
+      return this.votingContract.commit(hash, { from: this.wallet.address });
    }
 
-   async revealBitvote(epochData: EpochData, from?: string | undefined): Promise<any> {
-      return this.votingContract.revealBitvote(epochData.random!, epochData.merkleRoot!, epochData.bitVote!, epochData.pricesHex!, { from });
+   async revealBitvote(epochData: EpochData): Promise<any> {
+      return this.votingContract.revealBitvote(epochData.random!, epochData.merkleRoot!, epochData.bitVote!, epochData.pricesHex!, { from: this.wallet.address });
    }
 
-   async signResult(epochId: number, merkleRoot: string, signature: BareSignature, from?: string | undefined): Promise<any> {
+   async signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
+      this.assertWallet();
       return this.votingContract.signResult(epochId,
          merkleRoot,
          {
             v: signature.v,
             r: signature.r,
             s: signature.s
-         }, { from });
+         }, { from: this.wallet.address });
    }
 
-   async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[], from?: string | undefined) {
-      return this.votingContract.finalize(epochId, mySignatureHash, signatures, { from });
+   async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]) {
+      this.assertWallet();
+      return this.votingContract.finalize(epochId, mySignatureHash, signatures, { from: this.wallet.address });
    }
 
-   async publishPrices(epochResult: EpochResult, symbolIndices: number[], from?: string | undefined): Promise<any> {
+   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
       // console.dir(epochResult);
-      return this.priceOracleContract.publishPrices(epochResult.dataMerkleRoot, epochResult.priceEpochId, epochResult.priceMessage, epochResult.symbolMessage, symbolIndices, { from });
+      this.assertWallet();
+      return this.priceOracleContract.publishPrices(epochResult.dataMerkleRoot, epochResult.priceEpochId, epochResult.priceMessage, epochResult.symbolMessage, symbolIndices, { from: this.wallet.address });
+   }
+
+   async signMessage(message: string): Promise<BareSignature> {
+      this.assertWallet();
+      return await this.wallet.sign(message);
    }
 
    async voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]> {
@@ -119,13 +139,6 @@ export class TruffleProvider extends IVotingProvider {
 
    functionSignature(name: string): string {
       return this.functionSignatures.get(name)!;
-   }
-
-   hashMessage(message: string): string {
-      if (!message.startsWith("0x")) {
-         throw new Error("Message must be hex string prefixed with 0x");
-      }
-      return web3.utils.soliditySha3(message)!;
    }
 
    private decodeFunctionCall(tx: TxData, name: string) {
@@ -161,6 +174,11 @@ export class TruffleProvider extends IVotingProvider {
          r: resultTmp.signature.r,
          s: resultTmp.signature.s
       } as SignatureData;
+   }
+
+   get senderAddressLowercase(): string {
+      this.assertWallet();
+      return this.wallet.address.toLowerCase();
    }
 
 }

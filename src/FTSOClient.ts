@@ -43,15 +43,11 @@ export class FTSOClient {
 
   priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
-  wallet: any;
-
   verbose: boolean = false;
 
   constructor(
-    privateKey: string,
     provider: IVotingProvider,
-  ) {
-    this.wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+  ) {    
     this.provider = provider;
   }
 
@@ -73,10 +69,6 @@ export class FTSOClient {
     pctShare: BN
   ) {
     this.rewardCalculator = new RewardCalculator(this, firstRewardedPriceEpoch, rewardEpochDurationInEpochs, initialRewardEpoch, iqrShare, pctShare);
-  }
-
-  get senderAddress(): string {
-    return this.wallet.address;
   }
 
   priceEpochIdForTime(timestamp: number): number {
@@ -129,6 +121,10 @@ export class FTSOClient {
     this.verbose = verbose;
   }
 
+  get address() {
+    return this.provider.senderAddressLowercase
+  }
+  
   async processBlock(blockNumber: number) {
     let block = await this.provider.getBlock(blockNumber);
     this.blockTimestamps.set(block.number, block.timestamp);
@@ -242,8 +238,8 @@ export class FTSOClient {
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
-    let hash = this.hashForCommit(this.senderAddress, epochData.random!, epochData.merkleRoot!, epochData.pricesHex!);
-    await this.provider.commit(hash, this.wallet.address);
+    let hash = this.hashForCommit(this.provider.senderAddressLowercase, epochData.random!, epochData.merkleRoot!, epochData.pricesHex!);
+    await this.provider.commit(hash);
   }
 
   async onReveal(epochId: number) {
@@ -251,7 +247,7 @@ export class FTSOClient {
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
-    await this.provider.revealBitvote(epochData, this.wallet.address);
+    await this.provider.revealBitvote(epochData);
   }
 
   async onSign(epochId: number, skipCalculation = false) {
@@ -263,15 +259,14 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
 
-    let signature = await this.wallet.sign(result.merkleRoot);
+    let signature = await this.provider.signMessage(result.merkleRoot!);
     await this.provider.signResult(epochId,
       result.merkleRoot!,
       {
         v: signature.v,
         r: signature.r,
         s: signature.s
-      },
-      this.wallet.address
+      }
     );
   }
 
@@ -384,7 +379,7 @@ export class FTSOClient {
     let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
 
     // add merkle proofs to the claims for this FTSO client
-    rewards.get(this.wallet.address.toLowerCase())?.forEach(claim => {
+    rewards.get(this.provider.senderAddressLowercase)?.forEach(claim => {
       if (!claim.hash) {
         throw new Error("Assert: Claim hash must be calculated.");
       }
@@ -459,7 +454,7 @@ export class FTSOClient {
           s: sig.s
         } as BareSignature
       })
-    return await this.provider.finalize(epochId, mySignatureHash, signatures, this.wallet.address);
+    return await this.provider.finalize(epochId, mySignatureHash, signatures);
   }
 
   async publishPrices(epochId: number, symbolIndices: number[]) {
@@ -468,14 +463,14 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
     // console.log(result.dataMerkleRoot, result.fullPriceMessage, result.merkleRoot)
-    return await this.provider.publishPrices(result, symbolIndices, this.wallet.address);
+    return await this.provider.publishPrices(result, symbolIndices);
   }
 
   async claimReward(rewardEpochId: number) {
     let claimPriceEpochId = this.rewardCalculator.firstRewardedPriceEpoch + this.rewardCalculator.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
     let result = this.priceEpochResults.get(claimPriceEpochId)!;
 
-    let rewardClaims = result.rewards.get(this.wallet.address.toLowerCase()) || [];
+    let rewardClaims = result.rewards.get(this.provider.senderAddressLowercase) || [];
     let receipts = [];
     for (let rewardClaim of rewardClaims) {
       let receipt = await this.provider.claimReward(rewardClaim);

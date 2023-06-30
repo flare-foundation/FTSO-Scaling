@@ -10,7 +10,7 @@ import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig } from "../src/price-feeds/RandomPriceFeed";
 import { TruffleProvider } from "../src/providers/TruffleProvider";
 import { Feed, Offer } from "../src/voting-interfaces";
-import { ZERO_ADDRESS, feedId, moveToCurrentRewardEpochRevealEnd, moveToNextPriceEpochStart, moveToNextRewardEpochStart, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
+import { ZERO_ADDRESS, feedId, hexlifyBN, moveToCurrentRewardEpochRevealEnd, moveToNextPriceEpochStart, moveToNextRewardEpochStart, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
 import { DummyERC20Instance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
@@ -55,7 +55,7 @@ async function offerRewards(
   rewardValue: BN,
 ) {
   for (let coin of erc20Coins) {
-    await coin.approve(votingRewardManager.address, rewardValue);
+    await coin.approve(votingRewardManager.address, rewardValue, { from: governance });
     expect(await coin.allowance(governance, votingRewardManager.address)).to.bignumber.equal(rewardValue);
   }
 
@@ -83,7 +83,9 @@ async function offerRewards(
     }
   }
 
-  await ftsoClients[0].provider.offerRewards(offersSent);
+  await votingRewardManager.offerRewards(hexlifyBN(offersSent), { from: governance, value: totalAmount });
+
+  // await ftsoClients[0].provider.offerRewards(offersSent);
 
   let balance = await web3.eth.getBalance(votingRewardManager.address);
   expect(balance).to.equal(totalAmount);
@@ -330,18 +332,20 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       priceFeedConfigs.push(priceFeedConfig);
     }
 
-    let provider = new TruffleProvider(
-      voting.address,
-      votingRewardManager.address,
-      voterRegistry.address,
-      priceOracle.address,
-      votingManager.address,
-    );
-    await provider.initialize();
 
     // Initialize FTSO clients with random feeds
     for (let i = 1; i <= N; i++) {
-      let client = new FTSOClient(wallets[i].privateKey, provider);
+      // initialize provider
+      let provider = new TruffleProvider(
+        voting.address,
+        votingRewardManager.address,
+        voterRegistry.address,
+        priceOracle.address,
+        votingManager.address,
+      );
+      await provider.initialize({ privateKey: wallets[i].privateKey });
+      let client = new FTSOClient(provider);
+
       await client.initialize(currentBlockNumber, undefined, web3);
       // generate price feeds for the client
       let priceFeedsForClient = priceFeedConfigs.map(config => new RandomPriceFeed(config));
@@ -448,29 +452,58 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   it("should claim rewards when available", async () => {
     // By checking each client, we not only test the correctness of the behavior of claimReward(),
     // but also the correctness of the construction of the Merkle proof in all possible cases.
+
+    console.log("INITIAL BALANCES ON REWARD MANAGER");
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      console.log("Balance of", coin.address, "is", (await coin.balanceOf(votingRewardManager.address)).toString());
+      // expect(await coin.balanceOf(votingRewardManager.address)).to.be.bignumber.equal(toBN(0));
+    }
+    console.log("Balance of reward manager is", (await web3.eth.getBalance(votingRewardManager.address)).toString());
+    // expect(await web3.eth.getBalance(votingRewardManager.address)).to.be.bignumber.equal(toBN(0));
+
     let currentRewardEpochId = await votingManager.getCurrentRewardEpochId();
     console.log("Current reward epoch", currentRewardEpochId.toNumber());
     expect(currentRewardEpochId.toNumber()).to.be.equal(TEST_REWARD_EPOCH + 1);
     for (let client of ftsoClients) {
-      let originalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
+      let originalBalance = toBN(await web3.eth.getBalance(client.address));
 
-      let rewardClaims = client.priceEpochResults.get(initialPriceEpoch + REWARD_EPOCH_DURATION)?.rewards?.get(client.wallet.address.toLowerCase());
-      console.log("Reward claims", rewardClaims);
-      await client.claimReward(TEST_REWARD_EPOCH);
-      let finalBalance = toBN(await web3.eth.getBalance(client.wallet.address));
-
-      // if (rewardClaims === undefined) {
-      //   expect(finalBalance).to.be.bignumber.equal(originalBalance);
-      // } else {
-      //   let flrClaim = rewardClaims.find(claim => claim.claimRewardBody?.currencyAddress === ZERO_ADDRESS);
-      //   if (flrClaim !== undefined) {
-      //     let rewardValue = flrClaim.claimRewardBody?.amount;
-      //     expect(rewardValue).to.be.bignumber.equal(finalBalance.sub(originalBalance));
-      //   } else {
-      //     expect(finalBalance).to.be.bignumber.equal(originalBalance);
-      //   }
-      // }
+      let rewardClaims = client.priceEpochResults.get(initialPriceEpoch + REWARD_EPOCH_DURATION - 1)?.rewards?.get(client.address.toLowerCase());
+      let receipts = await client.claimReward(TEST_REWARD_EPOCH);
+      let txFee = toBN(0);
+      for (let receipt of receipts) {
+        txFee = txFee.add(toBN(receipt.receipt.gasUsed).mul(toBN(receipt.receipt.effectiveGasPrice)));
+      }
+      let finalBalance = toBN(await web3.eth.getBalance(client.address));
+      if (rewardClaims === undefined || rewardClaims.length === 0) {
+        expect(receipts.length).to.be.equal(0);
+        expect(finalBalance).to.be.bignumber.equal(originalBalance);
+      } else {
+        let flrClaim = rewardClaims.find(claim => claim.claimRewardBody?.currencyAddress === ZERO_ADDRESS);
+        if (flrClaim !== undefined) {
+          let rewardValue = flrClaim.claimRewardBody?.amount;
+          expect(rewardValue).to.be.bignumber.equal(finalBalance.sub(originalBalance).add(txFee));
+        } else {
+          expect(finalBalance).to.be.bignumber.equal(originalBalance.sub(txFee));
+        }
+        // Check the erc20 claims
+        for (let claim of rewardClaims) {
+          if(claim.claimRewardBody?.currencyAddress === ZERO_ADDRESS) {
+            continue;
+          }
+          let rewardValue = claim.claimRewardBody?.amount;
+          let erc20Contract = await DummyERC20.at(claim.claimRewardBody?.currencyAddress!);
+          expect(await erc20Contract.balanceOf(client.address)).to.be.bignumber.equal(rewardValue);
+        }
+      }
     };
+    // Check the balance of the reward manager
+    console.log("FINAL BALANCES ON REWARD MANAGER");
+    for (let coin of [dummyCoin1, dummyCoin2]) {
+      console.log("Balance of", coin.address, "is", (await coin.balanceOf(votingRewardManager.address)).toString());
+      // expect(await coin.balanceOf(votingRewardManager.address)).to.be.bignumber.equal(toBN(0));
+    }
+    console.log("Balance of reward manager is", (await web3.eth.getBalance(votingRewardManager.address)).toString());
+    // expect(await web3.eth.getBalance(votingRewardManager.address)).to.be.bignumber.equal(toBN(0));
   });
 
 });

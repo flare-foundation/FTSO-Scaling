@@ -31,24 +31,33 @@ export abstract class IVotingProvider {
       this.votingManagerContractAddress = votingManagerContractAddress;
    }
 
-   abstract initialize(): Promise<void>;
+   abstract initialize(options?: any): Promise<void>;
 
    abstract claimReward(claim: ClaimReward): Promise<any>;
    abstract offerRewards(offer: Offer[]): Promise<any>;
-   abstract commit(hash: string, from?: string): Promise<any>;
-   abstract revealBitvote(epochData: EpochData, from?: string | undefined): Promise<any>;
-   abstract signResult(epochId: number, merkleRoot: string, signature: BareSignature, from?: string): Promise<any>;
-   abstract finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[], from?: string): Promise<any>;
-   abstract publishPrices(epochResult: EpochResult, symbolIndices: number[], from?: string | undefined): Promise<any>;
+   abstract commit(hash: string): Promise<any>;
+   abstract revealBitvote(epochData: EpochData): Promise<any>;
+   abstract signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
+   abstract finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
+   abstract publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
    abstract voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]>;
+   abstract signMessage(message: string): Promise<BareSignature>;
 
    abstract getBlockNumber(): Promise<number>;
    abstract getBlock(blockNumber: number): Promise<BlockData>;
    abstract functionSignature(name: string): string;
-   abstract hashMessage(message: string): string;
+
+   hashMessage(message: string): string {
+      if (!message.startsWith("0x")) {
+         throw new Error("Message must be hex string prefixed with 0x");
+      }
+      return web3.utils.soliditySha3(message)!;
+   }
+
 
    abstract extractOffers(tx: TxData): Offer[];
    abstract extractCommitHash(tx: TxData): string;
    abstract extractRevealBitvoteData(tx: TxData): RevealBitvoteData;
    abstract extractSignatureData(tx: TxData): SignatureData;
+   abstract get senderAddressLowercase(): string;
 }
