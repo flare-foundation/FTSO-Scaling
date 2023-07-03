@@ -1,7 +1,7 @@
 import { toBN } from "../test-utils/utils/test-helpers";
 import { FTSOClient } from "./FTSOClient";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
-import { ClaimReward, Feed, FeedValue, MedianCalculationResult, Offer } from "./voting-interfaces";
+import { ClaimReward, Feed, FeedValue, MedianCalculationResult, Offer, OfferReceived } from "./voting-interfaces";
 import { feedId } from "./voting-utils";
 
 /**
@@ -37,10 +37,10 @@ export class RewardCalculator {
 
   ////////////// Offer data //////////////
   // rewardEpochId => list of reward offers
-  rewardOffers: Map<number, Offer[]> = new Map<number, Offer[]>();
+  rewardOffers: Map<number, OfferReceived[]> = new Map<number, OfferReceived[]>();
   // rewardEpochId => feedId => list of reward offers
   // The offers in the same currency are accumulated
-  rewardOffersBySymbol: Map<number, Map<string, Offer[]>> = new Map<number, Map<string, Offer[]>>();
+  rewardOffersBySymbol: Map<number, Map<string, OfferReceived[]>> = new Map<number, Map<string, OfferReceived[]>>();
 
   ////////////// Claim data //////////////
   // priceEpochId => list of claims
@@ -88,7 +88,7 @@ export class RewardCalculator {
    * @param rewardEpoch 
    * @param rewardOffers 
    */
-  public setRewardOffers(rewardEpoch: number, rewardOffers: Offer[]) {
+  public setRewardOffers(rewardEpoch: number, rewardOffers: OfferReceived[]) {
     if(this.rewardOffers.has(rewardEpoch)) {
       throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
     }

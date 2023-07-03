@@ -4,35 +4,17 @@ pragma solidity 0.8.18;
 import "../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
+import "../../userInterfaces/IPriceOracle.sol";
 
 // import "hardhat/console.sol";
 
-contract PriceOracle is Governed {
+contract PriceOracle is Governed, IPriceOracle {
     // VotingManager contract
     VotingManager public votingManager;
 
     Voting public voting;
 
     mapping(bytes32 => AnchorPrice) public anchorPrices;
-
-    struct AnchorPrice {
-        uint32 price;
-        uint32 timestamp;
-        uint32 price1;
-        uint32 timestamp1;
-        uint32 price2;
-        uint32 timestamp2;
-        uint32 priceEpochId;
-    }
-
-    // events
-    event PriceFeedPublished(
-        uint256 indexed priceEpochId,
-        bytes4 indexed offerSymbol,
-        bytes4 indexed quoteSymbol,
-        uint32 price,
-        uint32 timestamp
-    );
 
     constructor(address _governance) Governed(_governance) {}
 
@@ -93,6 +75,15 @@ contract PriceOracle is Governed {
                 );
             }
         }
+    }
+
+    function anchorPricesForSymbol(bytes8 symbol) public view returns (AnchorPrice memory){
+        return anchorPrices[symbol];
+    }
+
+    function lastAnchorPricesForSymbol(bytes8 symbol) public view returns (uint32 price, uint32 timestamp){
+        price = anchorPrices[symbol].price;
+        timestamp = anchorPrices[symbol].timestamp;
     }
 
     function anchorPriceShift(AnchorPrice storage _anchorPrice) internal {

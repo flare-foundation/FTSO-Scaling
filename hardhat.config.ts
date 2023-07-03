@@ -12,10 +12,10 @@ dotenv.config();
 
 import fs from "fs";
 
-let accounts  = [
+let accounts = [
   // In Truffle, default account is always the first one.
-  ...(process.env.DEPLOYER_PRIVATE_KEY ? [{privateKey: process.env.DEPLOYER_PRIVATE_KEY, balance:"100000000000000000000000000000000"}] : []),  
-  ...(process.env.GOVERNANCE_SETTINGS_DEPLOYER_PRIVATE_KEY ? [{privateKey: process.env.GOVERNANCE_SETTINGS_DEPLOYER_PRIVATE_KEY, balance:"100000000000000000000000000000000"}] : []),  
+  ...(process.env.DEPLOYER_PRIVATE_KEY ? [{ privateKey: process.env.DEPLOYER_PRIVATE_KEY, balance: "100000000000000000000000000000000" }] : []),
+  ...(process.env.GOVERNANCE_SETTINGS_DEPLOYER_PRIVATE_KEY ? [{ privateKey: process.env.GOVERNANCE_SETTINGS_DEPLOYER_PRIVATE_KEY, balance: "100000000000000000000000000000000" }] : []),
   // First 20 accounts with 10^14 NAT each 
   // Addresses:
   //   0xc783df8a850f42e7f7e57013759c285caa701eb6
@@ -39,12 +39,35 @@ let accounts  = [
   //   0x68dfc526037e9030c8f813d014919cc89e7d4d74
   //   0x26c43a1d431a4e5ee86cd55ed7ef9edf3641e901
   ...JSON.parse(fs.readFileSync('test-1020-accounts.json').toString()).slice(0, process.env.TENDERLY == 'true' ? 150 : 2000).filter((x: any) => x.privateKey != process.env.DEPLOYER_PRIVATE_KEY),
-  ...(process.env.GENESIS_GOVERNANCE_PRIVATE_KEY ? [{privateKey: process.env.GENESIS_GOVERNANCE_PRIVATE_KEY, balance:"100000000000000000000000000000000"}] : []),
-  ...(process.env.GOVERNANCE_PRIVATE_KEY ? [{privateKey: process.env.GOVERNANCE_PRIVATE_KEY, balance:"100000000000000000000000000000000"}] : []),
+  ...(process.env.GENESIS_GOVERNANCE_PRIVATE_KEY ? [{ privateKey: process.env.GENESIS_GOVERNANCE_PRIVATE_KEY, balance: "100000000000000000000000000000000" }] : []),
+  ...(process.env.GOVERNANCE_PRIVATE_KEY ? [{ privateKey: process.env.GOVERNANCE_PRIVATE_KEY, balance: "100000000000000000000000000000000" }] : []),
 ];
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.18",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.18",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.6.7",
+        settings: {},
+      },      
+    ],
+    overrides: {
+      "contracts/utils/Imports.sol": {
+        version: "0.6.12",
+        settings: {}
+      },
+    }
+  },
+  
   defaultNetwork: "hardhat",
 
   networks: {
@@ -90,10 +113,10 @@ const config: HardhatUserConfig = {
   },
   paths: {
     sources: "./contracts/",
-    tests: process.env.TEST_PATH || "test",
+    tests: process.env.TEST_PATH || "test ",
     cache: "./cache",
     artifacts: "./artifacts",
-  }  
+  }
 };
 
 export default config;

@@ -5,8 +5,9 @@ import "./../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
 import "../../userInterfaces/IRewardManager.sol";
+import "../../userInterfaces/IERC20PriceOracle.sol";
 import "./types/StoredBalances.sol";
-// import {MerkleProof} from "../lib/MerkleProof.sol";
+
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 // import "hardhat/console.sol";
@@ -16,7 +17,11 @@ contract VotingRewardManager is Governed, IRewardManager {
 
     VotingManager public votingManager;
     Voting public voting;
+    IERC20PriceOracle public erc20PriceOracle;
 
+    uint256 public minimalOfferValueWei; // in wei
+    uint256 public priceExpirySeconds;  
+    
     // The set of (hashes of) claims that have _ever_ been processed successfully.
     mapping(bytes32 => bool) processedRewardClaims;
 
@@ -42,6 +47,11 @@ contract VotingRewardManager is Governed, IRewardManager {
         // return (nextRewardEpochBalanceIndex + epochId + STORED_PREVIOUS_BALANCES - currentRewardEpochId)
         //         % STORED_PREVIOUS_BALANCES;
         return epochId % STORED_PREVIOUS_BALANCES;
+    }
+
+    function setMinimalOfferParameters(uint256 _minimalOfferValueWei, uint256 _priceExpirySeconds) public onlyGovernance {
+        minimalOfferValueWei = _minimalOfferValueWei;
+        priceExpirySeconds = _priceExpirySeconds;
     }
 
     // Bookkeeping semantics for anything that affects the reward balances.
@@ -72,6 +82,11 @@ contract VotingRewardManager is Governed, IRewardManager {
         initialize();
     }
 
+    function setERC20PriceOracle(address _erc20PriceOracle) override public onlyGovernance {
+        require(_erc20PriceOracle != address(0), "oracle address is zero");
+        erc20PriceOracle = IERC20PriceOracle(_erc20PriceOracle);
+    }
+
     function initialize() internal {
         currentRewardEpochId = votingManager.getCurrentRewardEpochId();
         nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(currentRewardEpochId + 1);
@@ -93,6 +108,13 @@ contract VotingRewardManager is Governed, IRewardManager {
             Offer calldata offer = offers[i];
             if (offer.currencyAddress == address(0)) {
                 totalNativeOffer += offer.amount;
+            } else {
+                uint256 price;
+                uint256 timestamp;
+                // Reverts if price is too old or not allowed
+                (price, timestamp) = erc20PriceOracle.getPrice(offer.currencyAddress);
+                require(block.timestamp - timestamp < priceExpirySeconds, "price too old");
+                require(price * offer.amount >= minimalOfferValueWei, "offer value is too small");
             }
             balances.credit(offer.currencyAddress, address(this), offer.amount);
         }

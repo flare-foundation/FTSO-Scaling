@@ -2,7 +2,7 @@ import BN from "bn.js";
 import fs from "fs";
 import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData, deepCopyClaim } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, OfferReceived, RevealBitvoteData, SignatureData, TxData, deepCopyClaim } from "../voting-interfaces";
 import { IVotingProvider } from "./IVotingProvider";
 import { ZERO_ADDRESS, convertOfferFromWeb3Response, hexlifyBN } from "../voting-utils";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
@@ -142,6 +142,10 @@ export class TruffleProvider extends IVotingProvider {
       return result as any as BlockData;
    }
 
+   getTransactionReceipt(txId: string): Promise<any> {
+      return web3.eth.getTransactionReceipt(txId);
+   }
+
    functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
       return this.functionSignatures.get(name)!;
    }
@@ -152,7 +156,7 @@ export class TruffleProvider extends IVotingProvider {
       return web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
    }
 
-   extractOffers(tx: TxData): Offer[] {
+   extractOffers(tx: TxData): OfferReceived[] {
       return this.decodeFunctionCall(tx, "offerRewards").offers.map(convertOfferFromWeb3Response);
    }
 

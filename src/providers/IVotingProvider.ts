@@ -1,4 +1,4 @@
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, OfferReceived, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import BN from "bn.js";
 
 /**
@@ -60,7 +60,7 @@ export abstract class IVotingProvider {
    ////////////// Block calls //////////////
    abstract getBlockNumber(): Promise<number>;
    abstract getBlock(blockNumber: number): Promise<BlockData>;
-
+   abstract getTransactionReceipt(txId: string): Promise<any>;
    ////////////// Auxiliary //////////////
    abstract functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string;
 
@@ -80,7 +80,7 @@ export abstract class IVotingProvider {
 
    ////////////// Transaction and event data extraction methods //////////////
 
-   abstract extractOffers(tx: TxData): Offer[];
+   abstract extractOffers(tx: TxData): OfferReceived[];
    abstract extractCommitHash(tx: TxData): string;
    abstract extractRevealBitvoteData(tx: TxData): RevealBitvoteData;
    abstract extractSignatureData(tx: TxData): SignatureData;
