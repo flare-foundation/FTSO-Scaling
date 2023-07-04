@@ -7,7 +7,7 @@ import { RewardCalculator } from "./RewardCalculator";
 import { calculateMedian } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
-import { BareSignature, EpochData, EpochResult, Feed, MedianCalculationResult, Offer, OfferReceived, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { BareSignature, EpochData, EpochResult, Feed, MedianCalculationResult, RevealBitvoteData, RewardOffered, SignatureData, TxData } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, unprefixedSymbolBytes } from "./voting-utils";
 
 const EPOCH_BYTES = 4;
@@ -38,7 +38,7 @@ export class FTSOClient {
   priceEpochData = new Map<number, EpochData>();
   priceEpochResults = new Map<number, EpochResult>();
 
-  rewardEpochOffers = new Map<number, OfferReceived[]>();
+  rewardEpochOffers = new Map<number, RewardOffered[]>();
   rewardEpochOffersClosed = new Map<number, boolean>();
 
   elasticBandWidthPPM: number = 5000;
@@ -127,7 +127,7 @@ export class FTSOClient {
     let block = await this.provider.getBlock(blockNumber);
     this.blockTimestamps.set(block.number, block.timestamp);
     for (let tx of block.transactions) {
-      tx.receipt = await this.provider.getTransactionReceipt(tx.txId);
+      tx.receipt = await this.provider.getTransactionReceipt(tx.hash);
       this.processTx(tx as any as TxData);
     }
     this.lastProcessedBlockNumber = blockNumber;
@@ -159,7 +159,7 @@ export class FTSOClient {
    * @param tx 
    */
   private extractOffers(tx: TxData): void {
-    let offers: OfferReceived[] = this.provider.extractOffers(tx);
+    let offers: RewardOffered[] = this.provider.extractOffers(tx);
     let currentPriceEpochId = this.priceEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let currentRewardEpochId = this.rewardEpochIdForPriceEpochId(currentPriceEpochId);
     let nextRewardEpoch = currentRewardEpochId + 1;

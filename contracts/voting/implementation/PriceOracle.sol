@@ -81,7 +81,7 @@ contract PriceOracle is Governed, IPriceOracle {
         return anchorPrices[symbol];
     }
 
-    function lastAnchorPricesForSymbol(bytes8 symbol) public view returns (uint32 price, uint32 timestamp){
+    function lastAnchorPriceForSymbol(bytes8 symbol) public view returns (uint32 price, uint32 timestamp){
         price = anchorPrices[symbol].price;
         timestamp = anchorPrices[symbol].timestamp;
     }

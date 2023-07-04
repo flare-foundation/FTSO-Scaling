@@ -30,5 +30,5 @@ interface IPriceOracle {
     ) external;
 
     function anchorPricesForSymbol(bytes8 symbol) external view returns (AnchorPrice memory);
-    function lastAnchorPricesForSymbol(bytes8 symbol) external view returns (uint32 price, uint32 timestamp);
+    function lastAnchorPriceForSymbol(bytes8 symbol) external view returns (uint32 price, uint32 timestamp);
 }

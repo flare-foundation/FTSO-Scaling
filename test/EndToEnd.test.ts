@@ -37,7 +37,7 @@ const PCT_SHARE = toBN(300000);
 const ELASTIC_BAND_WIDTH_PPM = toBN(50000);
 const DEFAULT_REWARD_BELT_PPM = toBN(500000); // 50%
 const MINIMAL_OFFER_VALUE = REWARD_VALUE.div(toBN(2));
-const MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC = toBN(30);
+const MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC = toBN(60);
 
 function prepareSymbols(numberOfFeeds: number): Feed[] {
   let symbols = [{ // rewarded feed
@@ -92,8 +92,6 @@ async function offerRewards(
   }
 
   await votingRewardManager.offerRewards(hexlifyBN(offersSent), { from: governance, value: totalAmount });
-
-  // await ftsoClients[0].provider.offerRewards(offersSent);
 
   let balance = await web3.eth.getBalance(votingRewardManager.address);
   expect(balance).to.equal(totalAmount);
@@ -266,7 +264,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let priceOracle: PriceOracleInstance;
   let erc20PriceOracle: ERC20PriceOracleInstance;
   let mockPriceOracle: MockContractInstance;
-  
+
 
   let dummyCoin1: DummyERC20Instance;
   let dummyCoin2: DummyERC20Instance;
@@ -320,12 +318,10 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // Feed symbols
     symbols = prepareSymbols(INITIAL_MAX_NUMBER_OF_FEEDS);
 
-    // Configure mock price oracle to return the correct values for first two symbols
-    mockPriceOracle.givenMethodReturn(priceOracle.contract.methods.anchorPrices("0x" + unprefixedSymbolBytes(symbols[0])).encodeABI(), web3.eth.abi.encodeParameters(["uint32", "uint32"], [REWARD_VALUE, now - 2]));
-    mockPriceOracle.givenMethodReturn(priceOracle.contract.methods.anchorPrices("0x" + unprefixedSymbolBytes(symbols[1])).encodeABI(), web3.eth.abi.encodeParameters(["uint32", "uint32"], [REWARD_VALUE, now - 2]));
-
     // ERC20 price oracle configuration
     await erc20PriceOracle.setPriceOracle(mockPriceOracle.address);
+    await erc20PriceOracle.setERC20Settings(dummyCoin1.address, "0x" + unprefixedSymbolBytes(symbols[0]));
+    await erc20PriceOracle.setERC20Settings(dummyCoin2.address, "0x" + unprefixedSymbolBytes(symbols[1]));
 
     // Reward manager configuration
     await votingRewardManager.setVoting(voting.address);
@@ -337,7 +333,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     await priceOracle.setVotingManager(votingManager.address);
     await priceOracle.setVoting(voting.address);
 
-    
+
     // vote time configuration
     firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
     epochDurationSec = await votingManager.BUFFER_WINDOW();
@@ -416,6 +412,11 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   });
 
   it(`should track correct reward offers`, async () => {
+    // Configure mock price oracle to return the correct values for first two symbols
+    let now = Math.floor(Date.now() / 1000) - 2;
+    mockPriceOracle.givenMethodReturn(priceOracle.contract.methods.lastAnchorPriceForSymbol("0x" + unprefixedSymbolBytes(symbols[0])).encodeABI(), web3.eth.abi.encodeParameters(["uint32", "uint32"], [REWARD_VALUE, now]));
+    mockPriceOracle.givenMethodReturn(priceOracle.contract.methods.lastAnchorPriceForSymbol("0x" + unprefixedSymbolBytes(symbols[1])).encodeABI(), web3.eth.abi.encodeParameters(["uint32", "uint32"], [REWARD_VALUE, now]));
+
     await offerRewards(
       TEST_REWARD_EPOCH, [dummyCoin1, dummyCoin2], ftsoClients, symbols,
       votingRewardManager, governance, accounts.slice(1, 3), REWARD_VALUE

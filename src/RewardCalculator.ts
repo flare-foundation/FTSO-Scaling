@@ -1,7 +1,7 @@
 import { toBN } from "../test-utils/utils/test-helpers";
 import { FTSOClient } from "./FTSOClient";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
-import { ClaimReward, Feed, FeedValue, MedianCalculationResult, Offer, OfferReceived } from "./voting-interfaces";
+import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } from "./voting-interfaces";
 import { feedId } from "./voting-utils";
 
 /**
@@ -37,10 +37,10 @@ export class RewardCalculator {
 
   ////////////// Offer data //////////////
   // rewardEpochId => list of reward offers
-  rewardOffers: Map<number, OfferReceived[]> = new Map<number, OfferReceived[]>();
+  rewardOffers: Map<number, RewardOffered[]> = new Map<number, RewardOffered[]>();
   // rewardEpochId => feedId => list of reward offers
   // The offers in the same currency are accumulated
-  rewardOffersBySymbol: Map<number, Map<string, OfferReceived[]>> = new Map<number, Map<string, OfferReceived[]>>();
+  rewardOffersBySymbol: Map<number, Map<string, RewardOffered[]>> = new Map<number, Map<string, RewardOffered[]>>();
 
   ////////////// Claim data //////////////
   // priceEpochId => list of claims
@@ -88,7 +88,7 @@ export class RewardCalculator {
    * @param rewardEpoch 
    * @param rewardOffers 
    */
-  public setRewardOffers(rewardEpoch: number, rewardOffers: OfferReceived[]) {
+  public setRewardOffers(rewardEpoch: number, rewardOffers: RewardOffered[]) {
     if(this.rewardOffers.has(rewardEpoch)) {
       throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
     }
@@ -132,7 +132,7 @@ export class RewardCalculator {
    * @param offer 
    * @returns 
    */
-  public rewardOfferForPriceEpoch(priceEpoch: number, offer: Offer): Offer {
+  public rewardOfferForPriceEpoch(priceEpoch: number, offer: RewardOffered): RewardOffered {
     let rewardEpoch = this.rewardEpochIdForPriceEpoch(priceEpoch);
     let reward = offer.amount.div(toBN(this.rewardEpochDurationInEpochs));
     let remainder = offer.amount.mod(toBN(this.rewardEpochDurationInEpochs)).toNumber();
@@ -144,7 +144,7 @@ export class RewardCalculator {
       ...offer,
       priceEpochId: priceEpoch,
       amount: reward
-    } as Offer;
+    } as RewardOffered;
   }
 
   /**
@@ -155,7 +155,7 @@ export class RewardCalculator {
    * @param feed 
    * @returns 
    */
-  public offersForPriceEpochAndSymbol(priceEpochId: number, feed: Feed): Offer[] {
+  public offersForPriceEpochAndSymbol(priceEpochId: number, feed: Feed): RewardOffered[] {
     let rewardEpochId = this.rewardEpochIdForPriceEpoch(priceEpochId);
     let offersBySymbol = this.rewardOffersBySymbol.get(rewardEpochId);
     if(offersBySymbol === undefined) {
@@ -180,7 +180,7 @@ export class RewardCalculator {
     if (rewardOffers === undefined) {
       throw new Error(`Reward offers are not defined for reward epoch ${rewardEpoch}`);
     }
-    let result: Map<string, Offer[]> = new Map<string, Offer[]>();
+    let result: Map<string, RewardOffered[]> = new Map<string, RewardOffered[]>();
     for (let offer of rewardOffers) {
       let offers = result.get(feedId(offer));
       if (offers === undefined) {

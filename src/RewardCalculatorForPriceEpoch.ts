@@ -2,7 +2,7 @@ import BN from "bn.js";
 import Web3 from "web3";
 import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
-import { ClaimReward, ClaimRewardBody, MedianCalculationResult, Offer, VoterWithWeight, deepCopyClaim } from "./voting-interfaces";
+import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffered, VoterWithWeight, deepCopyClaim } from "./voting-interfaces";
 import { feedId } from "./voting-utils";
 
 
@@ -56,7 +56,7 @@ export class RewardCalculatorForPriceEpoch {
    * @param pctShare 
    * @returns 
    */
-  calculateClaimsForOffer(offer: Offer, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
+  calculateClaimsForOffer(offer: RewardOffered, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
     let voterRecords: VoterWithWeight[] = [];
@@ -226,7 +226,7 @@ export class RewardCalculatorForPriceEpoch {
    */
   claimsForSymbols(calculationResults: MedianCalculationResult[], iqrShare: BN, pctShare: BN): ClaimReward[] {
     let claims: ClaimReward[] = [];
-    let offers: Offer[] = [];
+    let offers: RewardOffered[] = [];
     for (let calculationResult of calculationResults) {
       let priceEpochOffers = this.rewardCalculator.offersForPriceEpochAndSymbol(this.priceEpoch, calculationResult.feed);
       for (let offer of priceEpochOffers) {
@@ -280,7 +280,7 @@ export class RewardCalculatorForPriceEpoch {
    * @param offers 
    * @param claims 
    */
-  private assertOffersVsClaimsStats(offers: Offer[], claims: ClaimReward[]) {
+  private assertOffersVsClaimsStats(offers: RewardOffered[], claims: ClaimReward[]) {
     let offersRewards = new Map<string, BN>();
 
     for (let offer of offers) {

@@ -36,11 +36,12 @@ export interface Offer extends Feed {
   pctSharePPM: BN;
 }
 
-export interface OfferReceived extends Offer {
+export interface RewardOffered extends Offer {
   priceEpochId?: number;
   transactionId?: string;
   flrValue: BN;
 }
+
 export interface FeedValue extends Feed {
   feedId: string;
   flrValue: BN;
@@ -69,7 +70,7 @@ export interface SignatureData {
 
 export interface TxData {
   blockNumber: number;
-  txId: string;
+  hash: string;
   input?: string;
   from: string;
   to?: string;
