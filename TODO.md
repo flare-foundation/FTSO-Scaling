@@ -3,7 +3,6 @@
 - Lead data providers and their limitation on the reward should be considered when reward is calculated.
 - Make integration with WNat contract, for claims
 - Integration with the existing VoterWhitelister and adaptation of the reward manager to use with WNat contract on Coston/2. Possibly truncating vote power?
-- Offer rewards should emit events. Events should be indexed on a client as a proof of a successful reward offer. Offers should not be extracted from function calldata, as a function may revert. The Offer event should have address of the issuer as well.
 - If a claim with amount for some price epoch yields no rewards (no rewarded weight), there should be produced a back claim for the offer issuer. Each offer should contain offer issuer address, so that the funds can be returned (RewardCalculatorForPriceEpoch.ts:L125)
 - Code should be commented better. Maybe a bit refactored for easier use.
 - Web3 library provider should be implemented and FTSO client enabled for real time use. Needed for deployment on Coston. Implement scheduling of jobs. Add configurations.
