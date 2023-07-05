@@ -115,7 +115,7 @@ export function removeIndexFields<T>(obj: T): T {
 export function convertRewardOfferedEvent(offer: any): RewardOffered {
   let newOffer = removeIndexFields(offer);
   delete newOffer.__length__;
-  newOffer.trustedProviders = [...offer.trustedProviders];
+  newOffer.leadProviders = [...offer.leadProviders];
   let tmp = newOffer as RewardOffered;
   tmp.offerSymbol = bytes4ToText(tmp.offerSymbol),
   tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol),

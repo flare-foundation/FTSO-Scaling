@@ -52,28 +52,16 @@ export class RewardCalculator {
   // rewardEpochId => feedId => index of the feed in the reward epoch
   indexForFeedInRewardEpoch: Map<number, Map<string, number>> = new Map<number, Map<string, number>>();
 
-  ///////////// IQR and PCT weights //////////////
-  // Should be nominators of fractions with the same denominator. Eg. if in BIPS with denominator 100, then 30 means 30%
-  // The sum should be equal to the intended denominator (100 in the example).
-  // IQR weight
-  iqrShare: BN = toBN(0);
-  // PCT weight
-  pctShare: BN = toBN(0);
-
   client: FTSOClient;
   
   constructor(
     client: FTSOClient,
-    initialRewardEpoch: number,
-    iqrShare: BN,
-    pctShare: BN
+    initialRewardEpoch: number
   ) {
     this.client = client;
     this.initialRewardEpoch = initialRewardEpoch;
     this.firstRewardedPriceEpoch = client.provider.firstRewardedPriceEpoch; 
     this.rewardEpochDurationInEpochs = client.provider.rewardEpochDurationInEpochs;
-    this.iqrShare = iqrShare;
-    this.pctShare = pctShare;
     this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
@@ -265,7 +253,7 @@ export class RewardCalculator {
     }
     let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpochId, this);
 
-    let claims = epochCalculator.claimsForSymbols(calculationResults, this.iqrShare, this.pctShare);
+    let claims = epochCalculator.claimsForSymbols(calculationResults);
     // regular price epoch in the current reward epoch
     if (priceEpochId < this.firstPriceEpochInNextRewardEpoch - 1) {
       if (priceEpochId === this.initialPriceEpoch) {

@@ -74,12 +74,13 @@ async function offerRewards(
       currencyAddress: ZERO_ADDRESS,
       offerSymbol: toBytes4(symbols[i].offerSymbol),
       quoteSymbol: toBytes4(symbols[i].quoteSymbol),
-      trustedProviders: leadProviders,
+      leadProviders: leadProviders,
       rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
       flrValue: amount,
       elasticBandWidthPPM: ELASTIC_BAND_WIDTH_PPM,
       iqrSharePPM: IQR_SHARE,
       pctSharePPM: PCT_SHARE,
+      remainderClaimer: ZERO_ADDRESS,
     } as Offer;
     if (i < erc20Coins.length) {
       offersSent.push(
@@ -179,8 +180,6 @@ async function calculateVoteResults(priceEpochId: number, ftsoClients: FTSOClien
   let finalMedianPrice = [];
   let quartile1Price = [];
   let quartile3Price = [];
-  let lowElasticBandPrice = [];
-  let highElasticBandPrice = [];
 
   for (let client of ftsoClients) {
     await client.calculateResults(calculatePriceEpochId);
@@ -188,8 +187,6 @@ async function calculateVoteResults(priceEpochId: number, ftsoClients: FTSOClien
     finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
     quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
     quartile3Price.push(data.medianData.map(res => res.data.quartile3Price));
-    lowElasticBandPrice.push(data.medianData.map(res => res.data.lowElasticBandPrice));
-    highElasticBandPrice.push(data.medianData.map(res => res.data.highElasticBandPrice));
   }
 
   let feedNumbers = new Set<number>(ftsoClients.map(client => client.orderedPriceFeeds(priceEpochId).length));
@@ -200,12 +197,10 @@ async function calculateVoteResults(priceEpochId: number, ftsoClients: FTSOClien
       expect(finalMedianPrice[i][j]).to.be.equal(finalMedianPrice[i + 1][j])
       expect(quartile1Price[i][j]).to.be.equal(quartile1Price[i + 1][j])
       expect(quartile3Price[i][j]).to.be.equal(quartile3Price[i + 1][j])
-      expect(lowElasticBandPrice[i][j]).to.be.equal(lowElasticBandPrice[i + 1][j])
-      expect(highElasticBandPrice[i][j]).to.be.equal(highElasticBandPrice[i + 1][j])
     }
   }
   for (let j = 0; j < numberOfFeeds; j++) {
-    console.log(`\t${lowElasticBandPrice[0][j]}\t${quartile1Price[0][j]}\t${finalMedianPrice[0][j]}\t${quartile3Price[0][j]}\t${highElasticBandPrice[0][j]}`);
+    console.log(`\t${quartile1Price[0][j]}\t${finalMedianPrice[0][j]}\t${quartile3Price[0][j]}`);
   }
 
   let client = ftsoClients[0];
@@ -380,7 +375,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       let priceFeedsForClient = priceFeedConfigs.map(config => new RandomPriceFeed(config));
       client.registerPriceFeeds(priceFeedsForClient);
       // initialize reward calculator for the client
-      client.initializeRewardCalculator(TEST_REWARD_EPOCH, IQR_SHARE, PCT_SHARE);
+      client.initializeRewardCalculator(TEST_REWARD_EPOCH);
       ftsoClients.push(client);
     }
   });

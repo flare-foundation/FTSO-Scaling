@@ -52,22 +52,48 @@ export class RewardCalculatorForPriceEpoch {
    * Given a slotId it calculates the claims for the slot from all active pools
    * @param slotId 
    * @param calculationResult 
-   * @param iqrShare 
-   * @param pctShare 
    * @returns 
    */
-  calculateClaimsForOffer(offer: RewardOffered, calculationResult: MedianCalculationResult, iqrShare: BN, pctShare: BN): ClaimReward[] {
+  calculateClaimsForOffer(offer: RewardOffered, calculationResult: MedianCalculationResult): ClaimReward[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
     let voterRecords: VoterWithWeight[] = [];
     // establish boundaries
     let lowIQR = calculationResult.data.quartile1Price;
     let highIQR = calculationResult.data.quartile3Price;
-    let lowPCT = calculationResult.data.lowElasticBandPrice;
-    let highPCT = calculationResult.data.highElasticBandPrice;
+
+    // Elastic band limits
+    let medianPrice = calculationResult.data.finalMedianPrice
+    let elasticBandDiff = toBN(medianPrice).mul(toBN(offer.elasticBandWidthPPM)).div(toBN(1000000));
+
+    // NOTE: this can be negative
+    let lowPCT = medianPrice - elasticBandDiff.toNumber();
+    let highPCT = medianPrice + elasticBandDiff.toNumber();
 
     if (offer.priceEpochId !== this.priceEpoch) {
       throw new Error("Offer price epoch does not match the current price epoch");
+    }
+
+    // trusted provider lead
+    let lowEligible = 0;
+    let highEligible = 0;
+    let pricesOfLeadProvidersThatVoted = [];
+    if (offer.leadProviders.length > 0) {
+      let leadProvidersSet = new Set<string>(offer.leadProviders.map(x => x.toLowerCase()));
+      for(let i = 0; i < calculationResult.voters!.length; i++) {
+        let voterAddress = calculationResult.voters![i];
+        let price = calculationResult.prices![i];
+        if (leadProvidersSet.has(voterAddress.toLowerCase())) {
+          pricesOfLeadProvidersThatVoted.push(price);
+        }
+      }
+      if(pricesOfLeadProvidersThatVoted.length > 0) {
+        pricesOfLeadProvidersThatVoted.sort();      
+        let trustedMedianPrice = pricesOfLeadProvidersThatVoted[Math.floor(pricesOfLeadProvidersThatVoted.length / 2)];
+        let eligibleRange = toBN(trustedMedianPrice).mul(toBN(offer.rewardBeltPPM)).div(toBN(1000000)).toNumber();
+        lowEligible = Math.max(trustedMedianPrice - eligibleRange, 0);
+        highEligible = trustedMedianPrice + eligibleRange;  
+      }
     }
     // assemble voter records
     for (let i = 0; i < calculationResult.voters!.length; i++) {
@@ -77,7 +103,8 @@ export class RewardCalculatorForPriceEpoch {
         voterAddress,
         weight: calculationResult.weights![i],
         iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(feedId(offer), this.priceEpoch, voterAddress)),
-        pct: price > lowPCT && price < highPCT
+        pct: price > lowPCT && price < highPCT,
+        eligible: pricesOfLeadProvidersThatVoted.length === 0 ? true : price >= lowEligible && price <= highEligible,
       });
     }
     // Sort by voters' addresses since results have to be in the canonical order
@@ -94,6 +121,9 @@ export class RewardCalculatorForPriceEpoch {
     let iqrSum: BN = toBN(0);
     let pctSum: BN = toBN(0);
     for (let voterRecord of voterRecords) {
+      if(!voterRecord.eligible) {
+        continue;
+      }
       if (voterRecord.iqr) {
         iqrSum = iqrSum.add(voterRecord.weight);
       }
@@ -105,6 +135,10 @@ export class RewardCalculatorForPriceEpoch {
     // calculate total rewarded weight
     let totalRewardedWeight = toBN(0);
     for (let voterRecord of voterRecords) {
+      if(!voterRecord.eligible) {
+        voterRecord.weight = toBN(0);
+        continue;
+      }
       let newWeight = toBN(0);
       if (pctSum.eq(toBN(0))) {
         if (voterRecord.iqr) {
@@ -112,10 +146,10 @@ export class RewardCalculatorForPriceEpoch {
         }
       } else {
         if (voterRecord.iqr) {
-          newWeight = newWeight.add(iqrShare.mul(voterRecord.weight).mul(pctSum));
+          newWeight = newWeight.add(offer.iqrSharePPM.mul(voterRecord.weight).mul(pctSum));
         }
         if (voterRecord.pct) {
-          newWeight = newWeight.add(pctShare.mul(voterRecord.weight).mul(iqrSum));
+          newWeight = newWeight.add(offer.pctSharePPM.mul(voterRecord.weight).mul(iqrSum));
         }
       }
       voterRecord.weight = newWeight;
@@ -123,8 +157,16 @@ export class RewardCalculatorForPriceEpoch {
     }
 
     if (totalRewardedWeight.eq(toBN(0))) {
-      // TODO: make a claim back to reward issuer
-      return [];
+      // claim back to reward issuer
+      return [{
+        merkleProof: [],
+        claimRewardBody: {
+          amount: offer.amount,
+          currencyAddress: offer.currencyAddress,
+          voterAddress: offer.remainderClaimer.toLowerCase(),
+          epochId: this.priceEpoch,
+        } as ClaimRewardBody
+      } as ClaimReward];
     }
 
     let rewardClaims: ClaimReward[] = [];
@@ -220,18 +262,16 @@ export class RewardCalculatorForPriceEpoch {
   /**
    * Calculates claims for all slots in the price epoch.
    * @param calculationResults 
-   * @param iqrShare 
-   * @param pctShare 
    * @returns 
    */
-  claimsForSymbols(calculationResults: MedianCalculationResult[], iqrShare: BN, pctShare: BN): ClaimReward[] {
+  claimsForSymbols(calculationResults: MedianCalculationResult[]): ClaimReward[] {
     let claims: ClaimReward[] = [];
     let offers: RewardOffered[] = [];
     for (let calculationResult of calculationResults) {
       let priceEpochOffers = this.rewardCalculator.offersForPriceEpochAndSymbol(this.priceEpoch, calculationResult.feed);
       for (let offer of priceEpochOffers) {
         offers.push(offer);
-        claims = this.mergeClaims(claims, this.calculateClaimsForOffer(offer, calculationResult, iqrShare, pctShare));
+        claims = this.mergeClaims(claims, this.calculateClaimsForOffer(offer, calculationResult));
       }
     }
     this.assertOffersVsClaimsStats(offers, claims);

@@ -41,8 +41,6 @@ export class FTSOClient {
   rewardEpochOffers = new Map<number, RewardOffered[]>();
   rewardEpochOffersClosed = new Map<number, boolean>();
 
-  elasticBandWidthPPM: number = 5000;
-
   startBlockNumber: number = 0;
 
   priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
@@ -62,11 +60,9 @@ export class FTSOClient {
   }
 
   public initializeRewardCalculator(
-    initialRewardEpoch: number,
-    iqrShare: BN,
-    pctShare: BN
+    initialRewardEpoch: number
   ) {
-    this.rewardCalculator = new RewardCalculator(this, initialRewardEpoch, iqrShare, pctShare);
+    this.rewardCalculator = new RewardCalculator(this, initialRewardEpoch);
   }
 
   private priceEpochIdForTime(timestamp: number): number {
@@ -317,7 +313,7 @@ export class FTSOClient {
     let results: MedianCalculationResult[] = [];
     for (let i = 0; i < numberOfFeeds; i++) {
       let prices = pricesForVoters.map(allPrices => toBN(allPrices[i]));
-      let data = calculateMedian(voters, prices, weights, this.elasticBandWidthPPM);
+      let data = calculateMedian(voters, prices, weights);
       results.push({
         feed: {
           offerSymbol: orderedPriceFeeds[i]?.getFeedInfo().offerSymbol,

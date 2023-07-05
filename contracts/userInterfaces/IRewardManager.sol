@@ -22,11 +22,12 @@ struct Offer {
     address currencyAddress; // zero address for native currency or address of ERC20 token
     bytes4 offerSymbol; // offer symbol of the reward feed (4-byte encoded string with nulls on the right)
     bytes4 quoteSymbol; // quote symbol of the reward feed (4-byte encoded string with nulls on the right)
-    address[] trustedProviders; // list of trusted providers
-    uint256 rewardBeltPPM; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
+    address[] leadProviders; // list of lead providers 
+    uint256 rewardBeltPPM; // reward belt in PPM (parts per million) in relation to the median price of the lead providers.
     uint256 elasticBandWidthPPM; // elastic band width in PPM (parts per million) in relation to the median price.
     uint256 iqrSharePPM; // Each offer defines IQR and PCT share in PPM (parts per million). The summ of all offers must be 1M.
     uint256 pctSharePPM;
+    address remainderClaimer; // address that can claim undistributed part of the reward
 }
 
 abstract contract IRewardManager {
@@ -35,12 +36,13 @@ abstract contract IRewardManager {
         address currencyAddress, // zero address for native currency or address of ERC20 token
         bytes4 offerSymbol, // offer symbol of the reward feed (4-byte encoded string with nulls on the right)
         bytes4 quoteSymbol, // quote symbol of the reward feed (4-byte encoded string with nulls on the right)
-        address[] trustedProviders, // list of trusted providers
+        address[] leadProviders, // list of trusted providers
         uint256 rewardBeltPPM, // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
         uint256 elasticBandWidthPPM, // elastic band width in PPM (parts per million) in relation to the median price.
         uint256 iqrSharePPM, // Each offer defines IQR and PCT share in PPM (parts per million). The summ of all offers must be 1M.
         uint256 pctSharePPM,
-        uint256 flrValue
+        uint256 flrValue,
+        address remainderClaimer  // address that can claim undistributed part of the reward
     );
 
     function setVoting(address votingContract) external virtual;

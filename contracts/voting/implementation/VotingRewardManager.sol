@@ -158,19 +158,28 @@ contract VotingRewardManager is Governed, IRewardManager {
                     "offer value is too small"
                 );
             }
+            require(
+                offer.iqrSharePPM + offer.pctSharePPM == 1000000,
+                "iqrSharePPM + pctSharePPM != 1000000"
+            );
             balances.credit(offer.currencyAddress, address(this), offer.amount);
-                emit RewardOffered(
-                    offer.amount,
-                    offer.currencyAddress,
-                    offer.offerSymbol,
-                    offer.quoteSymbol,
-                    offer.trustedProviders,
-                    offer.rewardBeltPPM,
-                    offer.elasticBandWidthPPM,
-                    offer.iqrSharePPM,
-                    offer.pctSharePPM,
-                    offerValue
-                );
+            address remainderClaimer = offer.remainderClaimer;
+            if(remainderClaimer == address(0)) {
+                remainderClaimer = msg.sender;
+            }
+            emit RewardOffered(
+                offer.amount,
+                offer.currencyAddress,
+                offer.offerSymbol,
+                offer.quoteSymbol,
+                offer.leadProviders,
+                offer.rewardBeltPPM,
+                offer.elasticBandWidthPPM,
+                offer.iqrSharePPM,
+                offer.pctSharePPM,
+                offerValue,
+                remainderClaimer
+            );
         }
         require(
             totalNativeOffer >= msg.value,
