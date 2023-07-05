@@ -1,6 +1,9 @@
 - Check the reward contract fixes are ok
+- Reward epoch choice, what is the random
+  - if a random is revealed by everybody
 - Make integration with WNat contract, for claims
 - Snapshoting weights for reward epoch, truncating
+  - truncated weight used to compete for rewards
 - Integration with the existing VoterWhitelister and adaptation of the reward manager to use with WNat contract on Coston/2. Possibly truncating vote power?
 - If a claim with amount for some price epoch yields no rewards (no rewarded weight), there should be produced a back claim for the offer issuer. Each offer should contain offer issuer address, so that the funds can be returned (RewardCalculatorForPriceEpoch.ts:L125)
 - Code should be commented better. Maybe a bit refactored for easier use.
@@ -8,3 +11,4 @@
 - Real price feeds integration must be done. Use FTSO provider by Flare. Implement plugable price feeds.
 - Deployment code scripts
 - Docs folder. Mirror the documentation from google docs to the repo.
+
