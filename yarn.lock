@@ -466,6 +466,11 @@
     "@ethersproject/properties" "^5.7.0"
     "@ethersproject/strings" "^5.7.0"
 
+"@gnosis.pm/mock-contract@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@gnosis.pm/mock-contract/-/mock-contract-4.0.0.tgz#eaf500fddcab81b5f6c22280a7b22ff891dd6f87"
+  integrity sha512-SkRq2KwPx6vo0LAjSc8JhgQstrQFXRyn2yqquIfub7r2WHi5nUbF8beeSSXsd36hvBcQxQfmOIYNYRpj9JOhrQ==
+
 "@jridgewell/resolve-uri@^3.0.3":
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/@jridgewell/resolve-uri/-/resolve-uri-3.1.1.tgz#c08679063f279615a3326583ba3a90d1d82cc721"

@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import Web3 from "web3";
 import { toBN } from "../test-utils/utils/test-helpers";
-import { ClaimReward, Feed, Offer } from "./voting-interfaces";
+import { ClaimReward, Feed, RewardOffered } from "./voting-interfaces";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -112,11 +112,19 @@ export function removeIndexFields<T>(obj: T): T {
  * @param offer 
  * @returns 
  */
-export function convertOfferFromWeb3Response(offer: Offer): Offer {
-  let tmp = feedToText(removeIndexFields(offer)) as Offer;
+export function convertRewardOfferedEvent(offer: any): RewardOffered {
+  let newOffer = removeIndexFields(offer);
+  delete newOffer.__length__;
+  newOffer.leadProviders = [...offer.leadProviders];
+  let tmp = newOffer as RewardOffered;
+  tmp.offerSymbol = bytes4ToText(tmp.offerSymbol),
+  tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol),
   tmp.amount = toBN(tmp.amount);
   tmp.flrValue = toBN(tmp.flrValue);
   tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
+  tmp.elasticBandWidthPPM = toBN(tmp.elasticBandWidthPPM);
+  tmp.iqrSharePPM = toBN(tmp.iqrSharePPM);
+  tmp.pctSharePPM = toBN(tmp.pctSharePPM);
   return tmp;
 }
 

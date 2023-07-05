@@ -41,10 +41,9 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
  * @param voters 
  * @param prices 
  * @param weights 
- * @param elasticBandWidthPPM 
  * @returns 
  */
-export function calculateMedian(voters: string[], prices: BN[], weights: BN[], elasticBandWidthPPM: number): MedianCalculationSummary {
+export function calculateMedian(voters: string[], prices: BN[], weights: BN[]): MedianCalculationSummary {
   let voteData = repack(voters, prices, weights);
   // Sort by price
   voteData.sort((a, b) => {
@@ -95,12 +94,10 @@ export function calculateMedian(voters: string[], prices: BN[], weights: BN[], e
       break;
     }
   }
-  let elasticBandDiff = medianPrice!.mul(toBN(elasticBandWidthPPM)).div(toBN(TOTAL_PPM));
+
   return {
     finalMedianPrice: medianPrice!.toNumber(),
     quartile1Price: quartile1Price!.toNumber(),
     quartile3Price: quartile3Price!.toNumber(),
-    lowElasticBandPrice: medianPrice!.sub(elasticBandDiff).toNumber(),
-    highElasticBandPrice: medianPrice!.add(elasticBandDiff).toNumber()
   }
 }

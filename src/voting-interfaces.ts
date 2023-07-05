@@ -29,11 +29,18 @@ export interface Feed {
 export interface Offer extends Feed {
   amount: BN; // 256-bit
   currencyAddress: string;
+  leadProviders: string[]; // list of trusted providers
+  rewardBeltPPM: BN; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
+  elasticBandWidthPPM: BN; // elastic band width in PPM (parts per million) in relation to the median price.
+  iqrSharePPM: BN; // Each offer defines IQR and PCT share in PPM (parts per million). The summ of all offers must be 1M.
+  pctSharePPM: BN;
+}
+
+export interface RewardOffered extends Offer {
   priceEpochId?: number;
   transactionId?: string;
-  trustedProviders: string[]; // list of trusted providers
-  rewardBeltPPM: BN; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
-  flrValue: BN;   // Value of the offer in the native currency (calculated on offer submission) 
+  remainderClaimer: string;
+  flrValue: BN;
 }
 
 export interface FeedValue extends Feed {
@@ -64,15 +71,16 @@ export interface SignatureData {
 
 export interface TxData {
   blockNumber: number;
-  txId: string;
+  hash: string;
   input?: string;
   from: string;
   to?: string;
   value?: string;
+  receipt?: any;
 }
 
 export interface BlockData {
-  number: number;   
+  number: number;
   timestamp: number;
   transactions: TxData[];
 }
@@ -101,7 +109,7 @@ export interface EpochResult {
 }
 
 export interface MedianCalculationResult {
-  feed: Feed;  
+  feed: Feed;
   voters?: string[];
   prices?: number[];
   data: MedianCalculationSummary;
@@ -112,13 +120,12 @@ export interface MedianCalculationSummary {
   finalMedianPrice: number;
   quartile1Price: number;
   quartile3Price: number;
-  lowElasticBandPrice: number;
-  highElasticBandPrice: number;
 }
 
 export interface VoterWithWeight {
   voterAddress: string;
   weight: BN;
-  pct: boolean;
-  iqr: boolean;
+  pct: boolean;   // gets PCT reward
+  iqr: boolean;   // gets IQR reward
+  eligible: boolean;  // is eligible for reward
 }

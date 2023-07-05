@@ -1,4 +1,4 @@
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RewardOffered, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
 import BN from "bn.js";
 
 /**
@@ -21,6 +21,7 @@ export abstract class IVotingProvider {
    signingDurationSec: number = 0;
  
    functionSignatures: Map<string, string> = new Map<string, string>();
+   eventSignatures: Map<string, string> = new Map<string, string>();
    abiForName: Map<string, any> = new Map<string, any>();
 
    constructor(
@@ -60,9 +61,11 @@ export abstract class IVotingProvider {
    ////////////// Block calls //////////////
    abstract getBlockNumber(): Promise<number>;
    abstract getBlock(blockNumber: number): Promise<BlockData>;
-
+   abstract getTransactionReceipt(txId: string): Promise<any>;
    ////////////// Auxiliary //////////////
    abstract functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string;
+   abstract eventSignature(name: "RewardOffered"): string;
+
 
    /**
     * Hashes a message. 
@@ -80,7 +83,7 @@ export abstract class IVotingProvider {
 
    ////////////// Transaction and event data extraction methods //////////////
 
-   abstract extractOffers(tx: TxData): Offer[];
+   abstract extractOffers(tx: TxData): RewardOffered[];
    abstract extractCommitHash(tx: TxData): string;
    abstract extractRevealBitvoteData(tx: TxData): RevealBitvoteData;
    abstract extractSignatureData(tx: TxData): SignatureData;

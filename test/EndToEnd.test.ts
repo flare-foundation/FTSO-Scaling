@@ -14,7 +14,7 @@ import { moveToCurrentRewardEpochRevealEnd, moveToNextPriceEpochStart, moveToNex
 import { ZERO_ADDRESS, feedId, hexlifyBN, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
-import { DummyERC20Instance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
+import { DummyERC20Instance, ERC20PriceOracleInstance, MockContractInstance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -23,6 +23,8 @@ const VotingManager = artifacts.require("VotingManager");
 const VotingRewardManager = artifacts.require("VotingRewardManager");
 const PriceOracle = artifacts.require("PriceOracle");
 const DummyERC20 = artifacts.require("DummyERC20");
+const ERC20PriceOracle = artifacts.require("ERC20PriceOracle");
+const Mock = artifacts.require("MockContract");
 
 const REWARD_OFFER_SYMBOL = "FLR";
 const REWARD_QUOTE_SYMBOL = "USD";
@@ -30,10 +32,12 @@ const REWARD_VALUE = toBN("1000999");
 const REWARD_EPOCH_DURATION = 5;
 const THRESHOLD = 5000;
 const INITIAL_MAX_NUMBER_OF_FEEDS = 8;
-const IQR_SHARE = toBN(70);
-const PCT_SHARE = toBN(30);
+const IQR_SHARE = toBN(700000);
+const PCT_SHARE = toBN(300000);
+const ELASTIC_BAND_WIDTH_PPM = toBN(50000);
 const DEFAULT_REWARD_BELT_PPM = toBN(500000); // 50%
-
+const MINIMAL_OFFER_VALUE = REWARD_VALUE.div(toBN(2));
+const MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC = toBN(60);
 
 function prepareSymbols(numberOfFeeds: number): Feed[] {
   let symbols = [{ // rewarded feed
@@ -70,9 +74,13 @@ async function offerRewards(
       currencyAddress: ZERO_ADDRESS,
       offerSymbol: toBytes4(symbols[i].offerSymbol),
       quoteSymbol: toBytes4(symbols[i].quoteSymbol),
-      trustedProviders: leadProviders,
+      leadProviders: leadProviders,
       rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
       flrValue: amount,
+      elasticBandWidthPPM: ELASTIC_BAND_WIDTH_PPM,
+      iqrSharePPM: IQR_SHARE,
+      pctSharePPM: PCT_SHARE,
+      remainderClaimer: ZERO_ADDRESS,
     } as Offer;
     if (i < erc20Coins.length) {
       offersSent.push(
@@ -85,8 +93,6 @@ async function offerRewards(
   }
 
   await votingRewardManager.offerRewards(hexlifyBN(offersSent), { from: governance, value: totalAmount });
-
-  // await ftsoClients[0].provider.offerRewards(offersSent);
 
   let balance = await web3.eth.getBalance(votingRewardManager.address);
   expect(balance).to.equal(totalAmount);
@@ -174,8 +180,6 @@ async function calculateVoteResults(priceEpochId: number, ftsoClients: FTSOClien
   let finalMedianPrice = [];
   let quartile1Price = [];
   let quartile3Price = [];
-  let lowElasticBandPrice = [];
-  let highElasticBandPrice = [];
 
   for (let client of ftsoClients) {
     await client.calculateResults(calculatePriceEpochId);
@@ -183,8 +187,6 @@ async function calculateVoteResults(priceEpochId: number, ftsoClients: FTSOClien
     finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
     quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
     quartile3Price.push(data.medianData.map(res => res.data.quartile3Price));
-    lowElasticBandPrice.push(data.medianData.map(res => res.data.lowElasticBandPrice));
-    highElasticBandPrice.push(data.medianData.map(res => res.data.highElasticBandPrice));
   }
 
   let feedNumbers = new Set<number>(ftsoClients.map(client => client.orderedPriceFeeds(priceEpochId).length));
@@ -195,12 +197,10 @@ async function calculateVoteResults(priceEpochId: number, ftsoClients: FTSOClien
       expect(finalMedianPrice[i][j]).to.be.equal(finalMedianPrice[i + 1][j])
       expect(quartile1Price[i][j]).to.be.equal(quartile1Price[i + 1][j])
       expect(quartile3Price[i][j]).to.be.equal(quartile3Price[i + 1][j])
-      expect(lowElasticBandPrice[i][j]).to.be.equal(lowElasticBandPrice[i + 1][j])
-      expect(highElasticBandPrice[i][j]).to.be.equal(highElasticBandPrice[i + 1][j])
     }
   }
   for (let j = 0; j < numberOfFeeds; j++) {
-    console.log(`\t${lowElasticBandPrice[0][j]}\t${quartile1Price[0][j]}\t${finalMedianPrice[0][j]}\t${quartile3Price[0][j]}\t${highElasticBandPrice[0][j]}`);
+    console.log(`\t${quartile1Price[0][j]}\t${finalMedianPrice[0][j]}\t${quartile3Price[0][j]}`);
   }
 
   let client = ftsoClients[0];
@@ -257,6 +257,9 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   let votingManager: VotingManagerInstance;
   let votingRewardManager: VotingRewardManagerInstance;
   let priceOracle: PriceOracleInstance;
+  let erc20PriceOracle: ERC20PriceOracleInstance;
+  let mockPriceOracle: MockContractInstance;
+
 
   let dummyCoin1: DummyERC20Instance;
   let dummyCoin2: DummyERC20Instance;
@@ -293,6 +296,8 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     voting = await Voting.new(voterRegistry.address, votingManager.address);
     priceOracle = await PriceOracle.new(governance);
     votingRewardManager = await VotingRewardManager.new(governance);
+    erc20PriceOracle = await ERC20PriceOracle.new(governance);
+    mockPriceOracle = await Mock.new();
 
     // Dummy ERC20 contracts
     dummyCoin1 = await DummyERC20.new("DummyCoin1", "DC1");
@@ -308,13 +313,21 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // Feed symbols
     symbols = prepareSymbols(INITIAL_MAX_NUMBER_OF_FEEDS);
 
+    // ERC20 price oracle configuration
+    await erc20PriceOracle.setPriceOracle(mockPriceOracle.address);
+    await erc20PriceOracle.setERC20Settings(dummyCoin1.address, "0x" + unprefixedSymbolBytes(symbols[0]));
+    await erc20PriceOracle.setERC20Settings(dummyCoin2.address, "0x" + unprefixedSymbolBytes(symbols[1]));
+
     // Reward manager configuration
     await votingRewardManager.setVoting(voting.address);
     await votingRewardManager.setVotingManager(votingManager.address);
+    await votingRewardManager.setERC20PriceOracle(erc20PriceOracle.address);
+    await votingRewardManager.setMinimalOfferParameters(MINIMAL_OFFER_VALUE, MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC);
 
     // price oracle configuration
     await priceOracle.setVotingManager(votingManager.address);
     await priceOracle.setVoting(voting.address);
+
 
     // vote time configuration
     firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
@@ -362,7 +375,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       let priceFeedsForClient = priceFeedConfigs.map(config => new RandomPriceFeed(config));
       client.registerPriceFeeds(priceFeedsForClient);
       // initialize reward calculator for the client
-      client.initializeRewardCalculator(TEST_REWARD_EPOCH, IQR_SHARE, PCT_SHARE);
+      client.initializeRewardCalculator(TEST_REWARD_EPOCH);
       ftsoClients.push(client);
     }
   });
@@ -394,6 +407,11 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   });
 
   it(`should track correct reward offers`, async () => {
+    // Configure mock price oracle to return the correct values for first two symbols
+    let now = Math.floor(Date.now() / 1000) - 2;
+    mockPriceOracle.givenMethodReturn(priceOracle.contract.methods.lastAnchorPriceForSymbol("0x" + unprefixedSymbolBytes(symbols[0])).encodeABI(), web3.eth.abi.encodeParameters(["uint32", "uint32"], [REWARD_VALUE, now]));
+    mockPriceOracle.givenMethodReturn(priceOracle.contract.methods.lastAnchorPriceForSymbol("0x" + unprefixedSymbolBytes(symbols[1])).encodeABI(), web3.eth.abi.encodeParameters(["uint32", "uint32"], [REWARD_VALUE, now]));
+
     await offerRewards(
       TEST_REWARD_EPOCH, [dummyCoin1, dummyCoin2], ftsoClients, symbols,
       votingRewardManager, governance, accounts.slice(1, 3), REWARD_VALUE

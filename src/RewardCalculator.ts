@@ -1,7 +1,7 @@
 import { toBN } from "../test-utils/utils/test-helpers";
 import { FTSOClient } from "./FTSOClient";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
-import { ClaimReward, Feed, FeedValue, MedianCalculationResult, Offer } from "./voting-interfaces";
+import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } from "./voting-interfaces";
 import { feedId } from "./voting-utils";
 
 /**
@@ -37,10 +37,10 @@ export class RewardCalculator {
 
   ////////////// Offer data //////////////
   // rewardEpochId => list of reward offers
-  rewardOffers: Map<number, Offer[]> = new Map<number, Offer[]>();
+  rewardOffers: Map<number, RewardOffered[]> = new Map<number, RewardOffered[]>();
   // rewardEpochId => feedId => list of reward offers
   // The offers in the same currency are accumulated
-  rewardOffersBySymbol: Map<number, Map<string, Offer[]>> = new Map<number, Map<string, Offer[]>>();
+  rewardOffersBySymbol: Map<number, Map<string, RewardOffered[]>> = new Map<number, Map<string, RewardOffered[]>>();
 
   ////////////// Claim data //////////////
   // priceEpochId => list of claims
@@ -52,28 +52,16 @@ export class RewardCalculator {
   // rewardEpochId => feedId => index of the feed in the reward epoch
   indexForFeedInRewardEpoch: Map<number, Map<string, number>> = new Map<number, Map<string, number>>();
 
-  ///////////// IQR and PCT weights //////////////
-  // Should be nominators of fractions with the same denominator. Eg. if in BIPS with denominator 100, then 30 means 30%
-  // The sum should be equal to the intended denominator (100 in the example).
-  // IQR weight
-  iqrShare: BN = toBN(0);
-  // PCT weight
-  pctShare: BN = toBN(0);
-
   client: FTSOClient;
   
   constructor(
     client: FTSOClient,
-    initialRewardEpoch: number,
-    iqrShare: BN,
-    pctShare: BN
+    initialRewardEpoch: number
   ) {
     this.client = client;
     this.initialRewardEpoch = initialRewardEpoch;
     this.firstRewardedPriceEpoch = client.provider.firstRewardedPriceEpoch; 
     this.rewardEpochDurationInEpochs = client.provider.rewardEpochDurationInEpochs;
-    this.iqrShare = iqrShare;
-    this.pctShare = pctShare;
     this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
@@ -88,7 +76,7 @@ export class RewardCalculator {
    * @param rewardEpoch 
    * @param rewardOffers 
    */
-  public setRewardOffers(rewardEpoch: number, rewardOffers: Offer[]) {
+  public setRewardOffers(rewardEpoch: number, rewardOffers: RewardOffered[]) {
     if(this.rewardOffers.has(rewardEpoch)) {
       throw new Error(`Reward offers are already defined for reward epoch ${rewardEpoch}`);
     }
@@ -132,7 +120,7 @@ export class RewardCalculator {
    * @param offer 
    * @returns 
    */
-  public rewardOfferForPriceEpoch(priceEpoch: number, offer: Offer): Offer {
+  public rewardOfferForPriceEpoch(priceEpoch: number, offer: RewardOffered): RewardOffered {
     let rewardEpoch = this.rewardEpochIdForPriceEpoch(priceEpoch);
     let reward = offer.amount.div(toBN(this.rewardEpochDurationInEpochs));
     let remainder = offer.amount.mod(toBN(this.rewardEpochDurationInEpochs)).toNumber();
@@ -144,7 +132,7 @@ export class RewardCalculator {
       ...offer,
       priceEpochId: priceEpoch,
       amount: reward
-    } as Offer;
+    } as RewardOffered;
   }
 
   /**
@@ -155,7 +143,7 @@ export class RewardCalculator {
    * @param feed 
    * @returns 
    */
-  public offersForPriceEpochAndSymbol(priceEpochId: number, feed: Feed): Offer[] {
+  public offersForPriceEpochAndSymbol(priceEpochId: number, feed: Feed): RewardOffered[] {
     let rewardEpochId = this.rewardEpochIdForPriceEpoch(priceEpochId);
     let offersBySymbol = this.rewardOffersBySymbol.get(rewardEpochId);
     if(offersBySymbol === undefined) {
@@ -180,7 +168,7 @@ export class RewardCalculator {
     if (rewardOffers === undefined) {
       throw new Error(`Reward offers are not defined for reward epoch ${rewardEpoch}`);
     }
-    let result: Map<string, Offer[]> = new Map<string, Offer[]>();
+    let result: Map<string, RewardOffered[]> = new Map<string, RewardOffered[]>();
     for (let offer of rewardOffers) {
       let offers = result.get(feedId(offer));
       if (offers === undefined) {
@@ -265,7 +253,7 @@ export class RewardCalculator {
     }
     let epochCalculator = new RewardCalculatorForPriceEpoch(priceEpochId, this);
 
-    let claims = epochCalculator.claimsForSymbols(calculationResults, this.iqrShare, this.pctShare);
+    let claims = epochCalculator.claimsForSymbols(calculationResults);
     // regular price epoch in the current reward epoch
     if (priceEpochId < this.firstPriceEpochInNextRewardEpoch - 1) {
       if (priceEpochId === this.initialPriceEpoch) {

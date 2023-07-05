@@ -2,11 +2,11 @@ import BN from "bn.js";
 import fs from "fs";
 import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, SignatureData, TxData, deepCopyClaim } from "../voting-interfaces";
-import { IVotingProvider } from "./IVotingProvider";
-import { ZERO_ADDRESS, convertOfferFromWeb3Response, hexlifyBN } from "../voting-utils";
-import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { toBN } from "../../test-utils/utils/test-helpers";
+import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, RewardOffered, SignatureData, TxData, deepCopyClaim } from "../voting-interfaces";
+import { ZERO_ADDRESS, convertRewardOfferedEvent, hexlifyBN } from "../voting-utils";
+import { IVotingProvider } from "./IVotingProvider";
 
 let VotingRewardManager = artifacts.require("VotingRewardManager");
 let Voting = artifacts.require("Voting");
@@ -48,14 +48,16 @@ export class TruffleProvider extends IVotingProvider {
       this.abiForName.set("signResult", votingABI.find((x: any) => x.name === "signResult"));
       this.abiForName.set("offerRewards", rewardsABI.find((x: any) => x.name === "offerRewards"));
       this.abiForName.set("claimRewardBodyDefinition", rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0]);
+      this.abiForName.set("RewardOffered", rewardsABI.find((x: any) => x.name === "RewardOffered"));
 
       this.functionSignatures.set("commit", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("commit")));
       this.functionSignatures.set("revealBitvote", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("revealBitvote")));
       this.functionSignatures.set("signResult", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("signResult")));
       this.functionSignatures.set("offerRewards", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("offerRewards")));
 
-      // contracts
+      this.eventSignatures.set("RewardOffered", web3.eth.abi.encodeEventSignature(this.abiForName.get("RewardOffered")));
 
+      // contracts
       this.votingRewardManagerContract = await VotingRewardManager.at(this.votingRewardManagerContractAddress);
       this.votingContract = await Voting.at(this.votingContractAddress);
       this.voterRegistryContract = await VoterRegistry.at(this.voterRegistryContractAddress);
@@ -142,8 +144,16 @@ export class TruffleProvider extends IVotingProvider {
       return result as any as BlockData;
    }
 
+   getTransactionReceipt(txId: string): Promise<any> {
+      return web3.eth.getTransactionReceipt(txId);
+   }
+
    functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
       return this.functionSignatures.get(name)!;
+   }
+
+   eventSignature(name: "RewardOffered"): string {
+      return this.eventSignatures.get(name)!;
    }
 
    private decodeFunctionCall(tx: TxData, name: string) {
@@ -152,8 +162,14 @@ export class TruffleProvider extends IVotingProvider {
       return web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
    }
 
-   extractOffers(tx: TxData): Offer[] {
-      return this.decodeFunctionCall(tx, "offerRewards").offers.map(convertOfferFromWeb3Response);
+   extractOffers(tx: TxData): RewardOffered[] {
+      let result = tx.receipt!.logs
+         .filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
+         .map((event: any) => {
+            let offer = web3.eth.abi.decodeLog(this.abiForName.get("RewardOffered").inputs, event.data, event.topics);
+            return convertRewardOfferedEvent(offer as any as RewardOffered);
+         });
+      return result;
    }
 
    extractCommitHash(tx: TxData): string {
