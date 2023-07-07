@@ -125,6 +125,9 @@ export interface MedianCalculationSummary {
 export interface VoterWithWeight {
   voterAddress: string;
   weight: BN;
+}
+
+export interface VoterRewarding extends VoterWithWeight {
   pct: boolean;   // gets PCT reward
   iqr: boolean;   // gets IQR reward
   eligible: boolean;  // is eligible for reward

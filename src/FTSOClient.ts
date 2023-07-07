@@ -7,7 +7,7 @@ import { RewardCalculator } from "./RewardCalculator";
 import { calculateMedian } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
-import { BareSignature, EpochData, EpochResult, Feed, MedianCalculationResult, RevealBitvoteData, RewardOffered, SignatureData, TxData } from "./voting-interfaces";
+import { BareSignature, ClaimReward, EpochData, EpochResult, Feed, MedianCalculationResult, RevealBitvoteData, RewardOffered, SignatureData, TxData, VoterWithWeight } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, unprefixedSymbolBytes } from "./voting-utils";
 
 const EPOCH_BYTES = 4;
@@ -37,6 +37,11 @@ export class FTSOClient {
   priceEpochSignatures = new Map<number, Map<string, SignatureData>>();
   priceEpochData = new Map<number, EpochData>();
   priceEpochResults = new Map<number, EpochResult>();
+
+  // reward epoch => voter => weight
+  eligibleVotersForRewardEpoch = new Map<number, VoterWithWeight[]>();
+  eligibleVoterWeights = new Map<number, Map<string, BN>>();
+  eligibleVoterTotalWeight = new Map<number, BN>();
 
   rewardEpochOffers = new Map<number, RewardOffered[]>();
   rewardEpochOffersClosed = new Map<number, boolean>();
@@ -288,6 +293,28 @@ export class FTSOClient {
   }
 
   /**
+   * Returns the list of eligible voters with their weights for the given reward epoch.
+   * It reads the data from the provider and caches it.
+   * @param rewardEpoch 
+   * @returns 
+   */
+  async refreshVoterToWeightMaps(rewardEpoch: number): Promise<void> {
+    let eligibleVoters = this.eligibleVotersForRewardEpoch.get(rewardEpoch);
+    if(!this.eligibleVoterWeights.has(rewardEpoch)) {
+      eligibleVoters = await this.provider.allVotersWithWeightsForRewardEpoch(rewardEpoch);
+      this.eligibleVotersForRewardEpoch.set(rewardEpoch, eligibleVoters);
+      let weightMap = new Map<string, BN>();
+      this.eligibleVoterWeights.set(rewardEpoch, weightMap);
+      let totalWeight = toBN(0);
+      for(let voter of eligibleVoters) {
+        weightMap.set(voter.voterAddress.toLowerCase(), voter.weight);
+        totalWeight = totalWeight.add(voter.weight);
+      }
+      this.eligibleVoterTotalWeight.set(rewardEpoch, totalWeight);
+    }    
+  }
+  
+  /**
    * 
    * @param priceEpochId 
    * @param symbolMap 
@@ -295,14 +322,18 @@ export class FTSOClient {
    */
   async calculateResults(priceEpochId: number) {
     let rewardEpoch = this.rewardEpochIdForPriceEpochId(priceEpochId);
-    let voters = this.calculateRevealers(priceEpochId)!;
-    if (voters.length === 0) {
+    let revealers = this.calculateRevealers(priceEpochId)!;
+    if (revealers.length === 0) {
+      // check!!!
       return;
     }
     let orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
     let numberOfFeeds = orderedPriceFeeds.length;
 
-    let weights = await this.provider.voterWeightsInRewardEpoch(rewardEpoch, voters);
+    await this.refreshVoterToWeightMaps(rewardEpoch);
+    let voters = revealers.filter(voter => this.eligibleVoterWeights.get(rewardEpoch)?.has(voter.toLowerCase())!);
+    let weights = voters.map(voter => this.eligibleVoterWeights.get(rewardEpoch)!.get(voter.toLowerCase())!);
+
     let pricesForVoters = voters.map(voter => {
       let revealData = this.priceEpochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
       let feeds = revealData.prices.slice(2).match(/(.{1,8})/g)?.map(hex => parseInt(hex, 16)) || [];
@@ -451,6 +482,18 @@ export class FTSOClient {
       receipts.push(receipt);
     }
     return receipts;
+  }
+
+  /**
+   * Returns the list of claims for the given reward epoch and claimer.
+   * @param rewardEpochId 
+   * @param claimer 
+   * @returns 
+   */
+  claimsForClaimer(rewardEpochId: number, claimer: string): ClaimReward[] {
+    let claimPriceEpochId = this.rewardCalculator.firstRewardedPriceEpoch + this.rewardCalculator.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
+    let result = this.priceEpochResults.get(claimPriceEpochId)!;
+    return result.rewards.get(claimer.toLowerCase()) || [];
   }
 
 }

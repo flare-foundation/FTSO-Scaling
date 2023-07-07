@@ -57,9 +57,10 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     let weight = toBN(1000);
     let rewardEpochId = 1;
 
-    for (let i = 1; i <= N; i++) {
-      await voterRegistry.addVoterWeightForRewardEpoch(accounts[i], rewardEpochId, weight);
-    }
+    let allWeights = new Array(N).fill(weight);
+    await voterRegistry.addVotersWithWeightsForRewardEpoch(rewardEpochId, accounts.slice(1, N + 1), allWeights);
+
+
     // Go to the next reward epoch (1)
     await increaseTimeTo(
       firstEpochStartSec.add(
@@ -82,7 +83,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
       let sWeight = await voterRegistry.getVoterWeightForRewardEpoch(accounts[i], rewardEpochId)
       // console.log(`${epochId} ${accounts[i]} ${sWeight.toString()}`)
       expect(sWeight).to.be.bignumber.eq(weight);
-      expect(await voting.getVoterWeightForEpoch(accounts[i], epochId)).to.be.bignumber.eq(weight);
+      expect(await voting.getVoterWeightForRewardEpoch(accounts[i], epochId)).to.be.bignumber.eq(weight);
     }
     expect(await voterRegistry.thresholdForRewardEpoch(rewardEpochId)).to.be.bignumber.eq(totalWeight.mul(toBN(THRESHOLD)).div(toBN(10000)));
   });
@@ -90,7 +91,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   it("Should vote be successful", async () => {
     let epochId = await voting.getCurrentPriceEpochId();
     let currentTime = toBN(await time.latest());
-    
+
     let signEpochId = epochId;
     let merkleRoot = "0x0000000000000000000000000000000000000000000000000000000000000002";
     let rewardEpochId = await votingManager.getCurrentRewardEpochId();
@@ -119,7 +120,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     console.log(`Finalize gas used: ${tx.receipt.gasUsed}`);
 
     expectEvent(tx, "MerkleRootConfirmed", { epochId: epochId, merkleRoot });
-    
+
 
     await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(6))).toNumber());
 

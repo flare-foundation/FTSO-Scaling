@@ -1,4 +1,4 @@
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RewardOffered, RevealBitvoteData, SignatureData, TxData } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RewardOffered, RevealBitvoteData, SignatureData, TxData, VoterWithWeight } from "../voting-interfaces";
 import BN from "bn.js";
 
 /**
@@ -52,7 +52,7 @@ export abstract class IVotingProvider {
    abstract signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
    abstract finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
    abstract publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
-   abstract voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]>;
+   abstract allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
 
 
    ////////////// Signing //////////////

@@ -1,11 +1,28 @@
 - Check the reward contract fixes are ok
-- Reward epoch choice, what is the random
-  - if a random is revealed by everybody
-- Make integration with WNat contract, for claims
-- Snapshoting weights for reward epoch, truncating
+- Why there were unclaimed rewards in some cases?
+- How to address low turnout.
+  - require certain turnout on offers
+  - have all voters defined prior to each reward epoch, and their weights, total weight
+  - do filtering of the commit/reveals based on the eligible votersx
+  - add signed weight in publication of the price
+- Incentives:
+  - for fast signing and publication (incentive for as many as possible weight as fast as possible)
+  - punishing missed reveals
+- Publishing random with quality (number of missed reveals)
+- Using random to determine vote power block
+- Fee definitions and declarations
+- Snapshoting weights for reward epoch on the reward contract
+  - deamonized (using voter whitelister at the time of the call)
+  - the best random for the last few reward epochs is used.
+  - order of voters is determined by copying the list of addresses of voterWhitelister
   - truncated weight used to compete for rewards
-- Integration with the existing VoterWhitelister and adaptation of the reward manager to use with WNat contract on Coston/2. Possibly truncating vote power?
-- If a claim with amount for some price epoch yields no rewards (no rewarded weight), there should be produced a back claim for the offer issuer. Each offer should contain offer issuer address, so that the funds can be returned (RewardCalculatorForPriceEpoch.ts:L125)
+  - weights for rewarding
+- Claiming by delegators (shareWith). Anyone can provide claim by 
+- Claiming could be done through a separate contract, that is topped up through a reward contract.
+- If a claim with amount for some price epoch yields no rewards (no rewarded weight), there should be produced a back claim for the offer issuer. Each offer should contain offer issuer address, so that the funds can be returned (RewardCalculatorForPriceEpoch.ts:L125). Do a test.
+
+# General
+- How to integrate Web Connector protocol.
 - Code should be commented better. Maybe a bit refactored for easier use.
 - Web3 library provider should be implemented and FTSO client enabled for real time use. Needed for deployment on Coston. Implement scheduling of jobs. Add configurations.
 - Real price feeds integration must be done. Use FTSO provider by Flare. Implement plugable price feeds.

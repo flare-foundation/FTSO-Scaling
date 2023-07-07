@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "./VoterRegistry.sol";
+import "../../userInterfaces/IVoterRegistry.sol";
 import "./VotingManager.sol";
 
 import "hardhat/console.sol";
 
 contract Voting {
-    VoterRegistry public voterRegistry;
+    IVoterRegistry public voterRegistry;
     // VotingManager contract
     VotingManager public votingManager;
 
@@ -35,7 +35,7 @@ contract Voting {
         uint256 timestamp
     );
 
-    constructor(VoterRegistry _voterRegistry, VotingManager _votingManager) {
+    constructor(IVoterRegistry _voterRegistry, VotingManager _votingManager) {
         voterRegistry = _voterRegistry;
         votingManager = _votingManager;
     }
@@ -97,7 +97,7 @@ contract Voting {
             address signer = recoverSigner(_merkleRoot, signatures[i]);
 
             if (signer != address(0)) {
-                uint256 weight = getVoterWeightForEpoch(signer, _epochId);
+                uint256 weight = getVoterWeightForRewardEpoch(signer, _epochId);
                 weightSum += weight;                
                 if (weightSum > threshold) {
                     merkleRoots[_epochId] = _merkleRoot;
@@ -131,7 +131,7 @@ contract Voting {
     }
 
     // Returns the voter weight for a given epoch
-    function getVoterWeightForEpoch(
+    function getVoterWeightForRewardEpoch(
         address _voter,
         uint256 _epochId
     ) public view returns (uint256) {
@@ -149,7 +149,7 @@ contract Voting {
     ) public view returns (uint256[] memory) {
         uint256[] memory allWeights = new uint256[](_voters.length);
         for (uint256 i = 0; i < _voters.length; i++) {
-            allWeights[i] = getVoterWeightForEpoch(_voters[i], _epochId);
+            allWeights[i] = getVoterWeightForRewardEpoch(_voters[i], _epochId);
         }
         return allWeights;
     }

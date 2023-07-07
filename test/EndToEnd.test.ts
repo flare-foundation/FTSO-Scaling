@@ -334,10 +334,9 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     epochDurationSec = await votingManager.BUFFER_WINDOW();
 
     // Initialize weights for reward epoch 1
-    for (let i = 1; i <= N; i++) {
-      console.log("Account:", accounts[i]);
-      await voterRegistry.addVoterWeightForRewardEpoch(accounts[i], TEST_REWARD_EPOCH, WEIGHT);
-    }
+    let allWeights = new Array(N).fill(WEIGHT);
+    await voterRegistry.addVotersWithWeightsForRewardEpoch(TEST_REWARD_EPOCH, accounts.slice(1, N + 1), allWeights);
+
 
     ftsoClients = [];
     let currentBlockNumber = await web3.eth.getBlockNumber();
@@ -401,7 +400,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let totalWeight = WEIGHT.mul(toBN(N));
     expect(await voterRegistry.totalWeightPerRewardEpoch(TEST_REWARD_EPOCH)).to.be.bignumber.eq(totalWeight);
     for (let i = 1; i <= N; i++) {
-      expect(await voting.getVoterWeightForEpoch(accounts[i], firstPriceEpochInRewardEpoch1)).to.be.bignumber.eq(WEIGHT);
+      expect(await voting.getVoterWeightForRewardEpoch(accounts[i], firstPriceEpochInRewardEpoch1)).to.be.bignumber.eq(WEIGHT);
     }
     expect(await voterRegistry.thresholdForRewardEpoch(TEST_REWARD_EPOCH)).to.be.bignumber.eq(totalWeight.mul(toBN(THRESHOLD)).div(toBN(10000)));
   });
@@ -518,6 +517,14 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       }
     };
 
+    // Claim the undistributed rewards
+    let offererClaims = ftsoClients[0].claimsForClaimer(TEST_REWARD_EPOCH, governance);
+    if(offererClaims.length > 0) {
+      console.log(`Claiming undistributed rewards. Number of claims: ${offererClaims.length}`);
+    }
+    for (let offererClaim of offererClaims) {
+      await votingRewardManager.claimReward(hexlifyBN(offererClaim), { from: governance });
+    }
     // Check the balance of the reward manager
     for (let coin of [dummyCoin1, dummyCoin2]) {
       expect(await coin.balanceOf(votingRewardManager.address)).to.be.bignumber.equal(toBN(0));

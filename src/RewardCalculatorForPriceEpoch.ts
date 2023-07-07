@@ -2,7 +2,7 @@ import BN from "bn.js";
 import Web3 from "web3";
 import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
-import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffered, VoterWithWeight, deepCopyClaim } from "./voting-interfaces";
+import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffered, VoterRewarding, deepCopyClaim } from "./voting-interfaces";
 import { feedId } from "./voting-utils";
 
 
@@ -57,7 +57,7 @@ export class RewardCalculatorForPriceEpoch {
   calculateClaimsForOffer(offer: RewardOffered, calculationResult: MedianCalculationResult): ClaimReward[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
-    let voterRecords: VoterWithWeight[] = [];
+    let voterRecords: VoterRewarding[] = [];
     // establish boundaries
     let lowIQR = calculationResult.data.quartile1Price;
     let highIQR = calculationResult.data.quartile3Price;
@@ -158,6 +158,7 @@ export class RewardCalculatorForPriceEpoch {
 
     if (totalRewardedWeight.eq(toBN(0))) {
       // claim back to reward issuer
+      console.log(`No reward for ${offer.currencyAddress} in ${offer.transactionId}`);
       return [{
         merkleProof: [],
         claimRewardBody: {

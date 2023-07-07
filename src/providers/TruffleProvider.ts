@@ -4,7 +4,7 @@ import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
 import { toBN } from "../../test-utils/utils/test-helpers";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
-import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, RewardOffered, SignatureData, TxData, deepCopyClaim } from "../voting-interfaces";
+import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, RewardOffered, SignatureData, TxData, VoterWithWeight, deepCopyClaim } from "../voting-interfaces";
 import { ZERO_ADDRESS, convertRewardOfferedEvent, hexlifyBN } from "../voting-utils";
 import { IVotingProvider } from "./IVotingProvider";
 
@@ -129,9 +129,15 @@ export class TruffleProvider extends IVotingProvider {
       return await this.wallet.sign(message);
    }
 
-   async voterWeightsInRewardEpoch(rewardEpoch: number, voters: string[]): Promise<BN[]> {
-      // TODO: cache the result for a reward epoch.
-      return this.voterRegistryContract.voterWeightsInRewardEpoch(rewardEpoch, voters);
+   async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
+      const data = await this.voterRegistryContract.votersForRewardEpoch(rewardEpoch);
+      const voters = data[0];
+      const weights = data[1];
+      let result: VoterWithWeight[] = [];
+      for (let i = 0; i < voters.length; i++) {
+         result.push({ voterAddress: voters[i], weight: weights[i] });
+      }
+      return result;
    }
 
    async getBlockNumber(): Promise<number> {
