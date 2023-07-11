@@ -102,10 +102,11 @@ export class RewardCalculatorForPriceEpoch {
       voterRecords.push({
         voterAddress,
         weight: calculationResult.weights![i],
+        originalWeight: calculationResult.weights![i],
         iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(feedId(offer), this.priceEpoch, voterAddress)),
         pct: price > lowPCT && price < highPCT,
         eligible: pricesOfLeadProvidersThatVoted.length === 0 ? true : price >= lowEligible && price <= highEligible,
-      });
+      } as VoterRewarding);
     }
     // Sort by voters' addresses since results have to be in the canonical order
     voterRecords.sort((a, b) => {
@@ -158,11 +159,11 @@ export class RewardCalculatorForPriceEpoch {
 
     if (totalRewardedWeight.eq(toBN(0))) {
       // claim back to reward issuer
-      console.log(`No reward for ${offer.currencyAddress} in ${offer.transactionId}`);
       return [{
         merkleProof: [],
         claimRewardBody: {
           amount: offer.amount,
+          weight: toBN(0), // indicates back claims
           currencyAddress: offer.currencyAddress,
           voterAddress: offer.remainderClaimer.toLowerCase(),
           epochId: this.priceEpoch,
@@ -189,6 +190,7 @@ export class RewardCalculatorForPriceEpoch {
         merkleProof: [],
         claimRewardBody: {
           amount: reward,
+          weight: voterRecord.originalWeight,
           currencyAddress: offer.currencyAddress,
           voterAddress: voterRecord.voterAddress,  // it is already lowercased
           epochId: this.priceEpoch,

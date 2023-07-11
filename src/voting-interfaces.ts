@@ -16,6 +16,7 @@ export function deepCopyClaim(claim: ClaimReward): ClaimReward {
 
 export interface ClaimRewardBody {
   amount: BN; // 256-bit
+  weight: BN;
   currencyAddress: string;
   voterAddress: string;
   epochId: number;
@@ -125,10 +126,18 @@ export interface MedianCalculationSummary {
 export interface VoterWithWeight {
   voterAddress: string;
   weight: BN;
+  originalWeight: BN;
 }
 
 export interface VoterRewarding extends VoterWithWeight {
   pct: boolean;   // gets PCT reward
   iqr: boolean;   // gets IQR reward
   eligible: boolean;  // is eligible for reward
+}
+
+export interface RevealResult {
+  revealed: string[];
+  failedCommit: string[];
+  committedFailedReveal: string[];
+  revealedRandoms: string[];
 }

@@ -60,7 +60,10 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   it("Should add and remove voter for specific reward epoch", async () => {
     let weight = toBN(1000);
     let rewardEpochId = 1;
-    await voterRegistry.addVotersWithWeightsForRewardEpoch(rewardEpochId, [accounts[1], accounts[2]], [weight.mul(toBN(2)), weight]);
+    await voterRegistry.registerAsAVoter(rewardEpochId, weight.mul(toBN(2)), {from: accounts[1]});
+    await voterRegistry.registerAsAVoter(rewardEpochId, weight, {from: accounts[2]});
+
+
     expect(await voterRegistry.getVoterWeightForRewardEpoch(accounts[1], rewardEpochId)).to.be.bignumber.eq(weight.mul(toBN(2)));
     expect(await voterRegistry.getVoterWeightForRewardEpoch(accounts[2], rewardEpochId)).to.be.bignumber.eq(weight);
     expect(await voterRegistry.totalWeightPerRewardEpoch(rewardEpochId)).to.be.bignumber.eq(weight.mul(toBN(3)));

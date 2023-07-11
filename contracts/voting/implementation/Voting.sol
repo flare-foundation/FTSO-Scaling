@@ -142,6 +142,19 @@ contract Voting {
             );
     }
 
+    function getDelegatorWeightForRewardEpoch(
+        address _delegator,
+        address _voter,
+        uint256 _rewardEpochId
+    ) public view returns (uint256) {
+        return
+            voterRegistry.getDelegatorWeightForRewardEpochAndVoter(
+                _delegator,
+                _voter,
+                _rewardEpochId
+            );
+    }
+
     // Returns the voter weights for a given epoch
     function getVoterWeightsForEpoch(
         uint256 _epochId,
@@ -181,4 +194,5 @@ contract Voting {
         );
         return signer;
     }
+
 }

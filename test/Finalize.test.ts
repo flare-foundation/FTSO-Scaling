@@ -57,8 +57,9 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     let weight = toBN(1000);
     let rewardEpochId = 1;
 
-    let allWeights = new Array(N).fill(weight);
-    await voterRegistry.addVotersWithWeightsForRewardEpoch(rewardEpochId, accounts.slice(1, N + 1), allWeights);
+    for(let i = 1; i <= N; i++) {
+      await voterRegistry.registerAsAVoter(rewardEpochId, weight, {from: accounts[i]});
+    }
 
 
     // Go to the next reward epoch (1)

@@ -7,7 +7,7 @@ import { RewardCalculator } from "./RewardCalculator";
 import { calculateMedian } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
-import { BareSignature, ClaimReward, EpochData, EpochResult, Feed, MedianCalculationResult, RevealBitvoteData, RewardOffered, SignatureData, TxData, VoterWithWeight } from "./voting-interfaces";
+import { BareSignature, ClaimReward, EpochData, EpochResult, Feed, MedianCalculationResult, RevealBitvoteData, RevealResult, RewardOffered, SignatureData, TxData, VoterWithWeight } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, unprefixedSymbolBytes } from "./voting-utils";
 
 const EPOCH_BYTES = 4;
@@ -273,23 +273,35 @@ export class FTSOClient {
   // Encoding of signed result
   // [4 epochId][32-byte merkle root][4-byte price sequence]
 
-  private calculateRevealers(epochId: number) {
-    let commits = this.priceEpochCommits.get(epochId);
-    let reveals = this.priceEpochReveals.get(epochId);
+  private calculateRevealers(priceEpochId: number): RevealResult {
+    let rewardEpochId = this.rewardEpochIdForPriceEpochId(priceEpochId);
+    let commits = this.priceEpochCommits.get(priceEpochId);
+    let reveals = this.priceEpochReveals.get(priceEpochId);
     if (!commits || !reveals) {
-      return [];
+      // TODO: check if this is correct
+      throw new Error("Commits or reveals not found");
     }
-    let senders = [...commits.keys()];
-    return senders
-      .map(sender => sender.toLowerCase())
+    
+    let eligibleCommitters = [...commits.keys()].map(sender => sender.toLowerCase()).filter(voter => this.eligibleVoterWeights.get(rewardEpochId)?.has(voter.toLowerCase())!);
+    let revealed = eligibleCommitters      
       .filter(sender => {
         let revealData = reveals!.get(sender);
         if (!revealData) {
           return false;
         }
-        let commitHash = this.priceEpochCommits.get(epochId)?.get(sender);
+        let commitHash = this.priceEpochCommits.get(priceEpochId)?.get(sender);
         return commitHash === this.hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
       });
+    let failedCommit = [...this.eligibleVoterWeights.get(rewardEpochId)?.keys()!].filter(voter => !revealed.includes(voter.toLowerCase()));
+    let revealedSet = new Set<string>(revealed);
+    let committedFailedReveal = eligibleCommitters.filter(voter => !revealedSet.has(voter.toLowerCase()));
+    let revealedRandoms = revealed.map(voter => reveals!.get(voter.toLowerCase())!.random);
+    return {
+      revealed,
+      failedCommit,
+      committedFailedReveal,
+      revealedRandoms
+    } as RevealResult;
   }
 
   /**
@@ -322,16 +334,19 @@ export class FTSOClient {
    */
   async calculateResults(priceEpochId: number) {
     let rewardEpoch = this.rewardEpochIdForPriceEpochId(priceEpochId);
-    let revealers = this.calculateRevealers(priceEpochId)!;
-    if (revealers.length === 0) {
-      // check!!!
+    await this.refreshVoterToWeightMaps(rewardEpoch);
+    
+    let revealResult = this.calculateRevealers(priceEpochId)!;
+    if(revealResult.revealed.length === 0) {
+      console.log("No reveals !!!!!!!!!");
+      // TODO: check when this can happen
       return;
     }
     let orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
     let numberOfFeeds = orderedPriceFeeds.length;
 
-    await this.refreshVoterToWeightMaps(rewardEpoch);
-    let voters = revealers.filter(voter => this.eligibleVoterWeights.get(rewardEpoch)?.has(voter.toLowerCase())!);
+    
+    let voters = revealResult.revealed;
     let weights = voters.map(voter => this.eligibleVoterWeights.get(rewardEpoch)!.get(voter.toLowerCase())!);
 
     let pricesForVoters = voters.map(voter => {
@@ -359,7 +374,6 @@ export class FTSOClient {
 
     this.rewardCalculator.calculateClaimsForPriceEpoch(priceEpochId, results);
     let rewards = this.rewardCalculator.getRewardMappingForPriceEpoch(priceEpochId);
-
     let rewardClaimHashes: string[] = [];
     for (let claimRewardList of rewards.values()) {
       for (let claim of claimRewardList) {

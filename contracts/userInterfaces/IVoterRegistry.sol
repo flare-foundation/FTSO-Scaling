@@ -15,4 +15,10 @@ interface IVoterRegistry {
         address _voter,
         uint256 _rewardEpochId
     ) external view returns (uint256);
+
+    function getDelegatorWeightForRewardEpochAndVoter(
+        address _delegator,
+        address _voter,
+        uint256 _rewardEpochId
+    ) external view returns (uint256);
 }

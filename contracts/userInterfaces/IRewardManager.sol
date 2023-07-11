@@ -8,13 +8,14 @@ struct ClaimReward {
 
 struct ClaimRewardBody {
     uint256 amount;
+    uint256 weight;
     address currencyAddress; // 0 for native currency
     address payable voterAddress;
     uint epochId;
 }
 
 /**
- * Defines a rewad offer in native coin or ERC20 token.
+ * Defines a reward offer in native coin or ERC20 token.
  *
  */
 struct Offer {
@@ -28,6 +29,11 @@ struct Offer {
     uint256 iqrSharePPM; // Each offer defines IQR and PCT share in PPM (parts per million). The summ of all offers must be 1M.
     uint256 pctSharePPM;
     address remainderClaimer; // address that can claim undistributed part of the reward
+}
+
+struct FeePercentage {          // used for storing data provider fee percentage settings
+    uint16 value;               // fee percentage value (value between 0 and 1e4)
+    uint240 validFromEpoch;     // id of the reward epoch from which the value is valid
 }
 
 abstract contract IRewardManager {
@@ -45,6 +51,12 @@ abstract contract IRewardManager {
         address remainderClaimer  // address that can claim undistributed part of the reward
     );
 
+    event FeePercentageChanged(
+        address indexed dataProvider,
+        uint256 value,
+        uint256 validFromEpoch
+    );
+
     function setVoting(address votingContract) external virtual;
 
     function setVotingManager(address votingManagerContract) external virtual;
@@ -53,7 +65,7 @@ abstract contract IRewardManager {
         address erc20PriceOracleContract
     ) external virtual;
 
-    function claimReward(ClaimReward calldata _data) external virtual;
+    function claimReward(ClaimReward calldata _data, address claimer) external virtual;
 
     function offerRewards(Offer[] calldata offers) external payable virtual;
 
@@ -63,6 +75,29 @@ abstract contract IRewardManager {
     ) external {}
 
     function offerDefinition(Offer calldata _data) external {}
+
+    /**
+     * @notice Allows data provider to set (or update last) fee percentage.
+     * @param _feePercentageBIPS    number representing fee percentage in BIPS
+     * @return _validFromEpoch      reward epoch number when the setting becomes effective.
+     */
+    function setDataProviderFeePercentage(uint256 _feePercentageBIPS)
+        external virtual returns (uint256 _validFromEpoch);
+
+    /**
+     * @notice Returns the current fee percentage of `_dataProvider`
+     * @param _dataProvider         address representing data provider
+     */
+    function getDataProviderCurrentFeePercentage(address _dataProvider)
+        external view virtual returns (uint256 _feePercentageBIPS);
+
+    function getDataProviderScheduledFeePercentageChanges(address _dataProvider)
+        external view virtual returns (
+            uint256[] memory _feePercentageBIPS,
+            uint256[] memory _validFromEpoch,
+            bool[] memory _fixed
+        );
+
 }
 
 function hash(ClaimReward calldata claim) pure returns (bytes32) {

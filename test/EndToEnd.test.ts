@@ -38,6 +38,8 @@ const ELASTIC_BAND_WIDTH_PPM = toBN(50000);
 const DEFAULT_REWARD_BELT_PPM = toBN(500000); // 50%
 const MINIMAL_OFFER_VALUE = REWARD_VALUE.div(toBN(2));
 const MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC = toBN(60);
+const FEE_PERCENTAGE_UPDATE_OFFSET = 3;
+const DEFAULT_FEE_PERCENTAGE = 2000; // 20%
 
 function prepareSymbols(numberOfFeeds: number): Feed[] {
   let symbols = [{ // rewarded feed
@@ -295,7 +297,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     voterRegistry = await VoterRegistry.new(governance, votingManager.address, THRESHOLD);
     voting = await Voting.new(voterRegistry.address, votingManager.address);
     priceOracle = await PriceOracle.new(governance);
-    votingRewardManager = await VotingRewardManager.new(governance);
+    votingRewardManager = await VotingRewardManager.new(governance, FEE_PERCENTAGE_UPDATE_OFFSET, DEFAULT_FEE_PERCENTAGE);
     erc20PriceOracle = await ERC20PriceOracle.new(governance);
     mockPriceOracle = await Mock.new();
 
@@ -334,8 +336,9 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     epochDurationSec = await votingManager.BUFFER_WINDOW();
 
     // Initialize weights for reward epoch 1
-    let allWeights = new Array(N).fill(WEIGHT);
-    await voterRegistry.addVotersWithWeightsForRewardEpoch(TEST_REWARD_EPOCH, accounts.slice(1, N + 1), allWeights);
+    for(let i = 1; i <= N; i++) {
+      await voterRegistry.registerAsAVoter(TEST_REWARD_EPOCH, WEIGHT, {from: accounts[i]});
+    }
 
 
     ftsoClients = [];
@@ -523,7 +526,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       console.log(`Claiming undistributed rewards. Number of claims: ${offererClaims.length}`);
     }
     for (let offererClaim of offererClaims) {
-      await votingRewardManager.claimReward(hexlifyBN(offererClaim), { from: governance });
+      await votingRewardManager.claimReward(hexlifyBN(offererClaim), governance, { from: governance });
     }
     // Check the balance of the reward manager
     for (let coin of [dummyCoin1, dummyCoin2]) {

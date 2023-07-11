@@ -80,7 +80,7 @@ export class TruffleProvider extends IVotingProvider {
    async claimReward(claim: ClaimReward): Promise<any> {
       let claimReward = deepCopyClaim(claim);
       delete claimReward.hash;
-      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward), { from: this.wallet.address });
+      return this.votingRewardManagerContract.claimReward(hexlifyBN(claimReward), this.wallet.address, { from: this.wallet.address });
    }
 
    async offerRewards(offers: Offer[]): Promise<any> {
@@ -135,7 +135,7 @@ export class TruffleProvider extends IVotingProvider {
       const weights = data[1];
       let result: VoterWithWeight[] = [];
       for (let i = 0; i < voters.length; i++) {
-         result.push({ voterAddress: voters[i], weight: weights[i] });
+         result.push({ voterAddress: voters[i], weight: weights[i], originalWeight: weights[i] });
       }
       return result;
    }

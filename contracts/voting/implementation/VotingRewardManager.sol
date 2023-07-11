@@ -12,8 +12,9 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 // import "hardhat/console.sol";
 
-contract VotingRewardManager is Governed, IRewardManager {
+contract VotingRewardManager is Governed, IRewardManager { 
     using MerkleProof for bytes32[];
+    uint256 constant internal MAX_BIPS = 1e4;
 
     VotingManager public votingManager;
     Voting public voting;
@@ -27,6 +28,16 @@ contract VotingRewardManager is Governed, IRewardManager {
 
     uint256 currentRewardEpochId;
 
+    uint256 public immutable feePercentageUpdateOffset; // fee percentage update timelock measured in reward epochs
+    uint256 public immutable defaultFeePercentage; // default value for fee percentage
+    mapping(address => FeePercentage[]) public dataProviderFeePercentages;
+
+    mapping(uint256 => mapping(address => uint256)) public epochProviderUnclaimedRewardWeight;
+    mapping(uint256 => mapping(address => uint256)) public epochProviderUnclaimedRewardAmount;    
+
+    mapping(address => address) public authorizedClaimer;
+    mapping(address => address) public authorizedRecepient;
+
     // The total remaining amount of rewards for the most recent reward epochs, from which claims are taken.
     uint constant STORED_PREVIOUS_BALANCES = 26;
     StoredBalances[STORED_PREVIOUS_BALANCES] storedRewardEpochBalances;
@@ -36,17 +47,25 @@ contract VotingRewardManager is Governed, IRewardManager {
         address tokenAddress
     ) public view returns (uint balance) {
         balance = storedRewardEpochBalances[nextRewardEpochBalanceIndex]
-            .balanceForTokenContract[tokenAddress];
+            .totalRewardForTokenContract[tokenAddress];
     }
 
-    function getRemainingEpochBalance(
-        address tokenAddress,
-        uint epochId
-    ) public view returns (uint balance) {
-        balance = storedRewardEpochBalances[
-            rewardEpochIdAsStoredBalanceIndex(epochId)
-        ].balanceForTokenContract[tokenAddress];
+    function authorizeClaimer(address claimer) public {
+        authorizedClaimer[msg.sender] = claimer;
     }
+
+    function authorizeRecepient(address recepient) public {
+        authorizedRecepient[msg.sender] = recepient;
+    }
+
+    // function getRemainingEpochBalance(
+    //     address tokenAddress,
+    //     uint epochId
+    // ) public view returns (uint balance) {
+    //     balance = storedRewardEpochBalances[
+    //         rewardEpochIdAsStoredBalanceIndex(epochId)
+    //     ].unclamedBalanceForTokenContract[tokenAddress];
+    // }
 
     function rewardEpochIdAsStoredBalanceIndex(
         uint256 epochId
@@ -81,13 +100,19 @@ contract VotingRewardManager is Governed, IRewardManager {
             nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(
                 currentRewardEpochId + 1
             );
-            storedRewardEpochBalances[nextRewardEpochBalanceIndex].reset();
+            // storedRewardEpochBalances[nextRewardEpochBalanceIndex].reset();  //TODO
         }
         _;
     }
 
-    constructor(address _governance) Governed(_governance) {
+    constructor(
+        address _governance,
+        uint256 _feePercentageUpdateOffset,
+        uint256 _defaultFeePercentage
+    ) Governed(_governance) {
         require(_governance != address(0), "governance address is zero");
+        feePercentageUpdateOffset = _feePercentageUpdateOffset;
+        defaultFeePercentage = _defaultFeePercentage;
     }
 
     function setVoting(address _voting) public override onlyGovernance {
@@ -188,8 +213,14 @@ contract VotingRewardManager is Governed, IRewardManager {
     }
 
     function claimReward(
-        ClaimReward calldata _data
+        ClaimReward calldata _data,
+        address beneficiary
     ) public override maybePushRewardBalance {
+        require(
+            msg.sender == beneficiary || msg.sender == authorizedClaimer[beneficiary],
+            "not authorized claimer"
+        );
+        
         ClaimRewardBody memory claim = _data.claimRewardBody;
         uint256 claimRewardEpoch = votingManager.getRewardEpochIdForEpoch(
             claim.epochId
@@ -210,20 +241,13 @@ contract VotingRewardManager is Governed, IRewardManager {
         StoredBalances storage balances = storedRewardEpochBalances[
             previousRewardEpochBalanceIndex
         ];
+
         address addr = claim.currencyAddress;
-        uint256 amt = claim.amount;
-
-        require(amt > 0, "claimed amount must be greater than 0");
-
-        require(
-            amt <= balances.currencyBalance(addr),
-            "claimed amount greater than reward balance"
-        );
-
         bytes32 claimHash = _data.hash();
+        bytes32 claimHashRecord = keccak256(abi.encode(claimHash, beneficiary));
 
         require(
-            !processedRewardClaims[claimHash],
+            !processedRewardClaims[claimHashRecord],
             "reward has already been claimed"
         );
 
@@ -235,7 +259,130 @@ contract VotingRewardManager is Governed, IRewardManager {
             "Merkle proof for reward failed"
         );
 
-        processedRewardClaims[claimHash] = true;
-        balances.debit(addr, claim.voterAddress, amt);
+        uint256 feePercentage;
+        // claim.weight > 0  --> data provider
+        // claim.weight == 0 --> back claims
+        if (claim.weight > 0 && balances.totalRewardForTokenContract[claim.voterAddress] == 0) {
+            feePercentage = _getDataProviderFeePercentage(claim.voterAddress, claimRewardEpoch);
+            balances.initializeForClaiming(claim.currencyAddress, claim.voterAddress, claim.weight, claim.amount, feePercentage);
+        }
+
+        uint256 claimWeight = voting.getDelegatorWeightForRewardEpoch(beneficiary, claim.voterAddress, claimRewardEpoch);
+        feePercentage = beneficiary == claim.voterAddress ? _getDataProviderFeePercentage(claim.voterAddress, claimRewardEpoch) : 0;
+        processedRewardClaims[claimHashRecord] = true;
+        address payable recipient = authorizedRecepient[beneficiary] == address(0) ? payable(beneficiary) : payable(authorizedRecepient[beneficiary]);
+
+        // claim.voterAddress == beneficiary  --> get fee
+        // back claimer                       --> get back claim
+        uint claimAmount = (claim.weight == 0 ? claim.amount : 0) + (feePercentage * claim.amount / 10000);
+        balances.debit(addr, claim.voterAddress, recipient, claimWeight, claimAmount);
     }
+
+    /**
+     * @notice Allows data provider to set (or update last) fee percentage.
+     * @param _feePercentageBIPS    number representing fee percentage in BIPS
+     * @return Returns the reward epoch number when the setting becomes effective.
+     */
+    function setDataProviderFeePercentage(uint256 _feePercentageBIPS) external override returns (uint256) {
+        require(_feePercentageBIPS <= MAX_BIPS, "fee percentage invalid");
+
+        uint256 rewardEpoch = votingManager.getCurrentRewardEpochId() + feePercentageUpdateOffset;
+        FeePercentage[] storage fps = dataProviderFeePercentages[msg.sender];
+
+        // determine whether to update the last setting or add a new one
+        uint256 position = fps.length;
+        if (position > 0) {
+            // do not allow updating the settings in the past
+            // (this can only happen if the sharing percentage epoch offset is updated)
+            require(rewardEpoch >= fps[position - 1].validFromEpoch, "fee percentage update failed");
+            
+            if (rewardEpoch == fps[position - 1].validFromEpoch) {
+                // update
+                position = position - 1;
+            }
+        }
+        if (position == fps.length) {
+            // add
+            fps.push();
+        }
+
+        // apply setting
+        fps[position].value = uint16(_feePercentageBIPS);
+        assert(rewardEpoch < 2**240);
+        fps[position].validFromEpoch = uint240(rewardEpoch);
+
+        emit FeePercentageChanged(msg.sender, _feePercentageBIPS, rewardEpoch);
+        return rewardEpoch;
+    }
+
+
+    /**
+     * @notice Returns the current fee percentage of `_dataProvider`
+     * @param _dataProvider         address representing data provider
+     */
+    function getDataProviderCurrentFeePercentage(address _dataProvider) external view override returns (uint256) {
+        return _getDataProviderFeePercentage(_dataProvider, votingManager.getCurrentRewardEpochId());
+    }
+
+    /**
+     * @notice Returns the scheduled fee percentage changes of `_dataProvider`
+     * @param _dataProvider         address representing data provider
+     * @return _feePercentageBIPS   positional array of fee percentages in BIPS
+     * @return _validFromEpoch      positional array of block numbers the fee setings are effective from
+     * @return _fixed               positional array of boolean values indicating if settings are subjected to change
+     */
+    function getDataProviderScheduledFeePercentageChanges(
+        address _dataProvider
+    )
+        external view override
+        returns (
+            uint256[] memory _feePercentageBIPS,
+            uint256[] memory _validFromEpoch,
+            bool[] memory _fixed
+        ) 
+    {
+        FeePercentage[] storage fps = dataProviderFeePercentages[_dataProvider];
+        if (fps.length > 0) {
+            uint256 currentEpoch = votingManager.getCurrentRewardEpochId();
+            uint256 position = fps.length;
+            while (position > 0 && fps[position - 1].validFromEpoch > currentEpoch) {
+                position--;
+            }
+            uint256 count = fps.length - position;
+            if (count > 0) {
+                _feePercentageBIPS = new uint256[](count);
+                _validFromEpoch = new uint256[](count);
+                _fixed = new bool[](count);
+                for (uint256 i = 0; i < count; i++) {
+                    _feePercentageBIPS[i] = fps[i + position].value;
+                    _validFromEpoch[i] = fps[i + position].validFromEpoch;
+                    _fixed[i] = (_validFromEpoch[i] - currentEpoch) != feePercentageUpdateOffset;
+                }
+            }
+        }        
+    }
+   
+    /**
+     * @notice Returns fee percentage setting for `_dataProvider` at `_rewardEpoch`.
+     * @param _dataProvider         address representing a data provider
+     * @param _rewardEpoch          reward epoch number
+     */
+    function _getDataProviderFeePercentage(
+        address _dataProvider,
+        uint256 _rewardEpoch
+    )
+        internal view
+        returns (uint256)
+    {
+        FeePercentage[] storage fps = dataProviderFeePercentages[_dataProvider];
+        uint256 index = fps.length;
+        while (index > 0) {
+            index--;
+            if (_rewardEpoch >= fps[index].validFromEpoch) {
+                return fps[index].value;
+            }
+        }
+        return defaultFeePercentage;
+    }
+
 }
