@@ -5,11 +5,15 @@
     "c": "yarn compile",
     "typechain-ethers-v6": "yarn typechain --target=ethers-v6 --out-dir typechain \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
     "typechain-truffle-v5": "yarn typechain --target=truffle-v5 --out-dir typechain-truffle \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
-    "typechain-web3-v1": "yarn typechain --target=web3-v1 --out-dir typechain-web3 \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul"
+    "typechain-web3-v1": "yarn typechain --target=web3-v1 --out-dir typechain-web3 \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
+    "-------TESTS---------": "",
+    "test": "yarn hardhat test",
+    "test-coverage": "nyc yarn hardhat coverage"
   },
   "license": "MIT",
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^4.0.0",
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.1",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
@@ -29,6 +33,7 @@
     "chai": "^4.3.7",
     "hardhat": "^2.15.0",
     "hardhat-gas-reporter": "^1.0.8",
+    "nyc": "^15.1.0",
     "solidity-coverage": "^0.8.1",
     "ts-node": "^10.9.1",
     "typechain": "8.2.0",
@@ -40,5 +45,20 @@
     "ethereumjs-wallet": "^1.0.2",
     "ethers": "^6.6.0",
     "web3": "^1.0.0-beta.36"
+  },
+  "nyc": {
+    "extends": "@istanbuljs/nyc-config-typescript",
+    "check-coverage": true,
+    "all": true,
+    "include": [
+      "src/**/!(*.test.*).[tj]s?(x)"
+    ],
+    "exclude": [
+      "src/voting-test-utils.ts"
+    ],
+    "reporter": [
+      "html"
+    ],
+    "report-dir": "coverage/ts"
   }
 }
