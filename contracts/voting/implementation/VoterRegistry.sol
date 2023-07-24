@@ -61,7 +61,7 @@ contract VoterRegistry is IVoterRegistry, Governed {
     ) public  {
         require(
             _rewardEpochId > votingManager.getCurrentRewardEpochId(),
-            "rewardEpochId too low"
+            "can only register for a future reward epoch"
         );
         require(
             weightForRewardEpoch[_rewardEpochId][msg.sender] == 0,

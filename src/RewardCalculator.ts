@@ -1,8 +1,7 @@
-import { toBN } from "../test-utils/utils/test-helpers";
 import { FTSOClient } from "./FTSOClient";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
 import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } from "./voting-interfaces";
-import { feedId } from "./voting-utils";
+import { feedId, toBN } from "./voting-utils";
 
 /**
  * Reward calculator for sequence of reward epochs. 
@@ -60,13 +59,13 @@ export class RewardCalculator {
   ) {
     this.client = client;
     this.initialRewardEpoch = initialRewardEpoch;
-    this.firstRewardedPriceEpoch = client.provider.firstRewardedPriceEpoch; 
+    this.firstRewardedPriceEpoch = client.provider.firstRewardedPriceEpoch;
     this.rewardEpochDurationInEpochs = client.provider.rewardEpochDurationInEpochs;
     this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
     this.currentRewardEpoch = this.initialRewardEpoch;
-    this.firstPriceEpochInNextRewardEpoch = this.initialPriceEpoch + this.rewardEpochDurationInEpochs;
+    this.firstPriceEpochInNextRewardEpoch = this.initialPriceEpoch + this.rewardEpochDurationInEpochs; // TODO: this never gets updated?
     this.initialized = true;
   }
 

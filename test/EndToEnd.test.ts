@@ -4,17 +4,17 @@ import { expectEvent } from "@openzeppelin/test-helpers";
 import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
-import fs from "fs";
 import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig } from "../src/price-feeds/RandomPriceFeed";
 import { TruffleProvider } from "../src/providers/TruffleProvider";
 import { Feed, Offer } from "../src/voting-interfaces";
-import { moveToCurrentRewardEpochRevealEnd, moveToNextPriceEpochStart, moveToNextRewardEpochStart } from "../src/voting-test-utils";
-import { ZERO_ADDRESS, feedId, hexlifyBN, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
+import { ZERO_ADDRESS, feedId, hexlifyBN, toBN, toBytes4, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
-import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
+import { increaseTimeTo } from "../test-utils/utils/test-helpers";
 import { DummyERC20Instance, ERC20PriceOracleInstance, MockContractInstance, PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../typechain-truffle";
+import { moveToCurrentRewardEpochRevealEnd, moveToNextPriceEpochStart, moveToNextRewardEpochStart } from "../test-utils/utils/voting-test-utils";
+import { loadAccounts } from "../deployment/tasks/common";
 chai.use(chaiBN(BN));
 
 const Voting = artifacts.require("Voting");
@@ -33,7 +33,7 @@ const REWARD_EPOCH_DURATION = 5;
 const THRESHOLD = 5000;
 const INITIAL_MAX_NUMBER_OF_FEEDS = 8;
 const IQR_SHARE = toBN(700000);
-const PCT_SHARE = toBN(300000);
+const PCT_SHARE = toBN(300000); 
 const ELASTIC_BAND_WIDTH_PPM = toBN(50000);
 const DEFAULT_REWARD_BELT_PPM = toBN(500000); // 50%
 const MINIMAL_OFFER_VALUE = REWARD_VALUE.div(toBN(2));
@@ -285,7 +285,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   before(async () => {
 
     // Getting accounts
-    wallets = JSON.parse(fs.readFileSync("./test-1020-accounts.json").toString()).map((x: any) => web3.eth.accounts.privateKeyToAccount(x.privateKey));
+    wallets = loadAccounts();
     accounts = wallets.map((wallet) => wallet.address);
     governance = accounts[0];
 
@@ -330,16 +330,13 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     await priceOracle.setVotingManager(votingManager.address);
     await priceOracle.setVoting(voting.address);
 
-
     // vote time configuration
     firstEpochStartSec = await votingManager.BUFFER_TIMESTAMP_OFFSET();
     epochDurationSec = await votingManager.BUFFER_WINDOW();
-
     // Initialize weights for reward epoch 1
     for(let i = 1; i <= N; i++) {
       await voterRegistry.registerAsAVoter(TEST_REWARD_EPOCH, WEIGHT, {from: accounts[i]});
     }
-
 
     ftsoClients = [];
     let currentBlockNumber = await web3.eth.getBlockNumber();
@@ -369,6 +366,8 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         priceOracle.address,
         votingManager.address,
       );
+      provider.artifacts = artifacts;
+      provider.web3 = web3;
       await provider.initialize({ privateKey: wallets[i].privateKey });
       let client = new FTSOClient(provider);
 

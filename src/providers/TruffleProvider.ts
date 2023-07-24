@@ -1,18 +1,9 @@
-import BN from "bn.js";
 import fs from "fs";
-import { artifacts, web3 } from "hardhat";
 import { AbiItem } from "web3-utils";
-import { toBN } from "../../test-utils/utils/test-helpers";
 import { PriceOracleInstance, VoterRegistryInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RevealBitvoteData, RewardOffered, SignatureData, TxData, VoterWithWeight, deepCopyClaim } from "../voting-interfaces";
-import { ZERO_ADDRESS, convertRewardOfferedEvent, hexlifyBN } from "../voting-utils";
+import { ZERO_ADDRESS, convertRewardOfferedEvent, hexlifyBN, toBN } from "../voting-utils";
 import { IVotingProvider } from "./IVotingProvider";
-
-let VotingRewardManager = artifacts.require("VotingRewardManager");
-let Voting = artifacts.require("Voting");
-let VoterRegistry = artifacts.require("VoterRegistry");
-let PriceOracle = artifacts.require("PriceOracle");
-let VotingManager = artifacts.require("VotingManager");
 
 export interface TruffleProviderOptions {
    privateKey: string;
@@ -23,6 +14,9 @@ export interface TruffleProviderOptions {
  * Intended for testing in hardhat environment.
  */
 export class TruffleProvider extends IVotingProvider {
+   // TODO: fix artifacts & web3 injection
+   public artifacts!: Truffle.Artifacts
+   public web3!: Web3
    votingRewardManagerContract!: VotingRewardManagerInstance;
    votingContract!: VotingInstance;
    voterRegistryContract!: VoterRegistryInstance;
@@ -56,6 +50,12 @@ export class TruffleProvider extends IVotingProvider {
       this.functionSignatures.set("offerRewards", web3.eth.abi.encodeFunctionSignature(this.abiForName.get("offerRewards")));
 
       this.eventSignatures.set("RewardOffered", web3.eth.abi.encodeEventSignature(this.abiForName.get("RewardOffered")));
+
+      const VotingRewardManager = artifacts.require("VotingRewardManager");
+      const Voting = artifacts.require("Voting");
+      const VoterRegistry = artifacts.require("VoterRegistry");
+      const PriceOracle = artifacts.require("PriceOracle");
+      const VotingManager = artifacts.require("VotingManager");
 
       // contracts
       this.votingRewardManagerContract = await VotingRewardManager.at(this.votingRewardManagerContractAddress);
@@ -140,18 +140,22 @@ export class TruffleProvider extends IVotingProvider {
       return result;
    }
 
+   async registerAsVoter(rewardEpochId: number, weight: number): Promise<any> {
+      return await this.voterRegistryContract.registerAsAVoter(rewardEpochId, weight, { from: this.wallet.address });
+   }
+
    async getBlockNumber(): Promise<number> {
-      return web3.eth.getBlockNumber();
+      return this.web3.eth.getBlockNumber();
    }
 
    async getBlock(blockNumber: number): Promise<BlockData> {
-      let result = await web3.eth.getBlock(blockNumber, true);
+      let result = await this.web3.eth.getBlock(blockNumber, true);
       result.timestamp = parseInt('' + result.timestamp, 10);
       return result as any as BlockData;
    }
 
    getTransactionReceipt(txId: string): Promise<any> {
-      return web3.eth.getTransactionReceipt(txId);
+      return this.web3.eth.getTransactionReceipt(txId);
    }
 
    functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
@@ -165,7 +169,7 @@ export class TruffleProvider extends IVotingProvider {
    private decodeFunctionCall(tx: TxData, name: string) {
       const encodedParameters = tx.input!.slice(10); // Drop the function signature
       const parametersEncodingABI = this.abiForName.get(name)!.inputs;
-      return web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
+      return this.web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
    }
 
    extractOffers(tx: TxData): RewardOffered[] {
@@ -206,6 +210,14 @@ export class TruffleProvider extends IVotingProvider {
    get senderAddressLowercase(): string {
       this.assertWallet();
       return this.wallet.address.toLowerCase();
+   }
+
+   async getCurrentRewardEpochId(): Promise<number> {
+      return (await this.votingManagerContract.getCurrentRewardEpochId()).toNumber();
+   }
+
+   async getCurrentPriceEpochId(): Promise<number> {
+      return (await this.votingManagerContract.getCurrentPriceEpochId()).toNumber();
    }
 
 }

@@ -1,5 +1,4 @@
 import { BareSignature, BlockData, ClaimReward, EpochData, EpochResult, Offer, RewardOffered, RevealBitvoteData, SignatureData, TxData, VoterWithWeight } from "../voting-interfaces";
-import BN from "bn.js";
 
 /**
  * An abstract class of a Voting provider. The role of a Voting provider is to
@@ -53,6 +52,7 @@ export abstract class IVotingProvider {
    abstract finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
    abstract publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
    abstract allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
+   abstract registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
 
 
    ////////////// Signing //////////////

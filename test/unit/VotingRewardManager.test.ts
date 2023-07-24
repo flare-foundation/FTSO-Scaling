@@ -4,7 +4,7 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { getTestFile } from "../../test-utils/utils/constants";
 import { MockContractInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
-import { toBN } from "../../test-utils/utils/test-helpers";
+import { toBN } from "../../src/voting-utils";
 chai.use(chaiBN(BN));
 
 const VotingRewardManager = artifacts.require("VotingRewardManager");

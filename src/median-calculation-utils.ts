@@ -1,5 +1,5 @@
-import { toBN } from "../test-utils/utils/test-helpers";
 import { MedianCalculationSummary } from "./voting-interfaces";
+import { toBN } from "./voting-utils";
 
 const TOTAL_PPM = 1000000;
 /**
