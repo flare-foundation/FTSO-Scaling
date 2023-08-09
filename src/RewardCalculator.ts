@@ -65,7 +65,7 @@ export class RewardCalculator {
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;
     this.currentRewardEpoch = this.initialRewardEpoch;
-    this.firstPriceEpochInNextRewardEpoch = this.initialPriceEpoch + this.rewardEpochDurationInEpochs; // TODO: this never gets updated?
+    this.firstPriceEpochInNextRewardEpoch = this.initialPriceEpoch + this.rewardEpochDurationInEpochs;
     this.initialized = true;
   }
 
@@ -280,6 +280,7 @@ export class RewardCalculator {
       // last (claiming) cumulative claim records
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, cumulativeClaims);
       this.currentRewardEpoch++;
+      this.firstPriceEpochInNextRewardEpoch += this.rewardEpochDurationInEpochs;
       // initialize empty cumulative claims for the new reward epoch
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, []);
     }
