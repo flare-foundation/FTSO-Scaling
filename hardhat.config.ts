@@ -8,11 +8,12 @@ import "@nomicfoundation/hardhat-network-helpers";
 import { HardhatUserConfig, task } from "hardhat/config";
 import { runDataProvider } from "./deployment/tasks/run-data-provider";
 import { deployContracts } from "./deployment/tasks/deploy-contracts";
-import loadTestAccounts, { getFTSOParameters as loadFTSOParameters } from "./hardhat.utils";
+import loadTestAccounts from "./hardhat.utils";
 
 import * as dotenv from "dotenv";
 import { OUTPUT_FILE } from "./deployment/tasks/common";
 import { runAdminDaemon } from "./deployment/tasks/run-admin-daemon";
+import { loadFTSOParameters } from "./deployment/config/FTSOParameters";
 
 dotenv.config();
 

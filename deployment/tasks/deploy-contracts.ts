@@ -10,7 +10,7 @@ import {
   VotingRewardManagerInstance,
 } from "../../typechain-truffle";
 import { writeFileSync } from "fs";
-import { DeployedContracts, OUTPUT_FILE } from "./common";
+import { ContractAddresses, OUTPUT_FILE } from "./common";
 import { Artifacts, HardhatRuntimeEnvironment } from "hardhat/types";
 
 // TODO: extract constants to config
@@ -43,12 +43,13 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     erc20PriceOracle
   );
 
-  const deployed = <DeployedContracts>{
-    votingManager,
-    voterRegistry,
-    voting,
-    votingRewardManager,
-    priceOracle,
+  const deployed = <ContractAddresses>{
+    votingManager: votingManager.address,
+    voterRegistry: voterRegistry.address,
+    voting: voting.address,
+    votingRewardManager: votingRewardManager.address,
+    priceOracle: priceOracle.address,
+    erc20PriceOracle: erc20PriceOracle.address,
   };
 
   outputAddresses(deployed);
@@ -117,7 +118,7 @@ async function deployVotingManager(artifacts: Artifacts, governance: Account): P
   return votingManager;
 }
 
-function outputAddresses(deployed: DeployedContracts) {
+function outputAddresses(deployed: ContractAddresses) {
   const contractAddresses = Object.fromEntries(
     Object.entries(deployed).map(([name, contract]) => [name, contract.address])
   );

@@ -6,7 +6,7 @@ import chaiBN from "chai-bn";
 import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig } from "../src/price-feeds/RandomPriceFeed";
-import { TruffleProvider } from "../src/providers/TruffleProvider";
+import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/voting-interfaces";
 import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
@@ -17,6 +17,7 @@ import {
   MockContractInstance,
   PriceOracleInstance,
   VoterRegistryInstance,
+  VotingContract,
   VotingInstance,
   VotingManagerInstance,
   VotingRewardManagerInstance,
@@ -26,7 +27,7 @@ import {
   moveToNextPriceEpochStart,
   moveToNextRewardEpochStart,
 } from "../test-utils/utils/voting-test-utils";
-import { loadAccounts } from "../deployment/tasks/common";
+import { ContractAddresses, loadAccounts } from "../deployment/tasks/common";
 import {
   REWARD_VALUE,
   calculateVoteResults,
@@ -43,7 +44,7 @@ import {
 
 chai.use(chaiBN(BN));
 
-const Voting = artifacts.require("Voting");
+const Voting: VotingContract = artifacts.require("Voting");
 const VoterRegistry = artifacts.require("VoterRegistry");
 const VotingManager = artifacts.require("VotingManager");
 const VotingRewardManager = artifacts.require("VotingRewardManager");
@@ -93,7 +94,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
   before(async () => {
     // Getting accounts
-    wallets = loadAccounts();
+    wallets = loadAccounts(web3);
     accounts = wallets.map(wallet => wallet.address);
     governance = accounts[0];
 
@@ -150,16 +151,21 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     // Initialize FTSO clients with random feeds
     ftsoClients = [];
     for (let i = 1; i <= DATA_PROVIDER_COUNT; i++) {
-      const provider = new TruffleProvider(
-        voting.address,
-        votingRewardManager.address,
-        voterRegistry.address,
-        priceOracle.address,
-        votingManager.address
+      const privateKey = wallets[i].privateKey;
+      const addr =     {
+        voting: voting.address,
+        votingRewardManager: votingRewardManager.address,
+        voterRegistry: voterRegistry.address,
+        priceOracle: priceOracle.address,
+        votingManager: votingManager.address,
+      } as ContractAddresses
+      const provider = await TruffleProvider.create(
+       addr,
+        { privateKey, artifacts, web3 } as TruffleProviderOptions
       );
-      provider.artifacts = artifacts;
-      provider.web3 = web3;
-      await provider.initialize({ privateKey: wallets[i].privateKey });
+
+      provider.contractAddresses = addr;
+
       const client = new FTSOClient(provider);
       await client.initialize(currentBlockNumber, undefined, web3);
       priceFeedsForClient = priceFeedConfigs.map(config => new RandomPriceFeed(config));

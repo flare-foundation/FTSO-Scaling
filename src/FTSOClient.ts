@@ -22,6 +22,7 @@ import {
 } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
 import { EpochSettings } from "./EpochSettings";
+import { hashMessage } from "./utils";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 
@@ -137,7 +138,7 @@ export class FTSOClient {
 
   processTx(tx: TxData, blockTimestampSec: number) {
     let prefix = tx.input?.slice(0, 10);
-    if (tx.to?.toLowerCase() === this.provider.votingContractAddress.toLowerCase()) {
+    if (tx.to?.toLowerCase() === this.provider.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {
         if (prefix === this.provider.functionSignature("commit")) {
           return this.extractCommit(tx, blockTimestampSec);
@@ -147,7 +148,7 @@ export class FTSOClient {
           return this.extractSignature(tx);
         }
       }
-    } else if (tx.to?.toLowerCase() === this.provider.votingRewardManagerContractAddress.toLowerCase()) {
+    } else if (tx.to?.toLowerCase() === this.provider.contractAddresses.votingRewardManager.toLowerCase()) {
       if (prefix === this.provider.functionSignature("offerRewards")) {
         return this.extractOffers(tx, blockTimestampSec);
       }
@@ -372,7 +373,7 @@ export class FTSOClient {
     let rewardClaimHashes: string[] = [];
     for (let claimRewardList of rewards.values()) {
       for (let claim of claimRewardList) {
-        claim.hash = hashClaimReward(claim, this.provider.abiForName.get("claimRewardBodyDefinition")!);
+        claim.hash = hashClaimReward(claim, this.provider.abiForName("claimRewardBodyDefinition")!);
         rewardClaimHashes.push(claim.hash);
       }
     }
@@ -389,7 +390,7 @@ export class FTSOClient {
 
     let message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
 
-    let priceMessageHash = this.provider.hashMessage("0x" + message);
+    let priceMessageHash = hashMessage("0x" + message);
     let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
 
     // add merkle proofs to the claims for this FTSO client

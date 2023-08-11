@@ -62,7 +62,7 @@ async function offerRewards(
  * Runs admin tasks like providing offers
  */
 export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters: FTSOParameters) {
-  const accounts = loadAccounts();
+  const accounts = loadAccounts(hre.web3);
   const governance: Account = accounts[0];
 
   const contractAddresses = loadContracts();

@@ -14,7 +14,7 @@ function loadContracts() {
 export async function runDataProvider(hre: HardhatRuntimeEnvironment, myId: number, parameters: FTSOParameters) {
   console.log(`Starting data provider ${myId}`);
 
-  const accounts = loadAccounts();
+  const accounts = loadAccounts(hre.web3);
   const contractAddresses = loadContracts();
 
   console.log(`Initializing data provider ${myId} with address ${accounts[myId].address}`);

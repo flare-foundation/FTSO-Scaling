@@ -4,24 +4,6 @@ import { FTSOParameters } from "./deployment/config/FTSOParameters";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-function loadParameters(filename: string): FTSOParameters {
-  const jsonText = readFileSync(filename).toString();
-  const parameters = JSON.parse(jsonText);
-  return parameters;
-}
-
-export function getFTSOParameters() {
-  const chain = process.env.CHAIN_CONFIG;
-  if (chain) {
-    const parameters = loadParameters(`deployment/config/config-${chain}.json`);
-    if (process.env.DEPLOYER_PRIVATE_KEY) {
-      parameters.governancePrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
-    }
-    return parameters;
-  } else {
-    throw Error("Chain config must be set in env CHAIN_CONFIG");
-  }
-}
 
 export default function loadTestAccounts() {
   return [
