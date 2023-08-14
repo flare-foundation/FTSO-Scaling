@@ -7,7 +7,7 @@ import {
   VotingManagerInstance,
   VotingRewardManagerInstance,
 } from "../../typechain-truffle";
-import { getWeb3Wallet } from "../utils";
+import { getContractAbis, getAccount } from "../web3-utils";
 import {
   BareSignature,
   BlockData,
@@ -32,7 +32,7 @@ export interface TruffleProviderOptions {
   readonly web3: Web3;
 }
 
-interface Contracts {
+interface TruffleContracts {
   readonly votingRewardManager: VotingRewardManagerInstance;
   readonly voting: VotingInstance;
   readonly voterRegistry: VoterRegistryInstance;
@@ -48,6 +48,7 @@ export class TruffleProvider implements IVotingProvider {
   private functionSignatures: Map<string, string> = new Map<string, string>();
   private eventSignatures: Map<string, string> = new Map<string, string>();
   private abis: Map<string, any> = new Map<string, string>();
+  private wallet: Account;
 
   private constructor(
     readonly contractAddresses: ContractAddresses,
@@ -58,10 +59,11 @@ export class TruffleProvider implements IVotingProvider {
     readonly signingDurationSec: number,
     readonly artifacts: Truffle.Artifacts,
     readonly web3: Web3,
-    private contracts: Contracts,
-    private wallet: Account
+    private contracts: TruffleContracts,
+    privateKey: string
   ) {
-    this.setAbis();
+    this.wallet = getAccount(web3, privateKey);
+    [this.functionSignatures, this.eventSignatures, this.abis] = getContractAbis(web3);
   }
 
   assertWallet() {
@@ -126,7 +128,6 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
-    // console.dir(epochResult);
     this.assertWallet();
     return this.contracts.priceOracle.publishPrices(
       epochResult.dataMerkleRoot,
@@ -190,17 +191,11 @@ export class TruffleProvider implements IVotingProvider {
     return this.abis.get(name)!;
   }
 
-  private decodeFunctionCall(tx: TxData, name: string) {
-    const encodedParameters = tx.input!.slice(10); // Drop the function signature
-    const parametersEncodingABI = this.abis.get(name)!.inputs;
-    return this.web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
-  }
-
   extractOffers(tx: TxData): RewardOffered[] {
     const result = tx
       .receipt!.logs.filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
       .map((event: any) => {
-        const offer = web3.eth.abi.decodeLog(this.abis.get("RewardOffered").inputs, event.data, event.topics);
+        const offer = this.web3.eth.abi.decodeLog(this.abis.get("RewardOffered").inputs, event.data, event.topics);
         return convertRewardOfferedEvent(offer as any as RewardOffered);
       });
     return result;
@@ -244,49 +239,10 @@ export class TruffleProvider implements IVotingProvider {
     return (await this.contracts.votingManager.getCurrentPriceEpochId()).toNumber();
   }
 
-  private setAbis() {
-    const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
-    const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
-    //  const voterRegistryAbiPath = "artifacts/contracts/voting/implementation/VoterRegistry.sol/VoterRegistry.json";
-    const votingABI = JSON.parse(readFileSync(votingAbiPath).toString()).abi as AbiItem[];
-    const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
-    //  const voterRegistryABI = JSON.parse(fs.readFileSync(votingAbiPath).toString()).abi as AbiItem[];
-    this.abis.set(
-      "commit",
-      votingABI.find((x: any) => x.name === "commit")
-    );
-    this.abis.set(
-      "revealBitvote",
-      votingABI.find((x: any) => x.name === "revealBitvote")
-    );
-    this.abis.set(
-      "signResult",
-      votingABI.find((x: any) => x.name === "signResult")
-    );
-    this.abis.set(
-      "offerRewards",
-      rewardsABI.find((x: any) => x.name === "offerRewards")
-    );
-    this.abis.set(
-      "claimRewardBodyDefinition",
-      rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0]
-    );
-    this.abis.set(
-      "RewardOffered",
-      rewardsABI.find((x: any) => x.name === "RewardOffered")
-    );
-    this.functionSignatures.set("commit", this.web3.eth.abi.encodeFunctionSignature(this.abis.get("commit")));
-    this.functionSignatures.set(
-      "revealBitvote",
-      this.web3.eth.abi.encodeFunctionSignature(this.abis.get("revealBitvote"))
-    );
-    this.functionSignatures.set("signResult", this.web3.eth.abi.encodeFunctionSignature(this.abis.get("signResult")));
-    this.functionSignatures.set(
-      "offerRewards",
-      this.web3.eth.abi.encodeFunctionSignature(this.abis.get("offerRewards"))
-    );
-
-    this.eventSignatures.set("RewardOffered", this.web3.eth.abi.encodeEventSignature(this.abis.get("RewardOffered")));
+  private decodeFunctionCall(tx: TxData, name: string) {
+    const encodedParameters = tx.input!.slice(10); // Drop the function signature
+    const parametersEncodingABI = this.abis.get(name)!.inputs;
+    return this.web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
   }
 
   static async create(contractAddresses: ContractAddresses, options: TruffleProviderOptions): Promise<TruffleProvider> {
@@ -324,7 +280,7 @@ export class TruffleProvider implements IVotingProvider {
       artifacts,
       web3,
       contracts,
-      getWeb3Wallet(web3, options.privateKey)
+      options.privateKey
     );
   }
 }

@@ -1,7 +1,7 @@
+import BN from "bn.js";
 import { MedianCalculationSummary } from "./voting-interfaces";
 import { toBN } from "./voting-utils";
 
-const TOTAL_PPM = 1000000;
 /**
  * Data for a single vote.
  */

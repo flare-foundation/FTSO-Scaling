@@ -119,9 +119,7 @@ async function deployVotingManager(artifacts: Artifacts, governance: Account): P
 }
 
 function outputAddresses(deployed: ContractAddresses) {
-  const contractAddresses = Object.fromEntries(
-    Object.entries(deployed).map(([name, contract]) => [name, contract.address])
-  );
-  writeFileSync(OUTPUT_FILE, JSON.stringify(contractAddresses, null, 2));
-  console.log("Contract addresses stored in " + OUTPUT_FILE);
+  const contents = JSON.stringify(deployed, null, 2);
+  writeFileSync(OUTPUT_FILE, contents);
+  console.log(`Contract addresses written to ${OUTPUT_FILE}:\n${contents}`);
 }

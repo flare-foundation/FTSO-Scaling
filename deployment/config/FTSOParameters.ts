@@ -5,6 +5,7 @@ dotenv.config();
 
 export interface FTSOParameters {
   governancePrivateKey: string;
+  gasPrice: number;
   symbols: Feed[];
 }
 

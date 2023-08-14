@@ -47,13 +47,13 @@ export interface IVotingProvider {
   getBlockNumber(): Promise<number>;
   getBlock(blockNumber: number): Promise<BlockData>;
   getTransactionReceipt(txId: string): Promise<any>;
+
   ////////////// Auxiliary //////////////
   functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string;
   eventSignature(name: "RewardOffered"): string;
   abiForName(name: string): any;
 
   ////////////// Transaction and event data extraction methods //////////////
-
   extractOffers(tx: TxData): RewardOffered[];
   extractCommitHash(tx: TxData): string;
   extractRevealBitvoteData(tx: TxData): RevealBitvoteData;

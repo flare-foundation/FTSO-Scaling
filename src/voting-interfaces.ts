@@ -1,3 +1,5 @@
+import BN from 'bn.js';
+
 export interface ClaimReward {
   merkleProof: string[];
   hash?: string;

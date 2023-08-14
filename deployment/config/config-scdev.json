@@ -1,5 +1,6 @@
 {
   "governancePrivateKey": "<set in .env>",
+  "gasPrice": "3000000000000",
   "symbols": [
     { "offerSymbol": "FLR", "quoteSymbol": "USD" },
     { "offerSymbol": "FL1", "quoteSymbol": "USD" },

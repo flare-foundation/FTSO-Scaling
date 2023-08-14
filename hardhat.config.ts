@@ -1,19 +1,18 @@
+import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-web3";
-import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomicfoundation/hardhat-network-helpers";
 
 import { HardhatUserConfig, task } from "hardhat/config";
-import { runDataProvider } from "./deployment/tasks/run-data-provider";
 import { deployContracts } from "./deployment/tasks/deploy-contracts";
 import loadTestAccounts from "./hardhat.utils";
 
 import * as dotenv from "dotenv";
+import { loadFTSOParameters } from "./deployment/config/FTSOParameters";
 import { OUTPUT_FILE } from "./deployment/tasks/common";
 import { runAdminDaemon } from "./deployment/tasks/run-admin-daemon";
-import { loadFTSOParameters } from "./deployment/config/FTSOParameters";
 
 dotenv.config();
 
@@ -29,13 +28,6 @@ task("run-admin-daemon", `Does admin tasks`) // prettier-ignore
   .setAction(async (args, hre, runSuper) => {
     const parameters = loadFTSOParameters();
     await runAdminDaemon(hre, parameters);
-  });
-
-task("run-data-provider", "Runs a single data provider with the specified id (account index).")
-  .addPositionalParam("id")
-  .setAction(async (taskArgs, hre) => {
-    const parameters = loadFTSOParameters();
-    await runDataProvider(hre, taskArgs.id, parameters);
   });
 
 // Config

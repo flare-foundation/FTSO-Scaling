@@ -1,6 +1,8 @@
 import { RandomPriceFeedConfig, RandomPriceFeed } from "../../src/price-feeds/RandomPriceFeed";
 import { Feed } from "../../src/voting-interfaces";
 import { readFileSync } from "fs";
+import { Account } from "web3-core";
+
 import Web3 from "web3";
 
 export interface ContractAddresses {
@@ -28,7 +30,7 @@ export function generateRandomFeedsForClient(symbols: Feed[]) {
   return priceFeedConfigs.map(config => new RandomPriceFeed(config));
 }
 
-export function loadAccounts(web3: Web3) {
+export function loadAccounts(web3: Web3): Account[] {
   return JSON.parse(readFileSync(TEST_ACCOUNT_FILE).toString()).map((x: any) =>
     web3.eth.accounts.privateKeyToAccount(x.privateKey)
   );

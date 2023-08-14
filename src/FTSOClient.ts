@@ -22,7 +22,7 @@ import {
 } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
 import { EpochSettings } from "./EpochSettings";
-import { hashMessage } from "./utils";
+import { hashMessage } from "./web3-utils";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 
