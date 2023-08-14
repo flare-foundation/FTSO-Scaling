@@ -7,7 +7,6 @@ import {
   VotingManagerInstance,
   VotingRewardManagerInstance,
 } from "../../typechain-truffle";
-import { getContractAbis, getAccount } from "../web3-utils";
 import {
   BareSignature,
   BlockData,
@@ -15,16 +14,12 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  RevealBitvoteData,
-  RewardOffered,
-  SignatureData,
-  TxData,
   VoterWithWeight,
   deepCopyClaim,
 } from "../voting-interfaces";
-import { ZERO_ADDRESS, convertRewardOfferedEvent, hexlifyBN, toBN } from "../voting-utils";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
+import { getAccount } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
-import { readFileSync } from "fs";
 
 export interface TruffleProviderOptions {
   readonly privateKey: string;
@@ -45,10 +40,7 @@ interface TruffleContracts {
  * Intended for testing in hardhat environment.
  */
 export class TruffleProvider implements IVotingProvider {
-  private functionSignatures: Map<string, string> = new Map<string, string>();
-  private eventSignatures: Map<string, string> = new Map<string, string>();
-  private abis: Map<string, any> = new Map<string, string>();
-  private wallet: Account;
+  private account: Account;
 
   private constructor(
     readonly contractAddresses: ContractAddresses,
@@ -62,21 +54,14 @@ export class TruffleProvider implements IVotingProvider {
     private contracts: TruffleContracts,
     privateKey: string
   ) {
-    this.wallet = getAccount(web3, privateKey);
-    [this.functionSignatures, this.eventSignatures, this.abis] = getContractAbis(web3);
-  }
-
-  assertWallet() {
-    if (!this.wallet) {
-      throw new Error("wallet not initialized");
-    }
+    this.account = getAccount(web3, privateKey);
   }
 
   async claimReward(claim: ClaimReward): Promise<any> {
     const claimReward = deepCopyClaim(claim);
     delete claimReward.hash;
-    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claimReward), this.wallet.address, {
-      from: this.wallet.address,
+    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claimReward), this.account.address, {
+      from: this.account.address,
     });
   }
 
@@ -88,14 +73,13 @@ export class TruffleProvider implements IVotingProvider {
       }
     });
     return this.contracts.votingRewardManager.offerRewards(hexlifyBN(offers), {
-      from: this.wallet.address,
+      from: this.account.address,
       value: totalAmount,
     });
   }
 
   async commit(hash: string): Promise<any> {
-    this.assertWallet();
-    return this.contracts.voting.commit(hash, { from: this.wallet.address });
+    return this.contracts.voting.commit(hash, { from: this.account.address });
   }
 
   async revealBitvote(epochData: EpochData): Promise<any> {
@@ -104,12 +88,11 @@ export class TruffleProvider implements IVotingProvider {
       epochData.merkleRoot!,
       epochData.bitVote!,
       epochData.pricesHex!,
-      { from: this.wallet.address }
+      { from: this.account.address }
     );
   }
 
   async signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
-    this.assertWallet();
     return this.contracts.voting.signResult(
       epochId,
       merkleRoot,
@@ -118,30 +101,27 @@ export class TruffleProvider implements IVotingProvider {
         r: signature.r,
         s: signature.s,
       },
-      { from: this.wallet.address }
+      { from: this.account.address }
     );
   }
 
   async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]) {
-    this.assertWallet();
-    return this.contracts.voting.finalize(epochId, mySignatureHash, signatures, { from: this.wallet.address });
+    return this.contracts.voting.finalize(epochId, mySignatureHash, signatures, { from: this.account.address });
   }
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
-    this.assertWallet();
     return this.contracts.priceOracle.publishPrices(
       epochResult.dataMerkleRoot,
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,
       symbolIndices,
-      { from: this.wallet.address }
+      { from: this.account.address }
     );
   }
 
   async signMessage(message: string): Promise<BareSignature> {
-    this.assertWallet();
-    const signature = this.wallet.sign(message);
+    const signature = this.account.sign(message);
 
     return <BareSignature>{
       v: parseInt(signature.v),
@@ -162,7 +142,7 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   async registerAsVoter(rewardEpochId: number, weight: number): Promise<any> {
-    return await this.contracts.voterRegistry.registerAsAVoter(rewardEpochId, weight, { from: this.wallet.address });
+    return await this.contracts.voterRegistry.registerAsAVoter(rewardEpochId, weight, { from: this.account.address });
   }
 
   async getBlockNumber(): Promise<number> {
@@ -179,56 +159,8 @@ export class TruffleProvider implements IVotingProvider {
     return this.web3.eth.getTransactionReceipt(txId);
   }
 
-  functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
-    return this.functionSignatures.get(name)!;
-  }
-
-  eventSignature(name: "RewardOffered"): string {
-    return this.eventSignatures.get(name)!;
-  }
-
-  abiForName(name: "VotingRewardManager" | "PriceOracle" | "VoterRegistry" | "Voting" | "VotingManager") {
-    return this.abis.get(name)!;
-  }
-
-  extractOffers(tx: TxData): RewardOffered[] {
-    const result = tx
-      .receipt!.logs.filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
-      .map((event: any) => {
-        const offer = this.web3.eth.abi.decodeLog(this.abis.get("RewardOffered").inputs, event.data, event.topics);
-        return convertRewardOfferedEvent(offer as any as RewardOffered);
-      });
-    return result;
-  }
-
-  extractCommitHash(tx: TxData): string {
-    return this.decodeFunctionCall(tx, "commit")._commitHash;
-  }
-
-  extractRevealBitvoteData(tx: TxData): RevealBitvoteData {
-    const resultTmp = this.decodeFunctionCall(tx, "revealBitvote");
-    return {
-      random: resultTmp._random,
-      merkleRoot: resultTmp._merkleRoot,
-      bitVote: resultTmp._bitVote,
-      prices: resultTmp._prices,
-    } as RevealBitvoteData;
-  }
-
-  extractSignatureData(tx: TxData): SignatureData {
-    const resultTmp = this.decodeFunctionCall(tx, "signResult");
-    return {
-      epochId: parseInt(resultTmp._epochId, 10),
-      merkleRoot: resultTmp._merkleRoot,
-      v: parseInt(resultTmp.signature.v, 10),
-      r: resultTmp.signature.r,
-      s: resultTmp.signature.s,
-    } as SignatureData;
-  }
-
   get senderAddressLowercase(): string {
-    this.assertWallet();
-    return this.wallet.address.toLowerCase();
+    return this.account.address.toLowerCase();
   }
 
   async getCurrentRewardEpochId(): Promise<number> {
@@ -237,12 +169,6 @@ export class TruffleProvider implements IVotingProvider {
 
   async getCurrentPriceEpochId(): Promise<number> {
     return (await this.contracts.votingManager.getCurrentPriceEpochId()).toNumber();
-  }
-
-  private decodeFunctionCall(tx: TxData, name: string) {
-    const encodedParameters = tx.input!.slice(10); // Drop the function signature
-    const parametersEncodingABI = this.abis.get(name)!.inputs;
-    return this.web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
   }
 
   static async create(contractAddresses: ContractAddresses, options: TruffleProviderOptions): Promise<TruffleProvider> {

@@ -1,9 +1,7 @@
 import BN from "bn.js";
 import { Account, TransactionConfig } from "web3-core";
-import { AbiItem } from "web3-utils";
 import { ContractAddresses } from "../../deployment/tasks/common";
 
-import { readFileSync } from "fs";
 import Web3 from "web3";
 import { FTSOParameters } from "../../deployment/config/FTSOParameters";
 import {
@@ -22,15 +20,12 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  RevealBitvoteData,
-  RewardOffered,
-  SignatureData,
   TxData,
   VoterWithWeight,
   deepCopyClaim,
 } from "../voting-interfaces";
-import { ZERO_ADDRESS, convertRewardOfferedEvent, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, getContractAbis, loadContract } from "../web3-utils";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
+import { getAccount, loadContract } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 
 interface TypeChainContracts {
@@ -42,9 +37,6 @@ interface TypeChainContracts {
 }
 
 export class Web3Provider implements IVotingProvider {
-  private functionSignatures: Map<string, string> = new Map<string, string>();
-  private eventSignatures: Map<string, string> = new Map<string, string>();
-  private abis: Map<string, any> = new Map<string, string>();
   private account: Account;
 
   private constructor(
@@ -60,7 +52,6 @@ export class Web3Provider implements IVotingProvider {
     privateKey: string
   ) {
     this.account = getAccount(web3, privateKey);
-    [this.functionSignatures, this.eventSignatures, this.abis] = getContractAbis(web3);
   }
 
   async claimReward(claim: ClaimReward): Promise<any> {
@@ -174,53 +165,6 @@ export class Web3Provider implements IVotingProvider {
     return this.web3.eth.getTransactionReceipt(txId);
   }
 
-  functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
-    return this.functionSignatures.get(name)!;
-  }
-
-  eventSignature(name: "RewardOffered"): string {
-    return this.eventSignatures.get(name)!;
-  }
-
-  abiForName(name: "VotingRewardManager" | "PriceOracle" | "VoterRegistry" | "Voting" | "VotingManager") {
-    return this.abis.get(name)!;
-  }
-
-  extractOffers(tx: TxData): RewardOffered[] {
-    const result = tx
-      .receipt!.logs.filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
-      .map((event: any) => {
-        const offer = this.web3.eth.abi.decodeLog(this.abis.get("RewardOffered").inputs, event.data, event.topics);
-        return convertRewardOfferedEvent(offer as any as RewardOffered);
-      });
-    return result;
-  }
-
-  extractCommitHash(tx: TxData): string {
-    return this.decodeFunctionCall(tx, "commit")._commitHash;
-  }
-
-  extractRevealBitvoteData(tx: TxData): RevealBitvoteData {
-    const resultTmp = this.decodeFunctionCall(tx, "revealBitvote");
-    return {
-      random: resultTmp._random,
-      merkleRoot: resultTmp._merkleRoot,
-      bitVote: resultTmp._bitVote,
-      prices: resultTmp._prices,
-    } as RevealBitvoteData;
-  }
-
-  extractSignatureData(tx: TxData): SignatureData {
-    const resultTmp = this.decodeFunctionCall(tx, "signResult");
-    return {
-      epochId: parseInt(resultTmp._epochId, 10),
-      merkleRoot: resultTmp._merkleRoot,
-      v: parseInt(resultTmp.signature.v, 10),
-      r: resultTmp.signature.r,
-      s: resultTmp.signature.s,
-    } as SignatureData;
-  }
-
   get senderAddressLowercase(): string {
     return this.account.address.toLowerCase();
   }
@@ -231,12 +175,6 @@ export class Web3Provider implements IVotingProvider {
 
   async getCurrentPriceEpochId(): Promise<number> {
     return +(await this.contracts.votingManager.methods.getCurrentPriceEpochId().call());
-  }
-
-  private decodeFunctionCall(tx: TxData, name: string) {
-    const encodedParameters = tx.input!.slice(10); // Drop the function signature
-    const parametersEncodingABI = this.abis.get(name)!.inputs;
-    return this.web3.eth.abi.decodeParameters(parametersEncodingABI, encodedParameters);
   }
 
   private async signAndFinalize(

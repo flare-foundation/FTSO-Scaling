@@ -1,6 +1,8 @@
 import BN from "bn.js";
 import Web3 from "web3";
 
+import { EncodingHelper } from "./EncodingHelper";
+import { EpochSettings } from "./EpochSettings";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculator } from "./RewardCalculator";
 import { calculateMedian } from "./median-calculation-utils";
@@ -21,7 +23,6 @@ import {
   VoterWithWeight,
 } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
-import { EpochSettings } from "./EpochSettings";
 import { hashMessage } from "./web3-utils";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
@@ -65,6 +66,7 @@ export class FTSOClient {
   priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
   epochs: EpochSettings;
+  encoding: EncodingHelper = new EncodingHelper();
 
   verbose: boolean = true;
 
@@ -140,16 +142,16 @@ export class FTSOClient {
     let prefix = tx.input?.slice(0, 10);
     if (tx.to?.toLowerCase() === this.provider.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {
-        if (prefix === this.provider.functionSignature("commit")) {
+        if (prefix === this.encoding.functionSignature("commit")) {
           return this.extractCommit(tx, blockTimestampSec);
-        } else if (prefix === this.provider.functionSignature("revealBitvote")) {
+        } else if (prefix === this.encoding.functionSignature("revealBitvote")) {
           return this.extractReveal(tx, blockTimestampSec);
-        } else if (prefix === this.provider.functionSignature("signResult")) {
+        } else if (prefix === this.encoding.functionSignature("signResult")) {
           return this.extractSignature(tx);
         }
       }
     } else if (tx.to?.toLowerCase() === this.provider.contractAddresses.votingRewardManager.toLowerCase()) {
-      if (prefix === this.provider.functionSignature("offerRewards")) {
+      if (prefix === this.encoding.functionSignature("offerRewards")) {
         return this.extractOffers(tx, blockTimestampSec);
       }
     }
@@ -161,7 +163,7 @@ export class FTSOClient {
    * @param tx
    */
   private extractOffers(tx: TxData, blockTimestampSec: number): void {
-    let offers: RewardOffered[] = this.provider.extractOffers(tx);
+    let offers: RewardOffered[] = this.encoding.extractOffers(tx);
     let currentPriceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
     let currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
     let nextRewardEpoch = currentRewardEpochId + 1;
@@ -179,7 +181,7 @@ export class FTSOClient {
 
   // commit(bytes32 _commitHash)
   private extractCommit(tx: TxData, blockTimestampSec: number): void {
-    let hash = this.provider.extractCommitHash(tx);
+    let hash = this.encoding.extractCommitHash(tx);
     let from = tx.from.toLowerCase();
     let epochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
     let commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<string, string>();
@@ -189,7 +191,7 @@ export class FTSOClient {
 
   // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices)
   private extractReveal(tx: TxData, blockTimestampSec: number): void {
-    const result = this.provider.extractRevealBitvoteData(tx);
+    const result = this.encoding.extractRevealBitvoteData(tx);
     let from = tx.from.toLowerCase();
     let epochId = this.epochs.revealEpochIdForTime(blockTimestampSec);
     if (epochId !== undefined) {
@@ -201,7 +203,7 @@ export class FTSOClient {
 
   // function signResult(bytes32 _merkleRoot, Signature calldata signature)
   private extractSignature(tx: TxData): void {
-    let result = this.provider.extractSignatureData(tx);
+    let result = this.encoding.extractSignatureData(tx);
     let from = tx.from.toLowerCase();
     let signaturesInEpoch = this.priceEpochSignatures.get(result.epochId) || new Map<string, SignatureData>();
     this.priceEpochSignatures.set(result.epochId, signaturesInEpoch);
@@ -373,7 +375,7 @@ export class FTSOClient {
     let rewardClaimHashes: string[] = [];
     for (let claimRewardList of rewards.values()) {
       for (let claim of claimRewardList) {
-        claim.hash = hashClaimReward(claim, this.provider.abiForName("claimRewardBodyDefinition")!);
+        claim.hash = hashClaimReward(claim, this.encoding.abiForName("claimRewardBodyDefinition")!);
         rewardClaimHashes.push(claim.hash);
       }
     }

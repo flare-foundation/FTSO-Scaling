@@ -3,7 +3,6 @@ import glob from "glob";
 import Web3 from "web3";
 import { Account } from "web3-core";
 import utils from "web3-utils";
-import { AbiItem } from "web3-utils/types";
 
 export async function loadContract<ContractType>(web3: Web3, address: string, name: string) {
   if (!address) throw Error(`Address for ${name} not provided`);
@@ -51,48 +50,4 @@ export function hashMessage(message: string): string {
     throw new Error("Message must be hex string prefixed with 0x");
   }
   return utils.soliditySha3(message)!;
-}
-
-export function getContractAbis(web3: Web3) {
-  const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
-  const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
-  const votingABI = JSON.parse(readFileSync(votingAbiPath).toString()).abi as AbiItem[];
-  const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
-
-  const functionSignatures: Map<string, string> = new Map<string, string>();
-  const eventSignatures: Map<string, string> = new Map<string, string>();
-  const abis: Map<string, any> = new Map<string, string>();
-
-  abis.set(
-    "commit",
-    votingABI.find((x: any) => x.name === "commit")
-  );
-  abis.set(
-    "revealBitvote",
-    votingABI.find((x: any) => x.name === "revealBitvote")
-  );
-  abis.set(
-    "signResult",
-    votingABI.find((x: any) => x.name === "signResult")
-  );
-  abis.set(
-    "offerRewards",
-    rewardsABI.find((x: any) => x.name === "offerRewards")
-  );
-  abis.set(
-    "claimRewardBodyDefinition",
-    rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0]
-  );
-  abis.set(
-    "RewardOffered",
-    rewardsABI.find((x: any) => x.name === "RewardOffered")
-  );
-  functionSignatures.set("commit", web3.eth.abi.encodeFunctionSignature(abis.get("commit")));
-  functionSignatures.set("revealBitvote", web3.eth.abi.encodeFunctionSignature(abis.get("revealBitvote")));
-  functionSignatures.set("signResult", web3.eth.abi.encodeFunctionSignature(abis.get("signResult")));
-  functionSignatures.set("offerRewards", web3.eth.abi.encodeFunctionSignature(abis.get("offerRewards")));
-
-  eventSignatures.set("RewardOffered", web3.eth.abi.encodeEventSignature(abis.get("RewardOffered")));
-
-  return [functionSignatures, eventSignatures, abis];
 }
