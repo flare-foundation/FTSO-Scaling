@@ -88,7 +88,6 @@ export async function offerRewards(
   const finalBalance = await web3.eth.getBalance(votingRewardManager.address);
   expect(finalBalance).to.bignumber.equal(toBN(initialBalance).add(totalAmount));
   for (const coin of erc20Coins) {
-    console.log(`Coin address ${coin.address}`);
     expect(await votingRewardManager.getNextRewardEpochBalance(coin.address)).to.equal(rewardValue);
     expect(await coin.balanceOf(governance)).to.bignumber.equal(
       initialGovernanceBalanceByCoin.get(coin.address)!.sub(REWARD_VALUE)

@@ -4,51 +4,48 @@ import { AbiItem } from "web3-utils/types";
 import { RevealBitvoteData, RewardOffered, SignatureData, TxData } from "./voting-interfaces";
 import { convertRewardOfferedEvent } from "./voting-utils";
 
-export class EncodingHelper {
+const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
+const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
+
+export class EncodingUtils {
   private functionSignatures: Map<string, string> = new Map<string, string>();
   private eventSignatures: Map<string, string> = new Map<string, string>();
   private abis: Map<string, any> = new Map<string, string>();
 
   constructor() {
-    const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
-    const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
     const votingABI = JSON.parse(readFileSync(votingAbiPath).toString()).abi as AbiItem[];
     const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
 
-    const functionSignatures: Map<string, string> = new Map<string, string>();
-    const eventSignatures: Map<string, string> = new Map<string, string>();
-    const abis: Map<string, any> = new Map<string, string>();
-
-    abis.set(
+    this.abis.set(
       "commit",
       votingABI.find((x: any) => x.name === "commit")
     );
-    abis.set(
+    this.abis.set(
       "revealBitvote",
       votingABI.find((x: any) => x.name === "revealBitvote")
     );
-    abis.set(
+    this.abis.set(
       "signResult",
       votingABI.find((x: any) => x.name === "signResult")
     );
-    abis.set(
+    this.abis.set(
       "offerRewards",
       rewardsABI.find((x: any) => x.name === "offerRewards")
     );
-    abis.set(
+    this.abis.set(
       "claimRewardBodyDefinition",
       rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0]
     );
-    abis.set(
+    this.abis.set(
       "RewardOffered",
       rewardsABI.find((x: any) => x.name === "RewardOffered")
     );
-    functionSignatures.set("commit", coder.encodeFunctionSignature(abis.get("commit")));
-    functionSignatures.set("revealBitvote", coder.encodeFunctionSignature(abis.get("revealBitvote")));
-    functionSignatures.set("signResult", coder.encodeFunctionSignature(abis.get("signResult")));
-    functionSignatures.set("offerRewards", coder.encodeFunctionSignature(abis.get("offerRewards")));
+    this.functionSignatures.set("commit", coder.encodeFunctionSignature(this.abis.get("commit")));
+    this.functionSignatures.set("revealBitvote", coder.encodeFunctionSignature(this.abis.get("revealBitvote")));
+    this.functionSignatures.set("signResult", coder.encodeFunctionSignature(this.abis.get("signResult")));
+    this.functionSignatures.set("offerRewards", coder.encodeFunctionSignature(this.abis.get("offerRewards")));
 
-    eventSignatures.set("RewardOffered", coder.encodeEventSignature(abis.get("RewardOffered")));
+    this.eventSignatures.set("RewardOffered", coder.encodeEventSignature(this.abis.get("RewardOffered")));
   }
 
   functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {

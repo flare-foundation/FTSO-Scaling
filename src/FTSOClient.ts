@@ -1,7 +1,8 @@
 import BN from "bn.js";
 import Web3 from "web3";
+import coder from "web3-eth-abi";
 
-import { EncodingHelper } from "./EncodingHelper";
+import { EncodingUtils } from "./EncodingUtils";
 import { EpochSettings } from "./EpochSettings";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculator } from "./RewardCalculator";
@@ -23,7 +24,6 @@ import {
   VoterWithWeight,
 } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
-import { hashMessage } from "./web3-utils";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 
@@ -31,7 +31,6 @@ const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 
 const NON_EXISTENT_PRICE = 0;
-const web3 = new Web3();
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
@@ -66,7 +65,7 @@ export class FTSOClient {
   priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
   epochs: EpochSettings;
-  encoding: EncodingHelper = new EncodingHelper();
+  encoding: EncodingUtils = new EncodingUtils();
 
   verbose: boolean = true;
 
@@ -139,7 +138,7 @@ export class FTSOClient {
   }
 
   processTx(tx: TxData, blockTimestampSec: number) {
-    let prefix = tx.input?.slice(0, 10);
+    const prefix = tx.input?.slice(0, 10);
     if (tx.to?.toLowerCase() === this.provider.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {
         if (prefix === this.encoding.functionSignature("commit")) {
@@ -211,7 +210,7 @@ export class FTSOClient {
   }
 
   async processNewBlocks() {
-    let currentBlockNumber = await this.provider.getBlockNumber();
+    const currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
       try {
         await this.processBlock(this.lastProcessedBlockNumber + 1);
@@ -392,7 +391,7 @@ export class FTSOClient {
 
     let message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
 
-    let priceMessageHash = hashMessage("0x" + message);
+    let priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
     let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
 
     // add merkle proofs to the claims for this FTSO client
@@ -458,8 +457,8 @@ export class FTSOClient {
   hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
     const types = ["address", "uint256", "bytes32", "bytes"];
     const values = [voter, random, merkleRoot, prices] as any[];
-    const encoded = web3.eth.abi.encodeParameters(types, values);
-    return web3.utils.soliditySha3(encoded)!;
+    const encoded = coder.encodeParameters(types, values);
+    return Web3.utils.soliditySha3(encoded)!;
   }
 
   async onSendSignaturesForMyMerkleRoot(epochId: number) {

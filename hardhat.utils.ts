@@ -1,9 +1,6 @@
-import { readFileSync } from "fs";
-import { FTSOParameters } from "./deployment/config/FTSOParameters";
-
 import * as dotenv from "dotenv";
+import { readFileSync } from "fs";
 dotenv.config();
-
 
 export default function loadTestAccounts() {
   return [

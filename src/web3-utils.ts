@@ -2,7 +2,6 @@ import { readFileSync } from "fs";
 import glob from "glob";
 import Web3 from "web3";
 import { Account } from "web3-core";
-import utils from "web3-utils";
 
 export async function loadContract<ContractType>(web3: Web3, address: string, name: string) {
   if (!address) throw Error(`Address for ${name} not provided`);
@@ -43,11 +42,4 @@ export async function relativeContractABIPathForContractName(
       }
     });
   });
-}
-
-export function hashMessage(message: string): string {
-  if (!message.startsWith("0x")) {
-    throw new Error("Message must be hex string prefixed with 0x");
-  }
-  return utils.soliditySha3(message)!;
 }

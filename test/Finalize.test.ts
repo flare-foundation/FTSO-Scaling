@@ -1,15 +1,15 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expectEvent } from "@openzeppelin/test-helpers";
 import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
-import { ethers, web3 } from "hardhat";
+import { web3 } from "hardhat";
 import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../typechain-truffle";
 import { getTestFile } from "../test-utils/utils/constants";
-import { increaseTimeTo, toBN } from "../test-utils/utils/test-helpers";
-import fs from "fs";
+import { increaseTimeTo } from "../test-utils/utils/test-helpers";
 import { BareSignature } from "../src/voting-interfaces";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { toBN } from "../src/voting-utils";
+import { loadAccounts } from "../deployment/tasks/common";
 
 chai.use(chaiBN(BN));
 
@@ -30,16 +30,11 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   let firstEpochStartSec: BN;
   let epochDurationSec: BN;
   let N = 10;
-  // let signers: SignerWithAddress[];
   let accounts: string[];
   let wallets: any[];
 
   before(async () => {
-
-    // Getting accounts
-    // signers = await ethers.getSigners();
-    wallets = JSON.parse(fs.readFileSync("./test-1020-accounts.json").toString()).map((x: any) => web3.eth.accounts.privateKeyToAccount(x.privateKey));
-    // accounts = signers.map((signer) => signer.address);
+    wallets = loadAccounts(web3);
     accounts = wallets.map((wallet) => wallet.address);
     governance = accounts[0];
     let now = Math.floor(Date.now() / 1000);

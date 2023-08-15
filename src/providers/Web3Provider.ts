@@ -20,7 +20,6 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  TxData,
   VoterWithWeight,
   deepCopyClaim,
 } from "../voting-interfaces";

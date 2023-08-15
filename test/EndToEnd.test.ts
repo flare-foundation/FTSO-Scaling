@@ -152,19 +152,14 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     ftsoClients = [];
     for (let i = 1; i <= DATA_PROVIDER_COUNT; i++) {
       const privateKey = wallets[i].privateKey;
-      const addr =     {
+      const contracts = {
         voting: voting.address,
         votingRewardManager: votingRewardManager.address,
         voterRegistry: voterRegistry.address,
         priceOracle: priceOracle.address,
         votingManager: votingManager.address,
-      } as ContractAddresses
-      const provider = await TruffleProvider.create(
-       addr,
-        { privateKey, artifacts, web3 } as TruffleProviderOptions
-      );
-
-      provider.contractAddresses = addr;
+      } as ContractAddresses;
+      const provider = await TruffleProvider.create(contracts, { privateKey, artifacts, web3 } as TruffleProviderOptions);
 
       const client = new FTSOClient(provider);
       await client.initialize(currentBlockNumber, undefined, web3);
