@@ -10,8 +10,6 @@ import "./types/StoredBalances.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-// import "hardhat/console.sol";
-
 contract VotingRewardManager is Governed, IRewardManager { 
     using MerkleProof for bytes32[];
     uint256 constant internal MAX_BIPS = 1e4;

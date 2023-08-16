@@ -1,8 +1,7 @@
-import { toBN } from "../test-utils/utils/test-helpers";
 import { FTSOClient } from "./FTSOClient";
 import { RewardCalculatorForPriceEpoch } from "./RewardCalculatorForPriceEpoch";
 import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } from "./voting-interfaces";
-import { feedId } from "./voting-utils";
+import { feedId, toBN } from "./voting-utils";
 
 /**
  * Reward calculator for sequence of reward epochs. 
@@ -60,7 +59,7 @@ export class RewardCalculator {
   ) {
     this.client = client;
     this.initialRewardEpoch = initialRewardEpoch;
-    this.firstRewardedPriceEpoch = client.provider.firstRewardedPriceEpoch; 
+    this.firstRewardedPriceEpoch = client.provider.firstRewardedPriceEpoch;
     this.rewardEpochDurationInEpochs = client.provider.rewardEpochDurationInEpochs;
     this.initialPriceEpoch = this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * this.initialRewardEpoch;
     // Progress counters initialization
@@ -281,6 +280,7 @@ export class RewardCalculator {
       // last (claiming) cumulative claim records
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, cumulativeClaims);
       this.currentRewardEpoch++;
+      this.firstPriceEpochInNextRewardEpoch += this.rewardEpochDurationInEpochs;
       // initialize empty cumulative claims for the new reward epoch
       this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, []);
     }

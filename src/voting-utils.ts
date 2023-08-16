@@ -1,10 +1,19 @@
 import BN from "bn.js";
-import Web3 from "web3";
-import { toBN } from "../test-utils/utils/test-helpers";
+import utils from "web3-utils";
+import coder from "web3-eth-abi";
 import { ClaimReward, Feed, RewardOffered } from "./voting-interfaces";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+/**
+ * Converts a given number to BN.
+ */
+export function toBN(x: BN | number | string): BN {
+  if (x instanceof BN) return x;
+  // if (x instanceof BigNumber) return new BN(x.toHexString().slice(2), 16)
+  return utils.toBN(x);
+}
 
 /**
  * A sorted hash of two 32-byte strings
@@ -14,9 +23,9 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
  */
 export function sortedHashPair(x: string, y: string) {
   if (x <= y) {
-    return web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes32", "bytes32"], [x, y]));
+    return utils.soliditySha3(coder.encodeParameters(["bytes32", "bytes32"], [x, y]));
   }
-  return web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes32", "bytes32"], [y, x]));
+  return utils.soliditySha3(coder.encodeParameters(["bytes32", "bytes32"], [y, x]));
 }
 
 /**
@@ -26,7 +35,7 @@ export function sortedHashPair(x: string, y: string) {
  * @returns 
  */
 export function hashClaimReward(data: ClaimReward, abi: any): string {
-  return web3.utils.soliditySha3(web3.eth.abi.encodeParameter(abi, hexlifyBN(data.claimRewardBody)))!;
+  return utils.soliditySha3(coder.encodeParameter(abi, hexlifyBN(data.claimRewardBody)))!;
 }
 
 /**
@@ -44,7 +53,7 @@ export function toBytes4(text: string) {
   if (text.length > 4) {
     throw new Error(`Text should be at most 4 characters long`);
   }
-  return web3.utils.padRight(web3.utils.asciiToHex(text), 8);
+  return utils.padRight(utils.asciiToHex(text), 8);
 }
 
 /**
@@ -59,7 +68,7 @@ export function bytes4ToText(bytes4: string) {
   if (!/^0x[0-9a-f]{8}$/i.test(bytes4)) {
     throw new Error(`Bytes4 should be a 4-byte hex string`);
   }
-  return web3.utils.hexToAscii(bytes4).replace(/\u0000/g, '');
+  return utils.hexToAscii(bytes4).replace(/\u0000/g, '');
 }
 
 /**
@@ -162,9 +171,9 @@ export function prefix0xSigned(tx: string) {
  */
 export function toHex(x: string | number | BN, padToBytes?: number) {
   if ((padToBytes as any) > 0) {
-    return Web3.utils.leftPad(Web3.utils.toHex(x), padToBytes! * 2);
+    return utils.leftPad(utils.toHex(x), padToBytes! * 2);
   }
-  return Web3.utils.toHex(x);
+  return utils.toHex(x);
 }
 
 /**

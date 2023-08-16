@@ -1,9 +1,8 @@
 import BN from "bn.js";
 import Web3 from "web3";
-import { toBN } from "../test-utils/utils/test-helpers";
 import { RewardCalculator } from "./RewardCalculator";
 import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffered, VoterRewarding, deepCopyClaim } from "./voting-interfaces";
-import { feedId } from "./voting-utils";
+import { feedId, toBN } from "./voting-utils";
 
 
 /**

@@ -5,18 +5,29 @@
   "version": "0.2.0",
   "configurations": [
     {
-        "type": "node",
-        "console": "integratedTerminal",
-        "request": "launch",
-        "name": "Test EndToEnd",
-        "runtimeExecutable": "yarn",
-        "outFiles": [
-          "${workspaceFolder}/**/*.js"
-        ],
-        "env": {
-          "NODE_ENV": "development"
-        },
-        "runtimeArgs": ["hardhat", "test", "test/EndToEnd.test.ts"]
-      }
+      "type": "node",
+      "console": "integratedTerminal",
+      "request": "launch",
+      "name": "Test EndToEnd",
+      "runtimeExecutable": "yarn",
+      "outFiles": ["${workspaceFolder}/**/*.js"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "runtimeArgs": ["hardhat", "test", "test/EndToEnd.test.ts"]
+    },
+    {
+      "type": "node",
+      "console": "integratedTerminal",
+      "request": "launch",
+      "name": "Run data provider 1",
+      "runtimeExecutable": "yarn",
+      "outFiles": ["${workspaceFolder}/**/*.js"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "runtimeArgs": ["hardhat", "run-data-provider", "1", "--network", "scdev"]
+    }
+
   ]
 }

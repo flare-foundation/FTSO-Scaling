@@ -1,20 +1,36 @@
-
 import BN from "bn.js";
 import Web3 from "web3";
-import { toBN } from "../test-utils/utils/test-helpers";
+import coder from "web3-eth-abi";
+
+import { EncodingUtils } from "./EncodingUtils";
+import { EpochSettings } from "./EpochSettings";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculator } from "./RewardCalculator";
 import { calculateMedian } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
-import { BareSignature, ClaimReward, EpochData, EpochResult, Feed, MedianCalculationResult, RevealBitvoteData, RevealResult, RewardOffered, SignatureData, TxData, VoterWithWeight } from "./voting-interfaces";
-import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, unprefixedSymbolBytes } from "./voting-utils";
+import {
+  BareSignature,
+  ClaimReward,
+  EpochData,
+  EpochResult,
+  Feed,
+  MedianCalculationResult,
+  RevealBitvoteData,
+  RevealResult,
+  RewardOffered,
+  SignatureData,
+  TxData,
+  VoterWithWeight,
+} from "./voting-interfaces";
+import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
+
+const DEFAULT_VOTER_WEIGHT = 1000;
 
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 
 const NON_EXISTENT_PRICE = 0;
-const web3 = new Web3();
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
@@ -25,14 +41,12 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
  * It supports pluggable price feeds and voting providers (Truffle for testing, Web3 for production).
  */
 export class FTSOClient {
-  provider: IVotingProvider;
   rewardCalculator!: RewardCalculator;
 
   startBlock: number = 0;
   lastProcessedBlockNumber: number = 0;
   voters: string[] = [];
-  blockTimestamps = new Map<number, number>();
-  priceEpochCommits = new Map<number, Map<string, string>>()
+  priceEpochCommits = new Map<number, Map<string, string>>();
   priceEpochReveals = new Map<number, Map<string, RevealBitvoteData>>();
   priceEpochSignatures = new Map<number, Map<string, SignatureData>>();
   priceEpochData = new Map<number, EpochData>();
@@ -50,12 +64,18 @@ export class FTSOClient {
 
   priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
-  verbose: boolean = false;
+  epochs: EpochSettings;
+  encoding: EncodingUtils = new EncodingUtils();
 
-  constructor(
-    provider: IVotingProvider,
-  ) {    
-    this.provider = provider;
+  verbose: boolean = true;
+
+  constructor(public provider: IVotingProvider) {
+    this.epochs = new EpochSettings(
+      provider.firstEpochStartSec,
+      provider.epochDurationSec,
+      provider.firstRewardedPriceEpoch,
+      provider.rewardEpochDurationInEpochs
+    );
   }
 
   public registerPriceFeeds(priceFeeds: IPriceFeed[]) {
@@ -64,30 +84,16 @@ export class FTSOClient {
     }
   }
 
-  public initializeRewardCalculator(
-    initialRewardEpoch: number
-  ) {
+  /**
+   * Placeholder for registering as a voter with a default constant weight.
+   * To be replaced with a proper mechanisnm.
+   */
+  public async registerAsVoter(rewardEpochId: number) {
+    return await this.provider.registerAsVoter(rewardEpochId, DEFAULT_VOTER_WEIGHT);
+  }
+
+  public initializeRewardCalculator(initialRewardEpoch: number) {
     this.rewardCalculator = new RewardCalculator(this, initialRewardEpoch);
-  }
-
-  private priceEpochIdForTime(timestamp: number): number {
-    return Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
-  }
-
-  private revealEpochIdForTime(timestamp: number): number | undefined {
-    let epochId = Math.floor((timestamp - this.provider.firstEpochStartSec) / this.provider.epochDurationSec);
-    let revealDeadline = this.provider.firstEpochStartSec + epochId * this.provider.epochDurationSec + this.provider.epochDurationSec / 2;
-    if (timestamp > revealDeadline) {
-      return undefined;
-    }
-    return epochId - 1;
-  }
-
-  rewardEpochIdForPriceEpochId(priceEpochId: number): number {
-    if (priceEpochId < this.provider.firstRewardedPriceEpoch) {
-      throw new Error("Price epoch is too low");
-    }
-    return Math.floor((priceEpochId - this.provider.firstRewardedPriceEpoch) / this.provider.rewardEpochDurationInEpochs);
   }
 
   registerRewardsForRewardEpoch(rewardEpochId: number, forceClosure = false) {
@@ -112,8 +118,6 @@ export class FTSOClient {
   async initialize(startBlockNumber: number, rpcLink?: string, providedWeb3?: Web3, logger?: any) {
     this.startBlockNumber = startBlockNumber;
     this.lastProcessedBlockNumber = startBlockNumber - 1;
-
-    // this.initializeWeb3(rpcLink, providedWeb3, logger);
   }
 
   setVerbose(verbose: boolean) {
@@ -121,48 +125,46 @@ export class FTSOClient {
   }
 
   get address() {
-    return this.provider.senderAddressLowercase
+    return this.provider.senderAddressLowercase;
   }
-  
+
   async processBlock(blockNumber: number) {
     let block = await this.provider.getBlock(blockNumber);
-    this.blockTimestamps.set(block.number, block.timestamp);
     for (let tx of block.transactions) {
       tx.receipt = await this.provider.getTransactionReceipt(tx.hash);
-      this.processTx(tx as any as TxData);
+      this.processTx(tx as any as TxData, block.timestamp);
     }
     this.lastProcessedBlockNumber = blockNumber;
   }
 
-  processTx(tx: TxData) {
-    let prefix = tx.input?.slice(0, 10);
-    if (tx.to?.toLowerCase() === this.provider.votingContractAddress.toLowerCase()) {
+  processTx(tx: TxData, blockTimestampSec: number) {
+    const prefix = tx.input?.slice(0, 10);
+    if (tx.to?.toLowerCase() === this.provider.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {
-        if (prefix === this.provider.functionSignature("commit")) {
-          return this.extractCommit(tx);
-        } else if (prefix === this.provider.functionSignature("revealBitvote")) {
-          return this.extractReveal(tx);
-        } else if (prefix === this.provider.functionSignature("signResult")) {
+        if (prefix === this.encoding.functionSignature("commit")) {
+          return this.extractCommit(tx, blockTimestampSec);
+        } else if (prefix === this.encoding.functionSignature("revealBitvote")) {
+          return this.extractReveal(tx, blockTimestampSec);
+        } else if (prefix === this.encoding.functionSignature("signResult")) {
           return this.extractSignature(tx);
         }
       }
-    } else
-      if (tx.to?.toLowerCase() === this.provider.votingRewardManagerContractAddress.toLowerCase()) {
-        if (prefix === this.provider.functionSignature("offerRewards")) {
-          return this.extractOffers(tx);
-        }
+    } else if (tx.to?.toLowerCase() === this.provider.contractAddresses.votingRewardManager.toLowerCase()) {
+      if (prefix === this.encoding.functionSignature("offerRewards")) {
+        return this.extractOffers(tx, blockTimestampSec);
       }
+    }
   }
 
   /**
    * Extract offers from transaction input.
    * Assumption: the transaction is a call to `offerRewards` function.
-   * @param tx 
+   * @param tx
    */
-  private extractOffers(tx: TxData): void {
-    let offers: RewardOffered[] = this.provider.extractOffers(tx);
-    let currentPriceEpochId = this.priceEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
-    let currentRewardEpochId = this.rewardEpochIdForPriceEpochId(currentPriceEpochId);
+  private extractOffers(tx: TxData, blockTimestampSec: number): void {
+    let offers: RewardOffered[] = this.encoding.extractOffers(tx);
+    let currentPriceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
+    let currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
     let nextRewardEpoch = currentRewardEpochId + 1;
     if (offers && offers.length > 0) {
       if (this.rewardEpochOffersClosed.get(nextRewardEpoch)) {
@@ -170,28 +172,27 @@ export class FTSOClient {
       }
     }
     let offersInEpoch = this.rewardEpochOffers.get(nextRewardEpoch) ?? [];
-    this.rewardEpochOffers.set(nextRewardEpoch, offersInEpoch)
-
+    this.rewardEpochOffers.set(nextRewardEpoch, offersInEpoch);
     for (let offer of offers) {
       offersInEpoch.push(offer);
     }
   }
 
   // commit(bytes32 _commitHash)
-  private extractCommit(tx: TxData): void {
-    let hash = this.provider.extractCommitHash(tx);
+  private extractCommit(tx: TxData, blockTimestampSec: number): void {
+    let hash = this.encoding.extractCommitHash(tx);
     let from = tx.from.toLowerCase();
-    let epochId = this.priceEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
+    let epochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
     let commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<string, string>();
     this.priceEpochCommits.set(epochId, commitsInEpoch);
     commitsInEpoch.set(from.toLowerCase(), hash);
   }
 
-  // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices) 
-  private extractReveal(tx: TxData): void {
-    const result = this.provider.extractRevealBitvoteData(tx);
+  // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices)
+  private extractReveal(tx: TxData, blockTimestampSec: number): void {
+    const result = this.encoding.extractRevealBitvoteData(tx);
     let from = tx.from.toLowerCase();
-    let epochId = this.revealEpochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
+    let epochId = this.epochs.revealEpochIdForTime(blockTimestampSec);
     if (epochId !== undefined) {
       let revealsInEpoch = this.priceEpochReveals.get(epochId) || new Map<string, RevealBitvoteData>();
       this.priceEpochReveals.set(epochId, revealsInEpoch);
@@ -199,22 +200,20 @@ export class FTSOClient {
     }
   }
 
-  // function signResult(bytes32 _merkleRoot, Signature calldata signature)  
+  // function signResult(bytes32 _merkleRoot, Signature calldata signature)
   private extractSignature(tx: TxData): void {
-    let result = this.provider.extractSignatureData(tx);
+    let result = this.encoding.extractSignatureData(tx);
     let from = tx.from.toLowerCase();
-    // let epochId = this.epochIdForTime(this.blockTimestamps.get(tx.blockNumber)!);
     let signaturesInEpoch = this.priceEpochSignatures.get(result.epochId) || new Map<string, SignatureData>();
     this.priceEpochSignatures.set(result.epochId, signaturesInEpoch);
     signaturesInEpoch.set(from.toLowerCase(), result);
   }
 
   async processNewBlocks() {
-    let currentBlockNumber = await this.provider.getBlockNumber();
+    const currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
       try {
         await this.processBlock(this.lastProcessedBlockNumber + 1);
-        if (this.verbose) console.log("Processed block #" + this.lastProcessedBlockNumber);
       } catch (e) {
         console.error(e);
         return;
@@ -222,30 +221,24 @@ export class FTSOClient {
     }
   }
 
-  scheduleActions() {
-    // [END-]
-    // preparePriceFeedsForEpoch(epochId: number)
-    // onCommit(epochId: number)
-    // [1 + 1/2-]
-    // onReveal(epochId: number)
-    // [1 + 1/2+]
-    // calculateResults(epochId: number)
-    // onSign(epochId: number)
-  }
-
   async onCommit(epochId: number) {
-    let epochData = this.priceEpochData.get(epochId)
+    let epochData = this.priceEpochData.get(epochId);
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
-    let hash = this.hashForCommit(this.provider.senderAddressLowercase, epochData.random!, epochData.merkleRoot!, epochData.pricesHex!);
+    let hash = this.hashForCommit(
+      this.provider.senderAddressLowercase,
+      epochData.random!,
+      epochData.merkleRoot!,
+      epochData.pricesHex!
+    );
     await this.provider.commit(hash);
   }
 
   async onReveal(epochId: number) {
-    let epochData = this.priceEpochData.get(epochId)
+    let epochData = this.priceEpochData.get(epochId);
     if (!epochData) {
-      throw new Error("Epoch data not found");
+      throw new Error("Epoch data not found for epoch " + epochId);
     }
     await this.provider.revealBitvote(epochData);
   }
@@ -260,39 +253,40 @@ export class FTSOClient {
     }
 
     let signature = await this.provider.signMessage(result.merkleRoot!);
-    await this.provider.signResult(epochId,
-      result.merkleRoot!,
-      {
-        v: signature.v,
-        r: signature.r,
-        s: signature.s
-      }
-    );
+    await this.provider.signResult(epochId, result.merkleRoot!, {
+      v: signature.v,
+      r: signature.r,
+      s: signature.s,
+    });
   }
 
   // Encoding of signed result
   // [4 epochId][32-byte merkle root][4-byte price sequence]
 
   private calculateRevealers(priceEpochId: number): RevealResult {
-    let rewardEpochId = this.rewardEpochIdForPriceEpochId(priceEpochId);
+    let rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     let commits = this.priceEpochCommits.get(priceEpochId);
     let reveals = this.priceEpochReveals.get(priceEpochId);
+
     if (!commits || !reveals) {
       // TODO: check if this is correct
       throw new Error("Commits or reveals not found");
     }
-    
-    let eligibleCommitters = [...commits.keys()].map(sender => sender.toLowerCase()).filter(voter => this.eligibleVoterWeights.get(rewardEpochId)?.has(voter.toLowerCase())!);
-    let revealed = eligibleCommitters      
-      .filter(sender => {
-        let revealData = reveals!.get(sender);
-        if (!revealData) {
-          return false;
-        }
-        let commitHash = this.priceEpochCommits.get(priceEpochId)?.get(sender);
-        return commitHash === this.hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
-      });
-    let failedCommit = [...this.eligibleVoterWeights.get(rewardEpochId)?.keys()!].filter(voter => !revealed.includes(voter.toLowerCase()));
+
+    let eligibleCommitters = [...commits.keys()]
+      .map(sender => sender.toLowerCase())
+      .filter(voter => this.eligibleVoterWeights.get(rewardEpochId)?.has(voter.toLowerCase())!);
+    let revealed = eligibleCommitters.filter(sender => {
+      let revealData = reveals!.get(sender);
+      if (!revealData) {
+        return false;
+      }
+      let commitHash = this.priceEpochCommits.get(priceEpochId)?.get(sender);
+      return commitHash === this.hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
+    });
+    let failedCommit = [...this.eligibleVoterWeights.get(rewardEpochId)?.keys()!].filter(
+      voter => !revealed.includes(voter.toLowerCase())
+    );
     let revealedSet = new Set<string>(revealed);
     let committedFailedReveal = eligibleCommitters.filter(voter => !revealedSet.has(voter.toLowerCase()));
     let revealedRandoms = revealed.map(voter => reveals!.get(voter.toLowerCase())!.random);
@@ -300,44 +294,44 @@ export class FTSOClient {
       revealed,
       failedCommit,
       committedFailedReveal,
-      revealedRandoms
+      revealedRandoms,
     } as RevealResult;
   }
 
   /**
    * Returns the list of eligible voters with their weights for the given reward epoch.
    * It reads the data from the provider and caches it.
-   * @param rewardEpoch 
-   * @returns 
+   * @param rewardEpoch
+   * @returns
    */
   async refreshVoterToWeightMaps(rewardEpoch: number): Promise<void> {
     let eligibleVoters = this.eligibleVotersForRewardEpoch.get(rewardEpoch);
-    if(!this.eligibleVoterWeights.has(rewardEpoch)) {
+    if (!this.eligibleVoterWeights.has(rewardEpoch)) {
       eligibleVoters = await this.provider.allVotersWithWeightsForRewardEpoch(rewardEpoch);
       this.eligibleVotersForRewardEpoch.set(rewardEpoch, eligibleVoters);
       let weightMap = new Map<string, BN>();
       this.eligibleVoterWeights.set(rewardEpoch, weightMap);
       let totalWeight = toBN(0);
-      for(let voter of eligibleVoters) {
+      for (let voter of eligibleVoters) {
         weightMap.set(voter.voterAddress.toLowerCase(), voter.weight);
         totalWeight = totalWeight.add(voter.weight);
       }
       this.eligibleVoterTotalWeight.set(rewardEpoch, totalWeight);
-    }    
+    }
   }
-  
+
   /**
-   * 
-   * @param priceEpochId 
-   * @param symbolMap 
-   * @returns 
+   *
+   * @param priceEpochId
+   * @param symbolMap
+   * @returns
    */
   async calculateResults(priceEpochId: number) {
-    let rewardEpoch = this.rewardEpochIdForPriceEpochId(priceEpochId);
+    let rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     await this.refreshVoterToWeightMaps(rewardEpoch);
-    
+
     let revealResult = this.calculateRevealers(priceEpochId)!;
-    if(revealResult.revealed.length === 0) {
+    if (revealResult.revealed.length === 0) {
       console.log("No reveals !!!!!!!!!");
       // TODO: check when this can happen
       return;
@@ -345,13 +339,16 @@ export class FTSOClient {
     let orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
     let numberOfFeeds = orderedPriceFeeds.length;
 
-    
     let voters = revealResult.revealed;
     let weights = voters.map(voter => this.eligibleVoterWeights.get(rewardEpoch)!.get(voter.toLowerCase())!);
 
     let pricesForVoters = voters.map(voter => {
       let revealData = this.priceEpochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
-      let feeds = revealData.prices.slice(2).match(/(.{1,8})/g)?.map(hex => parseInt(hex, 16)) || [];
+      let feeds =
+        revealData.prices
+          .slice(2)
+          .match(/(.{1,8})/g)
+          ?.map(hex => parseInt(hex, 16)) || [];
       feeds = feeds.slice(0, numberOfFeeds);
       return padEndArray(feeds, numberOfFeeds, 0);
     });
@@ -377,7 +374,7 @@ export class FTSOClient {
     let rewardClaimHashes: string[] = [];
     for (let claimRewardList of rewards.values()) {
       for (let claim of claimRewardList) {
-        claim.hash = hashClaimReward(claim, this.provider.abiForName.get("claimRewardBodyDefinition")!);
+        claim.hash = hashClaimReward(claim, this.encoding.abiForName("claimRewardBodyDefinition")!);
         rewardClaimHashes.push(claim.hash);
       }
     }
@@ -394,7 +391,7 @@ export class FTSOClient {
 
     let message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
 
-    let priceMessageHash = this.provider.hashMessage("0x" + message);
+    let priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
     let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
 
     // add merkle proofs to the claims for this FTSO client
@@ -410,7 +407,7 @@ export class FTSOClient {
       // Adding the price message hash to the merkle proof, due to construction of the tree
       claim.merkleProof.push(priceMessageHash);
     });
-    
+
     this.priceEpochResults.set(priceEpochId, {
       priceEpochId: priceEpochId,
       medianData: results,
@@ -421,44 +418,47 @@ export class FTSOClient {
       dataMerkleRoot,
       dataMerkleProof: priceMessageHash,
       rewards,
-      merkleRoot
+      merkleRoot,
     } as EpochResult);
   }
 
   orderedPriceFeeds(priceEpochId: number): (IPriceFeed | undefined)[] {
-    let rewardEpoch = this.rewardEpochIdForPriceEpochId(priceEpochId);
-    return this.rewardCalculator.getFeedSequenceForRewardEpoch(rewardEpoch).map(feed => this.priceFeeds.get(feedId(feed)));
+    let rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    return this.rewardCalculator
+      .getFeedSequenceForRewardEpoch(rewardEpoch)
+      .map(feed => this.priceFeeds.get(feedId(feed)));
   }
 
   preparePriceFeedsForPriceEpoch(priceEpochId: number) {
     let data = this.priceEpochData.get(priceEpochId) || { epochId: priceEpochId };
     this.priceEpochData.set(priceEpochId, data);
     data.merkleRoot = ZERO_BYTES32;
-    data.prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed => priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE);
+    data.prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed =>
+      priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE
+    );
     data.pricesHex = this.packPrices(data.prices);
     data.random = Web3.utils.randomHex(32);
     data.bitVote = "0x00";
   }
 
   packPrices(prices: (number | string)[]) {
-    return "0x" + prices.map(price => parseInt("" + price).toString(16).padStart(8, "0")).join("");
+    return (
+      "0x" +
+      prices
+        .map(price =>
+          parseInt("" + price)
+            .toString(16)
+            .padStart(8, "0")
+        )
+        .join("")
+    );
   }
 
   hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
-    const types = [
-      "address",
-      "uint256",
-      "bytes32",
-      "bytes"
-    ];
-    const values = [
-      voter,
-      random,
-      merkleRoot,
-      prices
-    ] as any[];
-    const encoded = web3.eth.abi.encodeParameters(types, values);
-    return web3.utils.soliditySha3(encoded)!;
+    const types = ["address", "uint256", "bytes32", "bytes"];
+    const values = [voter, random, merkleRoot, prices] as any[];
+    const encoded = coder.encodeParameters(types, values);
+    return Web3.utils.soliditySha3(encoded)!;
   }
 
   async onSendSignaturesForMyMerkleRoot(epochId: number) {
@@ -470,9 +470,9 @@ export class FTSOClient {
         return {
           v: sig.v,
           r: sig.r,
-          s: sig.s
-        } as BareSignature
-      })
+          s: sig.s,
+        } as BareSignature;
+      });
     return await this.provider.finalize(epochId, mySignatureHash, signatures);
   }
 
@@ -481,14 +481,12 @@ export class FTSOClient {
     if (!result) {
       throw new Error("Result not found");
     }
-    // console.log(result.dataMerkleRoot, result.fullPriceMessage, result.merkleRoot)
     return await this.provider.publishPrices(result, symbolIndices);
   }
 
   async claimReward(rewardEpochId: number) {
-    let claimPriceEpochId = this.rewardCalculator.firstRewardedPriceEpoch + this.rewardCalculator.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
+    let claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
     let result = this.priceEpochResults.get(claimPriceEpochId)!;
-
     let rewardClaims = result.rewards.get(this.provider.senderAddressLowercase) || [];
     let receipts = [];
     for (let rewardClaim of rewardClaims) {
@@ -500,14 +498,13 @@ export class FTSOClient {
 
   /**
    * Returns the list of claims for the given reward epoch and claimer.
-   * @param rewardEpochId 
-   * @param claimer 
-   * @returns 
+   * @param rewardEpochId
+   * @param claimer
+   * @returns
    */
   claimsForClaimer(rewardEpochId: number, claimer: string): ClaimReward[] {
-    let claimPriceEpochId = this.rewardCalculator.firstRewardedPriceEpoch + this.rewardCalculator.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
+    let claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
     let result = this.priceEpochResults.get(claimPriceEpochId)!;
     return result.rewards.get(claimer.toLowerCase()) || [];
   }
-
 }
