@@ -21,7 +21,7 @@ const DEFAULT_EXCHANGE = "binance";
 export async function getPriceFeeds(symbols: Feed[], exchange: string = DEFAULT_EXCHANGE) {
   const client: Exchange = new (ccxt as any)[exchange]();
   await client.loadMarkets();
-  return symbols.map(symbol => new CcxtPriceFeed(symbol, client));
+  return Promise.all(symbols.map(async symbol => await CcxtPriceFeed.create(symbol, client)));
 }
 
 export function loadAccounts(web3: Web3): Account[] {
