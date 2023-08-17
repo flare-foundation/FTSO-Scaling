@@ -1,19 +1,19 @@
-import BN from 'bn.js';
+import BN from "bn.js";
 
 export interface ClaimReward {
   merkleProof: string[];
   hash?: string;
   claimRewardBody: ClaimRewardBody;
-};
+}
 
 export function deepCopyClaim(claim: ClaimReward): ClaimReward {
   return {
     ...claim,
     merkleProof: [...claim.merkleProof],
     claimRewardBody: {
-      ...claim.claimRewardBody
-    }
-  }
+      ...claim.claimRewardBody,
+    },
+  };
 }
 
 export interface ClaimRewardBody {
@@ -25,8 +25,8 @@ export interface ClaimRewardBody {
 }
 
 export interface Feed {
-  offerSymbol: string, // 4 characters/bytes
-  quoteSymbol: string, // 4 characters/bytes  
+  offerSymbol: string; // 4 characters/bytes
+  quoteSymbol: string; // 4 characters/bytes
 }
 
 export interface Offer extends Feed {
@@ -132,9 +132,9 @@ export interface VoterWithWeight {
 }
 
 export interface VoterRewarding extends VoterWithWeight {
-  pct: boolean;   // gets PCT reward
-  iqr: boolean;   // gets IQR reward
-  eligible: boolean;  // is eligible for reward
+  pct: boolean; // gets PCT reward
+  iqr: boolean; // gets IQR reward
+  eligible: boolean; // is eligible for reward
 }
 
 export interface RevealResult {
