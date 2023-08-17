@@ -1,8 +1,13 @@
-import ccxt, { Exchange, binance, binanceus } from "ccxt";
+import { Exchange, RequestTimeout, Trade } from "ccxt";
 import { IPriceFeed } from "./IPriceFeed";
 import { Feed } from "../voting-interfaces";
 
 const UPDATE_INTERVAL_MS = 1_000;
+/**
+ * We only pick the last trade, but use a larger trade history window so that
+ * we're more likely to get a first value on startup immediately.
+ */
+const TRADE_HISTORY_WINDOW_MS = 60_000;
 const USDT_TO_USD = 1; // TODO: Get live value
 
 /**
@@ -31,7 +36,16 @@ export class CcxtPriceFeed implements IPriceFeed {
   }
 
   private async fetchTrades() {
-    const trades = await this.client.fetchTrades(this.marketId, Date.now() - UPDATE_INTERVAL_MS, 1);
+    let trades: Trade[];
+    try {
+      trades = await this.client.fetchTrades(this.marketId, Date.now() - TRADE_HISTORY_WINDOW_MS, 1);
+    } catch (e) {
+      if (e instanceof RequestTimeout) {
+        console.log(`Request timeout for ${this.feed.offerSymbol}/${this.feed.quoteSymbol}`);
+        return;
+      }
+      throw e;
+    }
     if (trades.length > 0) {
       const trade = trades[0]!;
       if (trade.timestamp > this.lastPriceTimestamp) {
