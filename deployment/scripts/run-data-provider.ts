@@ -4,13 +4,9 @@ import { DataProvider } from "../../src/DataProvider";
 import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { loadFTSOParameters } from "../config/FTSOParameters";
-import { ContractAddresses, OUTPUT_FILE, generateRandomFeedsForClient, loadAccounts } from "../tasks/common";
-
-function loadContracts(): ContractAddresses {
-  const parsed = JSON.parse(readFileSync(OUTPUT_FILE).toString());
-  if (Object.entries(parsed).length == 0) throw Error(`No contract addresses found in ${OUTPUT_FILE}`);
-  return parsed;
-}
+import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
+import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
+import { Feed } from "../../src/voting-interfaces";
 
 async function main() {
   const myId = +process.argv[2];
@@ -18,20 +14,48 @@ async function main() {
     throw Error("Must provide a data provider id.");
   }
 
-  const web3 = new Web3("http://127.0.0.1:9650/ext/bc/C/rpc"); // TODO: move to config
+  const parameters = loadFTSOParameters();
+  const httpProvider = new Web3.providers.HttpProvider(parameters.rpcUrl.toString());
+  const web3 = new Web3(httpProvider);
+
   const accounts = loadAccounts(web3);
   const contractAddresses = loadContracts();
-  const parameters = loadFTSOParameters();
 
   console.log(`Initializing data provider ${myId} with address ${accounts[myId].address}`);
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, accounts[myId].privateKey);
   const client = new FTSOClient(provider);
-  const feeds = generateRandomFeedsForClient(parameters.symbols);
-  client.registerPriceFeeds(feeds);
+  const feeds = await getPriceFeeds(parameters.symbols);
+  client.registerPriceFeeds(randomizeFeeds(feeds));
 
   const dataProvider = new DataProvider(client, myId);
   await dataProvider.run();
 }
 
-main()
+function loadContracts(): ContractAddresses {
+  const parsed = JSON.parse(readFileSync(OUTPUT_FILE).toString());
+  if (Object.entries(parsed).length == 0) throw Error(`No contract addresses found in ${OUTPUT_FILE}`);
+  return parsed;
+}
+
+function randomizeFeeds(feeds: IPriceFeed[]): IPriceFeed[] {
+  return feeds.map(feed => {
+    return new (class implements IPriceFeed {
+      getPriceForEpoch(epochId: number): number {
+        const originalPrice = feed.getPriceForEpoch(epochId);
+        return addNoise(originalPrice);
+      }
+      getFeedInfo(): Feed {
+        return feed.getFeedInfo();
+      }
+    })();
+  });
+}
+
+function addNoise(num: number): number {
+  const noise = num * 0.001 * Math.random();
+  const sign = Math.random() < 0.5 ? -1 : 1;
+  return num + noise * sign;
+}
+
+main();

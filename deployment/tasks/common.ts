@@ -1,9 +1,10 @@
-import { RandomPriceFeedConfig, RandomPriceFeed } from "../../src/price-feeds/RandomPriceFeed";
 import { Feed } from "../../src/voting-interfaces";
 import { readFileSync } from "fs";
 import { Account } from "web3-core";
 
 import Web3 from "web3";
+import ccxt, { Exchange } from "ccxt";
+import { CcxtPriceFeed } from "../../src/price-feeds/CcxtPriceFeed";
 
 export interface ContractAddresses {
   votingManager: string;
@@ -15,19 +16,12 @@ export interface ContractAddresses {
 
 export const OUTPUT_FILE = "./deployed-contracts.json";
 export const TEST_ACCOUNT_FILE = "./deployment/config/test-1020-accounts.json";
+const DEFAULT_EXCHANGE = "binance";
 
-export function generateRandomFeedsForClient(symbols: Feed[]) {
-  const priceFeedConfigs: RandomPriceFeedConfig[] = [];
-  for (let j = 0; j < symbols.length; j++) {
-    const priceFeedConfig = {
-      period: 10,
-      factor: 1000 * (j + 1),
-      variance: 100,
-      feedInfo: symbols[j],
-    } as RandomPriceFeedConfig;
-    priceFeedConfigs.push(priceFeedConfig);
-  }
-  return priceFeedConfigs.map(config => new RandomPriceFeed(config));
+export async function getPriceFeeds(symbols: Feed[], exchange: string = DEFAULT_EXCHANGE) {
+  const client: Exchange = new (ccxt as any)[exchange]();
+  await client.loadMarkets();
+  return symbols.map(symbol => new CcxtPriceFeed(symbol, client));
 }
 
 export function loadAccounts(web3: Web3): Account[] {

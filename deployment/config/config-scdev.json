@@ -1,10 +1,10 @@
 {
   "governancePrivateKey": "<set in .env>",
+  "rpcUrl": "http://127.0.0.1:9650/ext/bc/C/rpc",
   "gasPrice": "3000000000000",
   "symbols": [
-    { "offerSymbol": "FLR", "quoteSymbol": "USD" },
-    { "offerSymbol": "FL1", "quoteSymbol": "USD" },
-    { "offerSymbol": "FL2", "quoteSymbol": "USD" },
-    { "offerSymbol": "FL3", "quoteSymbol": "USD" }
+    { "offerSymbol": "ETH", "quoteSymbol": "USDT" },
+    { "offerSymbol": "BTC", "quoteSymbol": "USDT" },
+    { "offerSymbol": "XRP", "quoteSymbol": "USDT" }
   ]
 }

@@ -2,6 +2,8 @@ import { FTSOClient } from "./FTSOClient";
 import { sleepFor } from "./time-utils";
 
 export class DataProvider {
+  private static readonly BLOCK_PROCESSING_INTERVAL_MS = 500;
+
   constructor(private client: FTSOClient, private myId: number) {}
 
   /** Used for checking if we need to send reveals in the current price epoch. */
@@ -10,7 +12,7 @@ export class DataProvider {
   private registeredRewardEpochs = new Set<number>();
 
   async run() {
-    const currentBlock = await this.client.provider.getBlockNumber()
+    const currentBlock = await this.client.provider.getBlockNumber();
     this.client.initialize(currentBlock);
     this.processBlocks();
     this.schedulePriceEpochActions();
@@ -19,7 +21,7 @@ export class DataProvider {
   private async processBlocks() {
     while (true) {
       await this.client.processNewBlocks();
-      await sleepFor(500);
+      await sleepFor(DataProvider.BLOCK_PROCESSING_INTERVAL_MS);
     }
   }
 
@@ -35,7 +37,6 @@ export class DataProvider {
 
   async onPriceEpoch() {
     const currentEpochId = this.client.epochs.priceEpochIdForTime(Date.now() / 1000);
-
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentEpochId);
 
     console.log(`[On price epoch] ${currentEpochId}, reward epoch ${currentRewardEpochId}.`);
@@ -45,8 +46,10 @@ export class DataProvider {
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
       await this.runVotingProcotol(currentEpochId);
-
-      if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
+      if (
+        this.isRegisteredForRewardEpoch(previousRewardEpochId) &&
+        this.isFirstPriceEpochInRewardEpoch(currentEpochId)
+      ) {
         console.log(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
         await this.client.claimReward(previousRewardEpochId);
       }
@@ -58,8 +61,6 @@ export class DataProvider {
   }
 
   private async runVotingProcotol(currentEpochId: number) {
-    console.log("[[[[[[Start voting protocol]]]]]");
-
     console.log(`[Voting] On commit for current ${currentEpochId}`);
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
     await this.client.onCommit(currentEpochId);

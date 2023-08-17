@@ -1,5 +1,5 @@
-import { Feed } from "../voting-interfaces";
-import { IPriceFeed } from "./IPriceFeed";
+import { Feed } from "../../src/voting-interfaces";
+import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
 
 export interface RandomPriceFeedConfig {
   period: number;
@@ -8,7 +8,7 @@ export interface RandomPriceFeedConfig {
   feedInfo: Feed;
 }
 
-export class RandomPriceFeed implements IPriceFeed{
+export class RandomPriceFeed implements IPriceFeed {
   priceFeedConfig!: RandomPriceFeedConfig;
 
   constructor(config: RandomPriceFeedConfig) {
