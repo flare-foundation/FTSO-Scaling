@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.1",
+    "ccxt": "^4.0.64",
     "dotenv": "^16.1.4",
     "ethereumjs-wallet": "^1.0.2",
     "ethers": "^6.6.0",

@@ -32,7 +32,7 @@ task("run-admin-daemon", `Does admin tasks`) // prettier-ignore
 
 // Config
 
-let accounts = loadTestAccounts();
+const accounts = loadTestAccounts();
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [

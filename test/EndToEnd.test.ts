@@ -5,7 +5,7 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
-import { RandomPriceFeed, RandomPriceFeedConfig } from "../src/price-feeds/RandomPriceFeed";
+import { RandomPriceFeed, RandomPriceFeedConfig } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/voting-interfaces";
 import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";

@@ -150,7 +150,7 @@ export class RewardCalculator {
     }
     let offers = offersBySymbol.get(feedId(feed));
     if(offers === undefined) {
-      throw new Error(`Reward offers are not defined for symbol ${feedId} in reward epoch ${rewardEpochId}`);
+      throw new Error(`Reward offers are not defined for symbol ${feedId(feed)} in reward epoch ${rewardEpochId}`);
     }
     return offers.map(offer => this.rewardOfferForPriceEpoch(priceEpochId, offer));
   }
