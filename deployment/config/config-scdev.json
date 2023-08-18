@@ -5,6 +5,6 @@
   "symbols": [
     { "offerSymbol": "ETH", "quoteSymbol": "USDT" },
     { "offerSymbol": "BTC", "quoteSymbol": "USDT" },
-    { "offerSymbol": "XRP", "quoteSymbol": "USDT" }
+    { "offerSymbol": "BCH", "quoteSymbol": "USDT" }
   ]
 }
