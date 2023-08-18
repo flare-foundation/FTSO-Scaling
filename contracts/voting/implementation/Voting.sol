@@ -4,8 +4,6 @@ pragma solidity 0.8.18;
 import "../../userInterfaces/IVoterRegistry.sol";
 import "./VotingManager.sol";
 
-import "hardhat/console.sol";
-
 contract Voting {
     IVoterRegistry public voterRegistry;
     // VotingManager contract
@@ -127,7 +125,9 @@ contract Voting {
 
     // Returns the merkle root for a given epoch
     function getMerkleRoot(uint256 _epochId) public view returns (bytes32) {
-        return merkleRoots[_epochId];
+        bytes32 merkleRoot = merkleRoots[_epochId];
+        require(merkleRoot != 0, "Merkle root for provided epoch not found – epoch not finalized.");
+        return merkleRoot;
     }
 
     // Returns the voter weight for a given epoch

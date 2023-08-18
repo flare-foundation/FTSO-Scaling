@@ -51,6 +51,9 @@ export class DataProvider {
         this.isFirstPriceEpochInRewardEpoch(currentEpochId)
       ) {
         console.log(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
+        // TODO: We need something more robust than sleeping, ideally should listen for a finalization
+        //       event and then trigger the claiming logic.
+        await sleepFor(5000) // Wait for finalization to happen - only one provider performs it
         await this.client.claimReward(previousRewardEpochId);
       }
     }
