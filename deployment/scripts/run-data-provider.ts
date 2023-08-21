@@ -7,12 +7,15 @@ import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
 import { Feed } from "../../src/voting-interfaces";
+import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 
 async function main() {
   const myId = +process.argv[2];
   if (!myId) {
     throw Error("Must provide a data provider id.");
   }
+
+  setGlobalLogFile(`data-provider-${myId}`);
 
   const parameters = loadFTSOParameters();
   const httpProvider = new Web3.providers.HttpProvider(parameters.rpcUrl.toString());
@@ -21,7 +24,7 @@ async function main() {
   const accounts = loadAccounts(web3);
   const contractAddresses = loadContracts();
 
-  console.log(`Initializing data provider ${myId} with address ${accounts[myId].address}`);
+  getLogger("data-provider").info(`Initializing data provider ${myId} with address ${accounts[myId].address}`);
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, accounts[myId].privateKey);
   const client = new FTSOClient(provider);

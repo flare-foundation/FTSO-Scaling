@@ -1,4 +1,5 @@
 import { FTSOClient } from "./FTSOClient";
+import { getLogger } from "./utils/logger";
 import { sleepFor } from "./time-utils";
 
 export class DataProvider {
@@ -6,10 +7,12 @@ export class DataProvider {
 
   constructor(private client: FTSOClient, private myId: number) {}
 
+  private readonly logger = getLogger(DataProvider.name); 
+
   /** Used for checking if we need to send reveals in the current price epoch. */
   private hasCommits: boolean = false;
   /** Tracks reward epochs the data provider is registered as a voter for. */
-  private registeredRewardEpochs = new Set<number>();
+  private readonly registeredRewardEpochs = new Set<number>();
 
   async run() {
     const currentBlock = await this.client.provider.getBlockNumber();
@@ -39,7 +42,7 @@ export class DataProvider {
     const currentEpochId = this.client.epochs.priceEpochIdForTime(Date.now() / 1000);
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentEpochId);
 
-    console.log(`[On price epoch] ${currentEpochId}, reward epoch ${currentRewardEpochId}.`);
+    this.logger.info(`[On price epoch] ${currentEpochId}, reward epoch ${currentRewardEpochId}.`);
 
     const previousRewardEpochId = currentRewardEpochId - 1;
     const nextRewardEpochId = currentRewardEpochId + 1;
@@ -50,10 +53,10 @@ export class DataProvider {
         this.isRegisteredForRewardEpoch(previousRewardEpochId) &&
         this.isFirstPriceEpochInRewardEpoch(currentEpochId)
       ) {
-        console.log(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
+        this.logger.info(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
         // TODO: We need something more robust than sleeping, ideally should listen for a finalization
         //       event and then trigger the claiming logic.
-        await sleepFor(5000) // Wait for finalization to happen - only one provider performs it
+        await sleepFor(5000); // Wait for finalization to happen - only one provider performs it
         await this.client.claimReward(previousRewardEpochId);
       }
     }
@@ -64,30 +67,30 @@ export class DataProvider {
   }
 
   private async runVotingProcotol(currentEpochId: number) {
-    console.log(`[Voting] On commit for current ${currentEpochId}`);
+    this.logger.info(`[Voting] On commit for current ${currentEpochId}`);
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
     await this.client.onCommit(currentEpochId);
 
     if (this.hasCommits) {
       const previousEpochId = currentEpochId - 1;
-      console.log(`[Voting] On reveal for previous ${previousEpochId}`);
+      this.logger.info(`[Voting] On reveal for previous ${previousEpochId}`);
       await this.client.onReveal(previousEpochId);
       await this.waitForRevealEpochEnd();
-      console.log(`[Voting] Calculate results and on sign prev ${previousEpochId}`);
+      this.logger.info(`[Voting] Calculate results and on sign prev ${previousEpochId}`);
       await this.client.onSign(previousEpochId);
       await sleepFor(2000); // Wait for others' signatures.
       if (this.shouldFinalize()) {
-        console.log(`[Voting] Send signatures for prev ${previousEpochId}`);
+        this.logger.info(`[Voting] Send signatures for prev ${previousEpochId}`);
         await this.client.onSendSignaturesForMyMerkleRoot(previousEpochId);
       }
     }
 
     this.hasCommits = true;
-    console.log("[[[[[[End voting protocol]]]]]");
+    this.logger.info("[[[[[[End voting protocol]]]]]");
   }
 
   private async registerForRewardEpoch(nextRewardEpochId: number) {
-    console.log(`Registering for reward epoch ${nextRewardEpochId}`);
+    this.logger.info(`Registering for reward epoch ${nextRewardEpochId}`);
 
     if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(nextRewardEpochId);
     this.client.registerRewardsForRewardEpoch(nextRewardEpochId);

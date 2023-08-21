@@ -1,6 +1,7 @@
 import { Exchange, RequestTimeout, Trade } from "ccxt";
 import { IPriceFeed } from "./IPriceFeed";
 import { Feed } from "../voting-interfaces";
+import { getLogger } from "../utils/logger";
 
 const UPDATE_INTERVAL_MS = 1_000;
 /**
@@ -15,6 +16,7 @@ const USDT_TO_USD = 1; // TODO: Get live value
  * Uses periodic polling to retrieve latest trades.
  */
 export class CcxtPriceFeed implements IPriceFeed {
+  private readonly logger = getLogger(CcxtPriceFeed.name);
   private readonly marketId: string;
   private lastPriceUSD: number = 0; // TODO: Avoid returning initial value 0
   private lastPriceTimestamp: number = 0;
@@ -41,7 +43,7 @@ export class CcxtPriceFeed implements IPriceFeed {
       trades = await this.client.fetchTrades(this.marketId, Date.now() - TRADE_HISTORY_WINDOW_MS, 1);
     } catch (e) {
       if (e instanceof RequestTimeout) {
-        console.log(`Request timeout for ${this.feed.offerSymbol}/${this.feed.quoteSymbol}`);
+        this.logger.error(`Request timeout for ${this.feed.offerSymbol}/${this.feed.quoteSymbol}`);
         return;
       }
       throw e;

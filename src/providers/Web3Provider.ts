@@ -26,6 +26,7 @@ import {
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
 import { getAccount, loadContract } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
+import { getLogger } from "../utils/logger";
 
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
@@ -36,6 +37,7 @@ interface TypeChainContracts {
 }
 
 export class Web3Provider implements IVotingProvider {
+  private readonly logger = getLogger(Web3Provider.name);
   private account: Account;
 
   private constructor(
@@ -56,6 +58,7 @@ export class Web3Provider implements IVotingProvider {
   async claimReward(claim: ClaimReward): Promise<any> {
     const claimReward = deepCopyClaim(claim);
     delete claimReward.hash;
+    this.logger.info("Calling claim reward contract with", claimReward);
     const methodCall = this.contracts.votingRewardManager.methods.claimReward(
       hexlifyBN(claimReward),
       this.account.address
@@ -201,16 +204,17 @@ export class Web3Provider implements IVotingProvider {
       );
       return true;
     } catch (e: any) {
+      this.logger.error(`error: ${e.message}`);
       if (e.message.indexOf("Transaction has been reverted by the EVM") < 0) {
-        console.log(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${e.message}`);
+        this.logger.error(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${e.message}`);
       } else {
         fnToEncode
           .call({ from: this.account.address })
           .then((result: any) => {
-            throw Error("unlikely to happen: " + JSON.stringify(result));
+            throw Error("unlikely to happen: " + result);
           })
           .catch((revertReason: any) => {
-            console.log(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${revertReason}`);
+            this.logger.error(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${revertReason}`);
           });
       }
       return false;
@@ -230,7 +234,7 @@ export class Web3Provider implements IVotingProvider {
       } else {
         throw new Error("Response timeout");
       }
-      console.log(`Delay backoff ${delay} (${retries})`);
+      this.logger.info(`Delay backoff ${delay} (${retries})`);
     }
     return res;
   }

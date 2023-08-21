@@ -9,12 +9,15 @@ import { VotingRewardManagerInstance } from "../../typechain-truffle";
 import { toBN } from "web3-utils";
 import { OUTPUT_FILE, loadAccounts } from "./common";
 import { FTSOParameters } from "../config/FTSOParameters";
+import { getLogger } from "../../src/utils/logger";
 
 const REWARD_VALUE = 1000999;
 const IQR_SHARE = 700000;
 const PCT_SHARE = 300000;
 const ELASTIC_BAND_WIDTH_PPM = 50000;
 const DEFAULT_REWARD_BELT_PPM = 500000; // 50%
+
+const logger = getLogger("admin-daemon");
 
 function loadContracts() {
   return JSON.parse(readFileSync(OUTPUT_FILE).toString());
@@ -28,7 +31,7 @@ async function offerRewards(
   leadProviders: string[],
   rewardValue: BN
 ) {
-  console.log(`Offering rewards for epoch ${rewardEpochId}...`);
+  logger.info(`Offering rewards for epoch ${rewardEpochId}...`);
 
   const toBN = web3.utils.toBN;
 
@@ -50,12 +53,12 @@ async function offerRewards(
       pctSharePPM: toBN(PCT_SHARE),
       remainderClaimer: ZERO_ADDRESS,
     } as Offer;
+    logger.info(`Offering ${amount} for ${symbols[i].offerSymbol}/${symbols[i].quoteSymbol}`);
     totalAmount = totalAmount.add(amount);
     offersSent.push(basicOffer);
   }
-
   let receipt = await votingRewardManager.offerRewards(hexlifyBN(offersSent), { from: governance, value: totalAmount });
-  console.log(`"Reward offers sent, gas used: ${receipt.receipt.gasUsed}`);
+  logger.info(`"Reward offers sent, gas used: ${receipt.receipt.gasUsed}`);
 }
 
 /**
@@ -79,7 +82,7 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
 
     const currentRewardEpoch: number = (await votingManager.getCurrentRewardEpochId()).toNumber();
     const currentPriceEpoch: number = (await votingManager.getCurrentPriceEpochId()).toNumber();
-    console.log(`Current reward epoch: ${currentRewardEpoch}, current price epoch: ${currentPriceEpoch}`);
+    logger.info(`Current reward epoch: ${currentRewardEpoch}, current price epoch: ${currentPriceEpoch}`);
 
     if (currentRewardEpoch > lastEpoch) {
       await offerRewards(

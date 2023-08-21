@@ -4,6 +4,8 @@ coverage
 coverage.json
 typechain
 typechain-types
+logs
+deployed-contracts.json
 
 # Hardhat files
 cache
@@ -18,4 +20,3 @@ typechain-web3
 # misc
 nul
 .DS_Store
-deployed-contracts.json
