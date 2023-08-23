@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import Web3 from "web3";
 import { DataProvider } from "../../src/DataProvider";
 import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
@@ -8,6 +7,7 @@ import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
 import { Feed } from "../../src/voting-interfaces";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
+import { getWeb3 } from "../../src/web3-utils";
 
 async function main() {
   const myId = +process.argv[2];
@@ -18,8 +18,7 @@ async function main() {
   setGlobalLogFile(`data-provider-${myId}`);
 
   const parameters = loadFTSOParameters();
-  const httpProvider = new Web3.providers.HttpProvider(parameters.rpcUrl.toString());
-  const web3 = new Web3(httpProvider);
+  const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const accounts = loadAccounts(web3);
   const contractAddresses = loadContracts();
@@ -27,7 +26,7 @@ async function main() {
   getLogger("data-provider").info(`Initializing data provider ${myId} with address ${accounts[myId].address}`);
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, accounts[myId].privateKey);
-  const client = new FTSOClient(provider);
+  const client = new FTSOClient(provider, await provider.getBlockNumber());
   const feeds = await getPriceFeeds(parameters.symbols);
   client.registerPriceFeeds(randomizeFeeds(feeds));
 

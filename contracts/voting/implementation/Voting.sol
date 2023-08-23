@@ -126,7 +126,7 @@ contract Voting {
     // Returns the merkle root for a given epoch
     function getMerkleRoot(uint256 _epochId) public view returns (bytes32) {
         bytes32 merkleRoot = merkleRoots[_epochId];
-        require(merkleRoot != 0, "Merkle root for provided epoch not found – epoch not finalized.");
+        require(merkleRoot != 0, "Merkle root for provided epoch not found - epoch not finalized.");
         return merkleRoot;
     }
 

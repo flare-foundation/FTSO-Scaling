@@ -54,6 +54,10 @@ export class Web3Provider implements IVotingProvider {
   ) {
     this.account = getAccount(web3, privateKey);
   }
+  async thresholdForRewardEpoch(epochId: number): Promise<BN> {
+    const threshold = await this.contracts.voterRegistry.methods.thresholdForRewardEpoch(epochId).call();
+    return toBN(threshold);
+  }
 
   async claimReward(claim: ClaimReward): Promise<any> {
     const claimReward = deepCopyClaim(claim);
@@ -107,7 +111,7 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Sign result", this.contracts.voting.options.address, methodCall);
   }
 
-  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]) {
+  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
     const methodCall = this.contracts.voting.methods.finalize(
       epochId,
       mySignatureHash,
@@ -158,13 +162,12 @@ export class Web3Provider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    const result = await this.web3.eth.getBlock(blockNumber, true);
-    result.timestamp = parseInt("" + result.timestamp, 10);
-    return result as any as BlockData;
-  }
-
-  getTransactionReceipt(txId: string): Promise<any> {
-    return this.web3.eth.getTransactionReceipt(txId);
+    const block = (await this.web3.eth.getBlock(blockNumber, true)) as any as BlockData;
+    block.timestamp = parseInt("" + block.timestamp, 10);
+    for (const tx of block.transactions) {
+      tx.receipt = await this.web3.eth.getTransactionReceipt(tx.hash);
+    }
+    return block;
   }
 
   get senderAddressLowercase(): string {

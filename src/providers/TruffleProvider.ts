@@ -57,6 +57,10 @@ export class TruffleProvider implements IVotingProvider {
     this.account = getAccount(web3, privateKey);
   }
 
+  async thresholdForRewardEpoch(epochId: number): Promise<BN> {
+    return this.contracts.voterRegistry.thresholdForRewardEpoch(epochId);
+  }
+
   async claimReward(claim: ClaimReward): Promise<any> {
     const claimReward = deepCopyClaim(claim);
     delete claimReward.hash;
@@ -105,8 +109,17 @@ export class TruffleProvider implements IVotingProvider {
     );
   }
 
-  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]) {
-    return this.contracts.voting.finalize(epochId, mySignatureHash, signatures, { from: this.account.address });
+  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
+    try {
+      await this.contracts.voting.finalize(epochId, mySignatureHash, signatures, {
+        from: this.account.address,
+      });
+      return true;
+    } catch (e) {
+      if ((e as any).message.includes("already finalized")) {
+        return false;
+      } else throw e;
+    }
   }
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
@@ -150,13 +163,12 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    const result = await this.web3.eth.getBlock(blockNumber, true);
-    result.timestamp = parseInt("" + result.timestamp, 10);
-    return result as any as BlockData;
-  }
-
-  getTransactionReceipt(txId: string): Promise<any> {
-    return this.web3.eth.getTransactionReceipt(txId);
+    const block = (await this.web3.eth.getBlock(blockNumber, true)) as any as BlockData;
+    block.timestamp = parseInt("" + block.timestamp, 10);
+    for (const tx of block.transactions) {
+      tx.receipt = await this.web3.eth.getTransactionReceipt(tx.hash);
+    }
+    return block;
   }
 
   get senderAddressLowercase(): string {

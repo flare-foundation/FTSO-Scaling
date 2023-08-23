@@ -205,3 +205,23 @@ export function hexlifyBN(obj: any): any {
   }
   return obj;
 }
+
+export function packPrices(prices: (number | string)[]) {
+  return (
+    "0x" +
+    prices
+      .map(price =>
+        parseInt("" + price)
+          .toString(16)
+          .padStart(8, "0")
+      )
+      .join("")
+  );
+}
+
+export function hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
+  const types = ["address", "uint256", "bytes32", "bytes"];
+  const values = [voter, random, merkleRoot, prices] as any[];
+  const encoded = coder.encodeParameters(types, values);
+  return utils.soliditySha3(encoded)!;
+}

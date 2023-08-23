@@ -10,6 +10,7 @@ import {
   VotingRewardManagerInstance,
   VotingManagerInstance,
 } from "../typechain-truffle";
+import { Received } from "../src/BlockIndexer";
 
 const DummyERC20 = artifacts.require("DummyERC20");
 export const REWARD_VALUE = toBN("1000999");
@@ -33,7 +34,6 @@ export async function offerRewards(
   console.log(`Offering rewards for epoch ${rewardEpochId}`);
   // Configure mock price oracle to return the correct values for first two symbols
   const now = await time.latest();
-
   mockPriceOracle.reset();
   mockPriceOracle.givenMethodReturn(
     priceOracle.contract.methods.lastAnchorPriceForSymbol("0x" + unprefixedSymbolBytes(symbols[0])).encodeABI(),
@@ -151,11 +151,11 @@ export async function commit(priceEpochId: number, ftsoClients: FTSOClient[], vo
   expect(currentEpoch).to.be.equal(priceEpochId);
   console.log("Commit epoch", currentEpoch);
   for (const client of ftsoClients) {
-    await client.onCommit(currentEpoch);
+    await client.commit(currentEpoch);
   }
   for (const client of ftsoClients) {
     await client.processNewBlocks();
-    expect(client.priceEpochCommits.get(currentEpoch)?.size).to.be.equal(ftsoClients.length);
+    expect(client.indexer.getCommits(currentEpoch)?.size).to.be.equal(ftsoClients.length);
   }
 }
 
@@ -164,11 +164,11 @@ export async function reveal(priceEpochId: number, ftsoClients: FTSOClient[], vo
   expect(revealEpoch).to.be.equal(priceEpochId);
   console.log("Reveal epoch", revealEpoch);
   for (const client of ftsoClients) {
-    await client.onReveal(revealEpoch);
+    await client.reveal(revealEpoch);
   }
   for (const client of ftsoClients) {
     await client.processNewBlocks();
-    expect(client.priceEpochReveals.get(revealEpoch)?.size).to.be.equal(ftsoClients.length);
+    expect(client.indexer.getReveals(revealEpoch)?.size).to.be.equal(ftsoClients.length);
   }
 }
 
@@ -227,19 +227,36 @@ export async function signAndSend(
 ) {
   const currentEpochId = (await votingManager.getCurrentPriceEpochId()).toNumber();
   expect(currentEpochId - 1).to.be.greaterThanOrEqual(priceEpochId);
+  const firstClient = ftsoClients[0];
+
+  let finalized = false;
+  const setFinalized = () => {
+    finalized = true;
+  };
+  firstClient.indexer.once(Received.Finalize, setFinalized);
+
+  for (const client of ftsoClients) {
+    client.listenForSignatures();
+  }
+
   // TODO: check the timing is correct, after the reveal period
   for (const client of ftsoClients) {
-    await client.onSign(priceEpochId, true); // skip calculation, since we already did it
+    await client.sign(priceEpochId, true); // skip calculation, since we already did it
   }
-  const client = ftsoClients[0];
-  await client.processNewBlocks();
-  const signaturesTmp = [...client.priceEpochSignatures.get(priceEpochId)!.values()];
+
+  for (const client of ftsoClients) {
+    await client.processNewBlocks(); // Process signatures, will submit finalize tx once enouch signatures received
+    await client.processNewBlocks(); // Process finalize tx, indexer will emit Received.Finalize
+  }
+
+  const signaturesTmp = [...firstClient.indexer.getSignatures(priceEpochId)!.values()];
   const merkleRoots = [...new Set(signaturesTmp.map(sig => sig.merkleRoot)).values()];
-  const merkleRoot = merkleRoots[0];
   expect(merkleRoots.length).to.be.equal(1);
-  const receipt = await client.onSendSignaturesForMyMerkleRoot(priceEpochId);
-  console.log(`Finalize gas used: ${receipt.receipt.gasUsed}`);
-  expectEvent(receipt, "MerkleRootConfirmed", { epochId: toBN(priceEpochId), merkleRoot });
+  expect(finalized).to.be.true;
+
+  for (const client of ftsoClients) {
+    client.clearSignatureListener();
+  }
 }
 
 export async function publishPriceEpoch(
@@ -295,9 +312,7 @@ export async function claimRewards(
     }
     const originalBalance = toBN(await web3.eth.getBalance(client.address));
 
-    const rewardClaims = client.priceEpochResults
-      .get(claimPriceEpoch)
-      ?.rewards?.get(client.provider.senderAddressLowercase);
+    const rewardClaims = client.priceEpochResults.get(claimPriceEpoch)?.rewards?.get(client.address);
     const receipts = await client.claimReward(claimRewardEpoch);
     let txFee = toBN(0);
     for (const receipt of receipts) {

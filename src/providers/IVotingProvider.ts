@@ -1,4 +1,3 @@
-import { readFileSync } from "fs";
 import { ContractAddresses } from "../../deployment/tasks/common";
 import {
   BareSignature,
@@ -7,10 +6,6 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  RewardOffered,
-  RevealBitvoteData,
-  SignatureData,
-  TxData,
   VoterWithWeight,
 } from "../voting-interfaces";
 
@@ -29,13 +24,15 @@ export interface IVotingProvider {
 
   get senderAddressLowercase(): string;
 
+  thresholdForRewardEpoch(epochId: number): Promise<BN>;
+
   ////////////// Contract calls //////////////
   claimReward(claim: ClaimReward): Promise<any>;
   offerRewards(offer: Offer[]): Promise<any>;
   commit(hash: string): Promise<any>;
   revealBitvote(epochData: EpochData): Promise<any>;
   signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
-  finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
+  finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean>;
   publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
   allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
@@ -46,5 +43,4 @@ export interface IVotingProvider {
   ////////////// Block calls //////////////
   getBlockNumber(): Promise<number>;
   getBlock(blockNumber: number): Promise<BlockData>;
-  getTransactionReceipt(txId: string): Promise<any>;
 }

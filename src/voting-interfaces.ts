@@ -1,4 +1,5 @@
 import BN from "bn.js";
+import { TransactionReceipt } from "web3-core";
 
 export interface ClaimReward {
   merkleProof: string[];
@@ -79,7 +80,7 @@ export interface TxData {
   from: string;
   to?: string;
   value?: string;
-  receipt?: any;
+  receipt?: TransactionReceipt;
 }
 
 export interface BlockData {

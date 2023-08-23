@@ -1,8 +1,6 @@
 import BN from "bn.js";
 import Web3 from "web3";
-import coder from "web3-eth-abi";
 
-import { EncodingUtils } from "./EncodingUtils";
 import { EpochSettings } from "./EpochSettings";
 import { MerkleTree } from "./MerkleTree";
 import { RewardCalculator } from "./RewardCalculator";
@@ -16,21 +14,28 @@ import {
   EpochResult,
   Feed,
   MedianCalculationResult,
-  RevealBitvoteData,
   RevealResult,
   RewardOffered,
   SignatureData,
-  TxData,
   VoterWithWeight,
 } from "./voting-interfaces";
-import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
+import {
+  ZERO_BYTES32,
+  feedId,
+  hashClaimReward,
+  hashForCommit,
+  packPrices,
+  sortedHashPair,
+  toBN,
+  unprefixedSymbolBytes,
+} from "./voting-utils";
 import { getLogger } from "./utils/logger";
+import { BlockIndexer, Received } from "./BlockIndexer";
+import { encodingUtils } from "./EncodingUtils";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
-
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
-
 const NON_EXISTENT_PRICE = 0;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
@@ -45,44 +50,57 @@ export class FTSOClient {
   private readonly logger = getLogger(FTSOClient.name);
 
   rewardCalculator!: RewardCalculator;
-
-  startBlock: number = 0;
   lastProcessedBlockNumber: number = 0;
-  voters: string[] = [];
-  priceEpochCommits = new Map<number, Map<string, string>>();
-  priceEpochReveals = new Map<number, Map<string, RevealBitvoteData>>();
-  priceEpochSignatures = new Map<number, Map<string, SignatureData>>();
-  priceEpochData = new Map<number, EpochData>();
-  priceEpochResults = new Map<number, EpochResult>();
+  epochs: EpochSettings;
+
+  readonly indexer: BlockIndexer;
+  readonly priceEpochData = new Map<number, EpochData>();
+  readonly priceEpochResults = new Map<number, EpochResult>();
 
   // reward epoch => voter => weight
-  eligibleVotersForRewardEpoch = new Map<number, VoterWithWeight[]>();
-  eligibleVoterWeights = new Map<number, Map<string, BN>>();
-  eligibleVoterTotalWeight = new Map<number, BN>();
+  private eligibleVotersForRewardEpoch = new Map<number, VoterWithWeight[]>();
+  private eligibleVoterWeights = new Map<number, Map<string, BN>>();
+  private eligibleVoterTotalWeight = new Map<number, BN>();
 
-  rewardEpochOffers = new Map<number, RewardOffered[]>();
-  rewardEpochOffersClosed = new Map<number, boolean>();
+  readonly rewardEpochOffers = new Map<number, RewardOffered[]>();
+  private readonly rewardEpochOffersClosed = new Map<number, boolean>();
+  private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
-  startBlockNumber: number = 0;
+  get address() {
+    return this.provider.senderAddressLowercase;
+  }
 
-  priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
-
-  epochs: EpochSettings;
-  encoding: EncodingUtils = new EncodingUtils();
-
-  verbose: boolean = true;
-
-  constructor(public provider: IVotingProvider) {
+  constructor(public provider: IVotingProvider, startBlockNumber: number) {
     this.epochs = new EpochSettings(
       provider.firstEpochStartSec,
       provider.epochDurationSec,
       provider.firstRewardedPriceEpoch,
       provider.rewardEpochDurationInEpochs
     );
+    this.indexer = new BlockIndexer(this.epochs, this.provider.contractAddresses);
+    this.indexer.on(Received.Offers, this.onRewardOffers);
+
+    this.lastProcessedBlockNumber = startBlockNumber - 1;
   }
 
-  public registerPriceFeeds(priceFeeds: IPriceFeed[]) {
-    for (let priceFeed of priceFeeds) {
+  initializeRewardCalculator(initialRewardEpoch: number) {
+    this.rewardCalculator = new RewardCalculator(this, initialRewardEpoch);
+  }
+
+  listenForSignatures() {
+    this.indexer.on(Received.Signature, this.onSignatureMaybeFinalize);
+  }
+
+  clearSignatureListener() {
+    try {
+      this.indexer.off(Received.Signature, this.onSignatureMaybeFinalize);
+    } catch (e) {
+      // Ignore - listener was removed before calling finalize.
+    }
+  }
+
+  registerPriceFeeds(priceFeeds: IPriceFeed[]) {
+    for (const priceFeed of priceFeeds) {
       this.priceFeeds.set(feedId(priceFeed.getFeedInfo()), priceFeed);
     }
   }
@@ -91,15 +109,13 @@ export class FTSOClient {
    * Placeholder for registering as a voter with a default constant weight.
    * To be replaced with a proper mechanisnm.
    */
-  public async registerAsVoter(rewardEpochId: number) {
+  async registerAsVoter(rewardEpochId: number) {
     return await this.provider.registerAsVoter(rewardEpochId, DEFAULT_VOTER_WEIGHT);
   }
 
-  public initializeRewardCalculator(initialRewardEpoch: number) {
-    this.rewardCalculator = new RewardCalculator(this, initialRewardEpoch);
-  }
-
   registerRewardsForRewardEpoch(rewardEpochId: number, forceClosure = false) {
+    this.logger.debug(`Registering rewards for reward epoch ${rewardEpochId}`);
+
     if (!this.rewardCalculator) {
       throw new Error("Reward calculator not initialized");
     }
@@ -118,144 +134,47 @@ export class FTSOClient {
     this.rewardEpochOffersClosed.set(rewardEpochId, true);
   }
 
-  async initialize(startBlockNumber: number, rpcLink?: string, providedWeb3?: Web3, logger?: any) {
-    this.startBlockNumber = startBlockNumber;
-    this.lastProcessedBlockNumber = startBlockNumber - 1;
-  }
-
-  setVerbose(verbose: boolean) {
-    this.verbose = verbose;
-  }
-
-  get address() {
-    return this.provider.senderAddressLowercase;
-  }
-
-  async processBlock(blockNumber: number) {
-    let block = await this.provider.getBlock(blockNumber);
-    for (let tx of block.transactions) {
-      tx.receipt = await this.provider.getTransactionReceipt(tx.hash);
-      this.processTx(tx as any as TxData, block.timestamp);
-    }
-    this.lastProcessedBlockNumber = blockNumber;
-  }
-
-  processTx(tx: TxData, blockTimestampSec: number) {
-    const prefix = tx.input?.slice(0, 10);
-    if (tx.to?.toLowerCase() === this.provider.contractAddresses.voting.toLowerCase()) {
-      if (prefix && prefix.length === 10) {
-        if (prefix === this.encoding.functionSignature("commit")) {
-          return this.extractCommit(tx, blockTimestampSec);
-        } else if (prefix === this.encoding.functionSignature("revealBitvote")) {
-          return this.extractReveal(tx, blockTimestampSec);
-        } else if (prefix === this.encoding.functionSignature("signResult")) {
-          return this.extractSignature(tx);
-        }
-      }
-    } else if (tx.to?.toLowerCase() === this.provider.contractAddresses.votingRewardManager.toLowerCase()) {
-      if (prefix === this.encoding.functionSignature("offerRewards")) {
-        return this.extractOffers(tx, blockTimestampSec);
-      }
-    }
-  }
-
-  /**
-   * Extract offers from transaction input.
-   * Assumption: the transaction is a call to `offerRewards` function.
-   * @param tx
-   */
-  private extractOffers(tx: TxData, blockTimestampSec: number): void {
-    let offers: RewardOffered[] = this.encoding.extractOffers(tx);
-    let currentPriceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
-    let currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
-    let nextRewardEpoch = currentRewardEpochId + 1;
-    if (offers && offers.length > 0) {
-      if (this.rewardEpochOffersClosed.get(nextRewardEpoch)) {
-        throw new Error("Reward epoch is closed");
-      }
-    }
-    let offersInEpoch = this.rewardEpochOffers.get(nextRewardEpoch) ?? [];
-    this.rewardEpochOffers.set(nextRewardEpoch, offersInEpoch);
-    for (let offer of offers) {
-      offersInEpoch.push(offer);
-    }
-  }
-
-  // commit(bytes32 _commitHash)
-  private extractCommit(tx: TxData, blockTimestampSec: number): void {
-    let hash = this.encoding.extractCommitHash(tx);
-    let from = tx.from.toLowerCase();
-    let epochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
-    let commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<string, string>();
-    this.priceEpochCommits.set(epochId, commitsInEpoch);
-    commitsInEpoch.set(from.toLowerCase(), hash);
-  }
-
-  // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices)
-  private extractReveal(tx: TxData, blockTimestampSec: number): void {
-    const result = this.encoding.extractRevealBitvoteData(tx);
-    let from = tx.from.toLowerCase();
-    let epochId = this.epochs.revealEpochIdForTime(blockTimestampSec);
-    if (epochId !== undefined) {
-      let revealsInEpoch = this.priceEpochReveals.get(epochId) || new Map<string, RevealBitvoteData>();
-      this.priceEpochReveals.set(epochId, revealsInEpoch);
-      revealsInEpoch.set(from.toLowerCase(), result);
-    }
-  }
-
-  // function signResult(bytes32 _merkleRoot, Signature calldata signature)
-  private extractSignature(tx: TxData): void {
-    let result = this.encoding.extractSignatureData(tx);
-    let from = tx.from.toLowerCase();
-    let signaturesInEpoch = this.priceEpochSignatures.get(result.epochId) || new Map<string, SignatureData>();
-    this.priceEpochSignatures.set(result.epochId, signaturesInEpoch);
-    signaturesInEpoch.set(from.toLowerCase(), result);
-  }
-
   async processNewBlocks() {
     const currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
       try {
-        await this.processBlock(this.lastProcessedBlockNumber + 1);
+        const block = await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
+        this.indexer.processBlock(block);
+        this.lastProcessedBlockNumber++;
       } catch (e) {
-        console.error(e);
+        this.logger.error(e);
         return;
       }
     }
   }
 
-  async onCommit(epochId: number) {
-    let epochData = this.priceEpochData.get(epochId);
+  async commit(epochId: number) {
+    const epochData = this.priceEpochData.get(epochId);
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
-    let hash = this.hashForCommit(
-      this.provider.senderAddressLowercase,
-      epochData.random!,
-      epochData.merkleRoot!,
-      epochData.pricesHex!
-    );
+    const hash = hashForCommit(this.address, epochData.random!, epochData.merkleRoot!, epochData.pricesHex!);
     await this.provider.commit(hash);
   }
 
-  async onReveal(epochId: number) {
-    let epochData = this.priceEpochData.get(epochId);
+  async reveal(epochId: number) {
+    const epochData = this.priceEpochData.get(epochId);
     if (!epochData) {
       throw new Error("Epoch data not found for epoch " + epochId);
     }
     await this.provider.revealBitvote(epochData);
   }
 
-  async onSign(epochId: number, skipCalculation = false) {
+  async sign(epochId: number, skipCalculation = false) {
     if (!skipCalculation) {
       await this.calculateResults(epochId);
     }
-    let result = this.priceEpochResults.get(epochId);
+    const result = this.priceEpochResults.get(epochId);
     if (!result) {
       throw new Error("Result not found");
     }
 
-    let signature = await this.provider.signMessage(result.merkleRoot!);
+    const signature = await this.provider.signMessage(result.merkleRoot!);
     await this.provider.signResult(epochId, result.merkleRoot!, {
       v: signature.v,
       r: signature.r,
@@ -263,128 +182,30 @@ export class FTSOClient {
     });
   }
 
-  // Encoding of signed result
-  // [4 epochId][32-byte merkle root][4-byte price sequence]
-
-  private calculateRevealers(priceEpochId: number): RevealResult {
-    let rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    let commits = this.priceEpochCommits.get(priceEpochId);
-    let reveals = this.priceEpochReveals.get(priceEpochId);
-
-    if (!commits || !reveals) {
-      // TODO: check if this is correct
-      throw new Error("Commits or reveals not found");
-    }
-
-    let eligibleCommitters = [...commits.keys()]
-      .map(sender => sender.toLowerCase())
-      .filter(voter => this.eligibleVoterWeights.get(rewardEpochId)?.has(voter.toLowerCase())!);
-    let revealed = eligibleCommitters.filter(sender => {
-      let revealData = reveals!.get(sender);
-      if (!revealData) {
-        return false;
-      }
-      let commitHash = this.priceEpochCommits.get(priceEpochId)?.get(sender);
-      return commitHash === this.hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
-    });
-    let failedCommit = [...this.eligibleVoterWeights.get(rewardEpochId)?.keys()!].filter(
-      voter => !revealed.includes(voter.toLowerCase())
-    );
-    let revealedSet = new Set<string>(revealed);
-    let committedFailedReveal = eligibleCommitters.filter(voter => !revealedSet.has(voter.toLowerCase()));
-    let revealedRandoms = revealed.map(voter => reveals!.get(voter.toLowerCase())!.random);
-    return {
-      revealed,
-      failedCommit,
-      committedFailedReveal,
-      revealedRandoms,
-    } as RevealResult;
-  }
-
-  /**
-   * Returns the list of eligible voters with their weights for the given reward epoch.
-   * It reads the data from the provider and caches it.
-   * @param rewardEpoch
-   * @returns
-   */
-  async refreshVoterToWeightMaps(rewardEpoch: number): Promise<void> {
-    let eligibleVoters = this.eligibleVotersForRewardEpoch.get(rewardEpoch);
-    if (!this.eligibleVoterWeights.has(rewardEpoch)) {
-      eligibleVoters = await this.provider.allVotersWithWeightsForRewardEpoch(rewardEpoch);
-      this.eligibleVotersForRewardEpoch.set(rewardEpoch, eligibleVoters);
-      let weightMap = new Map<string, BN>();
-      this.eligibleVoterWeights.set(rewardEpoch, weightMap);
-      let totalWeight = toBN(0);
-      for (let voter of eligibleVoters) {
-        weightMap.set(voter.voterAddress.toLowerCase(), voter.weight);
-        totalWeight = totalWeight.add(voter.weight);
-      }
-      this.eligibleVoterTotalWeight.set(rewardEpoch, totalWeight);
-    }
-  }
-
-  /**
-   *
-   * @param priceEpochId
-   * @param symbolMap
-   * @returns
-   */
   async calculateResults(priceEpochId: number) {
-    let rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     await this.refreshVoterToWeightMaps(rewardEpoch);
 
-    let revealResult = this.calculateRevealers(priceEpochId)!;
+    const revealResult = this.calculateRevealers(priceEpochId)!;
     if (revealResult.revealed.length === 0) {
       this.logger.info("No reveals !!!!!!!!!");
       // TODO: check when this can happen
       return;
     }
-    let orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
-    let numberOfFeeds = orderedPriceFeeds.length;
-
-    let voters = revealResult.revealed;
-    let weights = voters.map(voter => this.eligibleVoterWeights.get(rewardEpoch)!.get(voter.toLowerCase())!);
-
-    let pricesForVoters = voters.map(voter => {
-      let revealData = this.priceEpochReveals.get(priceEpochId)!.get(voter.toLowerCase())!;
-      let feeds =
-        revealData.prices
-          .slice(2)
-          .match(/(.{1,8})/g)
-          ?.map(hex => parseInt(hex, 16)) || [];
-      feeds = feeds.slice(0, numberOfFeeds);
-      return padEndArray(feeds, numberOfFeeds, 0);
-    });
-
-    let results: MedianCalculationResult[] = [];
-    for (let i = 0; i < numberOfFeeds; i++) {
-      let prices = pricesForVoters.map(allPrices => toBN(allPrices[i]));
-      let data = calculateMedian(voters, prices, weights);
-      this.logger.info("Median for feed", orderedPriceFeeds[i]?.getFeedInfo(), data);
-      results.push({
-        feed: {
-          offerSymbol: orderedPriceFeeds[i]?.getFeedInfo().offerSymbol,
-          quoteSymbol: orderedPriceFeeds[i]?.getFeedInfo().quoteSymbol,
-        } as Feed,
-        voters: voters,
-        prices: prices.map(price => price.toNumber()),
-        data: data,
-        weights: weights,
-      } as MedianCalculationResult);
-    }
+    const results: MedianCalculationResult[] = this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
 
     this.rewardCalculator.calculateClaimsForPriceEpoch(priceEpochId, results);
-    let rewards = this.rewardCalculator.getRewardMappingForPriceEpoch(priceEpochId);
-    let rewardClaimHashes: string[] = [];
-    for (let claimRewardList of rewards.values()) {
-      for (let claim of claimRewardList) {
-        claim.hash = hashClaimReward(claim, this.encoding.abiForName("claimRewardBodyDefinition")!);
+    const rewards = this.rewardCalculator.getRewardMappingForPriceEpoch(priceEpochId);
+    const rewardClaimHashes: string[] = [];
+    for (const claimRewardList of rewards.values()) {
+      for (const claim of claimRewardList) {
+        claim.hash = hashClaimReward(claim, encodingUtils.abiForName("claimRewardBodyDefinition")!);
         rewardClaimHashes.push(claim.hash);
       }
     }
 
-    let dataMerkleTree = new MerkleTree(rewardClaimHashes);
-    let dataMerkleRoot = dataMerkleTree.root!;
+    const dataMerkleTree = new MerkleTree(rewardClaimHashes);
+    const dataMerkleRoot = dataMerkleTree.root!;
 
     let priceMessage = "";
     let symbolMessage = "";
@@ -393,28 +214,27 @@ export class FTSOClient {
       symbolMessage += unprefixedSymbolBytes(data.feed);
     });
 
-    let message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
-
-    let priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
-    let merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
+    const message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
+    const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
+    const merkleRoot = sortedHashPair(priceMessageHash, dataMerkleRoot);
 
     // add merkle proofs to the claims for this FTSO client
-    rewards.get(this.provider.senderAddressLowercase)?.forEach(claim => {
+    rewards.get(this.address)?.forEach(claim => {
       if (!claim.hash) {
         throw new Error("Assert: Claim hash must be calculated.");
       }
-      let merkleProof = dataMerkleTree.getProof(claim.hash!);
+      const merkleProof = dataMerkleTree.getProof(claim.hash!);
       if (!merkleProof) {
-        throw new Error("Assert: Merkle proof must be set. ");
+        throw new Error("Assert: Merkle proof must be set.");
       }
       claim.merkleProof = merkleProof;
       // Adding the price message hash to the merkle proof, due to construction of the tree
       claim.merkleProof.push(priceMessageHash);
     });
 
-    this.logger.info(
+    this.logger.debug(
       `Storing price epoch results for ${priceEpochId}: data mr ${dataMerkleRoot}, mr: ${merkleRoot}, reward proofs: ${JSON.stringify(
-        rewards.get(this.provider.senderAddressLowercase)!!
+        rewards.get(this.address)!!
       )}`
     );
 
@@ -433,48 +253,28 @@ export class FTSOClient {
   }
 
   orderedPriceFeeds(priceEpochId: number): (IPriceFeed | undefined)[] {
-    let rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     return this.rewardCalculator
       .getFeedSequenceForRewardEpoch(rewardEpoch)
       .map(feed => this.priceFeeds.get(feedId(feed)));
   }
 
   preparePriceFeedsForPriceEpoch(priceEpochId: number) {
-    let data = this.priceEpochData.get(priceEpochId) || { epochId: priceEpochId };
+    const data = this.priceEpochData.get(priceEpochId) || { epochId: priceEpochId };
     this.priceEpochData.set(priceEpochId, data);
     data.merkleRoot = ZERO_BYTES32;
     data.prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed =>
       priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE
     );
-    data.pricesHex = this.packPrices(data.prices);
+    data.pricesHex = packPrices(data.prices);
     data.random = Web3.utils.randomHex(32);
     data.bitVote = "0x00";
   }
 
-  packPrices(prices: (number | string)[]) {
-    return (
-      "0x" +
-      prices
-        .map(price =>
-          parseInt("" + price)
-            .toString(16)
-            .padStart(8, "0")
-        )
-        .join("")
-    );
-  }
-
-  hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
-    const types = ["address", "uint256", "bytes32", "bytes"];
-    const values = [voter, random, merkleRoot, prices] as any[];
-    const encoded = coder.encodeParameters(types, values);
-    return Web3.utils.soliditySha3(encoded)!;
-  }
-
-  async onSendSignaturesForMyMerkleRoot(epochId: number) {
-    let signaturesTmp = [...this.priceEpochSignatures.get(epochId)!.values()];
-    let mySignatureHash = this.priceEpochResults.get(epochId)!.merkleRoot!;
-    let signatures = signaturesTmp
+  private async sendSignaturesForMyMerkleRoot(epochId: number) {
+    const signaturesTmp = [...this.indexer.getSignatures(epochId)!.values()];
+    const mySignatureHash = this.priceEpochResults.get(epochId)!.merkleRoot!;
+    const signatures = signaturesTmp
       .filter(sig => sig.merkleRoot === mySignatureHash)
       .map(sig => {
         return {
@@ -483,12 +283,23 @@ export class FTSOClient {
           s: sig.s,
         } as BareSignature;
       });
-    this.logger.info(`Calling finalize for ${epochId} with merkleRoot ${mySignatureHash}`);
-    return await this.provider.finalize(epochId, mySignatureHash, signatures);
+    // TODO: Handle finalization failures more gracefully – it's expected that another provier may finalize before us.
+    try {
+      const id = Web3.utils.randomHex(8);
+      this.logger.debug(`[${this.address.slice(0, 4)}] Trying to finalize ${id}`);
+      const result = await this.provider.finalize(epochId, mySignatureHash, signatures);
+      this.logger.debug(
+        `[${this.address.slice(0, 4)}] Finalization succesfull ${id}: ${result}, epoch ${epochId}, sig count ${
+          signatures.length
+        }`
+      );
+    } catch (e) {
+      this.logger.debug(`Error finalizing: ${e}`);
+    }
   }
 
   async publishPrices(epochId: number, symbolIndices: number[]) {
-    let result = this.priceEpochResults.get(epochId);
+    const result = this.priceEpochResults.get(epochId);
     if (!result) {
       throw new Error("Result not found");
     }
@@ -496,12 +307,12 @@ export class FTSOClient {
   }
 
   async claimReward(rewardEpochId: number) {
-    let claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
-    let result = this.priceEpochResults.get(claimPriceEpochId)!;
-    let rewardClaims = result.rewards.get(this.provider.senderAddressLowercase) || [];
-    let receipts = [];
-    for (let rewardClaim of rewardClaims) {
-      let receipt = await this.provider.claimReward(rewardClaim);
+    const claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
+    const result = this.priceEpochResults.get(claimPriceEpochId)!;
+    const rewardClaims = result.rewards.get(this.address) || [];
+    const receipts = [];
+    for (const rewardClaim of rewardClaims) {
+      const receipt = await this.provider.claimReward(rewardClaim);
       receipts.push(receipt);
     }
     return receipts;
@@ -509,13 +320,154 @@ export class FTSOClient {
 
   /**
    * Returns the list of claims for the given reward epoch and claimer.
-   * @param rewardEpochId
-   * @param claimer
-   * @returns
    */
   claimsForClaimer(rewardEpochId: number, claimer: string): ClaimReward[] {
-    let claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
-    let result = this.priceEpochResults.get(claimPriceEpochId)!;
+    const claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
+    const result = this.priceEpochResults.get(claimPriceEpochId)!;
     return result.rewards.get(claimer.toLowerCase()) || [];
+  }
+
+  /**
+   * Returns the list of eligible voters with their weights for the given reward epoch.
+   * It reads the data from the provider and caches it.
+   */
+  private async refreshVoterToWeightMaps(rewardEpoch: number): Promise<void> {
+    let eligibleVoters = this.eligibleVotersForRewardEpoch.get(rewardEpoch);
+    if (!this.eligibleVoterWeights.has(rewardEpoch)) {
+      eligibleVoters = await this.provider.allVotersWithWeightsForRewardEpoch(rewardEpoch);
+      this.eligibleVotersForRewardEpoch.set(rewardEpoch, eligibleVoters);
+      const weightMap = new Map<string, BN>();
+      this.eligibleVoterWeights.set(rewardEpoch, weightMap);
+      let totalWeight = toBN(0);
+      for (const voter of eligibleVoters) {
+        weightMap.set(voter.voterAddress.toLowerCase(), voter.weight);
+        totalWeight = totalWeight.add(voter.weight);
+      }
+      this.eligibleVoterTotalWeight.set(rewardEpoch, totalWeight);
+    }
+  }
+
+  private calculateFeedMedians(
+    priceEpochId: number,
+    revealResult: RevealResult,
+    rewardEpoch: number
+  ): MedianCalculationResult[] {
+    const orderedPriceFeeds = this.orderedPriceFeeds(priceEpochId);
+    const numberOfFeeds = orderedPriceFeeds.length;
+
+    const voters = revealResult.revealed;
+    const weights = voters.map(voter => this.eligibleVoterWeights.get(rewardEpoch)!.get(voter.toLowerCase())!);
+
+    const pricesForVoters = voters.map(voter => {
+      const revealData = this.indexer.getReveals(priceEpochId)!.get(voter.toLowerCase())!;
+      let feeds =
+        revealData.prices
+          .slice(2)
+          .match(/(.{1,8})/g)
+          ?.map(hex => parseInt(hex, 16)) || [];
+      feeds = feeds.slice(0, numberOfFeeds);
+      return padEndArray(feeds, numberOfFeeds, 0);
+    });
+
+    const results: MedianCalculationResult[] = [];
+    for (let i = 0; i < numberOfFeeds; i++) {
+      const prices = pricesForVoters.map(allPrices => toBN(allPrices[i]));
+      const data = calculateMedian(voters, prices, weights);
+      results.push({
+        feed: {
+          offerSymbol: orderedPriceFeeds[i]?.getFeedInfo().offerSymbol,
+          quoteSymbol: orderedPriceFeeds[i]?.getFeedInfo().quoteSymbol,
+        } as Feed,
+        voters: voters,
+        prices: prices.map(price => price.toNumber()),
+        data: data,
+        weights: weights,
+      } as MedianCalculationResult);
+    }
+    return results;
+  }
+
+  /** Once sufficient voter weight in received signatures is observed, will call finalize. */
+  private onSignatureMaybeFinalize = (async (signature: SignatureData) => {
+    this.logger.debug(`Got signature for epoch ${signature.epochId}`);
+
+    const signatureByVoter = this.indexer.getSignatures(signature.epochId)!;
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(signature.epochId);
+    const weightThreshold = await this.provider.thresholdForRewardEpoch(rewardEpoch);
+    const voterWeights = this.eligibleVoterWeights.get(rewardEpoch)!;
+
+    let totalWeight = toBN(0);
+    for (const [voter, signature] of signatureByVoter) {
+      const weight = voterWeights.get(voter)!;
+      totalWeight = totalWeight.add(weight);
+      if (totalWeight.gt(weightThreshold)) {
+        this.logger.debug(
+          `Weight threshold reached for ${
+            signature.epochId
+          }: ${totalWeight.toString()} >= ${weightThreshold.toString()}!, calling finalize with ${
+            signatureByVoter.size
+          } signatures`
+        );
+
+        this.indexer.off(Received.Signature, this.onSignatureMaybeFinalize);
+        await this.sendSignaturesForMyMerkleRoot(signature.epochId);
+        return;
+      }
+    }
+  }).bind(this);
+
+  private onRewardOffers = (async (priceEpoch: number, offers: RewardOffered[]) => {
+    const currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpoch);
+    const nextRewardEpoch = currentRewardEpochId + 1;
+    this.logger.debug(`Got reward offers for price epoch ${priceEpoch}, setting for ${nextRewardEpoch}`);
+    if (offers && offers.length > 0) {
+      if (this.rewardEpochOffersClosed.get(nextRewardEpoch)) {
+        this.logger.error("Reward epoch is closed");
+        return;
+      }
+    }
+    const offersInEpoch = this.rewardEpochOffers.get(nextRewardEpoch) ?? [];
+    this.rewardEpochOffers.set(nextRewardEpoch, offersInEpoch);
+    for (const offer of offers) {
+      offersInEpoch.push(offer);
+    }
+    this.logger.debug(`Set reward offers for reward epoch ${nextRewardEpoch}`);
+  }).bind(this);
+
+  // Encoding of signed result
+  // [4 epochId][32-byte merkle root][4-byte price sequence]
+  private calculateRevealers(priceEpochId: number): RevealResult {
+    const rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const commits = this.indexer.getCommits(priceEpochId);
+    const reveals = this.indexer.getReveals(priceEpochId);
+
+    if (!commits || !reveals) {
+      // TODO: check if this is correct
+      throw new Error("Commits or reveals not found");
+    }
+
+    const eligibleCommitters = [...commits.keys()]
+      .map(sender => sender.toLowerCase())
+      .filter(voter => this.eligibleVoterWeights.get(rewardEpochId)?.has(voter.toLowerCase())!);
+    const revealed = eligibleCommitters.filter(sender => {
+      const revealData = reveals!.get(sender);
+      if (!revealData) {
+        return false;
+      }
+      const commitHash = this.indexer.getCommits(priceEpochId)?.get(sender);
+      return commitHash === hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
+    });
+    const failedCommit = [...this.eligibleVoterWeights.get(rewardEpochId)?.keys()!].filter(
+      voter => !revealed.includes(voter.toLowerCase())
+    );
+    const revealedSet = new Set<string>(revealed);
+    const committedFailedReveal = eligibleCommitters.filter(voter => !revealedSet.has(voter.toLowerCase()));
+    const revealedRandoms = revealed.map(voter => reveals!.get(voter.toLowerCase())!.random);
+    return {
+      revealed,
+      failedCommit,
+      committedFailedReveal,
+      revealedRandoms,
+    } as RevealResult;
   }
 }
