@@ -12,6 +12,9 @@ import {
 import { writeFileSync } from "fs";
 import { ContractAddresses, OUTPUT_FILE } from "./common";
 import { Artifacts, HardhatRuntimeEnvironment } from "hardhat/types";
+import { getLogger } from "../../src/utils/logger";
+
+const logger = getLogger("deploy-contracts");
 
 // TODO: extract constants to config
 const REWARD_VALUE = 1000999;
@@ -54,7 +57,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
 
   outputAddresses(deployed);
 
-  console.log("Deployed all contracts");
+  logger.info("Deployed all contracts");
   return deployed;
 }
 
@@ -121,5 +124,5 @@ async function deployVotingManager(artifacts: Artifacts, governance: Account): P
 function outputAddresses(deployed: ContractAddresses) {
   const contents = JSON.stringify(deployed, null, 2);
   writeFileSync(OUTPUT_FILE, contents);
-  console.log(`Contract addresses written to ${OUTPUT_FILE}:\n${contents}`);
+  logger.info(`Contract addresses written to ${OUTPUT_FILE}:\n${contents}`);
 }

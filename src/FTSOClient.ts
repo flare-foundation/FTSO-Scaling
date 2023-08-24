@@ -24,6 +24,7 @@ import {
   VoterWithWeight,
 } from "./voting-interfaces";
 import { ZERO_BYTES32, feedId, hashClaimReward, sortedHashPair, toBN, unprefixedSymbolBytes } from "./voting-utils";
+import { getLogger } from "./utils/logger";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 
@@ -41,6 +42,8 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
  * It supports pluggable price feeds and voting providers (Truffle for testing, Web3 for production).
  */
 export class FTSOClient {
+  private readonly logger = getLogger(FTSOClient.name);
+
   rewardCalculator!: RewardCalculator;
 
   startBlock: number = 0;
@@ -332,7 +335,7 @@ export class FTSOClient {
 
     let revealResult = this.calculateRevealers(priceEpochId)!;
     if (revealResult.revealed.length === 0) {
-      console.log("No reveals !!!!!!!!!");
+      this.logger.info("No reveals !!!!!!!!!");
       // TODO: check when this can happen
       return;
     }
@@ -357,6 +360,7 @@ export class FTSOClient {
     for (let i = 0; i < numberOfFeeds; i++) {
       let prices = pricesForVoters.map(allPrices => toBN(allPrices[i]));
       let data = calculateMedian(voters, prices, weights);
+      this.logger.info("Median for feed", orderedPriceFeeds[i]?.getFeedInfo(), data);
       results.push({
         feed: {
           offerSymbol: orderedPriceFeeds[i]?.getFeedInfo().offerSymbol,
@@ -407,6 +411,12 @@ export class FTSOClient {
       // Adding the price message hash to the merkle proof, due to construction of the tree
       claim.merkleProof.push(priceMessageHash);
     });
+
+    this.logger.info(
+      `Storing price epoch results for ${priceEpochId}: data mr ${dataMerkleRoot}, mr: ${merkleRoot}, reward proofs: ${JSON.stringify(
+        rewards.get(this.provider.senderAddressLowercase)!!
+      )}`
+    );
 
     this.priceEpochResults.set(priceEpochId, {
       priceEpochId: priceEpochId,
@@ -473,6 +483,7 @@ export class FTSOClient {
           s: sig.s,
         } as BareSignature;
       });
+    this.logger.info(`Calling finalize for ${epochId} with merkleRoot ${mySignatureHash}`);
     return await this.provider.finalize(epochId, mySignatureHash, signatures);
   }
 
