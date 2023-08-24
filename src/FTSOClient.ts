@@ -66,6 +66,8 @@ export class FTSOClient {
   private readonly rewardEpochOffersClosed = new Map<number, boolean>();
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
+  private readonly signatureListener = (s: SignatureData) => this.onSignatureMaybeFinalize(s);
+
   get address() {
     return this.provider.senderAddressLowercase;
   }
@@ -78,7 +80,7 @@ export class FTSOClient {
       provider.rewardEpochDurationInEpochs
     );
     this.indexer = new BlockIndexer(this.epochs, this.provider.contractAddresses);
-    this.indexer.on(Received.Offers, this.onRewardOffers);
+    this.indexer.on(Received.Offers, (pe: number, o: RewardOffered[]) => this.onRewardOffers(pe, o));
 
     this.lastProcessedBlockNumber = startBlockNumber - 1;
   }
@@ -88,12 +90,12 @@ export class FTSOClient {
   }
 
   listenForSignatures() {
-    this.indexer.on(Received.Signature, this.onSignatureMaybeFinalize);
+    this.indexer.on(Received.Signature, this.signatureListener);
   }
 
   clearSignatureListener() {
     try {
-      this.indexer.off(Received.Signature, this.onSignatureMaybeFinalize);
+      this.indexer.off(Received.Signature, this.signatureListener);
     } catch (e) {
       // Ignore - listener was removed before calling finalize.
     }
@@ -388,7 +390,7 @@ export class FTSOClient {
   }
 
   /** Once sufficient voter weight in received signatures is observed, will call finalize. */
-  private onSignatureMaybeFinalize = (async (signature: SignatureData) => {
+  private async onSignatureMaybeFinalize(signature: SignatureData) {
     this.logger.debug(`Got signature for epoch ${signature.epochId}`);
 
     const signatureByVoter = this.indexer.getSignatures(signature.epochId)!;
@@ -409,14 +411,14 @@ export class FTSOClient {
           } signatures`
         );
 
-        this.indexer.off(Received.Signature, this.onSignatureMaybeFinalize);
+        this.indexer.off(Received.Signature, this.signatureListener);
         await this.sendSignaturesForMyMerkleRoot(signature.epochId);
         return;
       }
     }
-  }).bind(this);
+  }
 
-  private onRewardOffers = (async (priceEpoch: number, offers: RewardOffered[]) => {
+  private async onRewardOffers(priceEpoch: number, offers: RewardOffered[]) {
     const currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpoch);
     const nextRewardEpoch = currentRewardEpochId + 1;
     this.logger.debug(`Got reward offers for price epoch ${priceEpoch}, setting for ${nextRewardEpoch}`);
@@ -432,7 +434,7 @@ export class FTSOClient {
       offersInEpoch.push(offer);
     }
     this.logger.debug(`Set reward offers for reward epoch ${nextRewardEpoch}`);
-  }).bind(this);
+  }
 
   // Encoding of signed result
   // [4 epochId][32-byte merkle root][4-byte price sequence]
