@@ -24,7 +24,7 @@ import {
   deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, loadContract } from "../web3-utils";
+import { getAccount, loadContract, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 
@@ -131,14 +131,12 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Finalize", this.contracts.priceOracle.options.address, methodCall);
   }
 
-  async signMessage(message: string): Promise<BareSignature> {
-    const signature = this.account.sign(message);
+  signMessage(message: string): BareSignature {
+    return signMessage(web3, message, this.account.privateKey);
+  }
 
-    return <BareSignature>{
-      v: parseInt(signature.v),
-      r: signature.r,
-      s: signature.s,
-    };
+  recoverSigner(message: string, signature: BareSignature): string {
+    return recoverSigner(web3, message, signature);
   }
 
   async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {

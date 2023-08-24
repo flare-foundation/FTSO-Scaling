@@ -38,7 +38,8 @@ export interface IVotingProvider {
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
 
   ////////////// Signing //////////////
-  signMessage(message: string): Promise<BareSignature>;
+  signMessage(message: string): BareSignature;
+  recoverSigner(message: string, signature: BareSignature): string;
 
   ////////////// Block calls //////////////
   getBlockNumber(): Promise<number>;

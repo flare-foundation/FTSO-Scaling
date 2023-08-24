@@ -73,6 +73,12 @@ export interface SignatureData {
   s: string;
 }
 
+export interface FinalizeData {
+  epochId: number;
+  merkleRoot: string;
+  signatures: BareSignature[];
+}
+
 export interface TxData {
   blockNumber: number;
   hash: string;

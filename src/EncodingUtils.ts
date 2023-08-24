@@ -1,7 +1,14 @@
 import { readFileSync } from "fs";
 import coder from "web3-eth-abi";
 import { AbiItem } from "web3-utils/types";
-import { RevealBitvoteData, RewardOffered, SignatureData, TxData } from "./voting-interfaces";
+import {
+  BareSignature,
+  FinalizeData,
+  RevealBitvoteData,
+  RewardOffered,
+  SignatureData,
+  TxData,
+} from "./voting-interfaces";
 import { convertRewardOfferedEvent } from "./voting-utils";
 
 const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
@@ -98,6 +105,21 @@ class EncodingUtils {
       r: resultTmp.signature.r,
       s: resultTmp.signature.s,
     } as SignatureData;
+  }
+
+  extractFinalize(tx: TxData): FinalizeData {
+    const resultTmp = this.decodeFunctionCall(tx, "finalize");
+    return {
+      epochId: parseInt(resultTmp._epochId, 10),
+      merkleRoot: resultTmp._merkleRoot,
+      signatures: resultTmp.signatures.map((s: any) => {
+        return {
+          v: parseInt(s.v, 10),
+          r: s.r,
+          s: s.s,
+        } as BareSignature;
+      }),
+    } as unknown as FinalizeData;
   }
 
   private decodeFunctionCall(tx: TxData, name: string) {

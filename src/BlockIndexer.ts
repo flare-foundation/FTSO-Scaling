@@ -68,7 +68,8 @@ export class BlockIndexer extends EventEmitter {
     // TODO: extract signers from finalize call payload – they should get rewarded
     const successful = tx.receipt!.status == true;
     if (successful) {
-      this.emit(Received.Finalize, tx.from);
+      const data = encodingUtils.extractFinalize(tx);
+      this.emit(Received.Finalize, tx.from, data);
     }
   }
 

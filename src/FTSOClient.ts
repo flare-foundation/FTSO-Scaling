@@ -139,14 +139,9 @@ export class FTSOClient {
   async processNewBlocks() {
     const currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
-      try {
-        const block = await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
-        this.indexer.processBlock(block);
-        this.lastProcessedBlockNumber++;
-      } catch (e) {
-        this.logger.error(e);
-        return;
-      }
+      const block = await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
+      this.indexer.processBlock(block);
+      this.lastProcessedBlockNumber++;
     }
   }
 
@@ -176,7 +171,7 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
 
-    const signature = await this.provider.signMessage(result.merkleRoot!);
+    const signature = this.provider.signMessage(result.merkleRoot!);
     await this.provider.signResult(epochId, result.merkleRoot!, {
       v: signature.v,
       r: signature.r,
