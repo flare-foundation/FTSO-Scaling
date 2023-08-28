@@ -122,6 +122,10 @@ export class TruffleProvider implements IVotingProvider {
     }
   }
 
+  async getMerkleRoot(epochId: number): Promise<string> {
+    return this.contracts.voting.getMerkleRoot(epochId);
+  }
+
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     return this.contracts.priceOracle.publishPrices(
       epochResult.dataMerkleRoot,

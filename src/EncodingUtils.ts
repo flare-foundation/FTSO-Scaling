@@ -110,6 +110,7 @@ class EncodingUtils {
   extractFinalize(tx: TxData): FinalizeData {
     const resultTmp = this.decodeFunctionCall(tx, "finalize");
     return {
+      from: tx.from.toLowerCase(),
       epochId: parseInt(resultTmp._epochId, 10),
       merkleRoot: resultTmp._merkleRoot,
       signatures: resultTmp.signatures.map((s: any) => {

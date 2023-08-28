@@ -3,6 +3,8 @@ import { PriceEpochRewards } from "./PriceEpochRewards";
 import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } from "./voting-interfaces";
 import { feedId, toBN } from "./voting-utils";
 
+export type PriceEpochRewards = Map<string, ClaimReward[]>;
+
 /**
  * Reward calculator for sequence of reward epochs.
  * In essence it is initialized with the start reward epoch and the corresponding initial price epoch.
@@ -11,28 +13,27 @@ import { feedId, toBN } from "./voting-utils";
  */
 export class RewardCalculator {
   ////////////// Initial processing boundaries //////////////
-  // First price epoch of the reward epoch 'initialRewardEpoch'.
-  private initialPriceEpoch: number = 0;
+  /** First price epoch of initialRewardEpoch for which we're calculating rewards. */
+  private initialPriceEpoch: number;
 
   ////////////// Progress counters //////////////
-  // First price epoch of the next reward epoch in calculation. Used to determine when to move to the next reward epoch.
-  private firstPriceEpochInNextRewardEpoch: number = 0;
-  // Next price epoch to be processed.
-  private currentUnprocessedPriceEpoch: number = 0;
-  // Current reward epoch that is being processed.
-  private currentRewardEpoch: number = 0;
+  /** First price epoch of the next reward epoch in calculation. Used to determine when to move to the next reward epoch. */
+  private firstPriceEpochInNextRewardEpoch: number;
+  /** Next price epoch to be processed. */
+  private currentUnprocessedPriceEpoch: number;
+  /** Current reward epoch that is being processed. */
+  private currentRewardEpoch: number;
 
   ////////////// Offer data //////////////
-  // rewardEpochId => list of reward offers
+  /** rewardEpochId => list of reward offers */
   private readonly rewardOffers = new Map<number, RewardOffered[]>();
-  // rewardEpochId => feedId => list of reward offers
-  // The offers in the same currency are accumulated
+  /** rewardEpochId => feedId => list of reward offers. The offers in the same currency are accumulated. */
   readonly rewardOffersBySymbol = new Map<number, Map<string, RewardOffered[]>>();
 
   ////////////// Claim data //////////////
-  // rewardEpochId => list of cumulative claims
+  /** rewardEpochId => list of cumulative claims */
   private readonly rewardEpochCumulativeRewards = new Map<number, ClaimReward[]>();
-  // rewardEpochId => canonical list of feeds in the reward epoch
+  /** rewardEpochId => canonical list of feeds in the reward epoch */
   private readonly feedSequenceForRewardEpoch = new Map<number, FeedValue[]>();
 
   constructor(private readonly epochs: EpochSettings, initialRewardEpoch: number) {
@@ -91,7 +92,7 @@ export class RewardCalculator {
    * The offers are customized for the given price epoch, containing the share of
    * the reward for the given price epoch.
    */
-  public offersForPriceEpochAndSymbol(priceEpochId: number, feeds: Feed[]): Map<string, RewardOffered[]> {
+  public offersForPriceEpochBySymbol(priceEpochId: number, feeds: Feed[]): Map<string, RewardOffered[]> {
     const priceEpochOffersBySymbol = new Map<string, RewardOffered[]>();
     const rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const rewardEpochOffersBySymbol = this.rewardOffersBySymbol.get(rewardEpochId);
@@ -184,36 +185,94 @@ export class RewardCalculator {
 
   /**
    * Calculates the claims for the given price epoch.
-   * These claims are then stored for each price epoch in the priceEpochClaims map.
+   *
+   * Price epoch reward offers are divided into three parts:
+   * - 10% for finalizer of the previous epoch: {@link finalizerAddress}.
+   * - 10% for signers of the previous epoch results: {@link signers}.
+   * - 80% + remainder for the median calculation results.
+   *
+   * Generated claims are stored for each price epoch in the priceEpochClaims map.
    * During each reward epoch the claims are incrementally merged into cumulative claims for the reward epoch
    * which are stored in the rewardEpochCumulativeRewards map.
-   * The function also detects the first price epoch in the next reward epoch and triggers
-   * the calculation of the cumulative claims for the next reward epoch.
-   * After the end of the reward epoch and the end of the first price epoch in the next reward epoch
-   * the cumulative claims for the reward epoch are stored in the rewardEpochCumulativeRewards map.
    *
    * The function must be called for sequential price epochs.
    */
-  public calculateClaimsForPriceEpoch(priceEpochId: number, calculationResults: MedianCalculationResult[]) {
+  public calculateClaimsForPriceEpoch(
+    priceEpochId: number,
+    /** Can only be undefined during for the very first price epoch in FTSO */
+    finalizerAddress: string | undefined,
+    signers: string[],
+    calculationResults: MedianCalculationResult[],
+    voterWeights: Map<string, BN>
+  ) {
     if (priceEpochId !== this.currentUnprocessedPriceEpoch) {
       throw new Error(
         `Price epoch ${priceEpochId} is not the current unprocessed price epoch ${this.currentUnprocessedPriceEpoch}`
       );
     }
-    let offersBySymbol = this.offersForPriceEpochAndSymbol(
-      priceEpochId,
-      calculationResults.map(result => result.feed)
-    );
-    let claims = PriceEpochRewards.claimsForSymbols(priceEpochId, calculationResults, offersBySymbol);
-    // regular price epoch in the current reward epoch
+
+    const rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const rewardEpochOffers = this.rewardOffers.get(rewardEpochId);
+    const priceEpochOffers = rewardEpochOffers?.map(offer => this.rewardOfferForPriceEpoch(priceEpochId, offer))!;
+
+    const signingOffers: RewardOffered[] = [];
+    const finalizationOffers: RewardOffered[] = [];
+    const medianOffers: RewardOffered[] = [];
+
+    let currentPriceEpochClaims: ClaimReward[] = [];
+
+    if (finalizerAddress === undefined) {
+      medianOffers.push(...priceEpochOffers);
+    } else {
+      for (const offer of priceEpochOffers) {
+        const forSigning = offer.amount.div(toBN(10)); // 10%
+        const forFinalization = offer.amount.div(toBN(10)); // 10%
+        const forMedian = offer.amount.sub(forSigning).sub(forFinalization); // 80%
+
+        signingOffers.push({
+          ...offer,
+          amount: forSigning,
+        } as RewardOffered);
+        finalizationOffers.push({
+          ...offer,
+          amount: forFinalization,
+        } as RewardOffered);
+        medianOffers.push({
+          ...offer,
+          amount: forMedian,
+        } as RewardOffered);
+      }
+
+      const finalizationClaims = PriceEpochRewards.claimsForFinalizer(
+        finalizationOffers,
+        voterWeights.get(finalizerAddress)!,
+        finalizerAddress,
+        priceEpochId
+      );
+      currentPriceEpochClaims = PriceEpochRewards.mergeClaims(
+        currentPriceEpochClaims,
+        finalizationClaims,
+        priceEpochId
+      );
+
+      const signerClaims = PriceEpochRewards.claimsForSigners(signingOffers, signers, voterWeights, priceEpochId);
+      currentPriceEpochClaims = PriceEpochRewards.mergeClaims(currentPriceEpochClaims, signerClaims, priceEpochId);
+    }
+    const resultClaims = PriceEpochRewards.claimsForSymbols(priceEpochId, calculationResults, medianOffers);
+    currentPriceEpochClaims = PriceEpochRewards.mergeClaims(currentPriceEpochClaims, resultClaims, priceEpochId);
+
+    this.addToCumulativeClaims(priceEpochId, currentPriceEpochClaims);
+    this.currentUnprocessedPriceEpoch++;
+  }
+
+  private addToCumulativeClaims(priceEpochId: number, currentPriceEpochClaims: ClaimReward[]) {
     if (priceEpochId < this.firstPriceEpochInNextRewardEpoch - 1) {
-      this.onRegularPriceEpoch(priceEpochId, claims);
+      this.onRegularPriceEpoch(priceEpochId, currentPriceEpochClaims);
     } else {
       // we are in the last price epoch of the current reward epoch
       // the reward epoch is not yet shifted to the next reward epoch, matching the price epoch
-      this.onLastPriceEpoch(claims, priceEpochId);
+      this.onLastPriceEpoch(priceEpochId, currentPriceEpochClaims);
     }
-    this.currentUnprocessedPriceEpoch++;
   }
 
   private onRegularPriceEpoch(priceEpochId: number, claims: ClaimReward[]) {
@@ -229,7 +288,7 @@ export class RewardCalculator {
     }
   }
 
-  private onLastPriceEpoch(claims: ClaimReward[], priceEpochId: number) {
+  private onLastPriceEpoch(priceEpochId: number, claims: ClaimReward[]) {
     let previousClaims = this.rewardEpochCumulativeRewards.get(this.currentRewardEpoch);
 
     if (previousClaims === undefined) {
@@ -247,18 +306,18 @@ export class RewardCalculator {
   /**
    * Calculates the map from voter address to the list of claims for the given price epoch.
    */
-  public getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward[]> {
-    let result = this.rewardEpochCumulativeRewards.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpoch));
+  public getRewardMappingForPriceEpoch(priceEpoch: number): PriceEpochRewards {
+    const result = this.rewardEpochCumulativeRewards.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpoch));
     if (result === undefined) {
       throw new Error(`Reward mapping is not defined for price epoch ${priceEpoch}`);
     }
-    let rewardMapping = new Map<string, ClaimReward[]>();
-    let currencyAddresses = new Map<string, Set<string>>();
-    for (let claim of result) {
-      let address = claim.claimRewardBody.voterAddress;
-      let currencyAddress = claim.claimRewardBody.currencyAddress;
-      let addressClaims = rewardMapping.get(address) || [];
-      let addressCurrencyAddresses = currencyAddresses.get(address) || new Set<string>();
+    const rewardMapping = new Map<string, ClaimReward[]>();
+    const currencyAddresses = new Map<string, Set<string>>();
+    for (const claim of result) {
+      const address = claim.claimRewardBody.voterAddress;
+      const currencyAddress = claim.claimRewardBody.currencyAddress;
+      const addressClaims = rewardMapping.get(address) || [];
+      const addressCurrencyAddresses = currencyAddresses.get(address) || new Set<string>();
       rewardMapping.set(address, addressClaims);
       currencyAddresses.set(address, addressCurrencyAddresses);
       addressClaims.push(claim);

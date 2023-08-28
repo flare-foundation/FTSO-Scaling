@@ -12,7 +12,7 @@ import coder from "web3-eth-abi";
 import utils from "web3-utils";
 
 /**
- * Collection of utility methods used to calculate rewards for a given price epoch.
+ * Collection of utility methods used for reward claim calculation.
  */
 export namespace PriceEpochRewards {
   /**
@@ -193,7 +193,7 @@ export namespace PriceEpochRewards {
 
   /**
    * Merges new claims with previous claims where previous claims are the cumulative
-   * claims for all previous price epochs withing the same reward epoch.
+   * claims for all previous price epochs within the same reward epoch.
    * Merging is done by the key (address, poolId).
    * This function can be used to accumulate claims for all slots in the same reward epoch
    * as well as to accumulate claims for all price epochs in the same reward epoch.
@@ -255,19 +255,32 @@ export namespace PriceEpochRewards {
   export function claimsForSymbols(
     priceEpoch: number,
     calculationResults: MedianCalculationResult[],
-    offersBySymbol: Map<string, RewardOffered[]>
+    offers: RewardOffered[]
   ): ClaimReward[] {
+    const offersBySymbol = getOffersBySymbol(offers);
+
     let claims: ClaimReward[] = [];
-    let offers: RewardOffered[] = [];
+    const processedOffers: RewardOffered[] = [];
     for (let calculationResult of calculationResults) {
-      let priceEpochOffers = offersBySymbol.get(feedId(calculationResult.feed))!;
-      for (let offer of priceEpochOffers) {
-        offers.push(offer);
+      const priceEpochOffers = offersBySymbol.get(feedId(calculationResult.feed))!;
+      for (const offer of priceEpochOffers) {
         claims = mergeClaims(claims, calculateClaimsForOffer(priceEpoch, offer, calculationResult));
+        processedOffers.push(offer);
       }
     }
-    assertOffersVsClaimsStats(offers, claims);
+    assertOffersVsClaimsStats(processedOffers, claims);
     return claims;
+  }
+
+  function getOffersBySymbol(offers: RewardOffered[]) {
+    const offersBySymbol = new Map<string, RewardOffered[]>();
+    for (const offer of offers) {
+      const offerFeedId = feedId(offer);
+      const existing = offersBySymbol.get(offerFeedId) || [];
+      existing.push(offer);
+      offersBySymbol.set(offerFeedId, existing);
+    }
+    return offersBySymbol;
   }
 
   /**
@@ -326,5 +339,80 @@ export namespace PriceEpochRewards {
         throw new Error(`offerAmount ${offerAmount} != claimAmount ${claimAmount} for ${currencyAddress}`);
       }
     }
+  }
+
+  /**
+   * Generates reward claims for the party that submitted the finalization transaction in the previous price epoch.
+   */
+  export function claimsForFinalizer(
+    finalizationOffers: RewardOffered[],
+    finalizerWeight: BN,
+    finalizerAddress: string,
+    priceEpochId: number
+  ) {
+    let claims: ClaimReward[] = [];
+    for (const offer of finalizationOffers) {
+      const claim = {
+        merkleProof: [],
+        claimRewardBody: {
+          amount: offer.amount,
+          weight: finalizerWeight,
+          currencyAddress: offer.currencyAddress,
+          voterAddress: finalizerAddress,
+          epochId: priceEpochId,
+        } as ClaimRewardBody,
+      } as ClaimReward;
+
+      claims = mergeClaims(claims, [claim]);
+    }
+    return claims;
+  }
+
+  /**
+   * Generates reward claims for voters whose signatures were included the the previous epoch's finalization transaction.
+   */
+  export function claimsForSigners(
+    signingOffers: RewardOffered[],
+    signers: string[],
+    voterWeights: Map<string, BN>,
+    priceEpochId: number
+  ) {
+    const totalWeight = signers.map(signer => voterWeights.get(signer)!).reduce((a, b) => a.add(b), toBN(0));
+    let mergedClaims: ClaimReward[] = [];
+    for (const offer of signingOffers) {
+      const signingClaims = [];
+      let availableReward = offer.amount;
+      let availableWeight = totalWeight;
+      let totalReward = toBN(0);
+
+      for (const signer of signers) {
+        const signerWeight = voterWeights.get(signer)!;
+        const signerReward = signerWeight.mul(availableReward).div(availableWeight);
+        availableReward = availableReward.sub(signerReward);
+        availableWeight = availableWeight.sub(signerWeight);
+
+        totalReward = totalReward.add(signerReward);
+
+        signingClaims.push({
+          merkleProof: [],
+          claimRewardBody: {
+            amount: signerReward,
+            weight: signerWeight,
+            currencyAddress: offer.currencyAddress,
+            voterAddress: signer,
+            epochId: priceEpochId,
+          } as ClaimRewardBody,
+        } as ClaimReward);
+      }
+      if (!totalReward.eq(offer.amount)) {
+        throw new Error(
+          `Total reward for ${
+            offer.currencyAddress
+          } is not equal to the offer amount: ${offer.amount.toString()} != ${totalReward.toString()}`
+        );
+      }
+      mergedClaims = PriceEpochRewards.mergeClaims(mergedClaims, signingClaims, priceEpochId);
+    }
+    return mergedClaims;
   }
 }

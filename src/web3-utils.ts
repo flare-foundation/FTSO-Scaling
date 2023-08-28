@@ -56,7 +56,7 @@ export function signMessage(web3: Web3, message: string, privateKey: string): Ba
 }
 
 export function recoverSigner(web3: Web3, message: string, signature: BareSignature): string {
-  return web3.eth.accounts.recover(message,  "0x" + signature.v.toString(16), signature.r, signature.s);
+  return web3.eth.accounts.recover(message, "0x" + signature.v.toString(16), signature.r, signature.s).toLowerCase();
 }
 
 export function getAbi(abiPath: string) {

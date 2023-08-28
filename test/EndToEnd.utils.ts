@@ -60,19 +60,7 @@ export async function offerRewards(
   for (let i = 0; i < symbols.length; i++) {
     const amount = rewardValue.add(toBN(i));
 
-    const basicOffer = {
-      amount: amount,
-      currencyAddress: ZERO_ADDRESS,
-      offerSymbol: toBytes4(symbols[i].offerSymbol),
-      quoteSymbol: toBytes4(symbols[i].quoteSymbol),
-      leadProviders: leadProviders,
-      rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
-      flrValue: amount,
-      elasticBandWidthPPM: ELASTIC_BAND_WIDTH_PPM,
-      iqrSharePPM: IQR_SHARE,
-      pctSharePPM: PCT_SHARE,
-      remainderClaimer: ZERO_ADDRESS,
-    } as Offer;
+    const basicOffer = generateOfferForSymbol(amount, symbols[i], leadProviders);
     if (i < erc20Coins.length) {
       offersSent.push({ ...basicOffer, currencyAddress: erc20Coins[i].address, amount: rewardValue });
     } else {
@@ -116,6 +104,22 @@ export async function offerRewards(
   }
 
   console.log(`Finished Offering rewards for epoch ${rewardEpochId}`);
+}
+
+export function generateOfferForSymbol(amount: BN, symbol: Feed, leadProviders: string[]): Offer {
+  return {
+    amount: amount,
+    currencyAddress: ZERO_ADDRESS,
+    offerSymbol: toBytes4(symbol.offerSymbol),
+    quoteSymbol: toBytes4(symbol.quoteSymbol),
+    leadProviders: leadProviders,
+    rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
+    flrValue: amount,
+    elasticBandWidthPPM: ELASTIC_BAND_WIDTH_PPM,
+    iqrSharePPM: IQR_SHARE,
+    pctSharePPM: PCT_SHARE,
+    remainderClaimer: ZERO_ADDRESS,
+  } as Offer;
 }
 
 export async function syncToLastBlock(ftsoClients: FTSOClient[]) {

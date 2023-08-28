@@ -2,7 +2,7 @@ import { EventEmitter } from "events";
 import { ContractAddresses } from "../deployment/tasks/common";
 import { encodingUtils } from "./EncodingUtils";
 import { EpochSettings } from "./EpochSettings";
-import { BlockData, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
 
 declare type Address = string;
 declare type EpochId = number;
@@ -20,6 +20,7 @@ export class BlockIndexer extends EventEmitter {
   private readonly priceEpochCommits = new Map<EpochId, Map<Address, string>>();
   private readonly priceEpochReveals = new Map<EpochId, Map<Address, RevealBitvoteData>>();
   private readonly priceEpochSignatures = new Map<EpochId, Map<Address, SignatureData>>();
+  private readonly priceEpochFinalizes = new Map<EpochId, FinalizeData>();
 
   constructor(private readonly epochs: EpochSettings, private readonly contractAddresses: ContractAddresses) {
     super({ captureRejections: true });
@@ -35,6 +36,10 @@ export class BlockIndexer extends EventEmitter {
 
   getSignatures(priceEpochId: EpochId): Map<Address, SignatureData> {
     return this.priceEpochSignatures.get(priceEpochId) ?? new Map();
+  }
+
+  getFinalize(priceEpochId: EpochId): FinalizeData | undefined {
+    return this.priceEpochFinalizes.get(priceEpochId);
   }
 
   processBlock(block: BlockData) {
@@ -65,11 +70,14 @@ export class BlockIndexer extends EventEmitter {
   }
 
   private extractFinalize(tx: TxData) {
-    // TODO: extract signers from finalize call payload – they should get rewarded
     const successful = tx.receipt!.status == true;
     if (successful) {
-      const data = encodingUtils.extractFinalize(tx);
-      this.emit(Received.Finalize, tx.from, data);
+      const finalizeData = encodingUtils.extractFinalize(tx);
+      if (this.priceEpochFinalizes.has(finalizeData.epochId)) {
+        throw new Error(`Finalize data already exists for epoch ${finalizeData.epochId}`);
+      }
+      this.priceEpochFinalizes.set(finalizeData.epochId, finalizeData);
+      this.emit(Received.Finalize, tx.from, finalizeData);
     }
   }
 

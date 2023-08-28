@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { MedianCalculationSummary } from "./voting-interfaces";
+import { Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-interfaces";
 import { toBN } from "./voting-utils";
 
 /**
@@ -15,10 +15,6 @@ export interface VoteData {
 /**
  * Repacks voters, prices and weights into a single array of VoteData.
  * All arrays must have the same length.
- * @param voters 
- * @param prices 
- * @param weights 
- * @returns 
  */
 function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
   let result: VoteData[] = [];
@@ -30,18 +26,28 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
       voter: voters[i],
       price: prices[i],
       weight: weights[i],
-      initialIndex: i
+      initialIndex: i,
     });
   }
   return result;
 }
 
+export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {
+  const medianSummary = calculateMedian(voters, prices, weights);
+  return {
+    feed: {
+      offerSymbol: feed.offerSymbol,
+      quoteSymbol: feed.quoteSymbol,
+    } as Feed,
+    voters: voters,
+    prices: prices.map(price => price.toNumber()),
+    data: medianSummary,
+    weights: weights,
+  } as MedianCalculationResult;
+}
+
 /**
  * Given a list of voters, prices and weights, it calculates the median and other statistics.
- * @param voters 
- * @param prices 
- * @param weights 
- * @returns 
  */
 export function calculateMedian(voters: string[], prices: BN[], weights: BN[]): MedianCalculationSummary {
   let voteData = repack(voters, prices, weights);
@@ -55,7 +61,7 @@ export function calculateMedian(voters: string[], prices: BN[], weights: BN[]): 
     return 0;
   });
   let totalWeight = toBN(0);
-  weights.forEach(w => totalWeight = totalWeight.add(w));
+  weights.forEach(w => (totalWeight = totalWeight.add(w)));
   let medianWeight = totalWeight.div(toBN(2)).add(totalWeight.mod(toBN(2)));
   let currentWeightSum = toBN(0);
 
@@ -80,7 +86,7 @@ export function calculateMedian(voters: string[], prices: BN[], weights: BN[]): 
         medianPrice = vote.price;
       }
     }
-    if(medianPrice !== undefined && quartile1Price !== undefined) {
+    if (medianPrice !== undefined && quartile1Price !== undefined) {
       break;
     }
   }
@@ -99,5 +105,5 @@ export function calculateMedian(voters: string[], prices: BN[], weights: BN[]): 
     finalMedianPrice: medianPrice!.toNumber(),
     quartile1Price: quartile1Price!.toNumber(),
     quartile3Price: quartile3Price!.toNumber(),
-  }
+  };
 }

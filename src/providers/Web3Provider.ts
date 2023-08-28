@@ -120,6 +120,10 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Finalize", this.contracts.voting.options.address, methodCall);
   }
 
+  async getMerkleRoot(epochId: number): Promise<string> {
+    return await this.contracts.voting.methods.getMerkleRoot(epochId).call();
+  }
+
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     const methodCall = this.contracts.priceOracle.methods.publishPrices(
       epochResult.dataMerkleRoot,
