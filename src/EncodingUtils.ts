@@ -7,7 +7,7 @@ import { convertRewardOfferedEvent } from "./voting-utils";
 const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
 const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
 
-export class EncodingUtils {
+class EncodingUtils {
   private functionSignatures: Map<string, string> = new Map<string, string>();
   private eventSignatures: Map<string, string> = new Map<string, string>();
   private abis: Map<string, any> = new Map<string, string>();
@@ -29,6 +29,10 @@ export class EncodingUtils {
       votingABI.find((x: any) => x.name === "signResult")
     );
     this.abis.set(
+      "finalize",
+      votingABI.find((x: any) => x.name === "finalize")
+    );
+    this.abis.set(
       "offerRewards",
       rewardsABI.find((x: any) => x.name === "offerRewards")
     );
@@ -44,15 +48,16 @@ export class EncodingUtils {
     this.functionSignatures.set("revealBitvote", coder.encodeFunctionSignature(this.abis.get("revealBitvote")));
     this.functionSignatures.set("signResult", coder.encodeFunctionSignature(this.abis.get("signResult")));
     this.functionSignatures.set("offerRewards", coder.encodeFunctionSignature(this.abis.get("offerRewards")));
+    this.functionSignatures.set("finalize", coder.encodeFunctionSignature(this.abis.get("finalize")));
 
     this.eventSignatures.set("RewardOffered", coder.encodeEventSignature(this.abis.get("RewardOffered")));
   }
 
-  functionSignature(name: "commit" | "revealBitvote" | "signResult" | "offerRewards"): string {
+  functionSignature(name: string): string {
     return this.functionSignatures.get(name)!;
   }
 
-  eventSignature(name: "RewardOffered"): string {
+  eventSignature(name: string): string {
     return this.eventSignatures.get(name)!;
   }
 
@@ -101,3 +106,5 @@ export class EncodingUtils {
     return coder.decodeParameters(parametersEncodingABI, encodedParameters);
   }
 }
+
+export const encodingUtils = new EncodingUtils();

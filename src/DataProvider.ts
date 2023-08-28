@@ -1,13 +1,13 @@
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { sleepFor } from "./time-utils";
+import { Received } from "./BlockIndexer";
 
 export class DataProvider {
+  private readonly logger = getLogger(DataProvider.name);
   private static readonly BLOCK_PROCESSING_INTERVAL_MS = 500;
 
   constructor(private client: FTSOClient, private myId: number) {}
-
-  private readonly logger = getLogger(DataProvider.name); 
 
   /** Used for checking if we need to send reveals in the current price epoch. */
   private hasCommits: boolean = false;
@@ -15,8 +15,6 @@ export class DataProvider {
   private readonly registeredRewardEpochs = new Set<number>();
 
   async run() {
-    const currentBlock = await this.client.provider.getBlockNumber();
-    this.client.initialize(currentBlock);
     this.processBlocks();
     this.schedulePriceEpochActions();
   }
@@ -48,17 +46,8 @@ export class DataProvider {
     const nextRewardEpochId = currentRewardEpochId + 1;
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
+      await this.maybeScheduleRewardClaiming(previousRewardEpochId, currentEpochId);
       await this.runVotingProcotol(currentEpochId);
-      if (
-        this.isRegisteredForRewardEpoch(previousRewardEpochId) &&
-        this.isFirstPriceEpochInRewardEpoch(currentEpochId)
-      ) {
-        this.logger.info(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
-        // TODO: We need something more robust than sleeping, ideally should listen for a finalization
-        //       event and then trigger the claiming logic.
-        await sleepFor(5000); // Wait for finalization to happen - only one provider performs it
-        await this.client.claimReward(previousRewardEpochId);
-      }
     }
 
     if (!this.isRegisteredForRewardEpoch(nextRewardEpochId) && this.client.rewardEpochOffers.has(nextRewardEpochId)) {
@@ -66,27 +55,35 @@ export class DataProvider {
     }
   }
 
+  private async maybeScheduleRewardClaiming(previousRewardEpochId: number, currentEpochId: number) {
+    if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
+      this.client.indexer.once(Received.Finalize, async () => {
+        this.logger.info(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
+        await this.client.claimReward(previousRewardEpochId);
+      });
+    }
+  }
+
   private async runVotingProcotol(currentEpochId: number) {
+    this.client.clearSignatureListener(); // Clear listeners from previous epoch.
+
     this.logger.info(`[Voting] On commit for current ${currentEpochId}`);
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
-    await this.client.onCommit(currentEpochId);
+    await this.client.commit(currentEpochId);
 
     if (this.hasCommits) {
+      this.client.listenForSignatures();
       const previousEpochId = currentEpochId - 1;
       this.logger.info(`[Voting] On reveal for previous ${previousEpochId}`);
-      await this.client.onReveal(previousEpochId);
+      await this.client.reveal(previousEpochId);
       await this.waitForRevealEpochEnd();
       this.logger.info(`[Voting] Calculate results and on sign prev ${previousEpochId}`);
-      await this.client.onSign(previousEpochId);
-      await sleepFor(2000); // Wait for others' signatures.
-      if (this.shouldFinalize()) {
-        this.logger.info(`[Voting] Send signatures for prev ${previousEpochId}`);
-        await this.client.onSendSignaturesForMyMerkleRoot(previousEpochId);
-      }
+
+      await this.client.sign(previousEpochId);
     }
 
     this.hasCommits = true;
-    this.logger.info("[[[[[[End voting protocol]]]]]");
+    this.logger.info("[Voting] End round");
   }
 
   private async registerForRewardEpoch(nextRewardEpochId: number) {
@@ -108,11 +105,6 @@ export class DataProvider {
     const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(epochId);
     const rewardEpochForPrevious = this.client.epochs.rewardEpochIdForPriceEpochId(epochId - 1);
     return rewardEpochForPrevious != 0 && rewardEpochForPrevious < rewardEpoch;
-  }
-
-  /** Placeholder – the first data provider performs finalization. */
-  private shouldFinalize() {
-    return this.myId == 1;
   }
 
   private async waitForRevealEpochEnd() {

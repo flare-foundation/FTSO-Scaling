@@ -41,6 +41,7 @@ import {
   signAndSend,
   syncToLastBlock,
 } from "./EndToEnd.utils";
+import { sleepFor } from "../src/time-utils";
 
 chai.use(chaiBN(BN));
 
@@ -159,10 +160,13 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         priceOracle: priceOracle.address,
         votingManager: votingManager.address,
       } as ContractAddresses;
-      const provider = await TruffleProvider.create(contracts, { privateKey, artifacts, web3 } as TruffleProviderOptions);
+      const provider = await TruffleProvider.create(contracts, {
+        privateKey,
+        artifacts,
+        web3,
+      } as TruffleProviderOptions);
 
-      const client = new FTSOClient(provider);
-      await client.initialize(currentBlockNumber, undefined, web3);
+      const client = new FTSOClient(provider, currentBlockNumber);
       priceFeedsForClient = priceFeedConfigs.map(config => new RandomPriceFeed(config));
       client.registerPriceFeeds(priceFeedsForClient);
       client.initializeRewardCalculator(FIRST_REWARD_EPOCH);
@@ -282,6 +286,8 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         await calculateVoteResults(priceEpochId, ftsoClients, votingManager);
         await signAndSend(priceEpochId, ftsoClients, votingManager);
         await publishPriceEpoch(priceEpochId, ftsoClients[0], symbols, priceOracle);
+
+        await sleepFor(0); // Allow pending epoch event handlers to complete
       }
       let newRewardEpochId = await votingManager.getCurrentRewardEpochId();
 

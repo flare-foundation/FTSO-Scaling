@@ -1,4 +1,4 @@
-import { Exchange, RequestTimeout, Trade } from "ccxt";
+import { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
 import { IPriceFeed } from "./IPriceFeed";
 import { Feed } from "../voting-interfaces";
 import { getLogger } from "../utils/logger";
@@ -44,6 +44,10 @@ export class CcxtPriceFeed implements IPriceFeed {
     } catch (e) {
       if (e instanceof RequestTimeout) {
         this.logger.error(`Request timeout for ${this.feed.offerSymbol}/${this.feed.quoteSymbol}`);
+        return;
+      }
+      if (e instanceof NetworkError) {
+        this.logger.error(`Failed to fetch trades for ${this.feed.offerSymbol}/${this.feed.quoteSymbol}: NetworkError`);
         return;
       }
       throw e;

@@ -249,9 +249,12 @@ contract VotingRewardManager is Governed, IRewardManager {
             "reward has already been claimed"
         );
 
+        bytes32 rootForEpoch = voting.getMerkleRoot(claim.epochId);
+        require(rootForEpoch != bytes32(0), "claim epoch not finalized yet, not merkle root available");
+
         require(
             _data.merkleProof.verify(
-                voting.getMerkleRoot(claim.epochId),
+                rootForEpoch,
                 claimHash
             ),
             "Merkle proof for reward failed"
