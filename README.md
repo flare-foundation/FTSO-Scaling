@@ -18,10 +18,6 @@ nvm alias default 18
 
 ### Project
 
-- Install `ts-node`: (will be needed for running scripts)
-```
-npm install -g ts-node
-```
 - Install `yarn`: 
 ```
 npm install -g yarn
