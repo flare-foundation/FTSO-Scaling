@@ -63,5 +63,13 @@
       "html"
     ],
     "report-dir": "coverage/ts"
-  }
+  },
+  "prettier": {
+    "printWidth": 160,
+    "semi": true,
+    "singleQuote": false,
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "arrowParens": "avoid"
+ }
 }
