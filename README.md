@@ -11,7 +11,7 @@ This repo contains MVP of an implementation of the new FTSO Scaling protocol.
 ```
 nvm install 18
 ```
-- Set as version 18 as default: 
+- Set version 18 as default: 
 ```
 nvm alias default 18
 ```
@@ -31,7 +31,7 @@ yarn c
 yarn test
 ```
 
-Recommeded editor to use is [VSCode](https://code.visualstudio.com/).
+Recommended editor to use is [VSCode](https://code.visualstudio.com/).
 
 ## Code formatting
 
