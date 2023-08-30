@@ -138,11 +138,11 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   signMessage(message: string): BareSignature {
-    return signMessage(web3, message, this.account.privateKey);
+    return signMessage(this.web3, message, this.account.privateKey);
   }
 
   recoverSigner(message: string, signature: BareSignature): string {
-    return recoverSigner(web3, message, signature);
+    return recoverSigner(this.web3, message, signature);
   }
 
   async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {

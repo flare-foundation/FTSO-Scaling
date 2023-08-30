@@ -2,6 +2,7 @@ import { EpochSettings } from "./EpochSettings";
 import { PriceEpochRewards } from "./PriceEpochRewards";
 import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } from "./voting-interfaces";
 import { feedId, toBN } from "./voting-utils";
+import BN from "bn.js";
 
 export type PriceEpochRewards = Map<string, ClaimReward[]>;
 
