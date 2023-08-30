@@ -63,7 +63,7 @@ describe("median-calculation-utils", () => {
         it("should calculate the correct median", () => {
             medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-            // first with the median sum equal the half of total weight should be 50 (among 100)
+            // the first with the median sum equal the half of total weight should be 50 (among 100)
             expect(medianCalculationSummary.finalMedianPrice).to.equal(50);
             // the first with the quartile sum over the quarter of total weight should be 26
             expect(medianCalculationSummary.quartile1Price).to.equal(26);
@@ -91,7 +91,7 @@ describe("median-calculation-utils", () => {
         it("should calculate the correct median", () => {
             medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-            // first with the median sum equal the half of total weight should be 50 (among 100)
+            // the first with the median sum equal the half of total weight should be 50 (among 100)
             expect(medianCalculationSummary.finalMedianPrice).to.equal(50);
             // the first with the quartile sum over the quarter of total weight should be 26
             expect(medianCalculationSummary.quartile1Price).to.equal(25);
