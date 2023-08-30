@@ -1,6 +1,7 @@
+import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
-import utils from "web3-utils";
 import coder from "web3-eth-abi";
+import utils from "web3-utils";
 import { ClaimReward, Feed, RewardOffered } from "./voting-interfaces";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -35,7 +36,7 @@ export function sortedHashPair(x: string, y: string) {
  * @returns 
  */
 export function hashClaimReward(data: ClaimReward, abi: any): string {
-  return utils.soliditySha3(coder.encodeParameter(abi, hexlifyBN(data.claimRewardBody)))!;
+  return utils.soliditySha3(defaultAbiCoder.encode([abi], [hexlifyBN(data.claimRewardBody)]))!;
 }
 
 /**
@@ -127,8 +128,8 @@ export function convertRewardOfferedEvent(offer: any): RewardOffered {
   newOffer.leadProviders = [...offer.leadProviders];
   let tmp = newOffer as RewardOffered;
   tmp.offerSymbol = bytes4ToText(tmp.offerSymbol),
-  tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol),
-  tmp.amount = toBN(tmp.amount);
+    tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol),
+    tmp.amount = toBN(tmp.amount);
   tmp.flrValue = toBN(tmp.flrValue);
   tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
   tmp.elasticBandWidthPPM = toBN(tmp.elasticBandWidthPPM);
