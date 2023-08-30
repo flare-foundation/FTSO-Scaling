@@ -91,9 +91,9 @@ describe("median-calculation-utils", () => {
         it("should calculate the correct median", () => {
             medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-            // the first with the median sum equal the half of total weight should be 50 (among 100)
+            // the first with the median sum equal the half of total weight should be 50 (among 99)
             expect(medianCalculationSummary.finalMedianPrice).to.equal(50);
-            // the first with the quartile sum over the quarter of total weight should be 26
+            // the first with the quartile sum over the quarter of total weight should be 25
             expect(medianCalculationSummary.quartile1Price).to.equal(25);
             expect(medianCalculationSummary.quartile3Price).to.equal(75);
         })
