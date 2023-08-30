@@ -36,7 +36,6 @@ export function sortedHashPair(x: string, y: string) {
  * @returns 
  */
 export function hashClaimReward(data: ClaimReward, abi: any): string {
-  // return utils.soliditySha3(coder.encodeParameter(abi, hexlifyBN(data.claimRewardBody)))!;
   return utils.soliditySha3(defaultAbiCoder.encode([abi], [hexlifyBN(data.claimRewardBody)]))!;
 }
 
