@@ -19,13 +19,13 @@ dotenv.config();
 // Tasks
 
 task("deploy-contracts", `Deploys contracts and generates a file with addresses at ${OUTPUT_FILE}.`) // prettier-ignore
-  .setAction(async (args, hre, runSuper) => {
+  .setAction(async (_args, hre, _runSuper) => {
     const parameters = loadFTSOParameters();
     await deployContracts(hre, parameters);
   });
 
 task("run-admin-daemon", `Does admin tasks`) // prettier-ignore
-  .setAction(async (args, hre, runSuper) => {
+  .setAction(async (_args, hre, _runSuper) => {
     const parameters = loadFTSOParameters();
     await runAdminDaemon(hre, parameters);
   });

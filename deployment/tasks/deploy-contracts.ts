@@ -2,17 +2,12 @@ import { Feed } from "../../src/voting-interfaces";
 import { unprefixedSymbolBytes } from "../../src/voting-utils";
 import { Account } from "web3-core";
 import { FTSOParameters } from "../config/FTSOParameters";
-import {
-  ERC20PriceOracleInstance,
-  PriceOracleInstance,
-  VotingInstance,
-  VotingManagerInstance,
-  VotingRewardManagerInstance,
-} from "../../typechain-truffle";
+import { ERC20PriceOracleInstance, PriceOracleInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { writeFileSync } from "fs";
 import { ContractAddresses, OUTPUT_FILE } from "./common";
 import { Artifacts, HardhatRuntimeEnvironment } from "hardhat/types";
 import { getLogger } from "../../src/utils/logger";
+import { increaseTimeTo } from "../../test-utils/utils/test-helpers";
 
 const logger = getLogger("deploy-contracts");
 
@@ -26,25 +21,19 @@ const FEE_PERCENTAGE_UPDATE_OFFSET = 3;
 const DEFAULT_FEE_PERCENTAGE = 2000; // 20%
 
 export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters: FTSOParameters) {
+  await syncTime(hre);
+
   const artifacts = hre.artifacts;
   const governance = web3.eth.accounts.privateKeyToAccount(parameters.governancePrivateKey);
 
   const votingManager = await deployVotingManager(artifacts, governance);
-  const voterRegistry = await artifacts
-    .require("VoterRegistry")
-    .new(governance.address, votingManager.address, THRESHOLD);
+  const voterRegistry = await artifacts.require("VoterRegistry").new(governance.address, votingManager.address, THRESHOLD);
   const voting = await artifacts.require("Voting").new(voterRegistry.address, votingManager.address);
 
   const priceOracle = await deployPriceOracle(artifacts, governance, votingManager, voting);
   const erc20PriceOracle = await deployERC20PriceOracle(artifacts, governance, parameters.symbols, priceOracle);
 
-  const votingRewardManager = await deployVotingRewardManager(
-    artifacts,
-    governance,
-    voting,
-    votingManager,
-    erc20PriceOracle
-  );
+  const votingRewardManager = await deployVotingRewardManager(artifacts, governance, voting, votingManager, erc20PriceOracle);
 
   const deployed = <ContractAddresses>{
     votingManager: votingManager.address,
@@ -61,12 +50,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   return deployed;
 }
 
-async function deployPriceOracle(
-  artifacts: Artifacts,
-  governance: Account,
-  votingManager: VotingManagerInstance,
-  voting: VotingInstance
-) {
+async function deployPriceOracle(artifacts: Artifacts, governance: Account, votingManager: VotingManagerInstance, voting: VotingInstance) {
   const priceOracle = await artifacts.require("PriceOracle").new(governance.address);
   await priceOracle.setVotingManager(votingManager.address);
   await priceOracle.setVoting(voting.address);
@@ -80,9 +64,7 @@ async function deployVotingRewardManager(
   votingManager: VotingManagerInstance,
   erc20PriceOracle: ERC20PriceOracleInstance
 ): Promise<VotingRewardManagerInstance> {
-  const votingRewardManager = await artifacts
-    .require("VotingRewardManager")
-    .new(governance.address, FEE_PERCENTAGE_UPDATE_OFFSET, DEFAULT_FEE_PERCENTAGE);
+  const votingRewardManager = await artifacts.require("VotingRewardManager").new(governance.address, FEE_PERCENTAGE_UPDATE_OFFSET, DEFAULT_FEE_PERCENTAGE);
 
   await votingRewardManager.setVoting(voting.address);
   await votingRewardManager.setVotingManager(votingManager.address);
@@ -125,4 +107,16 @@ function outputAddresses(deployed: ContractAddresses) {
   const contents = JSON.stringify(deployed, null, 2);
   writeFileSync(OUTPUT_FILE, contents);
   logger.info(`Contract addresses written to ${OUTPUT_FILE}:\n${contents}`);
+}
+
+/**
+ * Update time to now for hardhat networks.
+ * If the time is too far in the past we get issues when calculating price epoch ids.
+ */
+async function syncTime(hre: HardhatRuntimeEnvironment) {
+  const network = hre.network.name;
+  if (network === "local" || network === "localhost" || network === "hardhat") {
+    let now = Math.floor(Date.now() / 1000);
+    await increaseTimeTo(now);
+  }
 }

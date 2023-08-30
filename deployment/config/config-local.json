@@ -1,0 +1,10 @@
+{
+  "governancePrivateKey": "<set in .env>",
+  "rpcUrl": "ws://127.0.0.1:8545/",
+  "gasPrice": "3000000000000",
+  "symbols": [
+    { "offerSymbol": "ETH", "quoteSymbol": "USDT" },
+    { "offerSymbol": "BTC", "quoteSymbol": "USDT" },
+    { "offerSymbol": "BCH", "quoteSymbol": "USDT" }
+  ]
+}
