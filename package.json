@@ -66,7 +66,7 @@
     "report-dir": "coverage/ts"
   },
   "prettier": {
-    "printWidth": 160,
+    "printWidth": 120,
     "semi": true,
     "singleQuote": false,
     "trailingComma": "es5",
