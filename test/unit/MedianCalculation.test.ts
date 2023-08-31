@@ -62,9 +62,9 @@ describe("median-calculation-utils", () => {
     it("should calculate the correct median", () => {
       medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-      // the first with the median sum equal the half of total weight should be 50 (among 100)
+      // the first with the median sum equal the half of the total weight should be 50 (among 100)
       expect(medianCalculationSummary.finalMedianPrice).to.equal(50);
-      // the first with the quartile sum over the quarter of total weight should be 26
+      // the first with the quartile sum over the quarter of the total weight should be 26
       expect(medianCalculationSummary.quartile1Price).to.equal(26);
       expect(medianCalculationSummary.quartile3Price).to.equal(75);
     });
@@ -90,9 +90,9 @@ describe("median-calculation-utils", () => {
     it("should calculate the correct median", () => {
       medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-      // the first with the median sum equal the half of total weight should be 50 (among 99)
+      // the first with the median sum equal the half of the total weight should be 50 (among 99)
       expect(medianCalculationSummary.finalMedianPrice).to.equal(50);
-      // the first with the quartile sum over the quarter of total weight should be 25
+      // the first with the quartile sum over the quarter of the total weight should be 25
       expect(medianCalculationSummary.quartile1Price).to.equal(25);
       expect(medianCalculationSummary.quartile3Price).to.equal(75);
     });
@@ -119,11 +119,9 @@ describe("median-calculation-utils", () => {
     it("should calculate the correct median", () => {
       medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-      // the first with the median sum over the half of total weight should be 50 (among 99)
       let expectedMedianPrice = 71; // since sum_{i=1}^71 i = 2556 > 2525 = totalWeightSum / 2
       expect(medianCalculationSummary.finalMedianPrice).to.equal(expectedMedianPrice);
-      // the first with the quartile sum over the quarter of total weight should be 25
-      let expectedquartile1Price = 50; // since sum_{i=1}^71 i = 1275 > 1262.5 = totalWeightSum / 4
+      let expectedquartile1Price = 50; // since sum_{i=1}^50 i = 1275 > 1262.5 = totalWeightSum / 4
       expect(medianCalculationSummary.quartile1Price).to.equal(expectedquartile1Price);
       let expectedquartile3Price = 87; // since sum_{i=87}^100 i = 1309 > 1262.5 = totalWeightSum / 4
       expect(medianCalculationSummary.quartile3Price).to.equal(expectedquartile3Price);
