@@ -48,7 +48,7 @@ The following steps describe how to get a group of data providers running locall
     DEPLOYER_PRIVATE_KEY=""
     CHAIN_CONFIG="local"
     ```
-    Set `DEPLOYER_PRIVATE_KEY` to the first private key under `deployment/test-1020-accounts.json`. 
+    Set `DEPLOYER_PRIVATE_KEY` to the first private key under `deployment/config/test-1020-accounts.json`. 
     By current convention, the first test account is used for governance/deployment.
 
 2. Open a new terminal window. Start a Hardhat node. This will run the Hardhat network:
