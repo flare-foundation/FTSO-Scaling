@@ -39,8 +39,8 @@ export interface IVotingProvider {
   getMerkleRoot(epochId: number): Promise<string>;
 
   ////////////// Signing //////////////
-  signMessage(message: string): BareSignature;
-  recoverSigner(message: string, signature: BareSignature): string;
+  signMessage(message: string): Promise<BareSignature>;
+  recoverSigner(message: string, signature: BareSignature): Promise<string>;
 
   ////////////// Block calls //////////////
   getBlockNumber(): Promise<number>;

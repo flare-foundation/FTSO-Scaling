@@ -3,7 +3,7 @@ import Web3 from "web3";
 
 import { EpochSettings } from "./EpochSettings";
 import { MerkleTree } from "./MerkleTree";
-import { PriceEpochRewards, RewardCalculator } from "./RewardCalculator";
+import { RewardCalculator } from "./RewardCalculator";
 import { calculateResultsForFeed } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
@@ -86,8 +86,6 @@ export class FTSOClient {
 
     this.lastProcessedBlockNumber = startBlockNumber - 1;
   }
-
-  private calculateRewardsForEpoch(currentEpochId: number, medianResults: MedianCalculationResult[]) {}
 
   initializeRewardCalculator(initialRewardEpoch: number) {
     this.rewardCalculator = new RewardCalculator(this.epochs, initialRewardEpoch);
@@ -175,7 +173,7 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
 
-    const signature = this.provider.signMessage(result.merkleRoot!);
+    const signature = await this.provider.signMessage(result.merkleRoot!);
     await this.provider.signResult(epochId, result.merkleRoot!, {
       v: signature.v,
       r: signature.r,
@@ -226,10 +224,17 @@ export class FTSOClient {
     priceEpochId: number,
     results: MedianCalculationResult[],
     priceMessageHash: string
-  ): Promise<[string, PriceEpochRewards]> {
+  ): Promise<[string, Map<string, ClaimReward[]>]> {
     const finalizationData = this.indexer.getFinalize(priceEpochId - 1);
-    if (finalizationData === undefined) {
-      const wasFinalized = await this.provider.getMerkleRoot(priceEpochId - 1) !== ZERO_BYTES32;
+    const finalizationSigners: string[] = [];
+
+    if (finalizationData !== undefined) {
+      for (const signature of finalizationData.signatures) {
+        const signer = await this.provider.recoverSigner(finalizationData.merkleRoot, signature);
+        finalizationSigners.push(signer);
+      }
+    } else {
+      const wasFinalized = (await this.provider.getMerkleRoot(priceEpochId - 1)) !== ZERO_BYTES32;
       if (wasFinalized) {
         // TODO: Add tests for this scenario
         throw Error(`Previous epoch ${priceEpochId - 1} was finalized, but we've not observed the finalization.\ 
@@ -237,12 +242,10 @@ export class FTSOClient {
       }
     }
 
-    const signers = finalizationData?.signatures.map(s => this.provider.recoverSigner(finalizationData.merkleRoot, s)) ?? [];
-
     this.rewardCalculator.calculateClaimsForPriceEpoch(
       priceEpochId,
       finalizationData?.from,
-      signers,
+      finalizationSigners,
       results,
       this.eligibleVoterWeights.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!
     );

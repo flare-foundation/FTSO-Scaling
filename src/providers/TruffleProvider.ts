@@ -137,12 +137,14 @@ export class TruffleProvider implements IVotingProvider {
     );
   }
 
-  signMessage(message: string): BareSignature {
-    return signMessage(this.web3, message, this.account.privateKey);
+  async signMessage(message: string): Promise<BareSignature> {
+    const signature = signMessage(this.web3, message, this.account.privateKey);
+    return Promise.resolve(signature);
   }
 
-  recoverSigner(message: string, signature: BareSignature): string {
-    return recoverSigner(this.web3, message, signature);
+  async recoverSigner(message: string, signature: BareSignature): Promise<string> {
+    const signer = recoverSigner(this.web3, message, signature);
+    return Promise.resolve(signer);
   }
 
   async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {

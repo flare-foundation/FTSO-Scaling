@@ -4,7 +4,11 @@ import { ClaimReward, Feed, FeedValue, MedianCalculationResult, RewardOffered } 
 import { feedId, toBN } from "./voting-utils";
 import BN from "bn.js";
 
-export type PriceEpochRewards = Map<string, ClaimReward[]>;
+/** 10% of total reward goes to the finalizer. */
+const FINALIZATION_BIPS = toBN(1_000);
+/** 10% of total reward goes to finalization signatures. */
+const SIGNING_BIPS = toBN(1_000);
+const TOTAL_BIPS = toBN(10_000);
 
 /**
  * Reward calculator for sequence of reward epochs.
@@ -86,31 +90,6 @@ export class RewardCalculator {
       priceEpochId: priceEpoch,
       amount: reward,
     } as RewardOffered;
-  }
-
-  /**
-   * Returns the list of reward offers for the given price epoch and feed.
-   * The offers are customized for the given price epoch, containing the share of
-   * the reward for the given price epoch.
-   */
-  public offersForPriceEpochBySymbol(priceEpochId: number, feeds: Feed[]): Map<string, RewardOffered[]> {
-    const priceEpochOffersBySymbol = new Map<string, RewardOffered[]>();
-    const rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const rewardEpochOffersBySymbol = this.rewardOffersBySymbol.get(rewardEpochId);
-    if (rewardEpochOffersBySymbol === undefined) {
-      throw new Error(`Reward offers are not defined for reward epoch ${rewardEpochId}`);
-    }
-    for (const feed of feeds) {
-      const offers = rewardEpochOffersBySymbol.get(feedId(feed));
-      if (offers === undefined) {
-        throw new Error(`Reward offers are not defined for symbol ${feedId(feed)} in reward epoch ${rewardEpochId}`);
-      }
-      priceEpochOffersBySymbol.set(
-        feedId(feed),
-        offers.map(offer => this.rewardOfferForPriceEpoch(priceEpochId, offer))
-      );
-    }
-    return priceEpochOffersBySymbol;
   }
 
   /**
@@ -226,9 +205,9 @@ export class RewardCalculator {
       medianOffers.push(...priceEpochOffers);
     } else {
       for (const offer of priceEpochOffers) {
-        const forSigning = offer.amount.div(toBN(10)); // 10%
-        const forFinalization = offer.amount.div(toBN(10)); // 10%
-        const forMedian = offer.amount.sub(forSigning).sub(forFinalization); // 80%
+        const forSigning = offer.amount.mul(FINALIZATION_BIPS).div(TOTAL_BIPS);
+        const forFinalization = offer.amount.mul(SIGNING_BIPS).div(TOTAL_BIPS);
+        const forMedian = offer.amount.sub(forSigning).sub(forFinalization);
 
         signingOffers.push({
           ...offer,
@@ -307,7 +286,7 @@ export class RewardCalculator {
   /**
    * Calculates the map from voter address to the list of claims for the given price epoch.
    */
-  public getRewardMappingForPriceEpoch(priceEpoch: number): PriceEpochRewards {
+  public getRewardMappingForPriceEpoch(priceEpoch: number): Map<string, ClaimReward[]> {
     const result = this.rewardEpochCumulativeRewards.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpoch));
     if (result === undefined) {
       throw new Error(`Reward mapping is not defined for price epoch ${priceEpoch}`);

@@ -19,6 +19,6 @@ describe("web3-utils", () => {
     const signature: BareSignature = signMessage(web3, message, privateKey);
     const signer: string = recoverSigner(web3, message, signature);
 
-    expect(signer).to.equal(account.address);
+    expect(signer).to.equal(account.address.toLowerCase());
   });
 });
