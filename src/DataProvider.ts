@@ -2,6 +2,7 @@ import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { sleepFor } from "./time-utils";
 import { Received } from "./BlockIndexer";
+import { FinalizeData } from "./voting-interfaces";
 
 export class DataProvider {
   private readonly logger = getLogger(DataProvider.name);
@@ -57,7 +58,7 @@ export class DataProvider {
 
   private async maybeScheduleRewardClaiming(previousRewardEpochId: number, currentEpochId: number) {
     if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
-      this.client.indexer.once(Received.Finalize, async () => {
+      this.client.indexer.once(Received.Finalize, async (f: string, d: FinalizeData) => {
         this.logger.info(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
         await this.client.claimReward(previousRewardEpochId);
       });

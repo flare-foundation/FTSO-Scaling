@@ -36,7 +36,7 @@ export interface Offer extends Feed {
   leadProviders: string[]; // list of trusted providers
   rewardBeltPPM: BN; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
   elasticBandWidthPPM: BN; // elastic band width in PPM (parts per million) in relation to the median price.
-  iqrSharePPM: BN; // Each offer defines IQR and PCT share in PPM (parts per million). The summ of all offers must be 1M.
+  iqrSharePPM: BN; // Each offer defines IQR and PCT share in PPM (parts per million). The sum of all offers must be 1M.
   pctSharePPM: BN;
 }
 
@@ -71,6 +71,13 @@ export interface SignatureData {
   v: number;
   r: string;
   s: string;
+}
+
+export interface FinalizeData {
+  from: string;
+  epochId: number;
+  merkleRoot: string;
+  signatures: BareSignature[];
 }
 
 export interface TxData {

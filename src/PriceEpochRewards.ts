@@ -1,59 +1,40 @@
 import BN from "bn.js";
-import Web3 from "web3";
-import { RewardCalculator } from "./RewardCalculator";
-import { ClaimReward, ClaimRewardBody, MedianCalculationResult, RewardOffered, VoterRewarding, deepCopyClaim } from "./voting-interfaces";
+import {
+  ClaimReward,
+  ClaimRewardBody,
+  MedianCalculationResult,
+  RewardOffered,
+  VoterRewarding,
+  deepCopyClaim,
+} from "./voting-interfaces";
 import { feedId, toBN } from "./voting-utils";
-
+import coder from "web3-eth-abi";
+import utils from "web3-utils";
 
 /**
- * This class is used to calculate rewards for a given price epoch.
+ * Collection of utility methods used for reward claim calculation.
  */
-export class RewardCalculatorForPriceEpoch {
-  priceEpoch: number = 0;
-  rewardCalculator!: RewardCalculator;
-  web3: Web3 = new Web3();
-
-  constructor(
-    priceEpoch: number,
-    rewardCalculator: RewardCalculator
-  ) {
-    this.priceEpoch = priceEpoch;
-    this.rewardCalculator = rewardCalculator;
-  }
-
-  /**
-   * Returns the reward epoch for the price epoch.
-   */
-  get rewardEpochId() {
-    return this.rewardCalculator.rewardEpochIdForPriceEpoch(this.priceEpoch);
-  }
-
+export namespace PriceEpochRewards {
   /**
    * Pseudo random selection based on the hash of (slotId, priceEpoch, voterAddress).
-   * Used to get deterministic randomization for border cases of IQR belt. 
-   * @param slotId 
-   * @param priceEpoch 
-   * @param voterAddress 
-   * @returns 
+   * Used to get deterministic randomization for border cases of IQR belt.
    */
-  randomSelect(symbol: string, priceEpoch: number, voterAddress: string) {
+  export function randomSelect(symbol: string, priceEpoch: number, voterAddress: string) {
     return toBN(
-      this.web3.utils.soliditySha3(
-        this.web3.eth.abi.encodeParameters(
-          ["string", "uint256", "address"],
-          [symbol, priceEpoch, voterAddress]
-        )
-      )!
-    ).mod(toBN(2)).eq(toBN(1));
+      utils.soliditySha3(coder.encodeParameters(["string", "uint256", "address"], [symbol, priceEpoch, voterAddress]))!
+    )
+      .mod(toBN(2))
+      .eq(toBN(1));
   }
 
   /**
    * Given a slotId it calculates the claims for the slot from all active pools
-   * @param slotId 
-   * @param calculationResult 
-   * @returns 
    */
-  calculateClaimsForOffer(offer: RewardOffered, calculationResult: MedianCalculationResult): ClaimReward[] {
+  function calculateClaimsForOffer(
+    priceEpoch: number,
+    offer: RewardOffered,
+    calculationResult: MedianCalculationResult
+  ): ClaimReward[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
     let voterRecords: VoterRewarding[] = [];
@@ -62,14 +43,14 @@ export class RewardCalculatorForPriceEpoch {
     let highIQR = calculationResult.data.quartile3Price;
 
     // Elastic band limits
-    let medianPrice = calculationResult.data.finalMedianPrice
+    let medianPrice = calculationResult.data.finalMedianPrice;
     let elasticBandDiff = toBN(medianPrice).mul(toBN(offer.elasticBandWidthPPM)).div(toBN(1000000));
 
     // NOTE: this can be negative
     let lowPCT = medianPrice - elasticBandDiff.toNumber();
     let highPCT = medianPrice + elasticBandDiff.toNumber();
 
-    if (offer.priceEpochId !== this.priceEpoch) {
+    if (offer.priceEpochId !== priceEpoch) {
       throw new Error("Offer price epoch does not match the current price epoch");
     }
 
@@ -79,19 +60,19 @@ export class RewardCalculatorForPriceEpoch {
     let pricesOfLeadProvidersThatVoted = [];
     if (offer.leadProviders.length > 0) {
       let leadProvidersSet = new Set<string>(offer.leadProviders.map(x => x.toLowerCase()));
-      for(let i = 0; i < calculationResult.voters!.length; i++) {
+      for (let i = 0; i < calculationResult.voters!.length; i++) {
         let voterAddress = calculationResult.voters![i];
         let price = calculationResult.prices![i];
         if (leadProvidersSet.has(voterAddress.toLowerCase())) {
           pricesOfLeadProvidersThatVoted.push(price);
         }
       }
-      if(pricesOfLeadProvidersThatVoted.length > 0) {
-        pricesOfLeadProvidersThatVoted.sort();      
+      if (pricesOfLeadProvidersThatVoted.length > 0) {
+        pricesOfLeadProvidersThatVoted.sort();
         let trustedMedianPrice = pricesOfLeadProvidersThatVoted[Math.floor(pricesOfLeadProvidersThatVoted.length / 2)];
         let eligibleRange = toBN(trustedMedianPrice).mul(toBN(offer.rewardBeltPPM)).div(toBN(1000000)).toNumber();
         lowEligible = Math.max(trustedMedianPrice - eligibleRange, 0);
-        highEligible = trustedMedianPrice + eligibleRange;  
+        highEligible = trustedMedianPrice + eligibleRange;
       }
     }
     // assemble voter records
@@ -102,7 +83,9 @@ export class RewardCalculatorForPriceEpoch {
         voterAddress,
         weight: calculationResult.weights![i],
         originalWeight: calculationResult.weights![i],
-        iqr: (price > lowIQR && price < highIQR) || ((price === lowIQR || price === highIQR) && this.randomSelect(feedId(offer), this.priceEpoch, voterAddress)),
+        iqr:
+          (price > lowIQR && price < highIQR) ||
+          ((price === lowIQR || price === highIQR) && randomSelect(feedId(offer), priceEpoch, voterAddress)),
         pct: price > lowPCT && price < highPCT,
         eligible: pricesOfLeadProvidersThatVoted.length === 0 ? true : price >= lowEligible && price <= highEligible,
       } as VoterRewarding);
@@ -121,7 +104,7 @@ export class RewardCalculatorForPriceEpoch {
     let iqrSum: BN = toBN(0);
     let pctSum: BN = toBN(0);
     for (let voterRecord of voterRecords) {
-      if(!voterRecord.eligible) {
+      if (!voterRecord.eligible) {
         continue;
       }
       if (voterRecord.iqr) {
@@ -135,7 +118,7 @@ export class RewardCalculatorForPriceEpoch {
     // calculate total rewarded weight
     let totalRewardedWeight = toBN(0);
     for (let voterRecord of voterRecords) {
-      if(!voterRecord.eligible) {
+      if (!voterRecord.eligible) {
         voterRecord.weight = toBN(0);
         continue;
       }
@@ -158,16 +141,18 @@ export class RewardCalculatorForPriceEpoch {
 
     if (totalRewardedWeight.eq(toBN(0))) {
       // claim back to reward issuer
-      return [{
-        merkleProof: [],
-        claimRewardBody: {
-          amount: offer.amount,
-          weight: toBN(0), // indicates back claims
-          currencyAddress: offer.currencyAddress,
-          voterAddress: offer.remainderClaimer.toLowerCase(),
-          epochId: this.priceEpoch,
-        } as ClaimRewardBody
-      } as ClaimReward];
+      return [
+        {
+          merkleProof: [],
+          claimRewardBody: {
+            amount: offer.amount,
+            weight: toBN(0), // indicates back claims
+            currencyAddress: offer.currencyAddress,
+            voterAddress: offer.remainderClaimer.toLowerCase(),
+            epochId: priceEpoch,
+          } as ClaimRewardBody,
+        } as ClaimReward,
+      ];
     }
 
     let rewardClaims: ClaimReward[] = [];
@@ -191,10 +176,10 @@ export class RewardCalculatorForPriceEpoch {
           amount: reward,
           weight: voterRecord.originalWeight,
           currencyAddress: offer.currencyAddress,
-          voterAddress: voterRecord.voterAddress,  // it is already lowercased
-          epochId: this.priceEpoch,
+          voterAddress: voterRecord.voterAddress, // it is already lowercased
+          epochId: priceEpoch,
           // offerTransactionId: offer.transactionId,
-        } as ClaimRewardBody
+        } as ClaimRewardBody,
       } as ClaimReward;
       rewardClaims.push(claimReward);
     }
@@ -207,28 +192,31 @@ export class RewardCalculatorForPriceEpoch {
   }
 
   /**
-   * Merges new claims with previous claims where previous claims are the cumulative 
-   * claims for all previous price epochs withing the same reward epoch.
+   * Merges new claims with previous claims where previous claims are the cumulative
+   * claims for all previous price epochs within the same reward epoch.
    * Merging is done by the key (address, poolId).
-   * This function can be used to accumulate claims for all slots in the same reward epoch 
+   * This function can be used to accumulate claims for all slots in the same reward epoch
    * as well as to accumulate claims for all price epochs in the same reward epoch.
    * All claim objects in parameters remain unchanged and new objects are created.
-   * @param previousClaims 
-   * @param newClaims 
-   * @returns 
    */
-  mergeClaims(previousClaims: ClaimReward[], newClaims: ClaimReward[], enforcePriceEpochId?: number): ClaimReward[] {
+  export function mergeClaims(
+    previousClaims: ClaimReward[],
+    newClaims: ClaimReward[],
+    enforcePriceEpochId?: number
+  ): ClaimReward[] {
     // address => currency => ClaimReward
     let claimsMap = new Map<string, Map<string, ClaimReward>>();
-    let previousClaimRewardMap = this.claimRewardsMap(previousClaims);
-    let addedClaimsRewardMap = this.claimRewardsMap(newClaims);
+    let previousClaimRewardMap = claimRewardsMap(previousClaims);
+    let addedClaimsRewardMap = claimRewardsMap(newClaims);
 
     // init map from previous claims
     for (let claim of previousClaims) {
       let voterClaims = claimsMap.get(claim.claimRewardBody.voterAddress) || new Map<string, ClaimReward>();
       claimsMap.set(claim.claimRewardBody.voterAddress, voterClaims);
       if (voterClaims.has(claim.claimRewardBody.currencyAddress)) {
-        throw new Error(`Duplicate claim for ${claim.claimRewardBody.voterAddress} and ${claim.claimRewardBody.currencyAddress}`);
+        throw new Error(
+          `Duplicate claim for ${claim.claimRewardBody.voterAddress} and ${claim.claimRewardBody.currencyAddress}`
+        );
       }
       voterClaims.set(claim.claimRewardBody.currencyAddress, deepCopyClaim(claim));
     }
@@ -256,36 +244,49 @@ export class RewardCalculatorForPriceEpoch {
         }
       }
     }
-    let newClaimRewardMap = this.claimRewardsMap(mergedClaims);
-    this.assertMergeCorrect(previousClaimRewardMap, newClaimRewardMap, addedClaimsRewardMap);
+    let newClaimRewardMap = claimRewardsMap(mergedClaims);
+    assertMergeCorrect(previousClaimRewardMap, newClaimRewardMap, addedClaimsRewardMap);
     return mergedClaims;
   }
 
   /**
    * Calculates claims for all slots in the price epoch.
-   * @param calculationResults 
-   * @returns 
    */
-  claimsForSymbols(calculationResults: MedianCalculationResult[]): ClaimReward[] {
+  export function claimsForSymbols(
+    priceEpoch: number,
+    calculationResults: MedianCalculationResult[],
+    offers: RewardOffered[]
+  ): ClaimReward[] {
+    const offersBySymbol = getOffersBySymbol(offers);
+
     let claims: ClaimReward[] = [];
-    let offers: RewardOffered[] = [];
+    const processedOffers: RewardOffered[] = [];
     for (let calculationResult of calculationResults) {
-      let priceEpochOffers = this.rewardCalculator.offersForPriceEpochAndSymbol(this.priceEpoch, calculationResult.feed);
-      for (let offer of priceEpochOffers) {
-        offers.push(offer);
-        claims = this.mergeClaims(claims, this.calculateClaimsForOffer(offer, calculationResult));
+      const priceEpochOffers = offersBySymbol.get(feedId(calculationResult.feed))!;
+      for (const offer of priceEpochOffers) {
+        claims = mergeClaims(claims, calculateClaimsForOffer(priceEpoch, offer, calculationResult));
+        processedOffers.push(offer);
       }
     }
-    this.assertOffersVsClaimsStats(offers, claims);
+    assertOffersVsClaimsStats(processedOffers, claims);
     return claims;
+  }
+
+  function getOffersBySymbol(offers: RewardOffered[]) {
+    const offersBySymbol = new Map<string, RewardOffered[]>();
+    for (const offer of offers) {
+      const offerFeedId = feedId(offer);
+      const existing = offersBySymbol.get(offerFeedId) || [];
+      existing.push(offer);
+      offersBySymbol.set(offerFeedId, existing);
+    }
+    return offersBySymbol;
   }
 
   /**
    * Produces a map from currencyAddress to total reward amount for all claims
-   * @param claims 
-   * @returns 
    */
-  private claimRewardsMap(claims: ClaimReward[]) {
+  function claimRewardsMap(claims: ClaimReward[]) {
     let currencyAddressToTotalReward = new Map<string, BN>();
     for (let claim of claims) {
       let amount = currencyAddressToTotalReward.get(claim.claimRewardBody.currencyAddress) || toBN(0);
@@ -296,11 +297,12 @@ export class RewardCalculatorForPriceEpoch {
 
   /**
    * Checks that the amount are correct after merging claims, given the previous claims, new claims and the resulting (new) claims.
-   * @param previousClaimRewardMap 
-   * @param newClaimRewardMap 
-   * @param claimsAddedMap 
    */
-  private assertMergeCorrect(previousClaimRewardMap: Map<string, BN>, newClaimRewardMap: Map<string, BN>, claimsAddedMap: Map<string, BN>) {
+  function assertMergeCorrect(
+    previousClaimRewardMap: Map<string, BN>,
+    newClaimRewardMap: Map<string, BN>,
+    claimsAddedMap: Map<string, BN>
+  ) {
     let allKeys = new Set<string>();
     previousClaimRewardMap.forEach((value, key) => allKeys.add(key));
     newClaimRewardMap.forEach((value, key) => allKeys.add(key));
@@ -316,20 +318,17 @@ export class RewardCalculatorForPriceEpoch {
     }
   }
 
-
   /**
    * Asserts that the sum of all offers is equal to the sum of all claims, for each currencyAddress
-   * @param offers 
-   * @param claims 
    */
-  private assertOffersVsClaimsStats(offers: RewardOffered[], claims: ClaimReward[]) {
+  function assertOffersVsClaimsStats(offers: RewardOffered[], claims: ClaimReward[]) {
     let offersRewards = new Map<string, BN>();
 
     for (let offer of offers) {
       let amount = offersRewards.get(offer.currencyAddress) || toBN(0);
       offersRewards.set(offer.currencyAddress, amount.add(offer.amount));
     }
-    let claimsRewards = this.claimRewardsMap(claims);
+    let claimsRewards = claimRewardsMap(claims);
     if (offersRewards.size !== claimsRewards.size) {
       throw new Error("offersMap.size !== claimsMap.size");
     }
@@ -342,5 +341,78 @@ export class RewardCalculatorForPriceEpoch {
     }
   }
 
+  /**
+   * Generates reward claims for the party that submitted the finalization transaction in the previous price epoch.
+   */
+  export function claimsForFinalizer(
+    finalizationOffers: RewardOffered[],
+    finalizerWeight: BN,
+    finalizerAddress: string,
+    priceEpochId: number
+  ) {
+    let claims: ClaimReward[] = [];
+    for (const offer of finalizationOffers) {
+      const claim = {
+        merkleProof: [],
+        claimRewardBody: {
+          amount: offer.amount,
+          weight: finalizerWeight,
+          currencyAddress: offer.currencyAddress,
+          voterAddress: finalizerAddress,
+          epochId: priceEpochId,
+        } as ClaimRewardBody,
+      } as ClaimReward;
 
+      claims = mergeClaims(claims, [claim]);
+    }
+    return claims;
+  }
+
+  /**
+   * Generates reward claims for voters whose signatures were included the the previous epoch's finalization transaction.
+   */
+  export function claimsForSigners(
+    signingOffers: RewardOffered[],
+    signers: string[],
+    voterWeights: Map<string, BN>,
+    priceEpochId: number
+  ) {
+    const totalWeight = signers.map(signer => voterWeights.get(signer)!).reduce((a, b) => a.add(b), toBN(0));
+    let mergedClaims: ClaimReward[] = [];
+    for (const offer of signingOffers) {
+      const signingClaims = [];
+      let availableReward = offer.amount;
+      let availableWeight = totalWeight;
+      let totalReward = toBN(0);
+
+      for (const signer of signers) {
+        const signerWeight = voterWeights.get(signer)!;
+        const signerReward = signerWeight.mul(availableReward).div(availableWeight);
+        availableReward = availableReward.sub(signerReward);
+        availableWeight = availableWeight.sub(signerWeight);
+
+        totalReward = totalReward.add(signerReward);
+
+        signingClaims.push({
+          merkleProof: [],
+          claimRewardBody: {
+            amount: signerReward,
+            weight: signerWeight,
+            currencyAddress: offer.currencyAddress,
+            voterAddress: signer,
+            epochId: priceEpochId,
+          } as ClaimRewardBody,
+        } as ClaimReward);
+      }
+      if (!totalReward.eq(offer.amount)) {
+        throw new Error(
+          `Total reward for ${
+            offer.currencyAddress
+          } is not equal to the offer amount: ${offer.amount.toString()} != ${totalReward.toString()}`
+        );
+      }
+      mergedClaims = PriceEpochRewards.mergeClaims(mergedClaims, signingClaims, priceEpochId);
+    }
+    return mergedClaims;
+  }
 }

@@ -18,7 +18,7 @@ import {
   deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount } from "../web3-utils";
+import { getAccount, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 
 export interface TruffleProviderOptions {
@@ -122,6 +122,10 @@ export class TruffleProvider implements IVotingProvider {
     }
   }
 
+  async getMerkleRoot(epochId: number): Promise<string> {
+    return this.contracts.voting.getMerkleRoot(epochId);
+  }
+
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     return this.contracts.priceOracle.publishPrices(
       epochResult.dataMerkleRoot,
@@ -134,13 +138,13 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   async signMessage(message: string): Promise<BareSignature> {
-    const signature = this.account.sign(message);
+    const signature = signMessage(this.web3, message, this.account.privateKey);
+    return Promise.resolve(signature);
+  }
 
-    return <BareSignature>{
-      v: parseInt(signature.v),
-      r: signature.r,
-      s: signature.s,
-    };
+  async recoverSigner(message: string, signature: BareSignature): Promise<string> {
+    const signer = recoverSigner(this.web3, message, signature);
+    return Promise.resolve(signer);
   }
 
   async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {

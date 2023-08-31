@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import glob from "glob";
 import Web3 from "web3";
 import { Account } from "web3-core";
+import { BareSignature } from "./voting-interfaces";
 
 export function getWeb3(rpcLink: string, logger?: any): Web3 {
   const web3 = new Web3();
@@ -43,6 +44,19 @@ export function getAccount(web3: Web3, privateKey: string): Account {
     privateKey = "0x" + privateKey;
   }
   return web3.eth.accounts.privateKeyToAccount(privateKey);
+}
+
+export function signMessage(web3: Web3, message: string, privateKey: string): BareSignature {
+  const signature = web3.eth.accounts.sign(message, privateKey);
+  return {
+    v: parseInt(signature.v, 16),
+    r: signature.r,
+    s: signature.s,
+  };
+}
+
+export function recoverSigner(web3: Web3, message: string, signature: BareSignature): string {
+  return web3.eth.accounts.recover(message, "0x" + signature.v.toString(16), signature.r, signature.s).toLowerCase();
 }
 
 export function getAbi(abiPath: string) {

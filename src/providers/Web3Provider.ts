@@ -24,7 +24,7 @@ import {
   deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, loadContract } from "../web3-utils";
+import { getAccount, loadContract, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 
@@ -120,6 +120,10 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Finalize", this.contracts.voting.options.address, methodCall);
   }
 
+  async getMerkleRoot(epochId: number): Promise<string> {
+    return await this.contracts.voting.methods.getMerkleRoot(epochId).call();
+  }
+
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     const methodCall = this.contracts.priceOracle.methods.publishPrices(
       epochResult.dataMerkleRoot,
@@ -132,13 +136,13 @@ export class Web3Provider implements IVotingProvider {
   }
 
   async signMessage(message: string): Promise<BareSignature> {
-    const signature = this.account.sign(message);
+    const signature = signMessage(this.web3, message, this.account.privateKey);
+    return Promise.resolve(signature);
+  }
 
-    return <BareSignature>{
-      v: parseInt(signature.v),
-      r: signature.r,
-      s: signature.s,
-    };
+  async recoverSigner(message: string, signature: BareSignature): Promise<string> {
+    const signer = recoverSigner(this.web3, message, signature);
+    return Promise.resolve(signer);
   }
 
   async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
