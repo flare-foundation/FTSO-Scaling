@@ -226,13 +226,10 @@ export class FTSOClient {
     priceMessageHash: string
   ): Promise<[string, Map<string, ClaimReward[]>]> {
     const finalizationData = this.indexer.getFinalize(priceEpochId - 1);
-    const finalizationSigners: string[] = [];
+    let rewardedSigners: string[] = [];
 
     if (finalizationData !== undefined) {
-      for (const signature of finalizationData.signatures) {
-        const signer = await this.provider.recoverSigner(finalizationData.merkleRoot, signature);
-        finalizationSigners.push(signer);
-      }
+      rewardedSigners = await this.getSignersToReward(finalizationData, priceEpochId);
     } else {
       const wasFinalized = (await this.provider.getMerkleRoot(priceEpochId - 1)) !== ZERO_BYTES32;
       if (wasFinalized) {
@@ -244,8 +241,8 @@ export class FTSOClient {
 
     this.rewardCalculator.calculateClaimsForPriceEpoch(
       priceEpochId,
-      finalizationData?.from,
-      finalizationSigners,
+      finalizationData?.[0].from,
+      rewardedSigners,
       results,
       this.eligibleVoterWeights.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!
     );
@@ -280,6 +277,22 @@ export class FTSOClient {
     return [rewardMerkleRoot, priceEpochRewards];
   }
 
+  /** We reward signers who submitted valid signatures in blocks preceding the finalization transaction block. */
+  private async getSignersToReward(finalizationData: [FinalizeData, number], priceEpochId: number) {
+    const rewardedSigners: string[] = [];
+    const [data, finalizationTime] = finalizationData;
+    const epochSignatures = this.indexer.getSignatures(priceEpochId - 1);
+
+    for (const [voter, [signature, signatureTime]] of epochSignatures) {
+      if (signatureTime >= finalizationTime) continue; // Only reward signatures with block timestamp less than that of finalization
+      const recoveredSigner = await this.provider.recoverSigner(data.merkleRoot, signature);
+      if (voter === recoveredSigner) {
+        rewardedSigners.push(voter);
+      }
+    }
+    return rewardedSigners;
+  }
+
   orderedPriceFeeds(priceEpochId: number): (IPriceFeed | undefined)[] {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     return this.rewardCalculator
@@ -300,7 +313,8 @@ export class FTSOClient {
   }
 
   private async sendSignaturesForMyMerkleRoot(epochId: number) {
-    const signaturesTmp = [...this.indexer.getSignatures(epochId)!.values()];
+    const signatureMap = this.indexer.getSignatures(epochId)!;
+    const signaturesTmp: SignatureData[] = [...signatureMap.values()].map(([s, _]) => s);
     const mySignatureHash = this.priceEpochResults.get(epochId)!.merkleRoot!;
     const signatures = signaturesTmp
       .filter(sig => sig.merkleRoot === mySignatureHash)
@@ -413,7 +427,7 @@ export class FTSOClient {
     const voterWeights = this.eligibleVoterWeights.get(rewardEpoch)!;
 
     let totalWeight = toBN(0);
-    for (const [voter, signature] of signatureByVoter) {
+    for (const [voter, [signature, _time]] of signatureByVoter) {
       const weight = voterWeights.get(voter)!;
       totalWeight = totalWeight.add(weight);
       if (totalWeight.gt(weightThreshold)) {

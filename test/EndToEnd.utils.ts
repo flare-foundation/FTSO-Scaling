@@ -253,7 +253,7 @@ export async function signAndSend(
     await client.processNewBlocks(); // Process finalize tx, indexer will emit Received.Finalize
   }
 
-  const signaturesTmp = [...firstClient.indexer.getSignatures(priceEpochId)!.values()];
+  const signaturesTmp = [...firstClient.indexer.getSignatures(priceEpochId)!.values()].map(([s, _]) => s);
   const merkleRoots = [...new Set(signaturesTmp.map(sig => sig.merkleRoot)).values()];
   expect(merkleRoots.length).to.be.equal(1);
   expect(finalized).to.be.true;

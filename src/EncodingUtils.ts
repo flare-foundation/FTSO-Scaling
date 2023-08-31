@@ -120,7 +120,7 @@ class EncodingUtils {
           s: s.s,
         } as BareSignature;
       }),
-    } as unknown as FinalizeData;
+    } as FinalizeData;
   }
 
   private decodeFunctionCall(tx: TxData, name: string) {

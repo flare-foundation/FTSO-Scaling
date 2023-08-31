@@ -6,6 +6,8 @@ import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } fro
 
 declare type Address = string;
 declare type EpochId = number;
+declare type CommitHash = string;
+declare type Timestamp = number;
 
 export enum Received {
   Commit = "commit",
@@ -17,16 +19,16 @@ export enum Received {
 
 /** Processes transaction blocks and emits events based on the type of extracted data. */
 export class BlockIndexer extends EventEmitter {
-  private readonly priceEpochCommits = new Map<EpochId, Map<Address, string>>();
+  private readonly priceEpochCommits = new Map<EpochId, Map<Address, CommitHash>>();
   private readonly priceEpochReveals = new Map<EpochId, Map<Address, RevealBitvoteData>>();
-  private readonly priceEpochSignatures = new Map<EpochId, Map<Address, SignatureData>>();
-  private readonly priceEpochFinalizes = new Map<EpochId, FinalizeData>();
+  private readonly priceEpochSignatures = new Map<EpochId, Map<Address, [SignatureData, Timestamp]>>();
+  private readonly priceEpochFinalizes = new Map<EpochId, [FinalizeData, Timestamp]>();
 
   constructor(private readonly epochs: EpochSettings, private readonly contractAddresses: ContractAddresses) {
     super({ captureRejections: true });
   }
 
-  getCommits(priceEpochId: EpochId): Map<Address, string> {
+  getCommits(priceEpochId: EpochId): Map<Address, CommitHash> {
     return this.priceEpochCommits.get(priceEpochId) ?? new Map();
   }
 
@@ -34,11 +36,11 @@ export class BlockIndexer extends EventEmitter {
     return this.priceEpochReveals.get(priceEpochId) ?? new Map();
   }
 
-  getSignatures(priceEpochId: EpochId): Map<Address, SignatureData> {
+  getSignatures(priceEpochId: EpochId): Map<Address, [SignatureData, Timestamp]> {
     return this.priceEpochSignatures.get(priceEpochId) ?? new Map();
   }
 
-  getFinalize(priceEpochId: EpochId): FinalizeData | undefined {
+  getFinalize(priceEpochId: EpochId): [FinalizeData, Timestamp] | undefined {
     return this.priceEpochFinalizes.get(priceEpochId);
   }
 
@@ -57,9 +59,9 @@ export class BlockIndexer extends EventEmitter {
         } else if (prefix === encodingUtils.functionSignature("revealBitvote")) {
           return this.extractReveal(tx, blockTimestampSec);
         } else if (prefix === encodingUtils.functionSignature("signResult")) {
-          return this.extractSignature(tx);
+          return this.extractSignature(tx, blockTimestampSec);
         } else if (prefix === encodingUtils.functionSignature("finalize")) {
-          return this.extractFinalize(tx);
+          return this.extractFinalize(tx, blockTimestampSec);
         }
       }
     } else if (tx.to?.toLowerCase() === this.contractAddresses.votingRewardManager.toLowerCase()) {
@@ -69,14 +71,14 @@ export class BlockIndexer extends EventEmitter {
     }
   }
 
-  private extractFinalize(tx: TxData) {
+  private extractFinalize(tx: TxData, blockTimestampSec: number) {
     const successful = tx.receipt!.status == true;
     if (successful) {
       const finalizeData = encodingUtils.extractFinalize(tx);
       if (this.priceEpochFinalizes.has(finalizeData.epochId)) {
         throw new Error(`Finalize data already exists for epoch ${finalizeData.epochId}`);
       }
-      this.priceEpochFinalizes.set(finalizeData.epochId, finalizeData);
+      this.priceEpochFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
       this.emit(Received.Finalize, tx.from, finalizeData);
     }
   }
@@ -93,10 +95,10 @@ export class BlockIndexer extends EventEmitter {
 
   // commit(bytes32 _commitHash)
   private extractCommit(tx: TxData, blockTimestampSec: number): void {
-    const hash = encodingUtils.extractCommitHash(tx);
+    const hash: CommitHash = encodingUtils.extractCommitHash(tx);
     const from = tx.from.toLowerCase();
     const epochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
-    const commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<Address, string>();
+    const commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<Address, CommitHash>();
     this.priceEpochCommits.set(epochId, commitsInEpoch);
     commitsInEpoch.set(from.toLowerCase(), hash);
   }
@@ -114,13 +116,14 @@ export class BlockIndexer extends EventEmitter {
   }
 
   // function signResult(bytes32 _merkleRoot, Signature calldata signature)
-  private extractSignature(tx: TxData): void {
+  private extractSignature(tx: TxData, blockTimestampSec: number): void {
     const signatureData = encodingUtils.extractSignatureData(tx);
     const from = tx.from.toLowerCase();
-    const signaturesInEpoch = this.priceEpochSignatures.get(signatureData.epochId) || new Map<Address, SignatureData>();
+    const signaturesInEpoch =
+      this.priceEpochSignatures.get(signatureData.epochId) || new Map<Address, [SignatureData, Timestamp]>();
 
     this.priceEpochSignatures.set(signatureData.epochId, signaturesInEpoch);
-    signaturesInEpoch.set(from.toLowerCase(), signatureData);
+    signaturesInEpoch.set(from.toLowerCase(), [signatureData, blockTimestampSec]);
 
     this.emit(Received.Signature, signatureData);
   }
