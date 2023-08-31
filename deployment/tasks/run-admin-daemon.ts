@@ -5,7 +5,7 @@ import { Account } from "web3-core";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { ZERO_ADDRESS, toBytes4, hexlifyBN } from "../../src/voting-utils";
-import { VotingRewardManagerInstance } from "../../typechain-truffle";
+import { VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { toBN } from "web3-utils";
 import { OUTPUT_FILE, loadAccounts } from "./common";
 import { FTSOParameters } from "../config/FTSOParameters";
@@ -70,33 +70,36 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
 
   const contractAddresses = loadContracts();
 
-  const votingRewardManager = await hre.artifacts
-    .require("VotingRewardManager")
-    .at(contractAddresses.votingRewardManager);
+  const votingRewardManager: VotingRewardManagerInstance = await hre.artifacts.require("VotingRewardManager").at(contractAddresses.votingRewardManager);
+  const votingManager: VotingManagerInstance = await hre.artifacts.require("VotingManager").at(contractAddresses.votingManager);
 
-  const votingManager = await hre.artifacts.require("VotingManager").at(contractAddresses.votingManager);
+  const timeout = ((await votingManager.BUFFER_WINDOW()).toNumber() * 1000) / 5; // Run 5 times per price epoch
   let lastEpoch = -1;
 
   while (true) {
-    await tick(hre, governance);
+    try {
+      await tick(hre, governance);
 
-    const currentRewardEpoch: number = (await votingManager.getCurrentRewardEpochId()).toNumber();
-    const currentPriceEpoch: number = (await votingManager.getCurrentPriceEpochId()).toNumber();
-    logger.info(`Current reward epoch: ${currentRewardEpoch}, current price epoch: ${currentPriceEpoch}`);
+      const currentRewardEpoch: number = (await votingManager.getCurrentRewardEpochId()).toNumber();
+      const currentPriceEpoch: number = (await votingManager.getCurrentPriceEpochId()).toNumber();
+      logger.info(`Current reward epoch: ${currentRewardEpoch}, current price epoch: ${currentPriceEpoch}`);
 
-    if (currentRewardEpoch > lastEpoch) {
-      await offerRewards(
-        currentRewardEpoch + 1, // Offering for next epoch
-        parameters.symbols,
-        votingRewardManager,
-        governance.address,
-        [accounts[1].address],
-        toBN(REWARD_VALUE)
-      );
-      lastEpoch = currentRewardEpoch;
+      if (currentRewardEpoch > lastEpoch) {
+        await offerRewards(
+          currentRewardEpoch + 1, // Offering for next epoch
+          parameters.symbols,
+          votingRewardManager,
+          governance.address,
+          [accounts[1].address],
+          toBN(REWARD_VALUE)
+        );
+        lastEpoch = currentRewardEpoch;
+      }
+    } catch (e) {
+      logger.error(e);
     }
 
-    await sleepFor(1_000);
+    await sleepFor(timeout);
   }
 }
 /**
