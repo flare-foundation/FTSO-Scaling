@@ -284,7 +284,7 @@ export class FTSOClient {
     const epochSignatures = this.indexer.getSignatures(priceEpochId - 1);
 
     for (const [voter, [signature, signatureTime]] of epochSignatures) {
-      if (signatureTime >= finalizationTime) continue; // Only reward signatures with block timestamp less than that of finalization
+      if (signatureTime > finalizationTime) continue; // Only reward signatures with block timestamp no greater than that of finalization
       const recoveredSigner = await this.provider.recoverSigner(data.merkleRoot, signature);
       if (voter === recoveredSigner) {
         rewardedSigners.push(voter);
