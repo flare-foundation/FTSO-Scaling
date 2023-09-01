@@ -10,7 +10,6 @@ import { TruffleProvider, TruffleProviderOptions } from "../src/providers/Truffl
 import { Feed } from "../src/voting-interfaces";
 import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
-import { increaseTimeTo } from "../test-utils/utils/test-helpers";
 import {
   DummyERC20Instance,
   ERC20PriceOracleInstance,
@@ -98,9 +97,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     wallets = loadAccounts(web3);
     accounts = wallets.map(wallet => wallet.address);
     governance = accounts[0];
-
-    let now = Math.floor(Date.now() / 1000);
-    await increaseTimeTo(now);
 
     // contract deployments
     votingManager = await VotingManager.new(governance);

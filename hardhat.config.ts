@@ -98,7 +98,11 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       accounts,
-      initialDate: "2021-01-01", // no time - get UTC @ 00:00:00
+      /**
+       * Should be kept in sync with changes to BUFFER_TIMESTAMP_OFFSET specified in VotingManager.sol.
+       * If the initialDate is lower the contract will fail to compute price epochs.
+       */
+      initialDate: "2023-06-07",
       blockGasLimit: 8000000, // 8M
       /*
         Normally each Truffle smart contract interaction that modifies state results in a transaction mined in a new block

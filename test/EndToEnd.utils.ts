@@ -248,6 +248,8 @@ export async function signAndSend(
     await client.sign(priceEpochId, true); // skip calculation, since we already did it
   }
 
+  await time.increase(1); // Force increase block timestamp
+
   for (const client of ftsoClients) {
     await client.processNewBlocks(); // Process signatures, will submit finalize tx once enouch signatures received
     await client.processNewBlocks(); // Process finalize tx, indexer will emit Received.Finalize
