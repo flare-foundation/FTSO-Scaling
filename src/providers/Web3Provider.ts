@@ -166,11 +166,12 @@ export class Web3Provider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    const block = (await this.web3.eth.getBlock(blockNumber, true)) as any as BlockData;
+    const block = (await this.web3.eth.getBlock(blockNumber, true)) as BlockData;
     block.timestamp = parseInt("" + block.timestamp, 10);
-    for (const tx of block.transactions) {
-      tx.receipt = await this.web3.eth.getTransactionReceipt(tx.hash);
-    }
+
+    const getReceipts = block.transactions.map(tx => this.web3.eth.getTransactionReceipt(tx.hash));
+    const receipts = await Promise.all(getReceipts);
+    block.transactions.forEach((tx, i) => (tx.receipt = receipts[i]));
     return block;
   }
 
