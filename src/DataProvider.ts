@@ -16,19 +16,21 @@ export class DataProvider {
   private readonly registeredRewardEpochs = new Set<number>();
 
   async run() {
-    this.processBlocks();
+    await this.client.processNewBlocks(); // Initial catchup.
+    this.keepProcessingNewBlocks();
     this.schedulePriceEpochActions();
   }
 
-  private async processBlocks() {
+  private async keepProcessingNewBlocks() {
     while (true) {
       await this.client.processNewBlocks();
       await sleepFor(DataProvider.BLOCK_PROCESSING_INTERVAL_MS);
     }
   }
 
+
   schedulePriceEpochActions() {
-    const timeSec = Date.now() / 1000;
+    const timeSec = this.client.currentTime();
     const nextEpochStartSec = this.client.epochs.nextEpochStartSec(timeSec);
 
     setTimeout(() => {
@@ -38,7 +40,7 @@ export class DataProvider {
   }
 
   async onPriceEpoch() {
-    const currentEpochId = this.client.epochs.priceEpochIdForTime(Date.now() / 1000);
+    const currentEpochId = this.client.epochs.priceEpochIdForTime(this.client.currentTime());
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentEpochId);
 
     this.logger.info(`[On price epoch] ${currentEpochId}, reward epoch ${currentRewardEpochId}.`);

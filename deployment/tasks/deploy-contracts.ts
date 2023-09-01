@@ -7,7 +7,6 @@ import { writeFileSync } from "fs";
 import { ContractAddresses, OUTPUT_FILE } from "./common";
 import { Artifacts, HardhatRuntimeEnvironment } from "hardhat/types";
 import { getLogger } from "../../src/utils/logger";
-import { increaseTimeTo } from "../../test-utils/utils/test-helpers";
 
 const logger = getLogger("deploy-contracts");
 
@@ -21,8 +20,6 @@ const FEE_PERCENTAGE_UPDATE_OFFSET = 3;
 const DEFAULT_FEE_PERCENTAGE = 2000; // 20%
 
 export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters: FTSOParameters) {
-  await syncTime(hre);
-
   const artifacts = hre.artifacts;
   const governance = web3.eth.accounts.privateKeyToAccount(parameters.governancePrivateKey);
 
@@ -98,6 +95,7 @@ async function deployERC20PriceOracle(
 async function deployVotingManager(artifacts: Artifacts, governance: Account): Promise<VotingManagerInstance> {
   const votingManager = await artifacts.require("VotingManager").new(governance.address);
   const currentPriceEpoch = await votingManager.getCurrentPriceEpochId();
+  console.log(`Setting current price epoch to be first rewarded epoch ${currentPriceEpoch}`);
   await votingManager.configureRewardEpoch(currentPriceEpoch, REWARD_EPOCH_DURATION_PRICE_EPOCHS);
   await votingManager.configureSigningDuration(180);
   return votingManager;
@@ -107,16 +105,4 @@ function outputAddresses(deployed: ContractAddresses) {
   const contents = JSON.stringify(deployed, null, 2);
   writeFileSync(OUTPUT_FILE, contents);
   logger.info(`Contract addresses written to ${OUTPUT_FILE}:\n${contents}`);
-}
-
-/**
- * Update time to now for hardhat networks.
- * If the time is too far in the past we get issues when calculating price epoch ids.
- */
-async function syncTime(hre: HardhatRuntimeEnvironment) {
-  const network = hre.network.name;
-  if (network === "local" || network === "localhost" || network === "hardhat") {
-    let now = Math.floor(Date.now() / 1000);
-    await increaseTimeTo(now);
-  }
 }

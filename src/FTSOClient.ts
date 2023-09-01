@@ -12,7 +12,6 @@ import {
   ClaimReward,
   EpochData,
   EpochResult,
-  Feed,
   FinalizeData,
   MedianCalculationResult,
   RevealResult,
@@ -53,6 +52,7 @@ export class FTSOClient {
 
   rewardCalculator!: RewardCalculator;
   lastProcessedBlockNumber: number = 0;
+  lastProcessedBlockTimestamp: number = 0;
   epochs: EpochSettings;
 
   readonly indexer: BlockIndexer;
@@ -147,7 +147,13 @@ export class FTSOClient {
       });
       this.indexer.processBlock(block);
       this.lastProcessedBlockNumber++;
+      this.lastProcessedBlockTimestamp = block.timestamp;
     }
+  }
+
+  /** Returns the timestamp of the last processed block. */
+  currentTime() {
+    return this.lastProcessedBlockTimestamp;
   }
 
   async commit(epochId: number) {
