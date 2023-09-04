@@ -38,7 +38,7 @@ async function offerRewards(
   let totalAmount = toBN(0);
   let offersSent: Offer[] = [];
   for (let i = 0; i < symbols.length; i++) {
-    let amount = rewardValue.add(toBN(i));
+  let amount = rewardValue.add(toBN(i));
 
     let basicOffer = {
       amount: amount,
@@ -73,7 +73,7 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
   const votingRewardManager: VotingRewardManagerInstance = await hre.artifacts.require("VotingRewardManager").at(contractAddresses.votingRewardManager);
   const votingManager: VotingManagerInstance = await hre.artifacts.require("VotingManager").at(contractAddresses.votingManager);
 
-  const timeout = ((await votingManager.BUFFER_WINDOW()).toNumber() * 1000) / 5; // Run 5 times per price epoch
+  const timeout = ((await votingManager.BUFFER_WINDOW()).toNumber() * 1000) / 3; // Run 3 times per price epoch
   let lastEpoch = -1;
 
   while (true) {
@@ -103,7 +103,7 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
   }
 }
 /**
- * Generates a dummy transaction so that new blocks get mined.
+ * Generates a dummy transaction to make sure new blocks get mined.
  */
 async function tick(hre: HardhatRuntimeEnvironment, governance: Account) {
   await hre.web3.eth.sendTransaction({ value: 100, from: governance.address, to: governance.address });
