@@ -33,11 +33,13 @@ import { getLogger } from "./utils/logger";
 import { BlockIndexer, Received } from "./BlockIndexer";
 import { encodingUtils } from "./EncodingUtils";
 import { retry } from "./utils/retry";
+import { sleepFor } from "./time-utils";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
+const BLOCK_PROCESSING_INTERVAL_MS = 500;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
@@ -67,7 +69,7 @@ export class FTSOClient {
   private readonly rewardEpochOffersClosed = new Map<number, boolean>();
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
-  private readonly signatureListener = (e: number) => this.checkSignaturesAndTryFinalize(e);
+  private readonly signatureListener = async (e: number) => this.checkSignaturesAndTryFinalize(e);
 
   get address() {
     return this.provider.senderAddressLowercase;
@@ -88,18 +90,6 @@ export class FTSOClient {
 
   initializeRewardCalculator(initialRewardEpoch: number) {
     this.rewardCalculator = new RewardCalculator(this.epochs, initialRewardEpoch);
-  }
-
-  listenForSignatures() {
-    this.indexer.on(Received.Signature, this.signatureListener);
-  }
-
-  clearSignatureListener() {
-    try {
-      this.indexer.off(Received.Signature, this.signatureListener);
-    } catch (e) {
-      // Ignore - listener was removed before calling finalize.
-    }
   }
 
   registerPriceFeeds(priceFeeds: IPriceFeed[]) {
@@ -165,7 +155,7 @@ export class FTSOClient {
     await this.provider.revealBitvote(epochData);
   }
 
-  async sign(epochId: number, skipCalculation = false) {
+  async calculateResultsAndSign(epochId: number, skipCalculation = false) {
     if (!skipCalculation) {
       await this.calculateResults(epochId);
     }
@@ -419,16 +409,27 @@ export class FTSOClient {
   }
 
   async tryFinalizeOnceSignaturesReceived(epochId: number) {
-    this.indexer.on(Received.Signature, this.signatureListener); // In case we haven't received all the signatures yet.
-    await this.checkSignaturesAndTryFinalize(epochId); // In case we already have, and the listener won't fire again.
+    this.indexer.on(Received.Signature, this.signatureListener); // Will atempt to finalize once enough signatures are received.
+    await this.processNewBlocks();
+    await this.awaitFinalization(epochId);
+    this.indexer.off(Received.Signature, this.signatureListener);
   }
 
-  /** 
-   * Once sufficient voter weight in received signatures is observed, will call finalize. 
+  private async awaitFinalization(epochId: number) {
+    while (!this.indexer.getFinalize(epochId)) {
+      this.logger.debug(`Epoch ${epochId} not finalized, keep processing new blocks`);
+      await sleepFor(BLOCK_PROCESSING_INTERVAL_MS);
+      await this.processNewBlocks();
+    }
+    this.logger.debug(`Epoch ${epochId} finalized, continue.`);
+  }
+
+  /**
+   * Once sufficient voter weight in received signatures is observed, will call finalize.
    * @returns true if enough signatures were found and finalization was attempted.
-  */
+   */
   private async checkSignaturesAndTryFinalize(epochId: number): Promise<boolean> {
-    if (epochId !in this.priceEpochResults) {
+    if (epochId! in this.priceEpochResults) {
       throw Error(`Invalid state: trying to finalize ${epochId}, but results not yet computed.`);
     }
 

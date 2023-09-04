@@ -240,29 +240,17 @@ export async function signAndSend(
   firstClient.indexer.once(Received.Finalize, setFinalized);
 
   for (const client of ftsoClients) {
-    client.listenForSignatures();
+    await client.calculateResultsAndSign(priceEpochId, true); // skip calculation, since we already did it
   }
 
-  // TODO: check the timing is correct, after the reveal period
   for (const client of ftsoClients) {
-    await client.sign(priceEpochId, true); // skip calculation, since we already did it
-  }
-
-  await time.increase(1); // Force increase block timestamp
-
-  for (const client of ftsoClients) {
-    await client.processNewBlocks(); // Process signatures, will submit finalize tx once enouch signatures received
-    await client.processNewBlocks(); // Process finalize tx, indexer will emit Received.Finalize
+    await client.tryFinalizeOnceSignaturesReceived(priceEpochId);
   }
 
   const signaturesTmp = [...firstClient.indexer.getSignatures(priceEpochId)!.values()].map(([s, _]) => s);
   const merkleRoots = [...new Set(signaturesTmp.map(sig => sig.merkleRoot)).values()];
   expect(merkleRoots.length).to.be.equal(1);
   expect(finalized).to.be.true;
-
-  for (const client of ftsoClients) {
-    client.clearSignatureListener();
-  }
 }
 
 export async function publishPriceEpoch(

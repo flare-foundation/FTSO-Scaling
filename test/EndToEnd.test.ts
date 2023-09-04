@@ -279,6 +279,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         await moveToNextPriceEpochStart(votingManager);
         await reveal(priceEpochId, ftsoClients, votingManager);
         await moveToCurrentRewardEpochRevealEnd(votingManager);
+        for (const client of ftsoClients) await client.processNewBlocks();
         await calculateVoteResults(priceEpochId, ftsoClients, votingManager);
         await signAndSend(priceEpochId, ftsoClients, votingManager);
         await publishPriceEpoch(priceEpochId, ftsoClients[0], symbols, priceOracle);

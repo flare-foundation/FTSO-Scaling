@@ -6,7 +6,6 @@ import { FinalizeData } from "./voting-interfaces";
 
 export class DataProvider {
   private readonly logger = getLogger(DataProvider.name);
-  private static readonly BLOCK_PROCESSING_INTERVAL_MS = 500;
 
   constructor(private client: FTSOClient, private myId: number) {}
 
@@ -17,15 +16,7 @@ export class DataProvider {
 
   async run() {
     await this.client.processNewBlocks(); // Initial catchup.
-    this.keepProcessingNewBlocks();
     this.schedulePriceEpochActions();
-  }
-
-  private async keepProcessingNewBlocks() {
-    while (true) {
-      await this.client.processNewBlocks();
-      await sleepFor(DataProvider.BLOCK_PROCESSING_INTERVAL_MS);
-    }
   }
 
 
@@ -34,7 +25,7 @@ export class DataProvider {
     const nextEpochStartSec = this.client.epochs.nextEpochStartSec(timeSec);
 
     setTimeout(() => {
-      this.onPriceEpoch();
+      this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
       this.schedulePriceEpochActions();
     }, (nextEpochStartSec - timeSec + 1) * 1000);
   }
@@ -68,21 +59,18 @@ export class DataProvider {
   }
 
   private async runVotingProcotol(currentEpochId: number) {
-    this.client.clearSignatureListener(); // Clear listeners from previous epoch.
-
     this.logger.info(`[Voting] On commit for current ${currentEpochId}`);
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
     await this.client.commit(currentEpochId);
 
     if (this.hasCommits) {
-      this.client.listenForSignatures();
       const previousEpochId = currentEpochId - 1;
-      this.logger.info(`[Voting] On reveal for previous ${previousEpochId}`);
+      this.logger.info(`[${currentEpochId}] On reveal for previous ${previousEpochId}`);
       await this.client.reveal(previousEpochId);
       await this.waitForRevealEpochEnd();
-      this.logger.info(`[Voting] Calculate results and on sign prev ${previousEpochId}`);
-
-      await this.client.sign(previousEpochId);
+      await this.client.processNewBlocks(); // Get reveals
+      this.logger.info(`[${currentEpochId}] Calculate results and on sign prev ${previousEpochId}`);
+      await this.client.calculateResultsAndSign(previousEpochId);
       await this.client.tryFinalizeOnceSignaturesReceived(previousEpochId);
     }
 

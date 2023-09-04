@@ -132,7 +132,7 @@ export class Web3Provider implements IVotingProvider {
       epochResult.symbolMessage,
       symbolIndices
     );
-    return await this.signAndFinalize("Finalize", this.contracts.priceOracle.options.address, methodCall);
+    return await this.signAndFinalize("Publish prices", this.contracts.priceOracle.options.address, methodCall);
   }
 
   async signMessage(message: string): Promise<BareSignature> {
@@ -194,7 +194,7 @@ export class Web3Provider implements IVotingProvider {
     value: number | BN = 0,
     gas: string = "2500000"
   ): Promise<boolean> {
-    const nonce = await this.web3.eth.getTransactionCount(this.account.address);
+    const nonce = await this.web3.eth.getTransactionCount(this.account.address, "pending");
     const tx = <TransactionConfig>{
       from: this.account.address,
       to: toAddress,
@@ -216,7 +216,7 @@ export class Web3Provider implements IVotingProvider {
       if (e.message.indexOf("Transaction has been reverted by the EVM") < 0) {
         this.logger.error(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${e.message}`);
       } else {
-        fnToEncode
+        await fnToEncode
           .call({ from: this.account.address })
           .then((result: any) => {
             throw Error("unlikely to happen: " + result);
