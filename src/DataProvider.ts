@@ -30,7 +30,7 @@ export class DataProvider {
 
 
   schedulePriceEpochActions() {
-    const timeSec = this.client.currentTime();
+    const timeSec = Math.floor(Date.now() / 1000); // this.client.blockchainTime();
     const nextEpochStartSec = this.client.epochs.nextEpochStartSec(timeSec);
 
     setTimeout(() => {
@@ -40,7 +40,7 @@ export class DataProvider {
   }
 
   async onPriceEpoch() {
-    const currentEpochId = this.client.epochs.priceEpochIdForTime(this.client.currentTime());
+    const currentEpochId = this.client.epochs.priceEpochIdForTime(Math.floor(Date.now() / 1000));
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentEpochId);
 
     this.logger.info(`[On price epoch] ${currentEpochId}, reward epoch ${currentRewardEpochId}.`);
@@ -83,6 +83,7 @@ export class DataProvider {
       this.logger.info(`[Voting] Calculate results and on sign prev ${previousEpochId}`);
 
       await this.client.sign(previousEpochId);
+      await this.client.tryFinalizeOnceSignaturesReceived(previousEpochId);
     }
 
     this.hasCommits = true;
