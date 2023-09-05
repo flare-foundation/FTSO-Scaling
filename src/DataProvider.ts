@@ -19,7 +19,6 @@ export class DataProvider {
     this.schedulePriceEpochActions();
   }
 
-
   schedulePriceEpochActions() {
     const timeSec = Math.floor(Date.now() / 1000); // this.client.blockchainTime();
     const nextEpochStartSec = this.client.epochs.nextEpochStartSec(timeSec);
@@ -47,6 +46,9 @@ export class DataProvider {
     if (!this.isRegisteredForRewardEpoch(nextRewardEpochId) && this.client.rewardEpochOffers.has(nextRewardEpochId)) {
       await this.registerForRewardEpoch(nextRewardEpochId);
     }
+
+    // Process new blocks to make sure we pick up reward offers.
+    await this.client.processNewBlocks();
   }
 
   private async maybeScheduleRewardClaiming(previousRewardEpochId: number, currentEpochId: number) {
