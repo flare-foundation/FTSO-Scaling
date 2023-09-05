@@ -33,6 +33,7 @@ import {
 import { getLogger } from "./utils/logger";
 import { BlockIndexer, Received } from "./BlockIndexer";
 import { encodingUtils } from "./EncodingUtils";
+import { retry } from "./utils/retry";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
@@ -141,7 +142,9 @@ export class FTSOClient {
   async processNewBlocks() {
     const currentBlockNumber = await this.provider.getBlockNumber();
     while (this.lastProcessedBlockNumber < currentBlockNumber) {
-      const block = await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
+      const block = await retry(async () => {
+        return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
+      });
       this.indexer.processBlock(block);
       this.lastProcessedBlockNumber++;
     }
