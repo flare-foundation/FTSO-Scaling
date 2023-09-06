@@ -20,7 +20,7 @@ export class DataProvider {
   }
 
   schedulePriceEpochActions() {
-    const timeSec = Math.floor(Date.now() / 1000); // this.client.blockchainTime();
+    const timeSec = this.currentTimeSec();
     const nextEpochStartSec = this.client.epochs.nextEpochStartSec(timeSec);
 
     setTimeout(() => {
@@ -30,10 +30,9 @@ export class DataProvider {
   }
 
   async onPriceEpoch() {
-    const currentEpochId = this.client.epochs.priceEpochIdForTime(Math.floor(Date.now() / 1000));
+    const currentEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentEpochId);
-
-    this.logger.info(`[On price epoch] ${currentEpochId}, reward epoch ${currentRewardEpochId}.`);
+    this.logger.info(`[${currentEpochId}] Processing price epoch, current reward epoch: ${currentRewardEpochId}.`);
 
     const previousRewardEpochId = currentRewardEpochId - 1;
     const nextRewardEpochId = currentRewardEpochId + 1;
@@ -49,39 +48,39 @@ export class DataProvider {
 
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
+    this.logger.info(`[${currentEpochId}] Finished processing price epoch.`);
   }
 
   private async maybeScheduleRewardClaiming(previousRewardEpochId: number, currentEpochId: number) {
     if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
       this.client.indexer.once(Received.Finalize, async (f: string, d: FinalizeData) => {
-        this.logger.info(`Claiming rewards for last reward epoch ${previousRewardEpochId}`);
+        this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
         await this.client.claimReward(previousRewardEpochId);
       });
     }
   }
 
   private async runVotingProcotol(currentEpochId: number) {
-    this.logger.info(`[Voting] On commit for current ${currentEpochId}`);
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
+    this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
     await this.client.commit(currentEpochId);
 
     if (this.hasCommits) {
       const previousEpochId = currentEpochId - 1;
-      this.logger.info(`[${currentEpochId}] On reveal for previous ${previousEpochId}`);
+      this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
       await this.client.reveal(previousEpochId);
       await this.waitForRevealEpochEnd();
       await this.client.processNewBlocks(); // Get reveals
-      this.logger.info(`[${currentEpochId}] Calculate results and on sign prev ${previousEpochId}`);
+      this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
       await this.client.calculateResultsAndSign(previousEpochId);
       await this.client.tryFinalizeOnceSignaturesReceived(previousEpochId);
     }
 
     this.hasCommits = true;
-    this.logger.info("[Voting] End round");
   }
 
   private async registerForRewardEpoch(nextRewardEpochId: number) {
-    this.logger.info(`Registering for reward epoch ${nextRewardEpochId}`);
+    this.logger.info(`Registering for next reward epoch ${nextRewardEpochId}`);
 
     if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(nextRewardEpochId);
     this.client.registerRewardsForRewardEpoch(nextRewardEpochId);
@@ -104,5 +103,9 @@ export class DataProvider {
   private async waitForRevealEpochEnd() {
     const revealPeriodDurationMs = this.client.epochs.revealDurationSec * 1000;
     await sleepFor(revealPeriodDurationMs + 1);
+  }
+  
+  private currentTimeSec(): number {
+    return Math.floor(Date.now() / 1000);
   }
 }

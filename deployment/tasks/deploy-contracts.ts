@@ -7,7 +7,7 @@ import { writeFileSync } from "fs";
 import { ContractAddresses, OUTPUT_FILE } from "./common";
 import { Artifacts, HardhatRuntimeEnvironment } from "hardhat/types";
 import { getLogger } from "../../src/utils/logger";
-import { increaseTimeTo } from "../../test-utils/utils/test-helpers";
+import { syncTimeToNow } from "../../test-utils/utils/test-helpers";
 
 const logger = getLogger("deploy-contracts");
 
@@ -21,7 +21,7 @@ const FEE_PERCENTAGE_UPDATE_OFFSET = 3;
 const DEFAULT_FEE_PERCENTAGE = 2000; // 20%
 
 export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters: FTSOParameters) {
-  await syncTime(hre);
+  await syncTimeToNow(hre);
 
   const artifacts = hre.artifacts;
   const governance = web3.eth.accounts.privateKeyToAccount(parameters.governancePrivateKey);
@@ -108,16 +108,4 @@ function outputAddresses(deployed: ContractAddresses) {
   const contents = JSON.stringify(deployed, null, 2);
   writeFileSync(OUTPUT_FILE, contents);
   logger.info(`Contract addresses written to ${OUTPUT_FILE}:\n${contents}`);
-}
-
-/**
- * Update time to now for hardhat networks.
- * If the time is too far in the past we get issues when calculating price epoch ids.
- */
-async function syncTime(hre: HardhatRuntimeEnvironment) {
-  const network = hre.network.name;
-  if (network === "local" || network === "localhost" || network === "hardhat") {
-    const now = Math.floor(Date.now() / 1000);
-    await increaseTimeTo(now);
-  }
 }
