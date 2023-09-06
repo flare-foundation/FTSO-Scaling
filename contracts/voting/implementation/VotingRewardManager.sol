@@ -98,7 +98,7 @@ contract VotingRewardManager is Governed, IRewardManager {
             nextRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(
                 currentRewardEpochId + 1
             );
-            // storedRewardEpochBalances[nextRewardEpochBalanceIndex].reset();  //TODO
+            storedRewardEpochBalances[nextRewardEpochBalanceIndex].reset();
         }
         _;
     }

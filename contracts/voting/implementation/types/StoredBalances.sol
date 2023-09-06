@@ -16,6 +16,27 @@ struct StoredBalances {
     mapping(address => uint256) initializedAmountForTokenContract;
     mapping(address => uint256) availableAmountForTokenContract;
     address[] tokenContracts;
+    address[] voters;
+}
+
+function reset(StoredBalances storage storedBalances) {
+    address[] storage addrs = storedBalances.tokenContracts;
+    address[] storage voters = storedBalances.voters;
+    for (uint i = 0; i < addrs.length; ++i) {
+        address addr = addrs[i];
+        delete storedBalances.totalRewardForTokenContract[addr];
+        delete storedBalances.initializedAmountForTokenContract[addr];
+        delete storedBalances.availableAmountForTokenContract[addr];
+        for (uint j = 0; j < voters.length; ++j) {
+            address voter = voters[j];
+            delete storedBalances.unclamedBalanceForTokenContractAndVoter[addr][voter];
+            delete storedBalances.totalBalanceForTokenContractAndVoter[addr][voter];
+            delete storedBalances.unclaimedWeightForTokenContract[addr][voter];
+            delete storedBalances.totalWeightForTokenContractAndVoter[addr][voter];
+        } 
+    }
+    delete storedBalances.tokenContracts;
+    delete storedBalances.voters;
 }
 
 function initializeForClaiming(
@@ -32,6 +53,8 @@ function initializeForClaiming(
     if (totalWeight[voter] > 0 || weight == 0) {  // already initialized or useless to initialize
         return;
     }
+
+    storedBalances.voters.push(voter);
 
     mapping(address => uint256) storage unclaimedWeight = storedBalances
         .unclaimedWeightForTokenContract[tokenAddr];
@@ -139,6 +162,7 @@ function debit(
 }
 
 using {
+    reset,
     currencyBalance,
     credit,
     debit,
