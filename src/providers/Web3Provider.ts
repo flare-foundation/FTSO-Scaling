@@ -111,7 +111,7 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Sign result", this.contracts.voting.options.address, methodCall);
   }
 
-  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
+  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any> {
     const methodCall = this.contracts.voting.methods.finalize(
       epochId,
       mySignatureHash,
@@ -193,7 +193,7 @@ export class Web3Provider implements IVotingProvider {
     fnToEncode: NonPayableTransactionObject<void>,
     value: number | BN = 0,
     gas: string = "2500000"
-  ): Promise<boolean> {
+  ): Promise<void> {
     const nonce = await this.web3.eth.getTransactionCount(this.account.address, "pending");
     const tx = <TransactionConfig>{
       from: this.account.address,
@@ -205,27 +205,19 @@ export class Web3Provider implements IVotingProvider {
       nonce: nonce,
     };
     const signedTx = await this.account.signTransaction(tx);
-
     try {
       await this.waitFinalize(this.account.address, () =>
         this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!)
       );
-      return true;
     } catch (e: any) {
-      this.logger.error(`error: ${e.message}`);
-      if (e.message.indexOf("Transaction has been reverted by the EVM") < 0) {
-        this.logger.error(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${e.message}`);
-      } else {
-        await fnToEncode
-          .call({ from: this.account.address })
-          .then((result: any) => {
-            throw Error("unlikely to happen: " + result);
-          })
-          .catch((revertReason: any) => {
-            this.logger.error(`${label} | Nonce sent: ${nonce} | signAndFinalize3 error: ${revertReason}`);
-          });
+      this.logger.debug(`[${label}] Transaction failed: ${e.message}`);
+      if (e.message.indexOf("Transaction has been reverted by the EVM") >= 0) {
+        // This call should throw a new exception containing the revert reason
+        await fnToEncode.call({ from: this.account.address });
       }
-      return false;
+      // Otherwise, either revert reason was already part of the original error or
+      // we failed to get any additional information.
+      throw e;
     }
   }
 

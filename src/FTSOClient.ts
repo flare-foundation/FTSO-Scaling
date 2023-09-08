@@ -316,18 +316,13 @@ export class FTSOClient {
           s: sig.s,
         } as BareSignature;
       });
-    // TODO: Handle finalization failures more gracefully – it's expected that another provier may finalize before us.
     try {
-      const id = Web3.utils.randomHex(8);
-      this.logger.debug(`[${this.address.slice(0, 4)}] Trying to finalize ${id}`);
-      const result = await this.provider.finalize(epochId, mySignatureHash, signatures);
-      this.logger.debug(
-        `[${this.address.slice(0, 4)}] Finalization succesfull ${id}: ${result}, epoch ${epochId}, sig count ${
-          signatures.length
-        }`
-      );
+      await this.provider.finalize(epochId, mySignatureHash, signatures);
+      // TODO: Finalization transaction executed succesfully, but we should check for MerkleRootConfirmed event
+      //       to make sure it was recorded in the smart contract.
+      this.logger.info(`Successfully submitted finalization transaction for epoch ${epochId}.`);
     } catch (e) {
-      this.logger.debug(`Error finalizing: ${e}`);
+      this.logger.info(`Failed to submit finalization transaction: ${e}`);
     }
   }
 

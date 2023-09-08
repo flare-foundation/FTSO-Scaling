@@ -41,10 +41,7 @@ async function main() {
     }
 
     while (true) {
-      const currentBlock = await web3.eth.getBlockNumber();
-      const curerntBlockTime = (await web3.eth.getBlock(currentBlock)).timestamp;
-      console.log(`Current block: ${currentBlock}, time: ${curerntBlockTime}`);
-      await sleepFor(1000);
+      await sleepFor(10_000);
     }
   } catch (e) {
     childProcesses.forEach(p => p.kill());
