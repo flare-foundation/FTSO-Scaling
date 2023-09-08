@@ -246,7 +246,6 @@ export async function signAndSend(
   for (const client of ftsoClients) {
     await client.tryFinalizeOnceSignaturesReceived(priceEpochId);
   }
-  await firstClient.processNewBlocks(); // Process the block with finalization for the indexer to emit Received.Finalize
 
   const signaturesTmp = [...firstClient.indexer.getSignatures(priceEpochId)!.values()].map(([s, _]) => s);
   const merkleRoots = [...new Set(signaturesTmp.map(sig => sig.merkleRoot)).values()];
