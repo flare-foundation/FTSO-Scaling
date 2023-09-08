@@ -9,6 +9,7 @@ import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import {
   BareSignature,
+  BlockData,
   ClaimReward,
   EpochData,
   EpochResult,
@@ -39,6 +40,7 @@ const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
+const MAX_ASYNCHRONOUS_BLOCK_REQUESTS = 1;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
@@ -139,14 +141,32 @@ export class FTSOClient {
     this.rewardEpochOffersClosed.set(rewardEpochId, true);
   }
 
+    /**
+   * Processes new blocks by first asynchronously requesting blocks and then
+   * sequentially processing them.
+   */
   async processNewBlocks() {
     const currentBlockNumber = await this.provider.getBlockNumber();
-    while (this.lastProcessedBlockNumber < currentBlockNumber) {
-      const block = await retry(async () => {
-        return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
-      });
-      this.indexer.processBlock(block);
-      this.lastProcessedBlockNumber++;
+    let numBlocks = currentBlockNumber - this.lastProcessedBlockNumber;
+    let numRequestRepeats = Math.ceil(numBlocks / MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
+    let blockPromisesLen = Math.min(numBlocks, MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
+    let blockPromises: Promise<Promise<BlockData>>[] = Array(blockPromisesLen);
+    for (let i = 0; i < numRequestRepeats; i++) {
+      let j: number = 0;
+      let k: number = this.lastProcessedBlockNumber;
+      while (j < MAX_ASYNCHRONOUS_BLOCK_REQUESTS && k < currentBlockNumber) {
+        blockPromises[j] = retry(async () => {
+          return await this.provider.getBlock(k + 1);
+        });
+        k++, j++;
+      }
+
+      j = 0;
+      while (j < MAX_ASYNCHRONOUS_BLOCK_REQUESTS && this.lastProcessedBlockNumber < currentBlockNumber) {
+        this.indexer.processBlock(await blockPromises[j]);
+        this.lastProcessedBlockNumber++;
+        j++;
+      }
     }
   }
 
@@ -334,7 +354,7 @@ export class FTSOClient {
       this.logger.debug(`[${this.address.slice(0, 4)}] Trying to finalize ${id}`);
       const result = await this.provider.finalize(epochId, mySignatureHash, signatures);
       this.logger.debug(
-        `[${this.address.slice(0, 4)}] Finalization succesfull ${id}: ${result}, epoch ${epochId}, sig count ${
+        `[${this.address.slice(0, 4)}] Finalization response ${id}: ${result}, epoch ${epochId}, sig count ${
           signatures.length
         }`
       );
