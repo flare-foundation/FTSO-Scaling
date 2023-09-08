@@ -1,8 +1,9 @@
-import { EventEmitter } from "events";
 import { ContractAddresses } from "../deployment/tasks/common";
 import { encodingUtils } from "./EncodingUtils";
 import { EpochSettings } from "./EpochSettings";
 import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { getLogger } from "./utils/logger";
+import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 
 declare type Address = string;
 declare type EpochId = number;
@@ -18,14 +19,14 @@ export enum Received {
 }
 
 /** Processes transaction blocks and emits events based on the type of extracted data. */
-export class BlockIndexer extends EventEmitter {
+export class BlockIndexer extends AsyncEventEmitter {
   private readonly priceEpochCommits = new Map<EpochId, Map<Address, CommitHash>>();
   private readonly priceEpochReveals = new Map<EpochId, Map<Address, RevealBitvoteData>>();
   private readonly priceEpochSignatures = new Map<EpochId, Map<Address, [SignatureData, Timestamp]>>();
   private readonly priceEpochFinalizes = new Map<EpochId, [FinalizeData, Timestamp]>();
 
   constructor(private readonly epochs: EpochSettings, private readonly contractAddresses: ContractAddresses) {
-    super({ captureRejections: true });
+    super();
   }
 
   getCommits(priceEpochId: EpochId): Map<Address, CommitHash> {
@@ -44,13 +45,13 @@ export class BlockIndexer extends EventEmitter {
     return this.priceEpochFinalizes.get(priceEpochId);
   }
 
-  processBlock(block: BlockData) {
+  async processBlock(block: BlockData) {
     for (const tx of block.transactions) {
-      this.processTx(tx, block.timestamp);
+      await this.processTx(tx, block.timestamp);
     }
   }
 
-  private processTx(tx: TxData, blockTimestampSec: number) {
+  private async processTx(tx: TxData, blockTimestampSec: number): Promise<void> {
     const prefix = tx.input?.slice(0, 10);
     if (tx.to?.toLowerCase() === this.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {
@@ -71,7 +72,7 @@ export class BlockIndexer extends EventEmitter {
     }
   }
 
-  private extractFinalize(tx: TxData, blockTimestampSec: number) {
+  private async extractFinalize(tx: TxData, blockTimestampSec: number) {
     const successful = tx.receipt!.status == true;
     if (successful) {
       const finalizeData = encodingUtils.extractFinalize(tx);
@@ -79,7 +80,7 @@ export class BlockIndexer extends EventEmitter {
         throw new Error(`Finalize data already exists for epoch ${finalizeData.epochId}`);
       }
       this.priceEpochFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
-      this.emit(Received.Finalize, tx.from, finalizeData);
+      await this.emit(Received.Finalize, tx.from, finalizeData);
     }
   }
 
@@ -87,10 +88,10 @@ export class BlockIndexer extends EventEmitter {
    * Extract offers from transaction input.
    * Assumption: the transaction is a call to `offerRewards` function.
    */
-  private extractOffers(tx: TxData, blockTimestampSec: number): void {
+  private async extractOffers(tx: TxData, blockTimestampSec: number): Promise<void> {
     const offers = encodingUtils.extractOffers(tx);
     const priceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
-    this.emit(Received.Offers, priceEpochId, offers);
+    await this.emit(Received.Offers, priceEpochId, offers);
   }
 
   // commit(bytes32 _commitHash)
@@ -116,7 +117,7 @@ export class BlockIndexer extends EventEmitter {
   }
 
   // function signResult(bytes32 _merkleRoot, Signature calldata signature)
-  private extractSignature(tx: TxData, blockTimestampSec: number): void {
+  private async extractSignature(tx: TxData, blockTimestampSec: number): Promise<void> {
     const signatureData = encodingUtils.extractSignatureData(tx);
     const from = tx.from.toLowerCase();
     const signaturesInEpoch =
@@ -125,6 +126,6 @@ export class BlockIndexer extends EventEmitter {
     this.priceEpochSignatures.set(signatureData.epochId, signaturesInEpoch);
     signaturesInEpoch.set(from.toLowerCase(), [signatureData, blockTimestampSec]);
 
-    this.emit(Received.Signature, signatureData);
+    await this.emit(Received.Signature, signatureData.epochId);
   }
 }

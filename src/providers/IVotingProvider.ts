@@ -32,7 +32,7 @@ export interface IVotingProvider {
   commit(hash: string): Promise<any>;
   revealBitvote(epochData: EpochData): Promise<any>;
   signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
-  finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean>;
+  finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
   publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
   allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;

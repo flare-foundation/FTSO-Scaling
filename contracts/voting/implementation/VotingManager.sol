@@ -37,6 +37,7 @@ contract VotingManager is Governed {
     }
 
     function getCurrentPriceEpochId() public view returns (uint256) {
+        require(block.timestamp >= BUFFER_TIMESTAMP_OFFSET, "Block timestamp too low");
         return (block.timestamp - BUFFER_TIMESTAMP_OFFSET) / BUFFER_WINDOW;
     }
 

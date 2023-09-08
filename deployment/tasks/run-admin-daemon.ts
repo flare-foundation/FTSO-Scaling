@@ -31,16 +31,13 @@ async function offerRewards(
   leadProviders: string[],
   rewardValue: BN
 ) {
-  logger.info(`Offering rewards for epoch ${rewardEpochId}...`);
-
-  const toBN = web3.utils.toBN;
+  logger.info(`Offering rewards for next reward epoch ${rewardEpochId}.`);
 
   let totalAmount = toBN(0);
-  let offersSent: Offer[] = [];
+  const offersSent: Offer[] = [];
   for (let i = 0; i < symbols.length; i++) {
-    let amount = rewardValue.add(toBN(i));
-
-    let basicOffer = {
+    const amount = rewardValue.add(toBN(i));
+    const basicOffer = {
       amount: amount,
       currencyAddress: ZERO_ADDRESS,
       offerSymbol: toBytes4(symbols[i].offerSymbol),
@@ -57,12 +54,16 @@ async function offerRewards(
     totalAmount = totalAmount.add(amount);
     offersSent.push(basicOffer);
   }
-  let receipt = await votingRewardManager.offerRewards(hexlifyBN(offersSent), { from: governance, value: totalAmount });
-  logger.info(`"Reward offers sent, gas used: ${receipt.receipt.gasUsed}`);
+  const receipt = await votingRewardManager.offerRewards(hexlifyBN(offersSent), {
+    from: governance,
+    value: totalAmount,
+  });
+  logger.info(`Offers sent for reward epoch ${rewardEpochId}, gas used: ${receipt.receipt.gasUsed}`);
 }
 
 /**
- * Runs admin tasks like providing offers
+ * Generates offers for every reward epoch, and sends periodic transactions
+ *  to make sure new blocks are mined on the Hardhat network.
  */
 export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters: FTSOParameters) {
   const accounts = loadAccounts(hre.web3);
@@ -70,20 +71,20 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
 
   const contractAddresses = loadContracts();
 
-  const votingRewardManager: VotingRewardManagerInstance = await hre.artifacts.require("VotingRewardManager").at(contractAddresses.votingRewardManager);
-  const votingManager: VotingManagerInstance = await hre.artifacts.require("VotingManager").at(contractAddresses.votingManager);
+  const votingRewardManager: VotingRewardManagerInstance = await hre.artifacts
+    .require("VotingRewardManager")
+    .at(contractAddresses.votingRewardManager);
+  const votingManager: VotingManagerInstance = await hre.artifacts
+    .require("VotingManager")
+    .at(contractAddresses.votingManager);
 
-  const timeout = ((await votingManager.BUFFER_WINDOW()).toNumber() * 1000) / 5; // Run 5 times per price epoch
+  const timeout = ((await votingManager.BUFFER_WINDOW()).toNumber() * 1000) / 3; // Run 3 times per price epoch
   let lastEpoch = -1;
 
   while (true) {
     try {
       await tick(hre, governance);
-
       const currentRewardEpoch: number = (await votingManager.getCurrentRewardEpochId()).toNumber();
-      const currentPriceEpoch: number = (await votingManager.getCurrentPriceEpochId()).toNumber();
-      logger.info(`Current reward epoch: ${currentRewardEpoch}, current price epoch: ${currentPriceEpoch}`);
-
       if (currentRewardEpoch > lastEpoch) {
         await offerRewards(
           currentRewardEpoch + 1, // Offering for next epoch
@@ -103,7 +104,7 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
   }
 }
 /**
- * Generates a dummy transaction so that new blocks get mined.
+ * Generates a dummy transaction to make sure new blocks get mined.
  */
 async function tick(hre: HardhatRuntimeEnvironment, governance: Account) {
   await hre.web3.eth.sendTransaction({ value: 100, from: governance.address, to: governance.address });
