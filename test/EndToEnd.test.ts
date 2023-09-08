@@ -10,7 +10,6 @@ import { TruffleProvider, TruffleProviderOptions } from "../src/providers/Truffl
 import { Feed } from "../src/voting-interfaces";
 import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
-import { increaseTimeTo } from "../test-utils/utils/test-helpers";
 import {
   DummyERC20Instance,
   ERC20PriceOracleInstance,
@@ -98,9 +97,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     wallets = loadAccounts(web3);
     accounts = wallets.map(wallet => wallet.address);
     governance = accounts[0];
-
-    let now = Math.floor(Date.now() / 1000);
-    await increaseTimeTo(now);
 
     // contract deployments
     votingManager = await VotingManager.new(governance);
@@ -283,6 +279,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         await moveToNextPriceEpochStart(votingManager);
         await reveal(priceEpochId, ftsoClients, votingManager);
         await moveToCurrentRewardEpochRevealEnd(votingManager);
+        for (const client of ftsoClients) await client.processNewBlocks();
         await calculateVoteResults(priceEpochId, ftsoClients, votingManager);
         await signAndSend(priceEpochId, ftsoClients, votingManager);
         await publishPriceEpoch(priceEpochId, ftsoClients[0], symbols, priceOracle);
