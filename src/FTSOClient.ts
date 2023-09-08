@@ -40,7 +40,7 @@ const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
-const MAX_ASYNCHRONOUS_BLOCK_REQUESTS = 1;
+const MAX_ASYNCHRONOUS_BLOCK_REQUESTS = 100;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
@@ -141,7 +141,7 @@ export class FTSOClient {
     this.rewardEpochOffersClosed.set(rewardEpochId, true);
   }
 
-    /**
+  /**
    * Processes new blocks by first asynchronously requesting blocks and then
    * sequentially processing them.
    */
