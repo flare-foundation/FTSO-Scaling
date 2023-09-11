@@ -10,12 +10,11 @@ import {
 import {
   BareSignature,
   BlockData,
-  ClaimReward,
+  RewardClaimWithProof,
   EpochData,
   EpochResult,
   Offer,
   VoterWithWeight,
-  deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
 import { getAccount, recoverSigner, signMessage } from "../web3-utils";
@@ -61,10 +60,8 @@ export class TruffleProvider implements IVotingProvider {
     return this.contracts.voterRegistry.thresholdForRewardEpoch(epochId);
   }
 
-  async claimReward(claim: ClaimReward): Promise<any> {
-    const claimReward = deepCopyClaim(claim);
-    delete claimReward.hash;
-    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claimReward), this.account.address, {
+  async claimReward(claim: RewardClaimWithProof): Promise<any> {
+    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claim), this.account.address, {
       from: this.account.address,
     });
   }
@@ -128,7 +125,7 @@ export class TruffleProvider implements IVotingProvider {
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     return this.contracts.priceOracle.publishPrices(
-      epochResult.dataMerkleRoot,
+      epochResult.rewardClaimMerkleRoot,
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-struct ClaimReward {
+struct RewardClaimWithProof {
     bytes32[] merkleProof;
-    ClaimRewardBody claimRewardBody;
+    RewardClaim body;
 }
 
-struct ClaimRewardBody {
+struct RewardClaim {
+    bool isFixedClaim;
     uint256 amount;
-    uint256 weight;
     address currencyAddress; // 0 for native currency
-    address payable voterAddress;
+    address payable beneficiary;
     uint epochId;
 }
 
@@ -65,13 +65,13 @@ abstract contract IRewardManager {
         address erc20PriceOracleContract
     ) external virtual;
 
-    function claimReward(ClaimReward calldata _data, address claimer) external virtual;
+    function claimReward(RewardClaimWithProof calldata _data, address claimer) external virtual;
 
     function offerRewards(Offer[] calldata offers) external payable virtual;
 
     // These functions are not for calling, but for exporting the type definitions in the metadata
-    function claimRewardBodyDefinition(
-        ClaimRewardBody calldata _data
+    function rewardClaimDefinition(
+        RewardClaim calldata _data
     ) external {}
 
     function offerDefinition(Offer calldata _data) external {}
@@ -100,8 +100,8 @@ abstract contract IRewardManager {
 
 }
 
-function hash(ClaimReward calldata claim) pure returns (bytes32) {
-    return keccak256(abi.encode(claim.claimRewardBody));
+function hash(RewardClaimWithProof calldata claim) pure returns (bytes32) {
+    return keccak256(abi.encode(claim.body));
 }
 
-using {hash} for ClaimReward global;
+using {hash} for RewardClaimWithProof global;

@@ -2,7 +2,8 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { ClaimReward, Feed, RewardOffered } from "./voting-interfaces";
+import { Feed, RewardOffered, RewardClaim } from "./voting-interfaces";
+import { encodingUtils } from "./EncodingUtils";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -30,19 +31,15 @@ export function sortedHashPair(x: string, y: string) {
 }
 
 /**
- * Hashing ClaimReward struct.
- * @param data 
- * @param abi 
- * @returns 
+ * Hashing {@link RewardClaim} struct.
  */
-export function hashClaimReward(data: ClaimReward, abi: any): string {
-  return utils.soliditySha3(defaultAbiCoder.encode([abi], [hexlifyBN(data.claimRewardBody)]))!;
+export function hashRewardClaim(data: RewardClaim): string {
+  const rewardClaimAbi: any = encodingUtils.abiInputForName("rewardClaimDefinition")!;
+  return utils.soliditySha3(defaultAbiCoder.encode([rewardClaimAbi], [hexlifyBN(data)]))!;
 }
 
 /**
  * Converts text representation of a symbol to bytes4.
- * @param text 
- * @returns 
  */
 export function toBytes4(text: string) {
   if (!text || text.length === 0) {
@@ -59,8 +56,6 @@ export function toBytes4(text: string) {
 
 /**
  * Converts bytes4 representation of a symbol to text.
- * @param bytes4 
- * @returns 
  */
 export function bytes4ToText(bytes4: string) {
   if (!bytes4 || bytes4.length === 0) {
@@ -69,13 +64,11 @@ export function bytes4ToText(bytes4: string) {
   if (!/^0x[0-9a-f]{8}$/i.test(bytes4)) {
     throw new Error(`Bytes4 should be a 4-byte hex string`);
   }
-  return utils.hexToAscii(bytes4).replace(/\u0000/g, '');
+  return utils.hexToAscii(bytes4).replace(/\u0000/g, "");
 }
 
 /**
  * Converts feed symbols withing the Feed from text to bytes.
- * @param feed 
- * @returns 
  */
 export function feedToBytes4(feed: Feed): Feed {
   return {
@@ -90,8 +83,6 @@ export function unprefixedSymbolBytes(feed: Feed) {
 
 /**
  * Converts feed symbols withing the Feed from bytes to text.
- * @param feed 
- * @returns 
  */
 export function feedToText(feed: Feed): Feed {
   return {
@@ -103,15 +94,13 @@ export function feedToText(feed: Feed): Feed {
 
 /**
  * Removes annoying index fields from an object.
- * @param obj 
- * @returns 
  */
 export function removeIndexFields<T>(obj: T): T {
   return Object.keys(obj as any)
-    .filter((key) => !key!.match(/^[0-9]+$/))
+    .filter(key => !key!.match(/^[0-9]+$/))
     .reduce((result: any, key: string) => {
       return Object.assign(result, {
-        [key]: (obj as any)[key]
+        [key]: (obj as any)[key],
       });
     }, {}) as T;
 }
@@ -119,17 +108,15 @@ export function removeIndexFields<T>(obj: T): T {
 /**
  * Converts an offer from web3 response to a more usable format, matching
  * the Offer interface.
- * @param offer 
- * @returns 
  */
 export function convertRewardOfferedEvent(offer: any): RewardOffered {
   let newOffer = removeIndexFields(offer);
   delete newOffer.__length__;
   newOffer.leadProviders = [...offer.leadProviders];
   let tmp = newOffer as RewardOffered;
-  tmp.offerSymbol = bytes4ToText(tmp.offerSymbol),
-    tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol),
-    tmp.amount = toBN(tmp.amount);
+  (tmp.offerSymbol = bytes4ToText(tmp.offerSymbol)),
+    (tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol)),
+    (tmp.amount = toBN(tmp.amount));
   tmp.flrValue = toBN(tmp.flrValue);
   tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
   tmp.elasticBandWidthPPM = toBN(tmp.elasticBandWidthPPM);
@@ -140,13 +127,10 @@ export function convertRewardOfferedEvent(offer: any): RewardOffered {
 
 /**
  * Id of a feed is a string of the form `offerSymbol-quoteSymbol`.
- * @param feed 
- * @returns 
  */
 export function feedId(feed: Feed) {
   return `${feed.offerSymbol}-${feed.quoteSymbol}`;
 }
-
 
 /**
  * Prefixes hex string with `0x` if the string is not yet prefixed.
@@ -191,7 +175,7 @@ export function hexlifyBN(obj: any): any {
     return prefix0xSigned(toHex(obj));
   }
   if (Array.isArray(obj)) {
-    return (obj as any[]).map((item) => hexlifyBN(item));
+    return (obj as any[]).map(item => hexlifyBN(item));
   }
   if (typeof obj === "object") {
     const res = {} as any;

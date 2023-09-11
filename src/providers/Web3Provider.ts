@@ -16,12 +16,11 @@ import { sleepFor } from "../time-utils";
 import {
   BareSignature,
   BlockData,
-  ClaimReward,
+  RewardClaimWithProof,
   EpochData,
   EpochResult,
   Offer,
   VoterWithWeight,
-  deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
 import { getAccount, loadContract, recoverSigner, signMessage } from "../web3-utils";
@@ -59,12 +58,10 @@ export class Web3Provider implements IVotingProvider {
     return toBN(threshold);
   }
 
-  async claimReward(claim: ClaimReward): Promise<any> {
-    const claimReward = deepCopyClaim(claim);
-    delete claimReward.hash;
-    this.logger.info("Calling claim reward contract with", claimReward);
+  async claimReward(claim: RewardClaimWithProof): Promise<any> {
+    this.logger.info("Calling claim reward contract with", claim);
     const methodCall = this.contracts.votingRewardManager.methods.claimReward(
-      hexlifyBN(claimReward),
+      hexlifyBN(claim),
       this.account.address
     );
     return await this.signAndFinalize("Claim reward", this.contracts.votingRewardManager.options.address, methodCall);
@@ -126,7 +123,7 @@ export class Web3Provider implements IVotingProvider {
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     const methodCall = this.contracts.priceOracle.methods.publishPrices(
-      epochResult.dataMerkleRoot,
+      epochResult.rewardClaimMerkleRoot,
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,

@@ -8,7 +8,7 @@ import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/voting-interfaces";
-import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";
+import { hexlifyBN, toBN, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import {
   DummyERC20Instance,
@@ -22,7 +22,7 @@ import {
   VotingRewardManagerInstance,
 } from "../typechain-truffle";
 import {
-  moveToCurrentRewardEpochRevealEnd,
+  moveToCurrentPriceEpochRevealEnd,
   moveToNextPriceEpochStart,
   moveToNextRewardEpochStart,
 } from "../test-utils/utils/voting-test-utils";
@@ -189,7 +189,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     const totalWeight = DEFAULT_VOTER_WEIGHT.mul(toBN(DATA_PROVIDER_COUNT));
     expect(await voterRegistry.totalWeightPerRewardEpoch(FIRST_REWARD_EPOCH)).to.be.bignumber.eq(totalWeight);
     for (let i = 1; i <= DATA_PROVIDER_COUNT; i++) {
-      expect(await voting.getVoterWeightForRewardEpoch(accounts[i], firstPriceEpochInRewardEpoch1)).to.be.bignumber.eq(
+      expect(await voting.getVoterWeightForPriceEpoch(accounts[i], firstPriceEpochInRewardEpoch1)).to.be.bignumber.eq(
         DEFAULT_VOTER_WEIGHT
       );
     }
@@ -240,7 +240,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   });
 
   it("should calculate vote results", async () => {
-    await moveToCurrentRewardEpochRevealEnd(votingManager);
+    await moveToCurrentPriceEpochRevealEnd(votingManager);
     await calculateVoteResults(initialPriceEpoch, ftsoClients, votingManager);
   });
 
@@ -278,7 +278,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
         await commit(priceEpochId, ftsoClients, votingManager);
         await moveToNextPriceEpochStart(votingManager);
         await reveal(priceEpochId, ftsoClients, votingManager);
-        await moveToCurrentRewardEpochRevealEnd(votingManager);
+        await moveToCurrentPriceEpochRevealEnd(votingManager);
         for (const client of ftsoClients) await client.processNewBlocks();
         await calculateVoteResults(priceEpochId, ftsoClients, votingManager);
         await signAndSend(priceEpochId, ftsoClients, votingManager);
@@ -286,13 +286,14 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
 
         await sleepFor(0); // Allow pending epoch event handlers to complete
       }
-      let newRewardEpochId = await votingManager.getCurrentRewardEpochId();
+      const newRewardEpochId = await votingManager.getCurrentRewardEpochId();
 
       ftsoClients.forEach(client => client.registerPriceFeeds(priceFeedsForClient));
 
+      const claimRewardEpoch = newRewardEpochId.toNumber() - 1;
       await claimRewards(
         votingManager,
-        newRewardEpochId.toNumber() - 1,
+        claimRewardEpoch,
         ftsoClients,
         priceEpochId - 1,
         governance,
@@ -301,10 +302,6 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
       );
     }
   });
-
-  // TODO: test claiming undistributed rewards
-  // it("should claim undistributed rewards", async () => {
-  // });
 
   async function registerVoters(voterRegistry: VoterRegistryInstance, rewardEpoch: BN, accounts: string[]) {
     for (let i = 1; i <= DATA_PROVIDER_COUNT; i++) {

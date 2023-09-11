@@ -2,7 +2,6 @@
 pragma solidity 0.8.18;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import "hardhat/console.sol";
 
 struct StoredBalances {
     // currencyAddress => voter => balance
@@ -11,7 +10,7 @@ struct StoredBalances {
     // currencyAddress => voter => weight
     mapping(address => mapping(address => uint256)) unclaimedWeightForTokenContract;
     mapping(address => mapping(address => uint256)) totalWeightForTokenContractAndVoter;
-    // currencyAddress => weight
+    // currencyAddress => balance
     mapping(address => uint256) totalRewardForTokenContract;
     mapping(address => uint256) initializedAmountForTokenContract;
     mapping(address => uint256) availableAmountForTokenContract;
@@ -127,25 +126,27 @@ function debit(
     address tokenAddr,
     address voter,
     address payable toAddr,
-    uint256 weight,
+    uint256 weightToClaim,
     uint256 additionalAmount
 ) {
-    mapping(address => uint256) storage unclaimedBalance = storedBalances
-        .unclamedBalanceForTokenContractAndVoter[tokenAddr];
-    mapping(address => uint256) storage unclaimedWeightOf = storedBalances
-        .unclaimedWeightForTokenContract[tokenAddr];
+    uint256 weightedAmount = 0;
+    if (weightToClaim > 0) {
+        // double decreasing balance and weight to avoid rounding errors
+        mapping(address => uint256) storage unclaimedBalance = storedBalances
+            .unclamedBalanceForTokenContractAndVoter[tokenAddr];
+        mapping(address => uint256) storage unclaimedWeightOf = storedBalances
+            .unclaimedWeightForTokenContract[tokenAddr];
 
-    // double decreasing balance and weight to avoid rounding errors
-    uint256 amount = (unclaimedBalance[voter] * weight) /
-        unclaimedWeightOf[voter];
-    require(amount <= unclaimedBalance[voter], "insufficient balance");
-    uint256 claimAmount = amount + additionalAmount;
+        uint256 unclaimedWeight = unclaimedWeightOf[voter];
+        require(unclaimedWeight > 0, "unclaimed weight is 0");
+        weightedAmount = (unclaimedBalance[voter] * weightToClaim) / unclaimedWeight;
+        require(weightedAmount <= unclaimedBalance[voter], "insufficient balance");
+        unclaimedBalance[voter] -= weightedAmount; // Assumes we don't subsequently credit, since this can reach 0.
+        unclaimedWeightOf[voter] -= weightToClaim;
+    }
+
+    uint256 claimAmount = weightedAmount + additionalAmount;
     require(claimAmount <= storedBalances.availableAmountForTokenContract[tokenAddr], "insufficient available amount");
-
-    // Additional amount is used to extract fee. Since it is
-
-    unclaimedBalance[voter] -= amount; // Assumes we don't subsequently credit, since this can reach 0.
-    unclaimedWeightOf[voter] -= weight;
     storedBalances.availableAmountForTokenContract[tokenAddr] -= claimAmount;
 
     bool success;
@@ -157,7 +158,6 @@ function debit(
         (success, ) = toAddr.call{value: claimAmount}("");
         /* solhint-enable avoid-low-level-calls */
     }
-
     require(success, "failed to transfer claimed balance");
 }
 

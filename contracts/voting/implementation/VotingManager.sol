@@ -48,31 +48,31 @@ contract VotingManager is Governed {
     }
 
     function getRewardEpochIdForEpoch(
-        uint256 _epochId
+        uint256 _priceEpochId
     ) public view returns (uint256) {
-        require(_epochId >= firstRewardedPriceEpoch, "epochId too low");
+        require(_priceEpochId >= firstRewardedPriceEpoch, "epochId too low");
         require(
             rewardEpochDurationInEpochs > 0,
             "rewardEpochDurationInEpochs not initialized"
         );
-        return (_epochId - firstRewardedPriceEpoch) / rewardEpochDurationInEpochs;
+        return (_priceEpochId - firstRewardedPriceEpoch) / rewardEpochDurationInEpochs;
     }
 
     function firstSigningTimestampForEpoch(
-        uint256 _epochId
+        uint256 _priceEpochId
     ) public pure returns (uint256) {
         return
             BUFFER_TIMESTAMP_OFFSET +
-            (_epochId * BUFFER_WINDOW) +
+            (_priceEpochId * BUFFER_WINDOW) +
             BUFFER_WINDOW /
             2 +
             1;
     }
 
     function lastSigningTimestampForEpoch(
-        uint256 _epochId
+        uint256 _priceEpochId
     ) public view returns (uint256) {
-        return firstSigningTimestampForEpoch(_epochId) + signingDurationSec - 1;
+        return firstSigningTimestampForEpoch(_priceEpochId) + signingDurationSec - 1;
     }
 
     function lastPriceEpochOfRewardEpoch(

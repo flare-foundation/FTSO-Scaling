@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import coder from "web3-eth-abi";
-import { AbiItem } from "web3-utils/types";
+import { AbiItem, AbiInput } from "web3-utils/types";
 import {
   BareSignature,
   FinalizeData,
@@ -15,49 +15,31 @@ const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voti
 const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
 
 class EncodingUtils {
-  private functionSignatures: Map<string, string> = new Map<string, string>();
-  private eventSignatures: Map<string, string> = new Map<string, string>();
-  private abis: Map<string, any> = new Map<string, string>();
+  private functionSignatures = new Map<string, string>();
+  private eventSignatures = new Map<string, string>();
+  private abiItems = new Map<string, AbiItem>();
+  private abiInputs = new Map<string, AbiInput>();
 
   constructor() {
     const votingABI = JSON.parse(readFileSync(votingAbiPath).toString()).abi as AbiItem[];
     const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
 
-    this.abis.set(
-      "commit",
-      votingABI.find((x: any) => x.name === "commit")
+    this.abiItems.set("commit", votingABI.find((x: AbiItem) => x.name === "commit")!);
+    this.abiItems.set("revealBitvote", votingABI.find((x: any) => x.name === "revealBitvote")!);
+    this.abiItems.set("signResult", votingABI.find((x: any) => x.name === "signResult")!);
+    this.abiItems.set("finalize", votingABI.find((x: any) => x.name === "finalize")!);
+    this.abiItems.set("offerRewards", rewardsABI.find((x: any) => x.name === "offerRewards")!);
+    this.abiItems.set("RewardOffered", rewardsABI.find((x: any) => x.name === "RewardOffered")!);
+    this.abiInputs.set(
+      "rewardClaimDefinition",
+      rewardsABI.find((x: any) => x.name === "rewardClaimDefinition")!.inputs![0]
     );
-    this.abis.set(
-      "revealBitvote",
-      votingABI.find((x: any) => x.name === "revealBitvote")
-    );
-    this.abis.set(
-      "signResult",
-      votingABI.find((x: any) => x.name === "signResult")
-    );
-    this.abis.set(
-      "finalize",
-      votingABI.find((x: any) => x.name === "finalize")
-    );
-    this.abis.set(
-      "offerRewards",
-      rewardsABI.find((x: any) => x.name === "offerRewards")
-    );
-    this.abis.set(
-      "claimRewardBodyDefinition",
-      rewardsABI.find((x: any) => x.name === "claimRewardBodyDefinition")?.inputs?.[0]
-    );
-    this.abis.set(
-      "RewardOffered",
-      rewardsABI.find((x: any) => x.name === "RewardOffered")
-    );
-    this.functionSignatures.set("commit", coder.encodeFunctionSignature(this.abis.get("commit")));
-    this.functionSignatures.set("revealBitvote", coder.encodeFunctionSignature(this.abis.get("revealBitvote")));
-    this.functionSignatures.set("signResult", coder.encodeFunctionSignature(this.abis.get("signResult")));
-    this.functionSignatures.set("offerRewards", coder.encodeFunctionSignature(this.abis.get("offerRewards")));
-    this.functionSignatures.set("finalize", coder.encodeFunctionSignature(this.abis.get("finalize")));
-
-    this.eventSignatures.set("RewardOffered", coder.encodeEventSignature(this.abis.get("RewardOffered")));
+    this.functionSignatures.set("commit", coder.encodeFunctionSignature(this.abiItems.get("commit")!));
+    this.functionSignatures.set("revealBitvote", coder.encodeFunctionSignature(this.abiItems.get("revealBitvote")!));
+    this.functionSignatures.set("signResult", coder.encodeFunctionSignature(this.abiItems.get("signResult")!));
+    this.functionSignatures.set("offerRewards", coder.encodeFunctionSignature(this.abiItems.get("offerRewards")!));
+    this.functionSignatures.set("finalize", coder.encodeFunctionSignature(this.abiItems.get("finalize")!));
+    this.eventSignatures.set("RewardOffered", coder.encodeEventSignature(this.abiItems.get("RewardOffered")!));
   }
 
   functionSignature(name: string): string {
@@ -68,15 +50,19 @@ class EncodingUtils {
     return this.eventSignatures.get(name)!;
   }
 
-  abiForName(name: string) {
-    return this.abis.get(name)!;
+  abiItemForName(name: string) {
+    return this.abiItems.get(name)!;
+  }
+
+  abiInputForName(name: string) {
+    return this.abiInputs.get(name)!;
   }
 
   extractOffers(tx: TxData): RewardOffered[] {
     const result = tx
       .receipt!.logs.filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
       .map((event: any) => {
-        const offer = coder.decodeLog(this.abis.get("RewardOffered").inputs, event.data, event.topics);
+        const offer = coder.decodeLog(this.abiItems.get("RewardOffered")!.inputs!, event.data, event.topics);
         return convertRewardOfferedEvent(offer as any as RewardOffered);
       });
     return result;
@@ -98,10 +84,11 @@ class EncodingUtils {
 
   extractSignatureData(tx: TxData): SignatureData {
     const resultTmp = this.decodeFunctionCall(tx, "signResult");
+
     return {
-      epochId: parseInt(resultTmp._epochId, 10),
+      epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
-      v: parseInt(resultTmp.signature.v, 10),
+      v: parseIntOrThrow(resultTmp.signature.v, 10),
       r: resultTmp.signature.r,
       s: resultTmp.signature.s,
     } as SignatureData;
@@ -111,11 +98,11 @@ class EncodingUtils {
     const resultTmp = this.decodeFunctionCall(tx, "finalize");
     return {
       from: tx.from.toLowerCase(),
-      epochId: parseInt(resultTmp._epochId, 10),
+      epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
       signatures: resultTmp.signatures.map((s: any) => {
         return {
-          v: parseInt(s.v, 10),
+          v: parseIntOrThrow(s.v, 10),
           r: s.r,
           s: s.s,
         } as BareSignature;
@@ -125,9 +112,15 @@ class EncodingUtils {
 
   private decodeFunctionCall(tx: TxData, name: string) {
     const encodedParameters = tx.input!.slice(10); // Drop the function signature
-    const parametersEncodingABI = this.abis.get(name)!.inputs;
+    const parametersEncodingABI = this.abiItems.get(name)!.inputs!;
     return coder.decodeParameters(parametersEncodingABI, encodedParameters);
   }
+}
+
+function parseIntOrThrow(input: string, base: number):number {
+  const parsed: number = parseInt(input, base);
+  if (Number.isNaN(parsed)) throw new Error(`Could not parse ${input} as number`);
+  return parsed;
 }
 
 export const encodingUtils = new EncodingUtils();

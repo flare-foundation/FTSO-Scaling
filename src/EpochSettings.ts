@@ -48,4 +48,8 @@ export class EpochSettings {
   lastPriceEpochForRewardEpoch(rewardEpochId: number): number {
     return this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
   }
+
+  priceEpochStartTimeSec(priceEpochId: number): number {
+    return this.firstEpochStartSec + priceEpochId * this.epochDurationSec;
+  }
 }
