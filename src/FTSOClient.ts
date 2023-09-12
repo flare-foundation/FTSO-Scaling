@@ -9,6 +9,7 @@ import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import {
   BareSignature,
+  BlockData,
   ClaimReward,
   EpochData,
   EpochResult,
@@ -39,6 +40,7 @@ const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
+const MAX_ASYNCHRONOUS_BLOCK_REQUESTS = 100;
 const BLOCK_PROCESSING_INTERVAL_MS = 500;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
@@ -127,14 +129,32 @@ export class FTSOClient {
     this.rewardEpochOffersClosed.set(rewardEpochId, true);
   }
 
+  /**
+   * Processes new blocks by first asynchronously requesting blocks and then
+   * sequentially processing them.
+   */
   async processNewBlocks() {
     const currentBlockNumber = await this.provider.getBlockNumber();
-    while (this.lastProcessedBlockNumber < currentBlockNumber) {
-      const block = await retry(async () => {
-        return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
-      });
-      await this.indexer.processBlock(block);
-      this.lastProcessedBlockNumber++;
+    const numBlocks = currentBlockNumber - this.lastProcessedBlockNumber;
+    const numRequestRepeats = Math.ceil(numBlocks / MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
+    const blockPromisesLen = Math.min(numBlocks, MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
+    let blockPromises: Promise<Promise<BlockData>>[] = Array(blockPromisesLen);
+    for (let i = 0; i < numRequestRepeats; i++) {
+      let j: number = 0;
+      let k: number = this.lastProcessedBlockNumber;
+      while (j < MAX_ASYNCHRONOUS_BLOCK_REQUESTS && k < currentBlockNumber) {
+        blockPromises[j] = retry(async () => {
+          return await this.provider.getBlock(k + 1);
+        });
+        k++, j++;
+      }
+
+      j = 0;
+      while (j < MAX_ASYNCHRONOUS_BLOCK_REQUESTS && this.lastProcessedBlockNumber < currentBlockNumber) {
+        this.indexer.processBlock(await blockPromises[j]);
+        this.lastProcessedBlockNumber++;
+        j++;
+      }
     }
   }
 
@@ -317,10 +337,10 @@ export class FTSOClient {
         } as BareSignature;
       });
     try {
-      await this.provider.finalize(epochId, mySignatureHash, signatures);
+      let result = await this.provider.finalize(epochId, mySignatureHash, signatures);
       // TODO: Finalization transaction executed succesfully, but we should check for MerkleRootConfirmed event
       //       to make sure it was recorded in the smart contract.
-      this.logger.info(`Successfully submitted finalization transaction for epoch ${epochId}.`);
+      this.logger.info(`Successfully submitted finalization transaction for epoch ${epochId}. Result: ${result}`);
     } catch (e) {
       this.logger.info(`Failed to submit finalization transaction: ${e}`);
     }
