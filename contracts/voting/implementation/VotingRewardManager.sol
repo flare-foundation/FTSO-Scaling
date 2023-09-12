@@ -42,40 +42,40 @@ contract VotingRewardManager is Governed, IRewardManager {
     uint256 nextRewardEpochBalanceIndex;
 
     function getNextRewardEpochBalance(
-        address tokenAddress
+        address _tokenAddress
     ) public view returns (uint balance) {
         balance = storedRewardEpochBalances[nextRewardEpochBalanceIndex]
-            .totalRewardForTokenContract[tokenAddress];
+            .totalRewardForTokenContract[_tokenAddress];
     }
 
-    function authorizeClaimer(address claimer) public {
-        authorizedClaimer[msg.sender] = claimer;
+    function authorizeClaimer(address _claimer) public {
+        authorizedClaimer[msg.sender] = _claimer;
     }
 
-    function authorizeRecepient(address recepient) public {
-        authorizedRecepient[msg.sender] = recepient;
+    function authorizeRecepient(address _recepient) public {
+        authorizedRecepient[msg.sender] = _recepient;
     }
 
-    function getRemainingEpochBalance(
-        address tokenAddress,
-        uint rewardEpochId
+    function getRemainingRewardEpochBalance(
+        address _tokenAddress,
+        uint _rewardEpochId
     ) public view returns (uint) {
         return storedRewardEpochBalances[
-            rewardEpochIdAsStoredBalanceIndex(rewardEpochId)
-        ].availableAmountForTokenContract[tokenAddress];
+            rewardEpochIdAsStoredBalanceIndex(_rewardEpochId)
+        ].availableAmountForTokenContract[_tokenAddress];
     }
 
     function rewardEpochIdAsStoredBalanceIndex(
-        uint256 rewardEpochId
+        uint256 _rewardEpochId
     ) internal view returns (uint256) {
         require(
-            rewardEpochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId,
+            _rewardEpochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId,
             "reward balance not preserved for epoch too far in the past"
         );
         // Have to add the modulus to get a nonnegative answer: -a % m == -(a % m)
         // return (nextRewardEpochBalanceIndex + rewardEpochId + STORED_PREVIOUS_BALANCES - currentRewardEpochId)
         //         % STORED_PREVIOUS_BALANCES;
-        return rewardEpochId % STORED_PREVIOUS_BALANCES;
+        return _rewardEpochId % STORED_PREVIOUS_BALANCES;
     }
 
     function setMinimalOfferParameters(
@@ -152,14 +152,14 @@ contract VotingRewardManager is Governed, IRewardManager {
     //
     // TODO: support token currencies
     function offerRewards(
-        Offer[] calldata offers
+        Offer[] calldata _offers
     ) public payable override maybePushRewardBalance {
         StoredBalances storage balances = storedRewardEpochBalances[
             nextRewardEpochBalanceIndex
         ];
         uint256 totalNativeOffer = 0;
-        for (uint i = 0; i < offers.length; ++i) {
-            Offer calldata offer = offers[i];
+        for (uint i = 0; i < _offers.length; ++i) {
+            Offer calldata offer = _offers[i];
             uint256 offerValue;
             if (offer.currencyAddress == address(0)) {
                 totalNativeOffer += offer.amount;
@@ -212,15 +212,15 @@ contract VotingRewardManager is Governed, IRewardManager {
 
     function claimReward(
         RewardClaimWithProof calldata _claimWithProof,
-        address beneficiary
+        address _beneficiary
     ) public override maybePushRewardBalance {
         require(
-            msg.sender == beneficiary || msg.sender == authorizedClaimer[beneficiary],
+            msg.sender == _beneficiary || msg.sender == authorizedClaimer[_beneficiary],
             "not authorized claimer"
         );
 
         RewardClaim memory claim = _claimWithProof.body;
-        uint256 claimRewardEpoch = votingManager.getRewardEpochIdForEpoch(
+        uint256 claimRewardEpoch = votingManager.getRewardEpochIdForPriceEpoch(
             claim.epochId
         );
         require(
@@ -239,13 +239,13 @@ contract VotingRewardManager is Governed, IRewardManager {
         ];
 
         bytes32 claimHash = _claimWithProof.hash();
-        bytes32 claimHashRecord = keccak256(abi.encode(claimHash, beneficiary));
+        bytes32 claimHashRecord = keccak256(abi.encode(claimHash, _beneficiary));
         require(
             !processedRewardClaims[claimHashRecord],
             "reward has already been claimed"
         );
 
-        bytes32 rootForEpoch = voting.getMerkleRoot(claim.epochId);
+        bytes32 rootForEpoch = voting.getMerkleRootForPriceEpoch(claim.epochId);
         require(rootForEpoch != bytes32(0), "claim epoch not finalized yet, merkle root not available");
         require(
             _claimWithProof.merkleProof.verify(
@@ -255,11 +255,11 @@ contract VotingRewardManager is Governed, IRewardManager {
             "Merkle proof for reward failed"
         );
 
-        address payable recipient = authorizedRecepient[beneficiary] == address(0) ? payable(beneficiary) : payable(authorizedRecepient[beneficiary]);
+        address payable recipient = authorizedRecepient[_beneficiary] == address(0) ? payable(_beneficiary) : payable(authorizedRecepient[_beneficiary]);
 
         if (claim.isFixedClaim) {
             require(
-                claim.beneficiary == beneficiary,
+                claim.beneficiary == _beneficiary,
                 "beneficiary does not match claim"
             );
             balances.debit(claim.currencyAddress, claim.beneficiary, recipient, 0, claim.amount);
@@ -272,9 +272,9 @@ contract VotingRewardManager is Governed, IRewardManager {
             }
                        
             // Beneficiary could be the voter itself or a delegator
-            uint256 weightToClaim = voting.getDelegatorWeightForRewardEpoch(beneficiary, claim.beneficiary, claimRewardEpoch);
+            uint256 weightToClaim = voting.getDelegatorWeightForRewardEpoch(_beneficiary, claim.beneficiary, claimRewardEpoch);
             // Claim data provider fee if beneficiary is a voter and not a delegator
-            uint256 fee = claim.beneficiary == beneficiary ? (feePercentage * claim.amount / 10000) : 0;
+            uint256 fee = claim.beneficiary == _beneficiary ? (feePercentage * claim.amount / 10000) : 0;
             balances.debit(claim.currencyAddress, claim.beneficiary, recipient, weightToClaim, fee);
         }
 

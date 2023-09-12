@@ -18,144 +18,144 @@ struct StoredBalances {
     address[] voters;
 }
 
-function reset(StoredBalances storage storedBalances) {
-    address[] storage addrs = storedBalances.tokenContracts;
-    address[] storage voters = storedBalances.voters;
+function reset(StoredBalances storage _storedBalances) {
+    address[] storage addrs = _storedBalances.tokenContracts;
+    address[] storage voters = _storedBalances.voters;
     for (uint i = 0; i < addrs.length; ++i) {
         address addr = addrs[i];
-        delete storedBalances.totalRewardForTokenContract[addr];
-        delete storedBalances.initializedAmountForTokenContract[addr];
-        delete storedBalances.availableAmountForTokenContract[addr];
+        delete _storedBalances.totalRewardForTokenContract[addr];
+        delete _storedBalances.initializedAmountForTokenContract[addr];
+        delete _storedBalances.availableAmountForTokenContract[addr];
         for (uint j = 0; j < voters.length; ++j) {
             address voter = voters[j];
-            delete storedBalances.unclamedBalanceForTokenContractAndVoter[addr][voter];
-            delete storedBalances.totalBalanceForTokenContractAndVoter[addr][voter];
-            delete storedBalances.unclaimedWeightForTokenContract[addr][voter];
-            delete storedBalances.totalWeightForTokenContractAndVoter[addr][voter];
+            delete _storedBalances.unclamedBalanceForTokenContractAndVoter[addr][voter];
+            delete _storedBalances.totalBalanceForTokenContractAndVoter[addr][voter];
+            delete _storedBalances.unclaimedWeightForTokenContract[addr][voter];
+            delete _storedBalances.totalWeightForTokenContractAndVoter[addr][voter];
         } 
     }
-    delete storedBalances.tokenContracts;
-    delete storedBalances.voters;
+    delete _storedBalances.tokenContracts;
+    delete _storedBalances.voters;
 }
 
 function initializeForClaiming(
-    StoredBalances storage storedBalances,
-    address tokenAddr,
-    address voter,
-    uint256 weight,
-    uint256 amount,
-    uint256 feePercentage
+    StoredBalances storage _storedBalances,
+    address _tokenAddr,
+    address _voter,
+    uint256 _weight,
+    uint256 _amount,
+    uint256 _feePercentage
 ) {
-    mapping(address => uint256) storage totalWeight = storedBalances
-        .totalWeightForTokenContractAndVoter[tokenAddr];
+    mapping(address => uint256) storage totalWeight = _storedBalances
+        .totalWeightForTokenContractAndVoter[_tokenAddr];
 
-    if (totalWeight[voter] > 0 || weight == 0) {  // already initialized or useless to initialize
+    if (totalWeight[_voter] > 0 || _weight == 0) {  // already initialized or useless to initialize
         return;
     }
 
-    storedBalances.voters.push(voter);
+    _storedBalances.voters.push(_voter);
 
-    mapping(address => uint256) storage unclaimedWeight = storedBalances
-        .unclaimedWeightForTokenContract[tokenAddr];
-    mapping(address => uint256) storage unclamedBalance = storedBalances
-        .unclamedBalanceForTokenContractAndVoter[tokenAddr];
-    mapping(address => uint256) storage totalBalance = storedBalances
-        .totalBalanceForTokenContractAndVoter[tokenAddr];
+    mapping(address => uint256) storage unclaimedWeight = _storedBalances
+        .unclaimedWeightForTokenContract[_tokenAddr];
+    mapping(address => uint256) storage unclamedBalance = _storedBalances
+        .unclamedBalanceForTokenContractAndVoter[_tokenAddr];
+    mapping(address => uint256) storage totalBalance = _storedBalances
+        .totalBalanceForTokenContractAndVoter[_tokenAddr];
         
-    unclaimedWeight[voter] = weight;
-    totalWeight[voter] = weight;
+    unclaimedWeight[_voter] = _weight;
+    totalWeight[_voter] = _weight;
 
     uint256 fee = 0;
-    if(feePercentage > 0) {
-        fee = (amount * feePercentage) / 10000;
+    if(_feePercentage > 0) {
+        fee = (_amount * _feePercentage) / 10000;
     }
 
-    unclamedBalance[voter] = amount - fee;
-    totalBalance[voter] = amount;
+    unclamedBalance[_voter] = _amount - fee;
+    totalBalance[_voter] = _amount;
 
-    mapping(address => uint256) storage initializedAmount = storedBalances
+    mapping(address => uint256) storage initializedAmount = _storedBalances
         .initializedAmountForTokenContract;
 
-    mapping(address => uint256) storage totalCurrencyAmount = storedBalances
+    mapping(address => uint256) storage totalCurrencyAmount = _storedBalances
         .totalRewardForTokenContract;
 
-    initializedAmount[tokenAddr] += amount;
+    initializedAmount[_tokenAddr] += _amount;
     require(
-        initializedAmount[tokenAddr] <= totalCurrencyAmount[tokenAddr],
+        initializedAmount[_tokenAddr] <= totalCurrencyAmount[_tokenAddr],
         "initialized amount exceeds total reward"
     );
 }
 
 function currencyBalance(
-    StoredBalances storage storedBalances,
-    address tokenAddr,
-    address voter
+    StoredBalances storage _storedBalances,
+    address _tokenAddr,
+    address _voter
 ) view returns (uint256) {
     return
-        storedBalances.totalBalanceForTokenContractAndVoter[tokenAddr][voter];
+        _storedBalances.totalBalanceForTokenContractAndVoter[_tokenAddr][_voter];
 }
 
 function credit(
-    StoredBalances storage storedBalances,
-    address tokenAddr,
-    address thisAddr,
-    uint256 amount
+    StoredBalances storage _storedBalances,
+    address _tokenAddr,
+    address _thisAddr,
+    uint256 _amount
 ) {
-    if (tokenAddr != address(0)) {
-        IERC20 token = IERC20(tokenAddr);
+    if (_tokenAddr != address(0)) {
+        IERC20 token = IERC20(_tokenAddr);
         require(
-            token.transferFrom(msg.sender, thisAddr, amount),
+            token.transferFrom(msg.sender, _thisAddr, _amount),
             "couldn't transfer currency amount to reward manager"
         );
     }
 
-    mapping(address => uint256) storage totalAmount = storedBalances
+    mapping(address => uint256) storage totalAmount = _storedBalances
         .totalRewardForTokenContract;
-    mapping(address => uint256) storage availableAmount = storedBalances
+    mapping(address => uint256) storage availableAmount = _storedBalances
         .availableAmountForTokenContract;
 
-    if (totalAmount[tokenAddr] == 0) {
-        storedBalances.tokenContracts.push(tokenAddr);
+    if (totalAmount[_tokenAddr] == 0) {
+        _storedBalances.tokenContracts.push(_tokenAddr);
     }
-    totalAmount[tokenAddr] += amount;
-    availableAmount[tokenAddr] += amount;
+    totalAmount[_tokenAddr] += _amount;
+    availableAmount[_tokenAddr] += _amount;
 }
 
 function debit(
-    StoredBalances storage storedBalances,
-    address tokenAddr,
-    address voter,
-    address payable toAddr,
-    uint256 weightToClaim,
-    uint256 additionalAmount
+    StoredBalances storage _storedBalances,
+    address _tokenAddr,
+    address _voter,
+    address payable _toAddr,
+    uint256 _weightToClaim,
+    uint256 _additionalAmount
 ) {
     uint256 weightedAmount = 0;
-    if (weightToClaim > 0) {
+    if (_weightToClaim > 0) {
         // double decreasing balance and weight to avoid rounding errors
-        mapping(address => uint256) storage unclaimedBalance = storedBalances
-            .unclamedBalanceForTokenContractAndVoter[tokenAddr];
-        mapping(address => uint256) storage unclaimedWeightOf = storedBalances
-            .unclaimedWeightForTokenContract[tokenAddr];
+        mapping(address => uint256) storage unclaimedBalance = _storedBalances
+            .unclamedBalanceForTokenContractAndVoter[_tokenAddr];
+        mapping(address => uint256) storage unclaimedWeightOf = _storedBalances
+            .unclaimedWeightForTokenContract[_tokenAddr];
 
-        uint256 unclaimedWeight = unclaimedWeightOf[voter];
+        uint256 unclaimedWeight = unclaimedWeightOf[_voter];
         require(unclaimedWeight > 0, "unclaimed weight is 0");
-        weightedAmount = (unclaimedBalance[voter] * weightToClaim) / unclaimedWeight;
-        require(weightedAmount <= unclaimedBalance[voter], "insufficient balance");
-        unclaimedBalance[voter] -= weightedAmount; // Assumes we don't subsequently credit, since this can reach 0.
-        unclaimedWeightOf[voter] -= weightToClaim;
+        weightedAmount = (unclaimedBalance[_voter] * _weightToClaim) / unclaimedWeight;
+        require(weightedAmount <= unclaimedBalance[_voter], "insufficient balance");
+        unclaimedBalance[_voter] -= weightedAmount; // Assumes we don't subsequently credit, since this can reach 0.
+        unclaimedWeightOf[_voter] -= _weightToClaim;
     }
 
-    uint256 claimAmount = weightedAmount + additionalAmount;
-    require(claimAmount <= storedBalances.availableAmountForTokenContract[tokenAddr], "insufficient available amount");
-    storedBalances.availableAmountForTokenContract[tokenAddr] -= claimAmount;
+    uint256 claimAmount = weightedAmount + _additionalAmount;
+    require(claimAmount <= _storedBalances.availableAmountForTokenContract[_tokenAddr], "insufficient available amount");
+    _storedBalances.availableAmountForTokenContract[_tokenAddr] -= claimAmount;
 
     bool success;
-    if (tokenAddr != address(0)) {        
-        IERC20 token = IERC20(tokenAddr);
-        success = token.transfer(toAddr, claimAmount);
+    if (_tokenAddr != address(0)) {        
+        IERC20 token = IERC20(_tokenAddr);
+        success = token.transfer(_toAddr, claimAmount);
     } else {
         /* solhint-disable avoid-low-level-calls */
-        (success, ) = toAddr.call{value: claimAmount}("");
+        (success, ) = _toAddr.call{value: claimAmount}("");
         /* solhint-enable avoid-low-level-calls */
     }
     require(success, "failed to transfer claimed balance");

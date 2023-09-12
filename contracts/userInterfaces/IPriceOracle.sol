@@ -29,6 +29,6 @@ interface IPriceOracle {
         uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) external;
 
-    function anchorPricesForSymbol(bytes8 symbol) external view returns (AnchorPrice memory);
-    function lastAnchorPriceForSymbol(bytes8 symbol) external view returns (uint32 price, uint32 timestamp);
+    function anchorPricesForSymbol(bytes8 _symbol) external view returns (AnchorPrice memory);
+    function lastAnchorPriceForSymbol(bytes8 _symbol) external view returns (uint32 price, uint32 timestamp);
 }

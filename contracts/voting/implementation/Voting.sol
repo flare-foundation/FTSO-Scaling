@@ -56,43 +56,28 @@ contract Voting {
         Signature calldata signature
     ) public {}
 
-    // function hashForCommit(
-    //     address _voter,
-    //     uint256 _random,
-    //     bytes32 _merkleRoot,
-    //     bytes calldata _prices
-    // ) public pure returns (bytes32) {
-    //     return
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 abi.encode(_voter, _random, _merkleRoot, _prices)
-    //             )
-    //         );
-    // }
-
-    // function hashForPrices
     function finalize(
         uint256 _priceEpochId,
         bytes32 _merkleRoot,
-        Signature[] calldata signatures
+        Signature[] calldata _signatures
     ) public {
         require(merkleRoots[_priceEpochId] == 0, "epochId already finalized");
         require(
             block.timestamp >=
-                votingManager.firstSigningTimestampForEpoch(_priceEpochId),
+                votingManager.firstSigningTimestampForPriceEpoch(_priceEpochId),
             "signing too early"
         );
         require(
             block.timestamp <=
-                votingManager.lastSigningTimestampForEpoch(_priceEpochId),
+                votingManager.lastSigningTimestampForPriceEpoch(_priceEpochId),
             "signing too late"
         );
         uint256 threshold = voterRegistry.thresholdForRewardEpoch(
-            votingManager.getRewardEpochIdForEpoch(_priceEpochId)
+            votingManager.getRewardEpochIdForPriceEpoch(_priceEpochId)
         );
         uint256 weightSum = 0;
-        for (uint256 i = 0; i < signatures.length; i++) {
-            address signer = recoverSigner(_merkleRoot, signatures[i]);
+        for (uint256 i = 0; i < _signatures.length; i++) {
+            address signer = recoverSigner(_merkleRoot, _signatures[i]);
 
             if (signer != address(0)) {
                 uint256 weight = getVoterWeightForPriceEpoch(signer, _priceEpochId);
@@ -123,13 +108,11 @@ contract Voting {
         (_priceEpochId, _merkleRoot, block.timestamp);
     }
 
-    // Returns the merkle root for a given epoch
-    function getMerkleRoot(uint256 _priceRpochId) public view returns (bytes32) {
+    function getMerkleRootForPriceEpoch(uint256 _priceRpochId) public view returns (bytes32) {
         bytes32 merkleRoot = merkleRoots[_priceRpochId];
         return merkleRoot;
     }
 
-    // Returns the voter weight for a given epoch
     function getVoterWeightForPriceEpoch(
         address _voter,
         uint256 _priceEpochId
@@ -137,7 +120,7 @@ contract Voting {
         return
             voterRegistry.getVoterWeightForRewardEpoch(
                 _voter,
-                votingManager.getRewardEpochIdForEpoch(_priceEpochId)
+                votingManager.getRewardEpochIdForPriceEpoch(_priceEpochId)
             );
     }
 
@@ -154,8 +137,7 @@ contract Voting {
             );
     }
 
-    // Returns the voter weights for a given epoch
-    function getVoterWeightsForEpoch(
+    function getVoterWeightsForPriceEpoch(
         uint256 _priceEpochId,
         address[] calldata _voters
     ) public view returns (uint256[] memory) {
@@ -166,20 +148,19 @@ contract Voting {
         return allWeights;
     }
 
-    // Returns the current epoch id
     function getCurrentPriceEpochId() public view returns (uint256) {
         return votingManager.getCurrentPriceEpochId();
     }
 
-    function firstSigningTimeForEpoch(
+    function firstSigningTimeForPriceEpoch(
         uint256 _priceEpochId
     ) public view returns (uint256) {
-        return votingManager.firstSigningTimestampForEpoch(_priceEpochId);
+        return votingManager.firstSigningTimestampForPriceEpoch(_priceEpochId);
     }
 
     function recoverSigner(
         bytes32 _hash,
-        Signature memory signature
+        Signature memory _signature
     ) public pure returns (address) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHashMessage = keccak256(
@@ -187,9 +168,9 @@ contract Voting {
         );
         address signer = ecrecover(
             prefixedHashMessage,
-            signature.v,
-            signature.r,
-            signature.s
+            _signature.v,
+            _signature.r,
+            _signature.s
         );
         return signer;
     }

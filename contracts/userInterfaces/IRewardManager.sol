@@ -16,7 +16,6 @@ struct RewardClaim {
 
 /**
  * Defines a reward offer in native coin or ERC20 token.
- *
  */
 struct Offer {
     uint256 amount; // amount of reward in native coin or ERC20 token
@@ -57,17 +56,17 @@ abstract contract IRewardManager {
         uint256 validFromEpoch
     );
 
-    function setVoting(address votingContract) external virtual;
+    function setVoting(address _votingContract) external virtual;
 
-    function setVotingManager(address votingManagerContract) external virtual;
+    function setVotingManager(address _votingManagerContract) external virtual;
 
     function setERC20PriceOracle(
-        address erc20PriceOracleContract
+        address _erc20PriceOracleContract
     ) external virtual;
 
-    function claimReward(RewardClaimWithProof calldata _data, address claimer) external virtual;
+    function claimReward(RewardClaimWithProof calldata _data, address _claimer) external virtual;
 
-    function offerRewards(Offer[] calldata offers) external payable virtual;
+    function offerRewards(Offer[] calldata _offers) external payable virtual;
 
     // These functions are not for calling, but for exporting the type definitions in the metadata
     function rewardClaimDefinition(
@@ -100,8 +99,8 @@ abstract contract IRewardManager {
 
 }
 
-function hash(RewardClaimWithProof calldata claim) pure returns (bytes32) {
-    return keccak256(abi.encode(claim.body));
+function hash(RewardClaimWithProof calldata _claim) pure returns (bytes32) {
+    return keccak256(abi.encode(_claim.body));
 }
 
 using {hash} for RewardClaimWithProof global;

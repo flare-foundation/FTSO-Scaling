@@ -8,10 +8,10 @@ interface IERC20PriceOracle {
     }
 
     function setERC20Settings(
-        address erc20Address,
-        bytes8 symbol
+        address _erc20Address,
+        bytes8 _symbol
     ) external;
 
-    function getPrice(address currencyAddress) external view returns (uint32 price, uint32 timestamp);
+    function getPrice(address _currencyAddress) external view returns (uint32 price, uint32 timestamp);
 }
 
