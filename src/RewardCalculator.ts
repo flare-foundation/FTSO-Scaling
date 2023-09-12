@@ -177,7 +177,7 @@ export class RewardCalculator {
    */
   public calculateClaimsForPriceEpoch(
     priceEpochId: number,
-    /** Can only be undefined during for the very first price epoch in FTSO */
+    /** Can only be undefined during for the very first price epoch in FTSO. */
     finalizerAddress: string | undefined,
     signers: string[],
     calculationResults: MedianCalculationResult[],
@@ -242,19 +242,22 @@ export class RewardCalculator {
   private addToCumulativeClaims(priceEpochId: number, currentClaims: RewardClaim[]) {
     if (priceEpochId < this.firstPriceEpochInNextRewardEpoch - 1) {
       if (priceEpochId === this.initialPriceEpoch) {
-        this.rewardEpochCumulativeRewards.set(this.currentRewardEpoch, currentClaims);
+        this.rewardEpochCumulativeRewards.set(
+          this.currentRewardEpoch,
+          PriceEpochRewards.mergeClaims(priceEpochId, currentClaims)
+        );
       } else {
-        this.setMergedClaims(priceEpochId, currentClaims);
+        this.mergeWithPreviousClaims(priceEpochId, currentClaims);
       }
     } else {
-      this.setMergedClaims(priceEpochId, currentClaims);
+      this.mergeWithPreviousClaims(priceEpochId, currentClaims);
       // we are in the last price epoch of the current reward epoch
       // the reward epoch is not yet shifted to the next reward epoch, matching the price epoch
       this.shiftRewardEpoch();
     }
   }
 
-  private setMergedClaims(priceEpochId: number, claims: RewardClaim[]) {
+  private mergeWithPreviousClaims(priceEpochId: number, claims: RewardClaim[]) {
     const previousClaims = this.rewardEpochCumulativeRewards.get(this.currentRewardEpoch);
     if (previousClaims === undefined) {
       throw new Error("Previous claims are undefined");
@@ -295,10 +298,6 @@ export class RewardCalculator {
       currencyAddresses.set(address, addressCurrencyAddresses);
       voterClaims.push(claim);
       addressCurrencyAddresses.add(currencyAddress);
-      if (voterClaims.length !== addressCurrencyAddresses.size) {
-        console.dir(claimsForRewardEpoch);
-        throw new Error(`Duplicate claim for ${address} and ${currencyAddress}`);
-      }
     }
     return claimsByVoter;
   }

@@ -114,9 +114,9 @@ export function convertRewardOfferedEvent(offer: any): RewardOffered {
   delete newOffer.__length__;
   newOffer.leadProviders = [...offer.leadProviders];
   let tmp = newOffer as RewardOffered;
-  (tmp.offerSymbol = bytes4ToText(tmp.offerSymbol)),
-    (tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol)),
-    (tmp.amount = toBN(tmp.amount));
+  tmp.offerSymbol = bytes4ToText(tmp.offerSymbol);
+  tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol);
+  tmp.amount = toBN(tmp.amount);
   tmp.flrValue = toBN(tmp.flrValue);
   tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
   tmp.elasticBandWidthPPM = toBN(tmp.elasticBandWidthPPM);

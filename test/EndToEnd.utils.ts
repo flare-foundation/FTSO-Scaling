@@ -372,7 +372,7 @@ export async function claimRewards(
   expect(await web3.eth.getBalance(votingRewardManager.address)).to.be.bignumber.equal(
     toBN(initialFlrBalance).sub(totalClaimedFlr)
   );
-  console.log(`Finsihed claiming rewards for epoch ${claimRewardEpoch}`);
+  console.log(`Finished claiming rewards for epoch ${claimRewardEpoch}`);
 }
 
 const REWARD_OFFER_SYMBOL = "FLR";
