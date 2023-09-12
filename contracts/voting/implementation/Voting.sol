@@ -53,7 +53,7 @@ contract Voting {
     function signResult(
         uint256 _priceEpochId,
         bytes32 _merkleRoot,
-        Signature calldata signature
+        Signature calldata _signature
     ) public {}
 
     function finalize(

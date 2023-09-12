@@ -1,6 +1,6 @@
 import { Feed } from "../voting-interfaces";
 
 export interface IPriceFeed {
-  getPriceForEpoch(epochId: number): number;
+  getPriceForEpoch(priceEpochId: number): number;
   getFeedInfo(): Feed;
 }

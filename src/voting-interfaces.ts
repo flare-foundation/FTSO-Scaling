@@ -10,7 +10,7 @@ export interface RewardClaim {
   readonly amount: BN; // 256-bit
   readonly currencyAddress: string;
   readonly beneficiary: string;
-  readonly epochId: number;
+  readonly priceEpochId: number;
 }
 export interface RewardClaimWithProof {
   readonly merkleProof: readonly string[];

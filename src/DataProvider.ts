@@ -21,7 +21,7 @@ export class DataProvider {
 
   schedulePriceEpochActions() {
     const timeSec = this.currentTimeSec();
-    const nextEpochStartSec = this.client.epochs.nextEpochStartSec(timeSec);
+    const nextEpochStartSec = this.client.epochs.nextPriceEpochStartSec(timeSec);
 
     setTimeout(() => {
       this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
@@ -30,16 +30,16 @@ export class DataProvider {
   }
 
   async onPriceEpoch() {
-    const currentEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
-    const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentEpochId);
-    this.logger.info(`[${currentEpochId}] Processing price epoch, current reward epoch: ${currentRewardEpochId}.`);
+    const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
+    const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
+    this.logger.info(`[${currentPriceEpochId}] Processing price epoch, current reward epoch: ${currentRewardEpochId}.`);
 
     const previousRewardEpochId = currentRewardEpochId - 1;
     const nextRewardEpochId = currentRewardEpochId + 1;
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
-      await this.maybeScheduleRewardClaiming(previousRewardEpochId, currentEpochId);
-      await this.runVotingProcotol(currentEpochId);
+      await this.maybeScheduleRewardClaiming(previousRewardEpochId, currentPriceEpochId);
+      await this.runVotingProcotol(currentPriceEpochId);
     }
 
     if (!this.isRegisteredForRewardEpoch(nextRewardEpochId) && this.client.rewardEpochOffers.has(nextRewardEpochId)) {
@@ -48,7 +48,7 @@ export class DataProvider {
 
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
-    this.logger.info(`[${currentEpochId}] Finished processing price epoch.`);
+    this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);
   }
 
   private async maybeScheduleRewardClaiming(previousRewardEpochId: number, currentEpochId: number) {
@@ -90,13 +90,13 @@ export class DataProvider {
     this.registeredRewardEpochs.add(nextRewardEpochId);
   }
 
-  private isRegisteredForRewardEpoch(epochId: number): boolean {
-    return this.registeredRewardEpochs.has(epochId);
+  private isRegisteredForRewardEpoch(rewardEpochId: number): boolean {
+    return this.registeredRewardEpochs.has(rewardEpochId);
   }
 
-  private isFirstPriceEpochInRewardEpoch(epochId: number): boolean {
-    const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(epochId);
-    const rewardEpochForPrevious = this.client.epochs.rewardEpochIdForPriceEpochId(epochId - 1);
+  private isFirstPriceEpochInRewardEpoch(priceEpochId: number): boolean {
+    const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const rewardEpochForPrevious = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId - 1);
     return rewardEpochForPrevious != 0 && rewardEpochForPrevious < rewardEpoch;
   }
 

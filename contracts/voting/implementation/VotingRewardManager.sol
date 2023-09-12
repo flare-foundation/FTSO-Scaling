@@ -221,10 +221,10 @@ contract VotingRewardManager is Governed, IRewardManager {
 
         RewardClaim memory claim = _claimWithProof.body;
         uint256 claimRewardEpoch = votingManager.getRewardEpochIdForPriceEpoch(
-            claim.epochId
+            claim.priceEpochId
         );
         require(
-            claim.epochId ==
+            claim.priceEpochId ==
                 votingManager.lastPriceEpochOfRewardEpoch(claimRewardEpoch),
             "claim epoch is not the last price epoch of the reward epoch"
         );
@@ -245,7 +245,7 @@ contract VotingRewardManager is Governed, IRewardManager {
             "reward has already been claimed"
         );
 
-        bytes32 rootForEpoch = voting.getMerkleRootForPriceEpoch(claim.epochId);
+        bytes32 rootForEpoch = voting.getMerkleRootForPriceEpoch(claim.priceEpochId);
         require(rootForEpoch != bytes32(0), "claim epoch not finalized yet, merkle root not available");
         require(
             _claimWithProof.merkleProof.verify(
@@ -265,7 +265,7 @@ contract VotingRewardManager is Governed, IRewardManager {
             balances.debit(claim.currencyAddress, claim.beneficiary, recipient, 0, claim.amount);
         } else {
             // Weight-based claim, claim.beneficiary is a voter.
-            uint voterWeight = voting.getVoterWeightForPriceEpoch(claim.beneficiary, claim.epochId);
+            uint voterWeight = voting.getVoterWeightForPriceEpoch(claim.beneficiary, claim.priceEpochId);
             uint256 feePercentage = _getDataProviderFeePercentage(claim.beneficiary, claimRewardEpoch);
              if (balances.totalBalanceForTokenContractAndVoter[claim.currencyAddress][claim.beneficiary] == 0) {
                 balances.initializeForClaiming(claim.currencyAddress, claim.beneficiary, voterWeight, claim.amount, feePercentage);

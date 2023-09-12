@@ -11,7 +11,7 @@ struct RewardClaim {
     uint256 amount;
     address currencyAddress; // 0 for native currency
     address payable beneficiary;
-    uint epochId;
+    uint priceEpochId;
 }
 
 /**

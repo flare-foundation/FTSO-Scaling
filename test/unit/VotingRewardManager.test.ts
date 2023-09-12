@@ -52,7 +52,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
 
   let firstRewardedPriceEpoch: BN;
 
-  const getMerkleRootMethod = () => voting.contract.methods.getMerkleRoot(0).encodeABI();
+  const getMerkleRootMethod = () => voting.contract.methods.getMerkleRootForPriceEpoch(0).encodeABI();
 
   describe("Data provider fee percentage changes", () => {
     const getRewardEpochIdMethod = () => votingManager.contract.methods.getCurrentRewardEpochId().encodeABI();
@@ -170,7 +170,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
           amount: basicOffer.amount,
           currencyAddress: basicOffer.currencyAddress,
           beneficiary: voter,
-          epochId: claimPriceEpoch,
+          priceEpochId: claimPriceEpoch,
         };
 
         const claimsWithProof = await generateClaimWithProof(claim);
@@ -178,7 +178,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
           from: voter,
         });
 
-        const remainingBalance = await votingRewardManager.getRemainingEpochBalance(
+        const remainingBalance = await votingRewardManager.getRemainingRewardEpochBalance(
           claim.currencyAddress,
           claimPriceEpoch
         );
@@ -335,7 +335,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
             amount: claimAmount,
             currencyAddress: offer.currencyAddress,
             beneficiary: claimer.address,
-            epochId: claimPriceEpoch,
+            priceEpochId: claimPriceEpoch,
           };
           claimsForParties.set(claimer, [claim]);
         }
@@ -346,7 +346,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
             amount: unclaimedReward,
             currencyAddress: offer.currencyAddress,
             beneficiary: offerSender.address,
-            epochId: claimPriceEpoch,
+            priceEpochId: claimPriceEpoch,
           };
 
           const existingClaims = claimsForParties.get(offerSender) ?? [];
@@ -356,7 +356,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
 
         await submitClaimsAndCheckBalances(claimsForParties);
 
-        const remainingBalance = await votingRewardManager.getRemainingEpochBalance(TOKEN, CLAIM_REWARD_EPOCH);
+        const remainingBalance = await votingRewardManager.getRemainingRewardEpochBalance(TOKEN, CLAIM_REWARD_EPOCH);
         expect(remainingBalance).to.be.bignumber.equal(toBN(0));
         expect(await web3.eth.getBalance(votingRewardManager.address)).to.be.bignumber.equal(toBN(0));
       }
@@ -378,7 +378,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
         await moveToNextRewardEpochStart(votingManager, firstRewardedPriceEpoch, REWARD_EPOCH_DURATION);
 
         expect(await votingManager.getCurrentRewardEpochId()).to.be.bignumber.equal(toBN(CLAIM_REWARD_EPOCH + 1));
-        const balance = await votingRewardManager.getRemainingEpochBalance(ZERO_ADDRESS, CLAIM_REWARD_EPOCH);
+        const balance = await votingRewardManager.getRemainingRewardEpochBalance(ZERO_ADDRESS, CLAIM_REWARD_EPOCH);
         expect(balance).to.be.bignumber.equal(REWARD_AMOUNT);
 
         return basicOffer;

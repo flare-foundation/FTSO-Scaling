@@ -141,7 +141,7 @@ export namespace PriceEpochRewards {
         amount: offer.amount,
         currencyAddress: offer.currencyAddress,
         beneficiary: offer.remainderClaimer.toLowerCase(),
-        epochId: priceEpoch,
+        priceEpochId: priceEpoch,
       };
       return [backClaim];
     }
@@ -166,7 +166,7 @@ export namespace PriceEpochRewards {
         amount: reward,
         currencyAddress: offer.currencyAddress,
         beneficiary: voterRecord.voterAddress, // it is already lowercased
-        epochId: priceEpoch,
+        priceEpochId: priceEpoch,
       };
       rewardClaims.push(rewardClaim);
     }
@@ -186,7 +186,7 @@ export namespace PriceEpochRewards {
       const merged: RewardClaim = {
         ...claims[0],
         amount: claims.map(x => x.amount).reduce((a, b) => a.add(b), toBN(0)),
-        epochId: mergePriceEpochId,
+        priceEpochId: mergePriceEpochId,
       };
       return merged;
     }
@@ -301,7 +301,7 @@ export namespace PriceEpochRewards {
         amount: offer.amount,
         currencyAddress: offer.currencyAddress,
         beneficiary: finalizerAddress.toLowerCase(),
-        epochId: priceEpochId,
+        priceEpochId: priceEpochId,
       };
       claims.push(claim);
     }
@@ -333,7 +333,7 @@ export namespace PriceEpochRewards {
           amount: reward,
           currencyAddress: offer.currencyAddress,
           beneficiary: signers[i].toLowerCase(),
-          epochId: priceEpochId,
+          priceEpochId: priceEpochId,
         };
         signingClaims.push(claim);
       }
@@ -350,7 +350,7 @@ export namespace PriceEpochRewards {
         amount: offer.amount,
         currencyAddress: offer.currencyAddress,
         beneficiary: offer.remainderClaimer.toLowerCase(),
-        epochId: priceEpochId,
+        priceEpochId: priceEpochId,
       };
       backClaims.push(backClaim);
     }

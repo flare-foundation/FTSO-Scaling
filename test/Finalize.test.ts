@@ -79,7 +79,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
       let sWeight = await voterRegistry.getVoterWeightForRewardEpoch(accounts[i], rewardEpochId)
       // console.log(`${epochId} ${accounts[i]} ${sWeight.toString()}`)
       expect(sWeight).to.be.bignumber.eq(weight);
-      expect(await voting.getVoterWeightForRewardEpoch(accounts[i], epochId)).to.be.bignumber.eq(weight);
+      expect(await voting.getVoterWeightForPriceEpoch(accounts[i], epochId)).to.be.bignumber.eq(weight);
     }
     expect(await voterRegistry.thresholdForRewardEpoch(rewardEpochId)).to.be.bignumber.eq(totalWeight.mul(toBN(THRESHOLD)).div(toBN(10000)));
   });
@@ -115,7 +115,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
     tx = await voting.finalize(signEpochId, merkleRoot, signatures, { from: accounts[0] });
     console.log(`Finalize gas used: ${tx.receipt.gasUsed}`);
 
-    expectEvent(tx, "MerkleRootConfirmed", { epochId: epochId, merkleRoot });
+    expectEvent(tx, "MerkleRootConfirmed", { priceEpochId: epochId, merkleRoot });
 
 
     await increaseTimeTo(currentTime.add(epochDurationSec.mul(toBN(6))).toNumber());

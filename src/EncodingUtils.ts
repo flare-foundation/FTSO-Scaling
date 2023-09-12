@@ -88,9 +88,9 @@ class EncodingUtils {
     return {
       epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
-      v: parseIntOrThrow(resultTmp.signature.v, 10),
-      r: resultTmp.signature.r,
-      s: resultTmp.signature.s,
+      v: parseIntOrThrow(resultTmp._signature.v, 10),
+      r: resultTmp._signature.r,
+      s: resultTmp._signature.s,
     } as SignatureData;
   }
 
@@ -100,7 +100,7 @@ class EncodingUtils {
       from: tx.from.toLowerCase(),
       epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
-      signatures: resultTmp.signatures.map((s: any) => {
+      signatures: resultTmp._signatures.map((s: any) => {
         return {
           v: parseIntOrThrow(s.v, 10),
           r: s.r,

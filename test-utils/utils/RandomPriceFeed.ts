@@ -19,9 +19,9 @@ export class RandomPriceFeed implements IPriceFeed {
     return this.priceFeedConfig.feedInfo;
   }
 
-  getPriceForEpoch(epochId: number) {
+  getPriceForEpoch(priceEpochId: number) {
     let noise = (Math.random() - 0.5) * this.priceFeedConfig.variance;
-    let result = Math.floor((Math.sin(epochId / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise);
+    let result = Math.floor((Math.sin(priceEpochId / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise);
     return Math.max(0, result);
   }
 }

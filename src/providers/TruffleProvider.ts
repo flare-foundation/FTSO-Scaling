@@ -56,8 +56,8 @@ export class TruffleProvider implements IVotingProvider {
     this.account = getAccount(web3, privateKey);
   }
 
-  async thresholdForRewardEpoch(epochId: number): Promise<BN> {
-    return this.contracts.voterRegistry.thresholdForRewardEpoch(epochId);
+  async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
+    return this.contracts.voterRegistry.thresholdForRewardEpoch(rewardEpochId);
   }
 
   async claimReward(claim: RewardClaimWithProof): Promise<any> {
@@ -93,9 +93,9 @@ export class TruffleProvider implements IVotingProvider {
     );
   }
 
-  async signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
+  async signResult(priceEpochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
     return this.contracts.voting.signResult(
-      epochId,
+      priceEpochId,
       merkleRoot,
       {
         v: signature.v,
@@ -106,9 +106,9 @@ export class TruffleProvider implements IVotingProvider {
     );
   }
 
-  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
+  async finalize(priceEpochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
     try {
-      await this.contracts.voting.finalize(epochId, mySignatureHash, signatures, {
+      await this.contracts.voting.finalize(priceEpochId, mySignatureHash, signatures, {
         from: this.account.address,
       });
       return true;
@@ -119,8 +119,8 @@ export class TruffleProvider implements IVotingProvider {
     }
   }
 
-  async getMerkleRoot(epochId: number): Promise<string> {
-    return this.contracts.voting.getMerkleRoot(epochId);
+  async getMerkleRoot(priceEpochId: number): Promise<string> {
+    return this.contracts.voting.getMerkleRootForPriceEpoch(priceEpochId);
   }
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {

@@ -24,19 +24,19 @@ export interface IVotingProvider {
 
   get senderAddressLowercase(): string;
 
-  thresholdForRewardEpoch(epochId: number): Promise<BN>;
+  thresholdForRewardEpoch(rewardEpochId: number): Promise<BN>;
 
   ////////////// Contract calls //////////////
   claimReward(claim: RewardClaimWithProof): Promise<any>;
   offerRewards(offer: Offer[]): Promise<any>;
   commit(hash: string): Promise<any>;
   revealBitvote(epochData: EpochData): Promise<any>;
-  signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
-  finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
+  signResult(priceEpochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
+  finalize(priceEpochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
   publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
   allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
-  getMerkleRoot(epochId: number): Promise<string>;
+  getMerkleRoot(priceEpochId: number): Promise<string>;
 
   ////////////// Signing //////////////
   signMessage(message: string): Promise<BareSignature>;

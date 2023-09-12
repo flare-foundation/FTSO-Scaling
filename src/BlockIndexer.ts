@@ -98,9 +98,9 @@ export class BlockIndexer extends AsyncEventEmitter {
   private extractCommit(tx: TxData, blockTimestampSec: number): void {
     const hash: CommitHash = encodingUtils.extractCommitHash(tx);
     const from = tx.from.toLowerCase();
-    const epochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
-    const commitsInEpoch = this.priceEpochCommits.get(epochId) || new Map<Address, CommitHash>();
-    this.priceEpochCommits.set(epochId, commitsInEpoch);
+    const priceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
+    const commitsInEpoch = this.priceEpochCommits.get(priceEpochId) || new Map<Address, CommitHash>();
+    this.priceEpochCommits.set(priceEpochId, commitsInEpoch);
     commitsInEpoch.set(from.toLowerCase(), hash);
   }
 
@@ -108,10 +108,10 @@ export class BlockIndexer extends AsyncEventEmitter {
   private extractReveal(tx: TxData, blockTimestampSec: number): void {
     const result = encodingUtils.extractRevealBitvoteData(tx);
     const from = tx.from.toLowerCase();
-    const epochId = this.epochs.revealEpochIdForTime(blockTimestampSec);
-    if (epochId !== undefined) {
-      const revealsInEpoch = this.priceEpochReveals.get(epochId) || new Map<Address, RevealBitvoteData>();
-      this.priceEpochReveals.set(epochId, revealsInEpoch);
+    const priceEpochId = this.epochs.revealPriceEpochIdForTime(blockTimestampSec);
+    if (priceEpochId !== undefined) {
+      const revealsInEpoch = this.priceEpochReveals.get(priceEpochId) || new Map<Address, RevealBitvoteData>();
+      this.priceEpochReveals.set(priceEpochId, revealsInEpoch);
       revealsInEpoch.set(from.toLowerCase(), result);
     }
   }

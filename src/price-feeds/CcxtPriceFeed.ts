@@ -61,7 +61,7 @@ export class CcxtPriceFeed implements IPriceFeed {
     }
   }
 
-  getPriceForEpoch(epochId: number): number {
+  getPriceForEpoch(_priceEpochId: number): number {
     return this.lastPriceUSD;
   }
   getFeedInfo(): Feed {

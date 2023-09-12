@@ -158,8 +158,8 @@ export class FTSOClient {
     }
   }
 
-  async commit(epochId: number) {
-    const epochData = this.priceEpochData.get(epochId);
+  async commit(priceEpochId: number) {
+    const epochData = this.priceEpochData.get(priceEpochId);
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
@@ -167,25 +167,25 @@ export class FTSOClient {
     await this.provider.commit(hash);
   }
 
-  async reveal(epochId: number) {
-    const epochData = this.priceEpochData.get(epochId);
+  async reveal(priceEpochId: number) {
+    const epochData = this.priceEpochData.get(priceEpochId);
     if (!epochData) {
-      throw new Error("Epoch data not found for epoch " + epochId);
+      throw new Error("Epoch data not found for epoch " + priceEpochId);
     }
     await this.provider.revealBitvote(epochData);
   }
 
-  async calculateResultsAndSign(epochId: number, skipCalculation = false) {
+  async calculateResultsAndSign(priceEpochId: number, skipCalculation = false) {
     if (!skipCalculation) {
-      await this.calculateResults(epochId);
+      await this.calculateResults(priceEpochId);
     }
-    const result = this.priceEpochResults.get(epochId);
+    const result = this.priceEpochResults.get(priceEpochId);
     if (!result) {
       throw new Error("Result not found");
     }
 
     const signature = await this.provider.signMessage(result.merkleRoot!);
-    await this.provider.signResult(epochId, result.merkleRoot!, {
+    await this.provider.signResult(priceEpochId, result.merkleRoot!, {
       v: signature.v,
       r: signature.r,
       s: signature.s,
@@ -307,10 +307,10 @@ export class FTSOClient {
     data.bitVote = "0x00";
   }
 
-  private async tryFinalizeEpoch(epochId: number) {
-    const signatureMap = this.indexer.getSignatures(epochId)!;
+  private async tryFinalizeEpoch(priceEpochId: number) {
+    const signatureMap = this.indexer.getSignatures(priceEpochId)!;
     const signaturesTmp: SignatureData[] = [...signatureMap.values()].map(([s, _]) => s);
-    const mySignatureHash = this.priceEpochResults.get(epochId)!.merkleRoot!;
+    const mySignatureHash = this.priceEpochResults.get(priceEpochId)!.merkleRoot!;
     const signatures = signaturesTmp
       .filter(sig => sig.merkleRoot === mySignatureHash)
       .map(sig => {
@@ -321,17 +321,17 @@ export class FTSOClient {
         } as BareSignature;
       });
     try {
-      let result = await this.provider.finalize(epochId, mySignatureHash, signatures);
+      let result = await this.provider.finalize(priceEpochId, mySignatureHash, signatures);
       // TODO: Finalization transaction executed succesfully, but we should check for MerkleRootConfirmed event
       //       to make sure it was recorded in the smart contract.
-      this.logger.info(`Successfully submitted finalization transaction for epoch ${epochId}. Result: ${result}`);
+      this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}. Result: ${result}`);
     } catch (e) {
       this.logger.info(`Failed to submit finalization transaction: ${e}`);
     }
   }
 
-  async publishPrices(epochId: number, symbolIndices: number[]) {
-    const result = this.priceEpochResults.get(epochId);
+  async publishPrices(peiceEpochId: number, symbolIndices: number[]) {
+    const result = this.priceEpochResults.get(peiceEpochId);
     if (!result) {
       throw new Error("Result not found");
     }
@@ -427,33 +427,33 @@ export class FTSOClient {
     );
   }
 
-  async tryFinalizeOnceSignaturesReceived(epochId: number) {
+  async tryFinalizeOnceSignaturesReceived(priceEpochId: number) {
     this.indexer.on(Received.Signature, this.signatureListener); // Will atempt to finalize once enough signatures are received.
     await this.processNewBlocks();
-    await this.awaitFinalization(epochId);
+    await this.awaitFinalization(priceEpochId);
     this.indexer.off(Received.Signature, this.signatureListener);
   }
 
-  private async awaitFinalization(epochId: number) {
-    while (!this.indexer.getFinalize(epochId)) {
-      this.logger.debug(`Epoch ${epochId} not finalized, keep processing new blocks`);
+  private async awaitFinalization(priceEpochId: number) {
+    while (!this.indexer.getFinalize(priceEpochId)) {
+      this.logger.debug(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
       await sleepFor(BLOCK_PROCESSING_INTERVAL_MS);
       await this.processNewBlocks();
     }
-    this.logger.debug(`Epoch ${epochId} finalized, continue.`);
+    this.logger.debug(`Epoch ${priceEpochId} finalized, continue.`);
   }
 
   /**
    * Once sufficient voter weight in received signatures is observed, will call finalize.
    * @returns true if enough signatures were found and finalization was attempted.
    */
-  private async checkSignaturesAndTryFinalize(epochId: number): Promise<boolean> {
-    if (epochId! in this.priceEpochResults) {
-      throw Error(`Invalid state: trying to finalize ${epochId}, but results not yet computed.`);
+  private async checkSignaturesAndTryFinalize(priceEpochId: number): Promise<boolean> {
+    if (priceEpochId! in this.priceEpochResults) {
+      throw Error(`Invalid state: trying to finalize ${priceEpochId}, but results not yet computed.`);
     }
 
-    const signatureByVoter = this.indexer.getSignatures(epochId)!;
-    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(epochId);
+    const signatureByVoter = this.indexer.getSignatures(priceEpochId)!;
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const weightThreshold = await this.provider.thresholdForRewardEpoch(rewardEpoch);
     const voterWeights = this.eligibleVoterWeights.get(rewardEpoch)!;
 
