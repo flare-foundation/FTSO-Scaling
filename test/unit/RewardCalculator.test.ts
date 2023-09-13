@@ -3,6 +3,7 @@ import { RewardCalculator } from "../../src/RewardCalculator";
 import { calculateResultsForFeed } from "../../src/median-calculation-utils";
 import { Feed, Offer, RewardOffered } from "../../src/voting-interfaces";
 import { feedToText, toBN } from "../../src/voting-utils";
+import { getTestFile } from "../../test-utils/utils/constants";
 import { generateOfferForSymbol, prepareSymbols } from "../EndToEnd.utils";
 
 function getAccountAddress(): string {
@@ -15,7 +16,7 @@ const EPOCH_DURATION_SEC = 10;
 const PRICE_EPOCHS_FOR_REWARD_EPOCH = 4;
 const FIRST_REWARD_EPOCH = 0;
 
-describe("RewardCalculator", () => {
+describe(`RewardCalculator; ${getTestFile(__filename)}`, () => {
   const claimerAddress = web3.eth.accounts.create().address.toLowerCase();
   const epochSettings = new EpochSettings(0, EPOCH_DURATION_SEC, FIRST_REWARD_EPOCH, PRICE_EPOCHS_FOR_REWARD_EPOCH);
   const feeds = prepareSymbols(FEED_COUNT);

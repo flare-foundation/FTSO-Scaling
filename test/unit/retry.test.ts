@@ -1,11 +1,12 @@
 import { sleepFor } from "../../src/time-utils";
 import { retry } from "../../src/utils/retry";
+import { getTestFile } from "../../test-utils/utils/constants";
 
 const MAX_RETRIES = 3;
 const RETRY_TIMEOUT = 0;
 const RESULT = 42;
 
-describe("retry", () => {
+describe(`retry; ${getTestFile(__filename)}`, () => {
   it("should return the result of the function if it succeeds on the first try", async () => {
     const result = await retry(() => RESULT, MAX_RETRIES, RETRY_TIMEOUT);
     expect(result).to.equal(RESULT);

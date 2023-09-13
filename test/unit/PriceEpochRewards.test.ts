@@ -1,7 +1,8 @@
 import { PriceEpochRewards } from "../../src/PriceEpochRewards";
 import { toBN } from "../../src/voting-utils";
+import { getTestFile } from "../../test-utils/utils/constants";
 
-describe("PriceEpochRewards", () => {
+describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
   it("should merge claims correctly", () => {
     const alice = "alice";
     const bob = "bob";

@@ -173,14 +173,14 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
           priceEpochId: claimPriceEpoch,
         };
 
-        const claimsWithProof = await generateClaimWithProof(claim);
-        await votingRewardManager.claimReward(hexlifyBN(claimsWithProof), voter, {
+        const claimRewardEpoch = (await votingManager.getCurrentRewardEpochId()).subn(1);
+        const claimWithProof = await generateClaimWithProof(claim);
+        await votingRewardManager.claimReward(hexlifyBN(claimWithProof), voter, {
           from: voter,
         });
-
         const remainingBalance = await votingRewardManager.getRemainingRewardEpochBalance(
           claim.currencyAddress,
-          claimPriceEpoch
+          claimRewardEpoch
         );
         expect(remainingBalance).to.be.bignumber.equal(toBN(0));
       }
