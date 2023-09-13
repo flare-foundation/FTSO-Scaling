@@ -14,13 +14,13 @@ import { convertRewardOfferedEvent } from "./voting-utils";
 const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
 const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
 
-class EncodingUtils {
+export default class EncodingUtils {
   private functionSignatures = new Map<string, string>();
   private eventSignatures = new Map<string, string>();
   private abiItems = new Map<string, AbiItem>();
   private abiInputs = new Map<string, AbiInput>();
 
-  constructor() {
+  private constructor() {
     const votingABI = JSON.parse(readFileSync(votingAbiPath).toString()).abi as AbiItem[];
     const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
 
@@ -115,12 +115,16 @@ class EncodingUtils {
     const parametersEncodingABI = this.abiItems.get(name)!.inputs!;
     return coder.decodeParameters(parametersEncodingABI, encodedParameters);
   }
+
+  private static _instance: EncodingUtils | undefined;
+  static get instance(): EncodingUtils {
+    if (this._instance === undefined) this._instance = new EncodingUtils();
+    return this._instance!;
+  }
 }
 
-function parseIntOrThrow(input: string, base: number):number {
+function parseIntOrThrow(input: string, base: number): number {
   const parsed: number = parseInt(input, base);
   if (Number.isNaN(parsed)) throw new Error(`Could not parse ${input} as number`);
   return parsed;
 }
-
-export const encodingUtils = new EncodingUtils();

@@ -3,7 +3,8 @@ import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { Feed, RewardOffered, RewardClaim } from "./voting-interfaces";
-import { encodingUtils } from "./EncodingUtils";
+import EncodingUtils from "./EncodingUtils";
+
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -34,7 +35,7 @@ export function sortedHashPair(x: string, y: string) {
  * Hashing {@link RewardClaim} struct.
  */
 export function hashRewardClaim(data: RewardClaim): string {
-  const rewardClaimAbi: any = encodingUtils.abiInputForName("rewardClaimDefinition")!;
+  const rewardClaimAbi: any = EncodingUtils.instance.abiInputForName("rewardClaimDefinition")!;
   return utils.soliditySha3(defaultAbiCoder.encode([rewardClaimAbi], [hexlifyBN(data)]))!;
 }
 
