@@ -7,8 +7,22 @@ image: node:18
 variables:
   YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
 
+.rules:
+  always:
+    # branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null && $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null'
+    # MR pipelines
+    - if: '$CI_OPEN_MERGE_REQUESTS != null && $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "web"'
+    # Prevent duplicate MR && branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+
 build-smart-contracts:
   stage: build
+  rules:
+    - !reference [.rules, always]
   needs: []
   before_script:
     - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
@@ -32,6 +46,8 @@ build-smart-contracts:
 test-unit:
   stage: test
   timeout: 1h
+  rules:
+    - !reference [.rules, always]
   needs:
     - build-smart-contracts
   before_script:
