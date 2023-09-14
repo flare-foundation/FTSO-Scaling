@@ -7,9 +7,10 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { ZERO_ADDRESS, toBytes4, hexlifyBN } from "../../src/voting-utils";
 import { VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { toBN } from "web3-utils";
-import { OUTPUT_FILE, loadAccounts } from "./common";
+import { OUTPUT_FILE } from "./common";
 import { FTSOParameters } from "../config/FTSOParameters";
 import { getLogger } from "../../src/utils/logger";
+import { isHardhatNetwork } from "../../test-utils/utils/test-helpers";
 
 const REWARD_VALUE = 1000999;
 const IQR_SHARE = 700000;
@@ -63,11 +64,10 @@ async function offerRewards(
 
 /**
  * Generates offers for every reward epoch, and sends periodic transactions
- *  to make sure new blocks are mined on the Hardhat network.
+ * to make sure new blocks are mined on the Hardhat network.
  */
 export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters: FTSOParameters) {
-  const accounts = loadAccounts(hre.web3);
-  const governance: Account = accounts[0];
+  const governance: Account = hre.web3.eth.accounts.privateKeyToAccount(parameters.governancePrivateKey);
 
   const contractAddresses = loadContracts();
 
@@ -91,7 +91,7 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
           parameters.symbols,
           votingRewardManager,
           governance.address,
-          [accounts[1].address],
+          [],
           toBN(REWARD_VALUE)
         );
         lastEpoch = currentRewardEpoch;
@@ -105,7 +105,10 @@ export async function runAdminDaemon(hre: HardhatRuntimeEnvironment, parameters:
 }
 /**
  * Generates a dummy transaction to make sure new blocks get mined.
+ * Only applicable for local networks.
  */
 async function tick(hre: HardhatRuntimeEnvironment, governance: Account) {
-  await hre.web3.eth.sendTransaction({ value: 100, from: governance.address, to: governance.address });
+  if (isHardhatNetwork(hre)) {
+    await hre.web3.eth.sendTransaction({ value: 100, from: governance.address, to: governance.address });
+  }
 }

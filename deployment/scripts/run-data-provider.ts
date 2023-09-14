@@ -11,21 +11,27 @@ import { getWeb3 } from "../../src/web3-utils";
 
 async function main() {
   const myId = +process.argv[2];
-  if (!myId) {
-    throw Error("Must provide a data provider id.");
-  }
+  if (!myId) throw Error("Must provide a data provider id.");
+  if (myId <= 0) throw Error("Data provider id must be greater than 0.");
 
   setGlobalLogFile(`data-provider-${myId}`);
 
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
-  const accounts = loadAccounts(web3);
   const contractAddresses = loadContracts();
 
-  getLogger("data-provider").info(`Initializing data provider ${myId} with address ${accounts[myId].address}`);
+  getLogger("data-provider").info(`Initializing data provider ${myId}`);
 
-  const provider = await Web3Provider.create(contractAddresses, web3, parameters, accounts[myId].privateKey);
+  let privateKey: string;
+  if (process.env.DATA_PROVIDER_PRIVATE_KEY != undefined) {
+    privateKey = process.env.DATA_PROVIDER_PRIVATE_KEY;
+  } else {
+    const accounts = loadAccounts(web3);
+    privateKey = accounts[myId].privateKey;
+  }
+
+  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
   const client = new FTSOClient(provider, await provider.getBlockNumber());
   const feeds = await getPriceFeeds(parameters.symbols);
   client.registerPriceFeeds(randomizeFeeds(feeds));

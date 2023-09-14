@@ -20,9 +20,13 @@ export async function increaseTimeTo(timestampSec: number) {
  * If the time is too far in the past we get issues when calculating price epoch ids.
  */
 export async function syncTimeToNow(hre: HardhatRuntimeEnvironment) {
-  const network = hre.network.name;
-  if (network === "local" || network === "localhost" || network === "hardhat") {
+  if (isHardhatNetwork(hre)) {
     const now = Math.floor(Date.now() / 1000);
     await increaseTimeTo(now);
   }
+}
+
+export function isHardhatNetwork(hre: HardhatRuntimeEnvironment) {
+  const network = hre.network.name;
+  return network === "local" || network === "localhost" || network === "hardhat";
 }
