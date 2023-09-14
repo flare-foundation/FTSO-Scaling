@@ -1,7 +1,8 @@
 import AsyncEventEmitter from "../../src/utils/AsyncEventEmitter";
 import { sleepFor } from "../../src/time-utils";
+import { getTestFile } from "../../test-utils/utils/constants";
 
-describe("AsyncEventEmitter", () => {
+describe(`AsyncEventEmitter; ${getTestFile(__filename)}`, () => {
   const EVENT = "test";
   let emitter: AsyncEventEmitter;
 

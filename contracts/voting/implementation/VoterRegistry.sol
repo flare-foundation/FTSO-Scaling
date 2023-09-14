@@ -31,30 +31,6 @@ contract VoterRegistry is IVoterRegistry, Governed {
         thresholdBIPS = _thresholdBIPS;
     }
 
-    // function addVotersWithWeightsForRewardEpoch(
-    //     uint256 _rewardEpochId,
-    //     address[] calldata _voters,
-    //     uint256[] calldata _weights
-    // ) public onlyGovernance {
-    //     require(
-    //         _rewardEpochId > votingManager.getCurrentRewardEpochId(),
-    //         "rewardEpochId too low"
-    //     );
-    //     require(
-    //         _voters.length == _weights.length,
-    //         "voters and weights length mismatch"
-    //     );
-    //     require(
-    //         rewardEpochToAllVoters[_rewardEpochId].length == 0,
-    //         "voters already added for this reward epoch"
-    //     );
-    //     for (uint256 i = 0; i < _voters.length; i++) {
-    //         weightForRewardEpoch[_rewardEpochId][_voters[i]] = _weights[i];
-    //         rewardEpochToAllVoters[_rewardEpochId].push(_voters[i]);
-    //         totalWeightPerRewardEpoch[_rewardEpochId] += _weights[i];
-    //     }
-    // }
-
     function registerAsAVoter(
         uint256 _rewardEpochId,
         uint256 _weight

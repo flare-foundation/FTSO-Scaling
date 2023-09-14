@@ -3,8 +3,9 @@ import { expect } from "chai";
 import { MedianCalculationSummary } from "../../src/voting-interfaces";
 import { toBN } from "../../src/voting-utils";
 import { calculateMedian } from "../../src/median-calculation-utils";
+import { getTestFile } from "../../test-utils/utils/constants";
 
-describe("median-calculation-utils", () => {
+describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
   let numVoters: number;
   let totalWeightSum: number;
   let voters: string[];
