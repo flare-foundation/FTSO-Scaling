@@ -15,10 +15,11 @@
     "./deployment",
     "./src",
     "./test",
-    "./typechain/**/*",
-    "./typechain-truffle/**/*",
-    "./typechain-web3/**/*",
-    "./test-utils",
+    "./typechain-types",
+    "./typechain",
+    "./typechain-truffle",
+    "./typechain-web3",
+    "./test-utils/utils",
  ],
   "files": ["./hardhat.config.ts"]
 }
