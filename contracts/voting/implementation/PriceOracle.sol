@@ -51,7 +51,7 @@ contract PriceOracle is Governed, IPriceOracle {
             merkleRoot = keccak256(abi.encode(priceHash, merkleRoot));
         }
         require(
-            merkleRoot == voting.getMerkleRoot(_priceEpochId),
+            merkleRoot == voting.getMerkleRootForPriceEpoch(_priceEpochId),
             "invalid data"
         );
         for (uint256 i = 0; i < _symbolsIndicesToPublish.length; i++) {
@@ -77,13 +77,13 @@ contract PriceOracle is Governed, IPriceOracle {
         }
     }
 
-    function anchorPricesForSymbol(bytes8 symbol) public view returns (AnchorPrice memory){
-        return anchorPrices[symbol];
+    function anchorPricesForSymbol(bytes8 _symbol) public view returns (AnchorPrice memory){
+        return anchorPrices[_symbol];
     }
 
-    function lastAnchorPriceForSymbol(bytes8 symbol) public view returns (uint32 price, uint32 timestamp){
-        price = anchorPrices[symbol].price;
-        timestamp = anchorPrices[symbol].timestamp;
+    function lastAnchorPriceForSymbol(bytes8 _symbol) public view returns (uint32 price, uint32 timestamp){
+        price = anchorPrices[_symbol].price;
+        timestamp = anchorPrices[_symbol].timestamp;
     }
 
     function anchorPriceShift(AnchorPrice storage _anchorPrice) internal {

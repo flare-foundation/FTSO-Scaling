@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-struct ClaimReward {
+struct RewardClaimWithProof {
     bytes32[] merkleProof;
-    ClaimRewardBody claimRewardBody;
+    RewardClaim body;
 }
 
-struct ClaimRewardBody {
+struct RewardClaim {
+    bool isFixedClaim;
     uint256 amount;
-    uint256 weight;
     address currencyAddress; // 0 for native currency
-    address payable voterAddress;
-    uint epochId;
+    address payable beneficiary;
+    uint priceEpochId;
 }
 
 /**
  * Defines a reward offer in native coin or ERC20 token.
- *
  */
 struct Offer {
     uint256 amount; // amount of reward in native coin or ERC20 token
@@ -57,21 +56,21 @@ abstract contract IRewardManager {
         uint256 validFromEpoch
     );
 
-    function setVoting(address votingContract) external virtual;
+    function setVoting(address _votingContract) external virtual;
 
-    function setVotingManager(address votingManagerContract) external virtual;
+    function setVotingManager(address _votingManagerContract) external virtual;
 
     function setERC20PriceOracle(
-        address erc20PriceOracleContract
+        address _erc20PriceOracleContract
     ) external virtual;
 
-    function claimReward(ClaimReward calldata _data, address claimer) external virtual;
+    function claimReward(RewardClaimWithProof calldata _data, address _claimer) external virtual;
 
-    function offerRewards(Offer[] calldata offers) external payable virtual;
+    function offerRewards(Offer[] calldata _offers) external payable virtual;
 
     // These functions are not for calling, but for exporting the type definitions in the metadata
-    function claimRewardBodyDefinition(
-        ClaimRewardBody calldata _data
+    function rewardClaimDefinition(
+        RewardClaim calldata _data
     ) external {}
 
     function offerDefinition(Offer calldata _data) external {}
@@ -100,8 +99,8 @@ abstract contract IRewardManager {
 
 }
 
-function hash(ClaimReward calldata claim) pure returns (bytes32) {
-    return keccak256(abi.encode(claim.claimRewardBody));
+function hash(RewardClaimWithProof calldata _claim) pure returns (bytes32) {
+    return keccak256(abi.encode(_claim.body));
 }
 
-using {hash} for ClaimReward global;
+using {hash} for RewardClaimWithProof global;

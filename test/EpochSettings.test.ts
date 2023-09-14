@@ -68,9 +68,6 @@ contract(`EpochSettings; ${getTestFile(__filename)}`, async (accounts) => {
     for (let rewardEpoch = 0; rewardEpoch <= N; rewardEpoch++) {
       const realLastPriceEpoch = (await votingManager.lastPriceEpochOfRewardEpoch(rewardEpoch)).toNumber();
       const calculatedLastPriceEpoch = epochSettings.lastPriceEpochForRewardEpoch(rewardEpoch);
-      console.log(
-        `Reward epoch ${rewardEpoch}: ${calculatedLastPriceEpoch} (calculated) vs ${realLastPriceEpoch} (real)`
-      );
       expect(calculatedLastPriceEpoch).to.equal(realLastPriceEpoch, "Last price epoch doesn't match smart contract.");
     }
   });

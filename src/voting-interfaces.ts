@@ -1,28 +1,20 @@
 import BN from "bn.js";
 import { TransactionReceipt } from "web3-core";
 
-export interface ClaimReward {
-  merkleProof: string[];
-  hash?: string;
-  claimRewardBody: ClaimRewardBody;
+export interface RewardClaim {
+  /**
+   * `true`if the claim is for the full amount claimable by the specified beneficiary. E.g: back claims, signer and finalization claims.
+   * `false` if the claim is for voting rewards, where the amount is shared between the beneficiary voter and its delegators proportionally to their weights.
+   */
+  readonly isFixedClaim: boolean;
+  readonly amount: BN; // 256-bit
+  readonly currencyAddress: string;
+  readonly beneficiary: string;
+  readonly priceEpochId: number;
 }
-
-export function deepCopyClaim(claim: ClaimReward): ClaimReward {
-  return {
-    ...claim,
-    merkleProof: [...claim.merkleProof],
-    claimRewardBody: {
-      ...claim.claimRewardBody,
-    },
-  };
-}
-
-export interface ClaimRewardBody {
-  amount: BN; // 256-bit
-  weight: BN;
-  currencyAddress: string;
-  voterAddress: string;
-  epochId: number;
+export interface RewardClaimWithProof {
+  readonly merkleProof: readonly string[];
+  readonly body: RewardClaim;
 }
 
 export interface Feed {
@@ -38,12 +30,12 @@ export interface Offer extends Feed {
   elasticBandWidthPPM: BN; // elastic band width in PPM (parts per million) in relation to the median price.
   iqrSharePPM: BN; // Each offer defines IQR and PCT share in PPM (parts per million). The sum of all offers must be 1M.
   pctSharePPM: BN;
+  remainderClaimer: string;
 }
 
 export interface RewardOffered extends Offer {
   priceEpochId?: number;
   transactionId?: string;
-  remainderClaimer: string;
   flrValue: BN;
 }
 
@@ -53,31 +45,31 @@ export interface FeedValue extends Feed {
 }
 
 export interface BareSignature {
-  v: number;
-  r: string;
-  s: string;
+  readonly v: number;
+  readonly r: string;
+  readonly s: string;
 }
 
 export interface RevealBitvoteData {
-  random: string;
-  merkleRoot: string;
-  bitVote: string;
-  prices: string; // 4-byte hex strings
+  readonly random: string;
+  readonly merkleRoot: string;
+  readonly bitVote: string;
+  readonly prices: string; // 4-byte hex strings
 }
 
 export interface SignatureData {
-  epochId: number;
-  merkleRoot: string;
-  v: number;
-  r: string;
-  s: string;
+  readonly epochId: number;
+  readonly merkleRoot: string;
+  readonly v: number;
+  readonly r: string;
+  readonly s: string;
 }
 
 export interface FinalizeData {
-  from: string;
-  epochId: number;
-  merkleRoot: string;
-  signatures: BareSignature[];
+  readonly from: string;
+  readonly epochId: number;
+  readonly merkleRoot: string;
+  readonly signatures: readonly BareSignature[];
 }
 
 export interface TxData {
@@ -93,7 +85,7 @@ export interface TxData {
 export interface BlockData {
   number: number;
   timestamp: number;
-  transactions: TxData[];
+  transactions: readonly TxData[];
 }
 
 export interface EpochData {
@@ -106,48 +98,47 @@ export interface EpochData {
 }
 
 export interface EpochResult {
-  priceEpochId: number;
-  medianData: MedianCalculationResult[];
-  priceMessage: string;
-  symbolMessage: string;
-  fullPriceMessage: string;
-  dataMerkleRoot: string;
-  dataMerkleProof: string;
-  // voter => claim
-  rewards: Map<string, ClaimReward[]>;
-  fullMessage: string;
-  merkleRoot: string;
+  readonly priceEpochId: number;
+  readonly medianData: readonly MedianCalculationResult[];
+  readonly priceMessage: string;
+  readonly symbolMessage: string;
+  readonly fullPriceMessage: string;
+  readonly rewardClaimMerkleRoot: string;
+  readonly rewardClaimMerkleProof: string;
+  readonly rewardClaims: readonly RewardClaim[];
+  readonly fullMessage: string;
+  readonly merkleRoot: string;
 }
 
 export interface MedianCalculationResult {
-  feed: Feed;
-  voters?: string[];
-  prices?: number[];
-  data: MedianCalculationSummary;
-  weights: BN[];
+  readonly feed: Feed;
+  readonly voters?: readonly string[];
+  readonly prices?: readonly number[];
+  readonly data: MedianCalculationSummary;
+  readonly weights: readonly BN[];
 }
 
 export interface MedianCalculationSummary {
-  finalMedianPrice: number;
-  quartile1Price: number;
-  quartile3Price: number;
+  readonly finalMedianPrice: number;
+  readonly quartile1Price: number;
+  readonly quartile3Price: number;
 }
 
 export interface VoterWithWeight {
-  voterAddress: string;
+  readonly voterAddress: string;
   weight: BN;
-  originalWeight: BN;
+  readonly originalWeight: BN;
 }
 
 export interface VoterRewarding extends VoterWithWeight {
-  pct: boolean; // gets PCT reward
-  iqr: boolean; // gets IQR reward
-  eligible: boolean; // is eligible for reward
+  readonly pct: boolean; // gets PCT reward
+  readonly iqr: boolean; // gets IQR reward
+  readonly eligible: boolean; // is eligible for reward
 }
 
 export interface RevealResult {
-  revealed: string[];
-  failedCommit: string[];
-  committedFailedReveal: string[];
-  revealedRandoms: string[];
+  readonly revealed: string[];
+  readonly failedCommit: string[];
+  readonly committedFailedReveal: string[];
+  readonly revealedRandoms: string[];
 }

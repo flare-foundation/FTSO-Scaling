@@ -42,40 +42,40 @@ contract VotingRewardManager is Governed, IRewardManager {
     uint256 nextRewardEpochBalanceIndex;
 
     function getNextRewardEpochBalance(
-        address tokenAddress
+        address _tokenAddress
     ) public view returns (uint balance) {
         balance = storedRewardEpochBalances[nextRewardEpochBalanceIndex]
-            .totalRewardForTokenContract[tokenAddress];
+            .totalRewardForTokenContract[_tokenAddress];
     }
 
-    function authorizeClaimer(address claimer) public {
-        authorizedClaimer[msg.sender] = claimer;
+    function authorizeClaimer(address _claimer) public {
+        authorizedClaimer[msg.sender] = _claimer;
     }
 
-    function authorizeRecepient(address recepient) public {
-        authorizedRecepient[msg.sender] = recepient;
+    function authorizeRecepient(address _recepient) public {
+        authorizedRecepient[msg.sender] = _recepient;
     }
 
-    // function getRemainingEpochBalance(
-    //     address tokenAddress,
-    //     uint epochId
-    // ) public view returns (uint balance) {
-    //     balance = storedRewardEpochBalances[
-    //         rewardEpochIdAsStoredBalanceIndex(epochId)
-    //     ].unclamedBalanceForTokenContract[tokenAddress];
-    // }
+    function getRemainingRewardEpochBalance(
+        address _tokenAddress,
+        uint _rewardEpochId
+    ) public view returns (uint) {
+        return storedRewardEpochBalances[
+            rewardEpochIdAsStoredBalanceIndex(_rewardEpochId)
+        ].availableAmountForTokenContract[_tokenAddress];
+    }
 
     function rewardEpochIdAsStoredBalanceIndex(
-        uint256 epochId
+        uint256 _rewardEpochId
     ) internal view returns (uint256) {
         require(
-            epochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId,
+            _rewardEpochId + STORED_PREVIOUS_BALANCES >= currentRewardEpochId,
             "reward balance not preserved for epoch too far in the past"
         );
         // Have to add the modulus to get a nonnegative answer: -a % m == -(a % m)
-        // return (nextRewardEpochBalanceIndex + epochId + STORED_PREVIOUS_BALANCES - currentRewardEpochId)
+        // return (nextRewardEpochBalanceIndex + rewardEpochId + STORED_PREVIOUS_BALANCES - currentRewardEpochId)
         //         % STORED_PREVIOUS_BALANCES;
-        return epochId % STORED_PREVIOUS_BALANCES;
+        return _rewardEpochId % STORED_PREVIOUS_BALANCES;
     }
 
     function setMinimalOfferParameters(
@@ -152,14 +152,14 @@ contract VotingRewardManager is Governed, IRewardManager {
     //
     // TODO: support token currencies
     function offerRewards(
-        Offer[] calldata offers
+        Offer[] calldata _offers
     ) public payable override maybePushRewardBalance {
         StoredBalances storage balances = storedRewardEpochBalances[
             nextRewardEpochBalanceIndex
         ];
         uint256 totalNativeOffer = 0;
-        for (uint i = 0; i < offers.length; ++i) {
-            Offer calldata offer = offers[i];
+        for (uint i = 0; i < _offers.length; ++i) {
+            Offer calldata offer = _offers[i];
             uint256 offerValue;
             if (offer.currencyAddress == address(0)) {
                 totalNativeOffer += offer.amount;
@@ -211,20 +211,20 @@ contract VotingRewardManager is Governed, IRewardManager {
     }
 
     function claimReward(
-        ClaimReward calldata _data,
-        address beneficiary
+        RewardClaimWithProof calldata _claimWithProof,
+        address _beneficiary
     ) public override maybePushRewardBalance {
         require(
-            msg.sender == beneficiary || msg.sender == authorizedClaimer[beneficiary],
+            msg.sender == _beneficiary || msg.sender == authorizedClaimer[_beneficiary],
             "not authorized claimer"
         );
-        
-        ClaimRewardBody memory claim = _data.claimRewardBody;
-        uint256 claimRewardEpoch = votingManager.getRewardEpochIdForEpoch(
-            claim.epochId
+
+        RewardClaim memory claim = _claimWithProof.body;
+        uint256 claimRewardEpoch = votingManager.getRewardEpochIdForPriceEpoch(
+            claim.priceEpochId
         );
         require(
-            claim.epochId ==
+            claim.priceEpochId ==
                 votingManager.lastPriceEpochOfRewardEpoch(claimRewardEpoch),
             "claim epoch is not the last price epoch of the reward epoch"
         );
@@ -232,51 +232,53 @@ contract VotingRewardManager is Governed, IRewardManager {
             claimRewardEpoch < currentRewardEpochId,
             "can only claim rewards for previous epochs"
         );
-        uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(
-                claimRewardEpoch
-            );
 
+        uint256 previousRewardEpochBalanceIndex = rewardEpochIdAsStoredBalanceIndex(claimRewardEpoch);
         StoredBalances storage balances = storedRewardEpochBalances[
             previousRewardEpochBalanceIndex
         ];
 
-        address addr = claim.currencyAddress;
-        bytes32 claimHash = _data.hash();
-        bytes32 claimHashRecord = keccak256(abi.encode(claimHash, beneficiary));
-
+        bytes32 claimHash = _claimWithProof.hash();
+        bytes32 claimHashRecord = keccak256(abi.encode(claimHash, _beneficiary));
         require(
             !processedRewardClaims[claimHashRecord],
             "reward has already been claimed"
         );
 
-        bytes32 rootForEpoch = voting.getMerkleRoot(claim.epochId);
-        require(rootForEpoch != bytes32(0), "claim epoch not finalized yet, not merkle root available");
-
+        bytes32 rootForEpoch = voting.getMerkleRootForPriceEpoch(claim.priceEpochId);
+        require(rootForEpoch != bytes32(0), "claim epoch not finalized yet, merkle root not available");
         require(
-            _data.merkleProof.verify(
+            _claimWithProof.merkleProof.verify(
                 rootForEpoch,
                 claimHash
             ),
             "Merkle proof for reward failed"
         );
 
-        uint256 feePercentage;
-        // claim.weight > 0  --> data provider
-        // claim.weight == 0 --> back claims
-        if (claim.weight > 0 && balances.totalRewardForTokenContract[claim.voterAddress] == 0) {
-            feePercentage = _getDataProviderFeePercentage(claim.voterAddress, claimRewardEpoch);
-            balances.initializeForClaiming(claim.currencyAddress, claim.voterAddress, claim.weight, claim.amount, feePercentage);
+        address payable recipient = authorizedRecepient[_beneficiary] == address(0) ? payable(_beneficiary) : payable(authorizedRecepient[_beneficiary]);
+
+        if (claim.isFixedClaim) {
+            require(
+                claim.beneficiary == _beneficiary,
+                "beneficiary does not match claim"
+            );
+            balances.debit(claim.currencyAddress, claim.beneficiary, recipient, 0, claim.amount);
+        } else {
+            // Weight-based claim, claim.beneficiary is a voter.
+            uint voterWeight = voting.getVoterWeightForPriceEpoch(claim.beneficiary, claim.priceEpochId);
+            uint256 feePercentage = _getDataProviderFeePercentage(claim.beneficiary, claimRewardEpoch);
+             if (balances.totalBalanceForTokenContractAndVoter[claim.currencyAddress][claim.beneficiary] == 0) {
+                balances.initializeForClaiming(claim.currencyAddress, claim.beneficiary, voterWeight, claim.amount, feePercentage);
+            }
+                       
+            // Beneficiary could be the voter itself or a delegator
+            uint256 weightToClaim = voting.getDelegatorWeightForRewardEpoch(_beneficiary, claim.beneficiary, claimRewardEpoch);
+            // Claim data provider fee if beneficiary is a voter and not a delegator
+            uint256 fee = claim.beneficiary == _beneficiary ? (feePercentage * claim.amount / 10000) : 0;
+            balances.debit(claim.currencyAddress, claim.beneficiary, recipient, weightToClaim, fee);
         }
 
-        uint256 claimWeight = voting.getDelegatorWeightForRewardEpoch(beneficiary, claim.voterAddress, claimRewardEpoch);
-        feePercentage = beneficiary == claim.voterAddress ? _getDataProviderFeePercentage(claim.voterAddress, claimRewardEpoch) : 0;
         processedRewardClaims[claimHashRecord] = true;
-        address payable recipient = authorizedRecepient[beneficiary] == address(0) ? payable(beneficiary) : payable(authorizedRecepient[beneficiary]);
-
-        // claim.voterAddress == beneficiary  --> get fee
-        // back claimer                       --> get back claim
-        uint claimAmount = (claim.weight == 0 ? claim.amount : 0) + (feePercentage * claim.amount / 10000);
-        balances.debit(addr, claim.voterAddress, recipient, claimWeight, claimAmount);
     }
 
     /**

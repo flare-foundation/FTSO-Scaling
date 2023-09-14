@@ -43,8 +43,8 @@ function loadContracts(): ContractAddresses {
 function randomizeFeeds(feeds: IPriceFeed[]): IPriceFeed[] {
   return feeds.map(feed => {
     return new (class implements IPriceFeed {
-      getPriceForEpoch(epochId: number): number {
-        const originalPrice = feed.getPriceForEpoch(epochId);
+      getPriceForEpoch(priceEpochId: number): number {
+        const originalPrice = feed.getPriceForEpoch(priceEpochId);
         return addNoise(originalPrice);
       }
       getFeedInfo(): Feed {

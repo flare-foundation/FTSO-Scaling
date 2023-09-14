@@ -21,19 +21,19 @@ contract ERC20PriceOracle is IERC20PriceOracle, Governed {
     }
 
     function setERC20Settings(
-        address erc20Address,
-        bytes8 symbol
+        address _erc20Address,
+        bytes8 _symbol
     ) public onlyGovernance {
-        require(erc20Address != address(0), "zero address set settings");
-        require(symbol != bytes8(0), "symbol must be non-zero");
-        currencyAddressToSymbol[erc20Address] = symbol;
+        require(_erc20Address != address(0), "zero address set settings");
+        require(_symbol != bytes8(0), "symbol must be non-zero");
+        currencyAddressToSymbol[_erc20Address] = _symbol;
     }
 
     function getPrice(
-        address currencyAddress
+        address _currencyAddress
     ) public view returns (uint32 price, uint32 timestamp) {
-        require(currencyAddress != address(0), "zero address get price");
-        bytes8 symbol = currencyAddressToSymbol[currencyAddress];
+        require(_currencyAddress != address(0), "zero address get price");
+        bytes8 symbol = currencyAddressToSymbol[_currencyAddress];
         require(symbol != bytes8(0), "symbol not found");
         (price, timestamp) = priceOracle.lastAnchorPriceForSymbol(symbol);
     }

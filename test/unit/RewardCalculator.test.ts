@@ -6,7 +6,7 @@ import { feedToText, toBN } from "../../src/voting-utils";
 import { generateOfferForSymbol, prepareSymbols } from "../EndToEnd.utils";
 
 function getAccountAddress(): string {
-  return web3.eth.accounts.create().address;
+  return web3.eth.accounts.create().address.toLowerCase();
 }
 
 const FEED_COUNT = 4;
@@ -16,18 +16,17 @@ const PRICE_EPOCHS_FOR_REWARD_EPOCH = 4;
 const FIRST_REWARD_EPOCH = 0;
 
 describe("RewardCalculator", () => {
-  const claimerAddress = web3.eth.accounts.create().address;
+  const claimerAddress = web3.eth.accounts.create().address.toLowerCase();
   const epochSettings = new EpochSettings(0, EPOCH_DURATION_SEC, FIRST_REWARD_EPOCH, PRICE_EPOCHS_FOR_REWARD_EPOCH);
   const feeds = prepareSymbols(FEED_COUNT);
 
   function generateReceivedOffer(offerAmount: number, symbol: Feed): RewardOffered {
     const amountBN = toBN(offerAmount);
-    const offer = generateOfferForSymbol(amountBN, symbol, []);
+    const offer = generateOfferForSymbol(claimerAddress, amountBN, symbol, []);
     const decoded = feedToText(offer) as Offer;
     return {
       ...decoded,
       flrValue: amountBN,
-      remainderClaimer: claimerAddress,
     };
   }
 
@@ -89,7 +88,6 @@ describe("RewardCalculator", () => {
       voters[0],
       voters.slice(0, 2),
       [calculationResults],
-      voterWeights
     );
 
     const claimsByVoter = calculator.getRewardMappingForPriceEpoch(priceEpochId);
@@ -98,7 +96,7 @@ describe("RewardCalculator", () => {
     let totalClaimAmount = toBN(0);
     for (const claims of claimsByVoter.values()) {
       for (const claim of claims) {
-        totalClaimAmount = totalClaimAmount.add(claim.claimRewardBody.amount);
+        totalClaimAmount = totalClaimAmount.add(claim.amount);
       }
     }
     expect(totalClaimAmount).to.bignumber.eq(expectedPriceEpochOfferShare.amount);

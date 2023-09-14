@@ -20,13 +20,13 @@ contract Voting {
 
     // Emitted when a merkle root is confirmed
     event MerkleRootConfirmed(
-        uint256 indexed epochId,
+        uint256 indexed priceEpochId,
         bytes32 merkleRoot,
         uint256 timestamp
     );
 
     event MerkleRootConfirmationFailed(
-        uint256 indexed epochId,
+        uint256 indexed priceEpochId,
         bytes32 merkleRoot,
         uint256 weight,
         uint256 threshold,
@@ -51,61 +51,46 @@ contract Voting {
 
     // Signs a merkle root and publishes the signature.
     function signResult(
-        uint256 _epochId,
+        uint256 _priceEpochId,
         bytes32 _merkleRoot,
-        Signature calldata signature
+        Signature calldata _signature
     ) public {}
 
-    // function hashForCommit(
-    //     address _voter,
-    //     uint256 _random,
-    //     bytes32 _merkleRoot,
-    //     bytes calldata _prices
-    // ) public pure returns (bytes32) {
-    //     return
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 abi.encode(_voter, _random, _merkleRoot, _prices)
-    //             )
-    //         );
-    // }
-
-    // function hashForPrices
     function finalize(
-        uint256 _epochId,
+        uint256 _priceEpochId,
         bytes32 _merkleRoot,
-        Signature[] calldata signatures
+        Signature[] calldata _signatures
     ) public {
-        require(merkleRoots[_epochId] == 0, "epochId already finalized");
+        require(merkleRoots[_priceEpochId] == 0, "epochId already finalized");
         require(
             block.timestamp >=
-                votingManager.firstSigningTimestampForEpoch(_epochId),
+                votingManager.firstSigningTimestampForPriceEpoch(_priceEpochId),
             "signing too early"
         );
         require(
             block.timestamp <=
-                votingManager.lastSigningTimestampForEpoch(_epochId),
+                votingManager.lastSigningTimestampForPriceEpoch(_priceEpochId),
             "signing too late"
         );
         uint256 threshold = voterRegistry.thresholdForRewardEpoch(
-            votingManager.getRewardEpochIdForEpoch(_epochId)
+            votingManager.getRewardEpochIdForPriceEpoch(_priceEpochId)
         );
         uint256 weightSum = 0;
-        for (uint256 i = 0; i < signatures.length; i++) {
-            address signer = recoverSigner(_merkleRoot, signatures[i]);
+        for (uint256 i = 0; i < _signatures.length; i++) {
+            address signer = recoverSigner(_merkleRoot, _signatures[i]);
 
             if (signer != address(0)) {
-                uint256 weight = getVoterWeightForRewardEpoch(signer, _epochId);
+                uint256 weight = getVoterWeightForPriceEpoch(signer, _priceEpochId);
                 weightSum += weight;                
                 if (weightSum > threshold) {
-                    merkleRoots[_epochId] = _merkleRoot;
-                    if (_epochId >= votingManager.TOTAL_STORED_PROOFS()) {
+                    merkleRoots[_priceEpochId] = _merkleRoot;
+                    if (_priceEpochId >= votingManager.TOTAL_STORED_PROOFS()) {
                         merkleRoots[
-                            _epochId - votingManager.TOTAL_STORED_PROOFS()
+                            _priceEpochId - votingManager.TOTAL_STORED_PROOFS()
                         ] = 0;
                     }
                     emit MerkleRootConfirmed(
-                        _epochId,
+                        _priceEpochId,
                         _merkleRoot,
                         block.timestamp
                     );
@@ -114,30 +99,28 @@ contract Voting {
             }
         }
         emit MerkleRootConfirmationFailed(
-            _epochId,
+            _priceEpochId,
             _merkleRoot,
             weightSum,
             threshold,
             block.timestamp
         );
-        (_epochId, _merkleRoot, block.timestamp);
+        (_priceEpochId, _merkleRoot, block.timestamp);
     }
 
-    // Returns the merkle root for a given epoch
-    function getMerkleRoot(uint256 _epochId) public view returns (bytes32) {
-        bytes32 merkleRoot = merkleRoots[_epochId];
+    function getMerkleRootForPriceEpoch(uint256 _priceRpochId) public view returns (bytes32) {
+        bytes32 merkleRoot = merkleRoots[_priceRpochId];
         return merkleRoot;
     }
 
-    // Returns the voter weight for a given epoch
-    function getVoterWeightForRewardEpoch(
+    function getVoterWeightForPriceEpoch(
         address _voter,
-        uint256 _epochId
+        uint256 _priceEpochId
     ) public view returns (uint256) {
         return
             voterRegistry.getVoterWeightForRewardEpoch(
                 _voter,
-                votingManager.getRewardEpochIdForEpoch(_epochId)
+                votingManager.getRewardEpochIdForPriceEpoch(_priceEpochId)
             );
     }
 
@@ -154,32 +137,30 @@ contract Voting {
             );
     }
 
-    // Returns the voter weights for a given epoch
-    function getVoterWeightsForEpoch(
-        uint256 _epochId,
+    function getVoterWeightsForPriceEpoch(
+        uint256 _priceEpochId,
         address[] calldata _voters
     ) public view returns (uint256[] memory) {
         uint256[] memory allWeights = new uint256[](_voters.length);
         for (uint256 i = 0; i < _voters.length; i++) {
-            allWeights[i] = getVoterWeightForRewardEpoch(_voters[i], _epochId);
+            allWeights[i] = getVoterWeightForPriceEpoch(_voters[i], _priceEpochId);
         }
         return allWeights;
     }
 
-    // Returns the current epoch id
     function getCurrentPriceEpochId() public view returns (uint256) {
         return votingManager.getCurrentPriceEpochId();
     }
 
-    function firstSigningTimeForEpoch(
-        uint256 _epochId
+    function firstSigningTimeForPriceEpoch(
+        uint256 _priceEpochId
     ) public view returns (uint256) {
-        return votingManager.firstSigningTimestampForEpoch(_epochId);
+        return votingManager.firstSigningTimestampForPriceEpoch(_priceEpochId);
     }
 
     function recoverSigner(
         bytes32 _hash,
-        Signature memory signature
+        Signature memory _signature
     ) public pure returns (address) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHashMessage = keccak256(
@@ -187,9 +168,9 @@ contract Voting {
         );
         address signer = ecrecover(
             prefixedHashMessage,
-            signature.v,
-            signature.r,
-            signature.s
+            _signature.v,
+            _signature.r,
+            _signature.s
         );
         return signer;
     }

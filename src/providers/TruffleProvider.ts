@@ -10,12 +10,11 @@ import {
 import {
   BareSignature,
   BlockData,
-  ClaimReward,
+  RewardClaimWithProof,
   EpochData,
   EpochResult,
   Offer,
   VoterWithWeight,
-  deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
 import { getAccount, recoverSigner, signMessage } from "../web3-utils";
@@ -57,14 +56,12 @@ export class TruffleProvider implements IVotingProvider {
     this.account = getAccount(web3, privateKey);
   }
 
-  async thresholdForRewardEpoch(epochId: number): Promise<BN> {
-    return this.contracts.voterRegistry.thresholdForRewardEpoch(epochId);
+  async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
+    return this.contracts.voterRegistry.thresholdForRewardEpoch(rewardEpochId);
   }
 
-  async claimReward(claim: ClaimReward): Promise<any> {
-    const claimReward = deepCopyClaim(claim);
-    delete claimReward.hash;
-    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claimReward), this.account.address, {
+  async claimReward(claim: RewardClaimWithProof): Promise<any> {
+    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claim), this.account.address, {
       from: this.account.address,
     });
   }
@@ -96,9 +93,9 @@ export class TruffleProvider implements IVotingProvider {
     );
   }
 
-  async signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
+  async signResult(priceEpochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
     return this.contracts.voting.signResult(
-      epochId,
+      priceEpochId,
       merkleRoot,
       {
         v: signature.v,
@@ -109,9 +106,9 @@ export class TruffleProvider implements IVotingProvider {
     );
   }
 
-  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
+  async finalize(priceEpochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<boolean> {
     try {
-      await this.contracts.voting.finalize(epochId, mySignatureHash, signatures, {
+      await this.contracts.voting.finalize(priceEpochId, mySignatureHash, signatures, {
         from: this.account.address,
       });
       return true;
@@ -122,13 +119,13 @@ export class TruffleProvider implements IVotingProvider {
     }
   }
 
-  async getMerkleRoot(epochId: number): Promise<string> {
-    return this.contracts.voting.getMerkleRoot(epochId);
+  async getMerkleRoot(priceEpochId: number): Promise<string> {
+    return this.contracts.voting.getMerkleRootForPriceEpoch(priceEpochId);
   }
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     return this.contracts.priceOracle.publishPrices(
-      epochResult.dataMerkleRoot,
+      epochResult.rewardClaimMerkleRoot,
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,

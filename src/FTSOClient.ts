@@ -10,7 +10,7 @@ import { IVotingProvider } from "./providers/IVotingProvider";
 import {
   BareSignature,
   BlockData,
-  ClaimReward,
+  RewardClaimWithProof,
   EpochData,
   EpochResult,
   FinalizeData,
@@ -19,11 +19,12 @@ import {
   RewardOffered,
   SignatureData,
   VoterWithWeight,
+  RewardClaim,
 } from "./voting-interfaces";
 import {
   ZERO_BYTES32,
   feedId,
-  hashClaimReward,
+  hashRewardClaim,
   hashForCommit,
   packPrices,
   sortedHashPair,
@@ -32,7 +33,6 @@ import {
 } from "./voting-utils";
 import { getLogger } from "./utils/logger";
 import { BlockIndexer, Received } from "./BlockIndexer";
-import { encodingUtils } from "./EncodingUtils";
 import { retry } from "./utils/retry";
 import { sleepFor } from "./time-utils";
 
@@ -158,8 +158,8 @@ export class FTSOClient {
     }
   }
 
-  async commit(epochId: number) {
-    const epochData = this.priceEpochData.get(epochId);
+  async commit(priceEpochId: number) {
+    const epochData = this.priceEpochData.get(priceEpochId);
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
@@ -167,25 +167,25 @@ export class FTSOClient {
     await this.provider.commit(hash);
   }
 
-  async reveal(epochId: number) {
-    const epochData = this.priceEpochData.get(epochId);
+  async reveal(priceEpochId: number) {
+    const epochData = this.priceEpochData.get(priceEpochId);
     if (!epochData) {
-      throw new Error("Epoch data not found for epoch " + epochId);
+      throw new Error("Epoch data not found for epoch " + priceEpochId);
     }
     await this.provider.revealBitvote(epochData);
   }
 
-  async calculateResultsAndSign(epochId: number, skipCalculation = false) {
+  async calculateResultsAndSign(priceEpochId: number, skipCalculation = false) {
     if (!skipCalculation) {
-      await this.calculateResults(epochId);
+      await this.calculateResults(priceEpochId);
     }
-    const result = this.priceEpochResults.get(epochId);
+    const result = this.priceEpochResults.get(priceEpochId);
     if (!result) {
       throw new Error("Result not found");
     }
 
     const signature = await this.provider.signMessage(result.merkleRoot!);
-    await this.provider.signResult(epochId, result.merkleRoot!, {
+    await this.provider.signResult(priceEpochId, result.merkleRoot!, {
       v: signature.v,
       r: signature.r,
       s: signature.s,
@@ -214,7 +214,7 @@ export class FTSOClient {
     const message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
     const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
 
-    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(priceEpochId, results, priceMessageHash);
+    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(priceEpochId, results);
     const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot);
 
     this.priceEpochResults.set(priceEpochId, {
@@ -224,18 +224,17 @@ export class FTSOClient {
       symbolMessage: "0x" + symbolMessage,
       fullPriceMessage: "0x" + message,
       fullMessage: rewardMerkleRoot + message,
-      dataMerkleRoot: rewardMerkleRoot,
-      dataMerkleProof: priceMessageHash,
-      rewards: priceEpochRewards,
+      rewardClaimMerkleRoot: rewardMerkleRoot,
+      rewardClaimMerkleProof: priceMessageHash,
+      rewardClaims: priceEpochRewards,
       merkleRoot: priceEpochMerkleRoot,
     } as EpochResult);
   }
 
   private async calculateRewards(
     priceEpochId: number,
-    results: MedianCalculationResult[],
-    priceMessageHash: string
-  ): Promise<[string, Map<string, ClaimReward[]>]> {
+    results: MedianCalculationResult[]
+  ): Promise<[string, RewardClaim[]]> {
     const finalizationData = this.indexer.getFinalize(priceEpochId - 1);
     let rewardedSigners: string[] = [];
 
@@ -254,44 +253,29 @@ export class FTSOClient {
       priceEpochId,
       finalizationData?.[0].from,
       rewardedSigners,
-      results,
-      this.eligibleVoterWeights.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!
+      results
     );
-    const priceEpochRewards = this.rewardCalculator.getRewardMappingForPriceEpoch(priceEpochId);
 
-    const rewardClaimHashes: string[] = [];
-    for (const claimRewardList of priceEpochRewards.values()) {
-      for (const claim of claimRewardList) {
-        claim.hash = hashClaimReward(claim, encodingUtils.abiForName("claimRewardBodyDefinition")!);
-        rewardClaimHashes.push(claim.hash);
-      }
-    }
-    if (rewardClaimHashes.length === 0) {
-      console.log(`No rewards for ${priceEpochId}, offers ${priceEpochRewards.size}`);
-    }
+    const rewardClaims = this.rewardCalculator.getRewardClaimsForPriceEpoch(priceEpochId);
+    const rewardClaimHashes: string[] = rewardClaims.map(claim => hashRewardClaim(claim));
     const rewardMerkleTree = new MerkleTree(rewardClaimHashes);
-    // add merkle proofs to the claims for this FTSO client
-    priceEpochRewards.get(this.address)?.forEach(claim => {
-      if (!claim.hash) {
-        throw new Error("Assert: Claim hash must be calculated.");
-      }
-      const merkleProof = rewardMerkleTree.getProof(claim.hash!);
-      if (!merkleProof) {
-        throw new Error("Assert: Merkle proof must be set.");
-      }
-      claim.merkleProof = merkleProof;
-      // Adding the price message hash to the merkle proof, due to construction of the tree
-      claim.merkleProof.push(priceMessageHash);
-    });
-
     const rewardMerkleRoot = rewardMerkleTree.root!;
-    return [rewardMerkleRoot, priceEpochRewards];
+    return [rewardMerkleRoot, rewardClaims];
   }
 
   /** We reward signers who submitted valid signatures in blocks preceding the finalization transaction block. */
-  private async getSignersToReward(finalizationData: [FinalizeData, number], priceEpochId: number) {
+  private async getSignersToReward(finalizationData: [FinalizeData, number], priceEpochId: number): Promise<string[]> {
     const rewardedSigners: string[] = [];
     const [data, finalizationTime] = finalizationData;
+
+    const currentEpochStartTime = this.epochs.priceEpochStartTimeSec(priceEpochId + 1); 
+    if (finalizationTime >= currentEpochStartTime) {
+      this.logger.info(
+        `Previous epoch ${data.epochId} finalization occured outside the price epoch window (at ${(new Date(finalizationTime * 1000)).toUTCString()} vs next epoch start time ${(new Date(currentEpochStartTime * 1000)).toUTCString()}), no signers will be rewarded.`
+      );
+      return [];
+    }
+
     const epochSignatures = this.indexer.getSignatures(priceEpochId - 1);
 
     for (const [voter, [signature, signatureTime]] of epochSignatures) {
@@ -323,10 +307,10 @@ export class FTSOClient {
     data.bitVote = "0x00";
   }
 
-  private async tryFinalizeEpoch(epochId: number) {
-    const signatureMap = this.indexer.getSignatures(epochId)!;
+  private async tryFinalizeEpoch(priceEpochId: number) {
+    const signatureMap = this.indexer.getSignatures(priceEpochId)!;
     const signaturesTmp: SignatureData[] = [...signatureMap.values()].map(([s, _]) => s);
-    const mySignatureHash = this.priceEpochResults.get(epochId)!.merkleRoot!;
+    const mySignatureHash = this.priceEpochResults.get(priceEpochId)!.merkleRoot!;
     const signatures = signaturesTmp
       .filter(sig => sig.merkleRoot === mySignatureHash)
       .map(sig => {
@@ -337,17 +321,17 @@ export class FTSOClient {
         } as BareSignature;
       });
     try {
-      let result = await this.provider.finalize(epochId, mySignatureHash, signatures);
+      let result = await this.provider.finalize(priceEpochId, mySignatureHash, signatures);
       // TODO: Finalization transaction executed succesfully, but we should check for MerkleRootConfirmed event
       //       to make sure it was recorded in the smart contract.
-      this.logger.info(`Successfully submitted finalization transaction for epoch ${epochId}. Result: ${result}`);
+      this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}. Result: ${result}`);
     } catch (e) {
       this.logger.info(`Failed to submit finalization transaction: ${e}`);
     }
   }
 
-  async publishPrices(epochId: number, symbolIndices: number[]) {
-    const result = this.priceEpochResults.get(epochId);
+  async publishPrices(peiceEpochId: number, symbolIndices: number[]) {
+    const result = this.priceEpochResults.get(peiceEpochId);
     if (!result) {
       throw new Error("Result not found");
     }
@@ -355,9 +339,7 @@ export class FTSOClient {
   }
 
   async claimReward(rewardEpochId: number) {
-    const claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
-    const result = this.priceEpochResults.get(claimPriceEpochId)!;
-    const rewardClaims = result.rewards.get(this.address) || [];
+    const rewardClaims = this.generateClaimsWithProofForClaimer(rewardEpochId, this.address);
     const receipts = [];
     for (const rewardClaim of rewardClaims) {
       const receipt = await this.provider.claimReward(rewardClaim);
@@ -366,13 +348,35 @@ export class FTSOClient {
     return receipts;
   }
 
-  /**
-   * Returns the list of claims for the given reward epoch and claimer.
-   */
-  claimsForClaimer(rewardEpochId: number, claimer: string): ClaimReward[] {
+  generateClaimsWithProofForClaimer(rewardEpochId: number, claimer: string): RewardClaimWithProof[] {
     const claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
     const result = this.priceEpochResults.get(claimPriceEpochId)!;
-    return result.rewards.get(claimer.toLowerCase()) || [];
+
+    const allClaims = result.rewardClaims;
+    const allHashes = allClaims.map(claim => hashRewardClaim(claim));
+    const merkleTree = new MerkleTree(allHashes);
+    if (merkleTree.root !== result.rewardClaimMerkleRoot) {
+      throw new Error("Invalid Merkle root for reward claims");
+    }
+
+    const claimsWithProof: RewardClaimWithProof[] = [];
+    for (let i = 0; i < allClaims.length; i++) {
+      const claim = allClaims[i];
+      if (claim.beneficiary.toLowerCase() === claimer.toLowerCase()) {
+        claimsWithProof.push({
+          merkleProof: getProof(i),
+          body: claim,
+        });
+      }
+    }
+    return claimsWithProof;
+
+    function getProof(i: number) {
+      const proof = merkleTree.getProof(allHashes[i]);
+      if (!proof) throw new Error(`No Merkle proof exists for claim hash ${allHashes[i]}`);
+      proof.push(result.rewardClaimMerkleProof);
+      return proof;
+    }
   }
 
   /**
@@ -423,33 +427,33 @@ export class FTSOClient {
     );
   }
 
-  async tryFinalizeOnceSignaturesReceived(epochId: number) {
+  async tryFinalizeOnceSignaturesReceived(priceEpochId: number) {
     this.indexer.on(Received.Signature, this.signatureListener); // Will atempt to finalize once enough signatures are received.
     await this.processNewBlocks();
-    await this.awaitFinalization(epochId);
+    await this.awaitFinalization(priceEpochId);
     this.indexer.off(Received.Signature, this.signatureListener);
   }
 
-  private async awaitFinalization(epochId: number) {
-    while (!this.indexer.getFinalize(epochId)) {
-      this.logger.debug(`Epoch ${epochId} not finalized, keep processing new blocks`);
+  private async awaitFinalization(priceEpochId: number) {
+    while (!this.indexer.getFinalize(priceEpochId)) {
+      this.logger.debug(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
       await sleepFor(BLOCK_PROCESSING_INTERVAL_MS);
       await this.processNewBlocks();
     }
-    this.logger.debug(`Epoch ${epochId} finalized, continue.`);
+    this.logger.debug(`Epoch ${priceEpochId} finalized, continue.`);
   }
 
   /**
    * Once sufficient voter weight in received signatures is observed, will call finalize.
    * @returns true if enough signatures were found and finalization was attempted.
    */
-  private async checkSignaturesAndTryFinalize(epochId: number): Promise<boolean> {
-    if (epochId! in this.priceEpochResults) {
-      throw Error(`Invalid state: trying to finalize ${epochId}, but results not yet computed.`);
+  private async checkSignaturesAndTryFinalize(priceEpochId: number): Promise<boolean> {
+    if (priceEpochId! in this.priceEpochResults) {
+      throw Error(`Invalid state: trying to finalize ${priceEpochId}, but results not yet computed.`);
     }
 
-    const signatureByVoter = this.indexer.getSignatures(epochId)!;
-    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(epochId);
+    const signatureByVoter = this.indexer.getSignatures(priceEpochId)!;
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const weightThreshold = await this.provider.thresholdForRewardEpoch(rewardEpoch);
     const voterWeights = this.eligibleVoterWeights.get(rewardEpoch)!;
 

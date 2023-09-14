@@ -16,12 +16,11 @@ import { sleepFor } from "../time-utils";
 import {
   BareSignature,
   BlockData,
-  ClaimReward,
+  RewardClaimWithProof,
   EpochData,
   EpochResult,
   Offer,
   VoterWithWeight,
-  deepCopyClaim,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
 import { getAccount, loadContract, recoverSigner, signMessage } from "../web3-utils";
@@ -54,17 +53,15 @@ export class Web3Provider implements IVotingProvider {
   ) {
     this.account = getAccount(web3, privateKey);
   }
-  async thresholdForRewardEpoch(epochId: number): Promise<BN> {
-    const threshold = await this.contracts.voterRegistry.methods.thresholdForRewardEpoch(epochId).call();
+  async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
+    const threshold = await this.contracts.voterRegistry.methods.thresholdForRewardEpoch(rewardEpochId).call();
     return toBN(threshold);
   }
 
-  async claimReward(claim: ClaimReward): Promise<any> {
-    const claimReward = deepCopyClaim(claim);
-    delete claimReward.hash;
-    this.logger.info("Calling claim reward contract with", claimReward);
+  async claimReward(claim: RewardClaimWithProof): Promise<any> {
+    this.logger.info("Calling claim reward contract with", claim);
     const methodCall = this.contracts.votingRewardManager.methods.claimReward(
-      hexlifyBN(claimReward),
+      hexlifyBN(claim),
       this.account.address
     );
     return await this.signAndFinalize("Claim reward", this.contracts.votingRewardManager.options.address, methodCall);
@@ -102,8 +99,8 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Reveal", this.contracts.voting.options.address, methodCall);
   }
 
-  async signResult(epochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
-    const methodCall = this.contracts.voting.methods.signResult(epochId, merkleRoot, [
+  async signResult(priceEpochId: number, merkleRoot: string, signature: BareSignature): Promise<any> {
+    const methodCall = this.contracts.voting.methods.signResult(priceEpochId, merkleRoot, [
       signature.v,
       signature.r,
       signature.s,
@@ -111,22 +108,22 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Sign result", this.contracts.voting.options.address, methodCall);
   }
 
-  async finalize(epochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any> {
+  async finalize(priceEpochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any> {
     const methodCall = this.contracts.voting.methods.finalize(
-      epochId,
+      priceEpochId,
       mySignatureHash,
       signatures.map(s => [s.v, s.r, s.s])
     );
     return await this.signAndFinalize("Finalize", this.contracts.voting.options.address, methodCall);
   }
 
-  async getMerkleRoot(epochId: number): Promise<string> {
-    return await this.contracts.voting.methods.getMerkleRoot(epochId).call();
+  async getMerkleRoot(priceEpochId: number): Promise<string> {
+    return await this.contracts.voting.methods.getMerkleRootForPriceEpoch(priceEpochId).call();
   }
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     const methodCall = this.contracts.priceOracle.methods.publishPrices(
-      epochResult.dataMerkleRoot,
+      epochResult.rewardClaimMerkleRoot,
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,

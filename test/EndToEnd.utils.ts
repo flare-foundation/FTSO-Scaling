@@ -11,6 +11,7 @@ import {
   VotingManagerInstance,
 } from "../typechain-truffle";
 import { Received } from "../src/BlockIndexer";
+import BN from "bn.js";
 
 const DummyERC20 = artifacts.require("DummyERC20");
 export const REWARD_VALUE = toBN("1000999");
@@ -60,7 +61,7 @@ export async function offerRewards(
   for (let i = 0; i < symbols.length; i++) {
     const amount = rewardValue.add(toBN(i));
 
-    const basicOffer = generateOfferForSymbol(amount, symbols[i], leadProviders);
+    const basicOffer = generateOfferForSymbol(governance, amount, symbols[i], leadProviders);
     if (i < erc20Coins.length) {
       offersSent.push({ ...basicOffer, currencyAddress: erc20Coins[i].address, amount: rewardValue });
     } else {
@@ -106,20 +107,20 @@ export async function offerRewards(
   console.log(`Finished Offering rewards for epoch ${rewardEpochId}`);
 }
 
-export function generateOfferForSymbol(amount: BN, symbol: Feed, leadProviders: string[]): Offer {
-  return {
+export function generateOfferForSymbol(sender: string, amount: BN, symbol: Feed, leadProviders: string[]): Offer {
+  const offer: Offer = {
     amount: amount,
     currencyAddress: ZERO_ADDRESS,
     offerSymbol: toBytes4(symbol.offerSymbol),
     quoteSymbol: toBytes4(symbol.quoteSymbol),
     leadProviders: leadProviders,
     rewardBeltPPM: DEFAULT_REWARD_BELT_PPM,
-    flrValue: amount,
     elasticBandWidthPPM: ELASTIC_BAND_WIDTH_PPM,
     iqrSharePPM: IQR_SHARE,
     pctSharePPM: PCT_SHARE,
-    remainderClaimer: ZERO_ADDRESS,
-  } as Offer;
+    remainderClaimer: sender,
+  };
+  return offer;
 }
 
 export async function syncToLastBlock(ftsoClients: FTSOClient[]) {
@@ -211,16 +212,11 @@ export async function calculateVoteResults(
   }
 
   const client = ftsoClients[0];
-  const rewards = client.priceEpochResults.get(calculatePriceEpochId)?.rewards;
+  const rewardClaims = client.priceEpochResults.get(calculatePriceEpochId)?.rewardClaims ?? [];
   const rewardMap = new Map<string, BN>();
-  for (const rewardClaims of rewards!.values()) {
-    for (const rewardClaim of rewardClaims) {
-      const rewardValue = rewardMap.get(rewardClaim.claimRewardBody?.currencyAddress!) ?? toBN(0);
-      rewardMap.set(
-        rewardClaim.claimRewardBody?.currencyAddress!,
-        rewardValue.add(rewardClaim.claimRewardBody?.amount!)
-      );
-    }
+  for (const rewardClaim of rewardClaims) {
+    const rewardValue = rewardMap.get(rewardClaim?.currencyAddress!) ?? toBN(0);
+    rewardMap.set(rewardClaim?.currencyAddress!, rewardValue.add(rewardClaim?.amount!));
   }
 }
 
@@ -304,54 +300,68 @@ export async function claimRewards(
     for (const coin of coins) {
       initalBalanceByCoin.set(coin.address, await coin.balanceOf(client.address));
     }
-    const originalBalance = toBN(await web3.eth.getBalance(client.address));
+    const originalFlrBalance = toBN(await web3.eth.getBalance(client.address));
 
-    const rewardClaims = client.priceEpochResults.get(claimPriceEpoch)?.rewards?.get(client.address);
     const receipts = await client.claimReward(claimRewardEpoch);
     let txFee = toBN(0);
     for (const receipt of receipts) {
       txFee = txFee.add(toBN(receipt.receipt.gasUsed).mul(toBN(receipt.receipt.effectiveGasPrice)));
     }
-    const finalBalance = toBN(await web3.eth.getBalance(client.address));
+    const finalFlrBalance = toBN(await web3.eth.getBalance(client.address));
+    const rewardClaims = client.priceEpochResults
+      .get(claimPriceEpoch)
+      ?.rewardClaims.filter(c => c.beneficiary === client.address);
+
     if (rewardClaims === undefined || rewardClaims.length === 0) {
       expect(receipts.length).to.be.equal(0);
-      expect(finalBalance).to.be.bignumber.equal(originalBalance);
+      expect(finalFlrBalance).to.be.bignumber.equal(originalFlrBalance);
     } else {
-      const flrClaim = rewardClaims.find(claim => claim.claimRewardBody?.currencyAddress === ZERO_ADDRESS);
-      if (flrClaim !== undefined) {
-        const rewardValue = flrClaim.claimRewardBody?.amount;
+      // Check flr balances
+      const flrClaims = rewardClaims.filter(claim => claim!.currencyAddress === ZERO_ADDRESS);
+      if (flrClaims.length > 0) {
+        const rewardValue = flrClaims.reduce((acc, claim) => acc.add(claim!.amount!), toBN(0));
         totalClaimedFlr = totalClaimedFlr.add(rewardValue);
-        expect(rewardValue).to.be.bignumber.equal(finalBalance.sub(originalBalance).add(txFee));
+        expect(rewardValue).to.be.bignumber.equal(finalFlrBalance.sub(originalFlrBalance).add(txFee));
       } else {
-        expect(finalBalance).to.be.bignumber.equal(originalBalance.sub(txFee));
+        expect(finalFlrBalance).to.be.bignumber.equal(originalFlrBalance.sub(txFee));
       }
       // Check the erc20 claims
-      for (const claim of rewardClaims) {
-        if (claim.claimRewardBody?.currencyAddress === ZERO_ADDRESS) {
-          continue;
-        }
-        const rewardValue = claim.claimRewardBody?.amount;
-        const erc20Contract = await DummyERC20.at(claim.claimRewardBody?.currencyAddress!);
+      const expectedValueByCoin = new Map<string, BN>();
+      const coinClaims = rewardClaims.filter(claim => claim!.currencyAddress !== ZERO_ADDRESS);
+      for (const claim of coinClaims) {
+        const rewardValue = claim!.amount!;
+        const erc20Contract = await DummyERC20.at(claim!.currencyAddress!);
+        expectedValueByCoin.set(
+          erc20Contract.address,
+          (expectedValueByCoin.get(erc20Contract.address) ?? toBN(0)).add(rewardValue)
+        );
+      }
+      for (const [coin, value] of expectedValueByCoin) {
+        const erc20Contract = await DummyERC20.at(coin);
         totalClaimedByCoin.set(
           erc20Contract.address,
-          (totalClaimedByCoin.get(erc20Contract.address) ?? toBN(0)).add(rewardValue)
+          (totalClaimedByCoin.get(erc20Contract.address) ?? toBN(0)).add(value)
         );
         expect(await erc20Contract.balanceOf(client.address)).to.be.bignumber.equal(
-          initalBalanceByCoin.get(erc20Contract.address)?.add(rewardValue)
+          initalBalanceByCoin.get(erc20Contract.address)?.add(value)
         );
       }
     }
   }
 
-  // TODO: Fix undistributed reward claiming
   // Claim the undistributed rewards
-  // const offererClaims = ftsoClients[0].claimsForClaimer(claimRewardEpoch, governance);
-  // if (offererClaims.length > 0) {
-  //   console.log(`Claiming undistributed rewards. Number of claims: ${offererClaims.length}`);
-  //   for (const offererClaim of offererClaims) {
-  //     await votingRewardManager.claimReward(hexlifyBN(offererClaim), governance, { from: governance });
-  //   }
-  // }
+  const offererClaims = ftsoClients[0].generateClaimsWithProofForClaimer(claimRewardEpoch, governance);
+  if (offererClaims.length > 0) {
+    for (const offererClaim of offererClaims) {
+      await votingRewardManager.claimReward(hexlifyBN(offererClaim), governance, { from: governance });
+      if (offererClaim.body.currencyAddress === ZERO_ADDRESS) {
+        totalClaimedFlr = totalClaimedFlr.add(offererClaim.body.amount);
+      } else {
+        const coin = offererClaim.body.currencyAddress;
+        totalClaimedByCoin.set(coin, (totalClaimedByCoin.get(coin) ?? toBN(0)).add(offererClaim.body.amount));
+      }
+    }
+  }
 
   // Check the balance of the reward manager
   for (const coin of coins) {
@@ -362,7 +372,7 @@ export async function claimRewards(
   expect(await web3.eth.getBalance(votingRewardManager.address)).to.be.bignumber.equal(
     toBN(initialFlrBalance).sub(totalClaimedFlr)
   );
-  console.log(`Finsihed claiming rewards for epoch ${claimRewardEpoch}`);
+  console.log(`Finished claiming rewards for epoch ${claimRewardEpoch}`);
 }
 
 const REWARD_OFFER_SYMBOL = "FLR";

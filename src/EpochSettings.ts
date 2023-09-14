@@ -1,6 +1,6 @@
 export class EpochSettings {
   constructor(
-    readonly firstEpochStartSec: number,
+    readonly firstPriceEpochStartSec: number,
     readonly epochDurationSec: number,
     readonly firstRewardedPriceEpoch: number,
     readonly rewardEpochDurationInEpochs: number
@@ -11,16 +11,16 @@ export class EpochSettings {
   }
 
   priceEpochIdForTime(timestampSec: number): number {
-    return Math.floor((timestampSec - this.firstEpochStartSec) / this.epochDurationSec);
+    return Math.floor((timestampSec - this.firstPriceEpochStartSec) / this.epochDurationSec);
   }
 
-  revealEpochIdForTime(timestampSec: number): number | undefined {
-    let epochId = this.priceEpochIdForTime(timestampSec);
-    let revealDeadlineSec = this.firstEpochStartSec + epochId * this.epochDurationSec + this.revealDurationSec;
+  revealPriceEpochIdForTime(timestampSec: number): number | undefined {
+    let priceEpochId = this.priceEpochIdForTime(timestampSec);
+    let revealDeadlineSec = this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec + this.revealDurationSec;
     if (timestampSec > revealDeadlineSec) {
       return undefined;
     }
-    return epochId - 1;
+    return priceEpochId - 1;
   }
 
   isLastPriceEpoch(priceEpochId: number): boolean {
@@ -37,8 +37,8 @@ export class EpochSettings {
     return Math.floor((priceEpochId - this.firstRewardedPriceEpoch) / this.rewardEpochDurationInEpochs);
   }
 
-  nextEpochStartSec(timestampSec: number): number {
-    return this.firstEpochStartSec + this.epochDurationSec * (this.priceEpochIdForTime(timestampSec) + 1);
+  nextPriceEpochStartSec(timestampSec: number): number {
+    return this.firstPriceEpochStartSec + this.epochDurationSec * (this.priceEpochIdForTime(timestampSec) + 1);
   }
 
   firstPriceEpochForRewardEpoch(rewardEpochId: number): number {
@@ -47,5 +47,9 @@ export class EpochSettings {
 
   lastPriceEpochForRewardEpoch(rewardEpochId: number): number {
     return this.firstRewardedPriceEpoch + this.rewardEpochDurationInEpochs * (rewardEpochId + 1) - 1;
+  }
+
+  priceEpochStartTimeSec(priceEpochId: number): number {
+    return this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec;
   }
 }

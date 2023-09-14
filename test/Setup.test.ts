@@ -53,8 +53,8 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   });
 
   it("Should return correct reward epoch for given epoch", async () => {
-    expect(await votingManager.getRewardEpochIdForEpoch(currentEpoch)).to.be.bignumber.eq(toBN(0));
-    expect(await votingManager.getRewardEpochIdForEpoch(currentEpoch.add(toBN(REWARD_EPOCH_DURATION)))).to.be.bignumber.eq(toBN(1));
+    expect(await votingManager.getRewardEpochIdForPriceEpoch(currentEpoch)).to.be.bignumber.eq(toBN(0));
+    expect(await votingManager.getRewardEpochIdForPriceEpoch(currentEpoch.add(toBN(REWARD_EPOCH_DURATION)))).to.be.bignumber.eq(toBN(1));
   });
 
   it("Should add and remove voter for specific reward epoch", async () => {
