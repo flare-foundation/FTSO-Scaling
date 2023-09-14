@@ -19,7 +19,7 @@
     "./typechain",
     "./typechain-truffle",
     "./typechain-web3",
-    "./test-utils/untils",
+    "./test-utils/utils",
  ],
   "files": ["./hardhat.config.ts"]
 }
