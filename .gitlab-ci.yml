@@ -53,6 +53,7 @@ test-unit:
 test-coverage:
   stage: test
   needs: []
+  image: node:18
   cache:
   - key:
       files:
