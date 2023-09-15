@@ -20,3 +20,4 @@ typechain-web3
 # misc
 nul
 .DS_Store
+.nyc_output
