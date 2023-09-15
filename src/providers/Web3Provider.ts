@@ -196,7 +196,6 @@ export class Web3Provider implements IVotingProvider {
       from: this.account.address,
       to: toAddress,
       gas: gas,
-      gasPrice: this.config.gasPrice,
       data: fnToEncode.encodeABI(),
       value: value,
       nonce: nonce,
