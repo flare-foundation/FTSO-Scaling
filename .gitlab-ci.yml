@@ -33,24 +33,10 @@ build-smart-contracts:
     - typechain-web3
     expire_in: 1 week
 
-test-unit:
-  stage: test
-  timeout: 1h
-  needs:
-    - build-smart-contracts
-  cache:
-  - key:
-      files:
-      - yarn.lock
-    paths:
-    - node_modules/
-    policy: pull
-  before_script:
-  - yarn install --frozen-lockfile
-  script:
-  - yarn test
 
-test-coverage:
+
+
+.test:
   stage: test
   needs: []
   image: node:18
@@ -63,6 +49,18 @@ test-coverage:
     policy: pull
   before_script:
   - yarn install --frozen-lockfile
+
+
+test-unit:
+  extends: .test
+  timeout: 1h
+  needs:
+    - build-smart-contracts
+  script:
+  - yarn test
+
+test-coverage:
+  extends: .test
   script:
   - yarn run test-coverage
   coverage: /All files[^|]*\|[^|]*\s+([\d\.]+)/
