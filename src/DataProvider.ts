@@ -1,8 +1,6 @@
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { sleepFor } from "./time-utils";
-import { Received } from "./BlockIndexer";
-import { FinalizeData } from "./voting-interfaces";
 
 export class DataProvider {
   private readonly logger = getLogger(DataProvider.name);
@@ -38,8 +36,8 @@ export class DataProvider {
     const nextRewardEpochId = currentRewardEpochId + 1;
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
-      await this.maybeScheduleRewardClaiming(previousRewardEpochId, currentPriceEpochId);
       await this.runVotingProcotol(currentPriceEpochId);
+      await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
     }
 
     if (!this.isRegisteredForRewardEpoch(nextRewardEpochId) && this.client.rewardEpochOffers.has(nextRewardEpochId)) {
@@ -51,12 +49,10 @@ export class DataProvider {
     this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);
   }
 
-  private async maybeScheduleRewardClaiming(previousRewardEpochId: number, currentEpochId: number) {
+  private async maybeClaimRewards(previousRewardEpochId: number, currentEpochId: number) {
     if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
-      this.client.indexer.once(Received.Finalize, async (f: string, d: FinalizeData) => {
-        this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
-        await this.client.claimReward(previousRewardEpochId);
-      });
+      this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
+      await this.client.claimReward(previousRewardEpochId);
     }
   }
 
@@ -104,7 +100,7 @@ export class DataProvider {
     const revealPeriodDurationMs = this.client.epochs.revealDurationSec * 1000;
     await sleepFor(revealPeriodDurationMs + 1);
   }
-  
+
   private currentTimeSec(): number {
     return Math.floor(Date.now() / 1000);
   }
