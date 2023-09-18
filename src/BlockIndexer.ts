@@ -47,6 +47,7 @@ export class BlockIndexer extends AsyncEventEmitter {
   }
 
   async processBlock(block: BlockData) {
+    getLogger("block-indexer").info(`Processing block ${block.number}, ${block.transactions.length} txs.`);
     for (const tx of block.transactions) {
       await this.processTx(tx, block.timestamp);
     }

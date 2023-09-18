@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import glob from "glob";
 import Web3 from "web3";
 import { Account } from "web3-core";
-import { BareSignature } from "./voting-interfaces";
+import { BareSignature, BlockData, TxData } from "./voting-interfaces";
 
 export function getWeb3(rpcLink: string, logger?: any): Web3 {
   const web3 = new Web3();
@@ -90,4 +90,31 @@ export async function relativeContractABIPathForContractName(
       }
     });
   });
+}
+
+export async function getBlock(web3: Web3, blockNumber: number): Promise<BlockData> {
+  const rawBlock = await web3.eth.getBlock(blockNumber, true);
+  if (rawBlock === null) throw new Error(`Block ${blockNumber} not found`);
+  if (rawBlock.number === null) throw new Error(`Block ${blockNumber} is still pending.`);
+
+  const getReceipts = rawBlock.transactions.map(tx => web3.eth.getTransactionReceipt(tx.hash));
+  const receipts = await Promise.all(getReceipts);
+
+  const blockData: BlockData = {
+    number: rawBlock.number,
+    timestamp: parseInt("" + rawBlock.timestamp, 10),
+    transactions: rawBlock.transactions.map((tx, i) => {
+      const txData: TxData = {
+        blockNumber: tx.blockNumber!,
+        hash: tx.hash,
+        input: tx.input,
+        from: tx.from,
+        to: tx.to,
+        value: tx.value,
+        receipt: receipts[i],
+      };
+      return txData;
+    }),
+  };
+  return blockData;
 }

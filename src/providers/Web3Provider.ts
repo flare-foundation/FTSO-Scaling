@@ -21,9 +21,10 @@ import {
   EpochResult,
   Offer,
   VoterWithWeight,
+  TxData,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, loadContract, recoverSigner, signMessage } from "../web3-utils";
+import { getAccount, getBlock, loadContract, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 
@@ -60,10 +61,7 @@ export class Web3Provider implements IVotingProvider {
 
   async claimReward(claim: RewardClaimWithProof): Promise<any> {
     this.logger.info("Calling claim reward contract with", claim);
-    const methodCall = this.contracts.votingRewardManager.methods.claimReward(
-      hexlifyBN(claim),
-      this.account.address
-    );
+    const methodCall = this.contracts.votingRewardManager.methods.claimReward(hexlifyBN(claim), this.account.address);
     return await this.signAndFinalize("Claim reward", this.contracts.votingRewardManager.options.address, methodCall);
   }
 
@@ -163,13 +161,7 @@ export class Web3Provider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    const block = (await this.web3.eth.getBlock(blockNumber, true)) as BlockData;
-    block.timestamp = parseInt("" + block.timestamp, 10);
-
-    const getReceipts = block.transactions.map(tx => this.web3.eth.getTransactionReceipt(tx.hash));
-    const receipts = await Promise.all(getReceipts);
-    block.transactions.forEach((tx, i) => (tx.receipt = receipts[i]));
-    return block;
+    return await getBlock(this.web3, blockNumber);
   }
 
   get senderAddressLowercase(): string {

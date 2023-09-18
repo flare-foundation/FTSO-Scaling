@@ -139,6 +139,7 @@ export class FTSOClient {
   async processNewBlocks() {
     const currentBlockNumber = await this.provider.getBlockNumber();
     const numBlocks = currentBlockNumber - this.lastProcessedBlockNumber;
+    if (numBlocks === 0) return;
     const numRequestRepeats = Math.ceil(numBlocks / MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
     const blockPromisesLen = Math.min(numBlocks, MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
     let blockPromises: Promise<Promise<BlockData>>[] = Array(blockPromisesLen);

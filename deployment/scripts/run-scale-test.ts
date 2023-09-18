@@ -57,7 +57,6 @@ async function runProviders(accounts: AccountDetails[]) {
     const id = i + 1;
     const envConfig = {
       ...process.env,
-      CHAIN_CONFIG: "local",
       DATA_PROVIDER_PRIVATE_KEY: accounts[i].privateKey,
     };
     startDataProvider(id, envConfig);
