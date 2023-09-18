@@ -67,6 +67,7 @@ export interface SignatureData {
 }
 
 export interface FinalizeData {
+  readonly confirmed: boolean;
   readonly from: string;
   readonly epochId: number;
   readonly merkleRoot: string;

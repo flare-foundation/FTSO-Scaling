@@ -3,6 +3,7 @@ import { EpochSettings } from "./EpochSettings";
 import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./EncodingUtils";
+import { getLogger } from "./utils/logger";
 
 declare type Address = string;
 declare type EpochId = number;
@@ -73,9 +74,8 @@ export class BlockIndexer extends AsyncEventEmitter {
   }
 
   private async extractFinalize(tx: TxData, blockTimestampSec: number) {
-    const successful = tx.receipt!.status == true;
-    if (successful) {
-      const finalizeData = this.encodingUtils.extractFinalize(tx);
+    const finalizeData = this.encodingUtils.extractFinalize(tx);
+    if (finalizeData.confirmed) {
       if (this.priceEpochFinalizes.has(finalizeData.epochId)) {
         throw new Error(`Finalize data already exists for epoch ${finalizeData.epochId}`);
       }
