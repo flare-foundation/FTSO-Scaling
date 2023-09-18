@@ -34,6 +34,7 @@ async function fundAccounts(web3: Web3, accounts: AccountDetails[]) {
 
   const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
   if (!deployerKey) throw Error("No deployer private key found in env.");
+  web3.eth.accounts.wallet.add(deployerKey);
   const deployerAddress = web3.eth.accounts.privateKeyToAccount(deployerKey!).address;
 
   for (const account of accounts) {
@@ -45,6 +46,7 @@ async function fundAccounts(web3: Web3, accounts: AccountDetails[]) {
         from: deployerAddress,
         to: account.address,
         value: toSend,
+        gas: 30000,
       });
     }
   }
