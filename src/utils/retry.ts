@@ -17,7 +17,9 @@ export async function retry<T>(
     } catch (e) {
       attempt++;
       if (attempt > maxRetriers) {
-        throw new Error(`Failed to execute function after ${maxRetriers} attempts: ${e}`);
+        const retryError = new Error(`Failed to execute function after ${maxRetriers} attempts`);
+        retryError.stack = (e as Error).stack;
+        throw retryError;
       }
       await sleepFor(backoffMs);
       backoffMs *= DEFAULT_BACKOFF_MULTIPLIER;
