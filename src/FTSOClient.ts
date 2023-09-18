@@ -107,8 +107,10 @@ export class FTSOClient {
    * Placeholder for registering as a voter with a default constant weight.
    * To be replaced with a proper mechanisnm.
    */
-  async registerAsVoter(rewardEpochId: number) {
-    return await this.provider.registerAsVoter(rewardEpochId, DEFAULT_VOTER_WEIGHT);
+  async registerAsVoter(rewardEpochId: number): Promise<void> {
+    this.logger.info(`Registering as a voter for reward epoch ${rewardEpochId}`);
+    await this.provider.registerAsVoter(rewardEpochId, DEFAULT_VOTER_WEIGHT);
+    this.logger.info(`Done registering as a voter for reward epoch ${rewardEpochId}`);
   }
 
   registerRewardsForRewardEpoch(rewardEpochId: number, forceClosure = false) {
@@ -338,10 +340,8 @@ export class FTSOClient {
 
   private async tryFinalizeEpoch(priceEpochId: number, merkleRoot: string, signatures: SignatureData[]) {
     try {
-      let result = await this.provider.finalize(priceEpochId, merkleRoot, signatures);
-      // TODO: Finalization transaction executed succesfully, but we should check for MerkleRootConfirmed event
-      //       to make sure it was recorded in the smart contract.
-      this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}. Result: ${result}`);
+      await this.provider.finalize(priceEpochId, merkleRoot, signatures);
+      this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}.`);
     } catch (e) {
       this.logger.info(`Failed to submit finalization transaction: ${e}`);
     }
