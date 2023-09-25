@@ -21,12 +21,13 @@ import {
   EpochResult,
   Offer,
   VoterWithWeight,
-  TxData,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, getBlock, loadContract, recoverSigner, signMessage } from "../web3-utils";
+import { getAccount, getFilteredBlock, loadContract, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
+
+const FORCE_NONCE_RESET_ON = 3;
 
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
@@ -39,6 +40,9 @@ interface TypeChainContracts {
 export class Web3Provider implements IVotingProvider {
   private readonly logger = getLogger(Web3Provider.name);
   private account: Account;
+
+  private localNonce: number | undefined;
+  private nonceResetCount: number = FORCE_NONCE_RESET_ON;
 
   private constructor(
     readonly contractAddresses: ContractAddresses,
@@ -161,7 +165,10 @@ export class Web3Provider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    return await getBlock(this.web3, blockNumber);
+    return await getFilteredBlock(this.web3, blockNumber, [
+      this.contractAddresses.voting,
+      this.contractAddresses.votingRewardManager,
+    ]);
   }
 
   get senderAddressLowercase(): string {
@@ -183,7 +190,7 @@ export class Web3Provider implements IVotingProvider {
     value: number | BN = 0,
     gas: string = "2500000"
   ): Promise<void> {
-    const nonce = await this.web3.eth.getTransactionCount(this.account.address, "pending");
+    const nonce = await this.getNonce();
     const tx = <TransactionConfig>{
       from: this.account.address,
       to: toAddress,
@@ -194,7 +201,7 @@ export class Web3Provider implements IVotingProvider {
     };
     const signedTx = await this.account.signTransaction(tx);
     try {
-      await this.waitFinalize(this.account.address, () =>
+      await this.waitFinalize(this.account.address, nonce, () =>
         this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!)
       );
     } catch (e: any) {
@@ -209,12 +216,31 @@ export class Web3Provider implements IVotingProvider {
     }
   }
 
-  private async waitFinalize(address: string, func: () => any, delay: number = 1000) {
-    const nonce = await this.web3.eth.getTransactionCount(address);
+  /**
+   * We keep track of the transction nonce locally to be able to submit more than one transaction for the same block.
+   * The nonce is reloaded from the network after every {@link FORCE_NONCE_RESET_ON} uses to make sure we don't get out of sync.
+   */
+  private async getNonce(): Promise<number> {
+    this.nonceResetCount--;
+    if (this.localNonce && this.nonceResetCount > 0) {
+      this.localNonce++;
+    } else {
+      this.localNonce = await this.web3.eth.getTransactionCount(this.account.address);
+      this.nonceResetCount = FORCE_NONCE_RESET_ON;
+    }
+    return this.localNonce;
+  }
+
+  private async waitFinalize<T>(
+    address: string,
+    nonce: number,
+    func: () => Promise<T>,
+    delay: number = 1000
+  ): Promise<T> {
     const res = await func();
     const backoff = 1.5;
     let retries = 0;
-    while ((await this.web3.eth.getTransactionCount(address)) == nonce) {
+    while ((await this.web3.eth.getTransactionCount(address)) <= nonce) {
       await sleepFor(delay);
       if (retries < 8) {
         delay = Math.floor(delay * backoff);
