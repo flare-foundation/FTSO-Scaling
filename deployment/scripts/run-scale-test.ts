@@ -13,14 +13,23 @@ interface AccountDetails {
   privateKey: string;
 }
 
+const DEFAULT_NUM_ACCOUNTS = 10;
+
 // gov pub key: 0xc783df8a850f42e7f7e57013759c285caa701eb6
 async function main() {
+  let numAccounts = +process.argv[2];
+  if (!numAccounts) numAccounts = DEFAULT_NUM_ACCOUNTS;
+
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
-  const accounts: AccountDetails[] = JSON.parse(fs.readFileSync("coston2-100-accounts.json", "utf-8")).slice(0, 10);
+  const accounts: AccountDetails[] = JSON.parse(fs.readFileSync("coston2-100-accounts.json", "utf-8")).slice(
+    0,
+    numAccounts
+  );
 
   await fundAccounts(web3, accounts);
+  console.log("Funded accounts.");
   await runProviders(accounts);
 
   while (true) {
@@ -37,19 +46,27 @@ async function fundAccounts(web3: Web3, accounts: AccountDetails[]) {
   web3.eth.accounts.wallet.add(deployerKey);
   const deployerAddress = web3.eth.accounts.privateKeyToAccount(deployerKey!).address;
 
+  let nonce = await web3.eth.getTransactionCount(deployerAddress);
+  const sends: Promise<any>[] = [];
   for (const account of accounts) {
     const weiBalance = toBN(await web3.eth.getBalance(account.address));
+    console.log("Account balance: ", weiBalance.toString());
     if (weiBalance.lt(weiValue)) {
       const toSend = weiValue.sub(weiBalance);
       console.log(`Sending ${web3.utils.fromWei(toSend)} to ${account.address}`);
-      await web3.eth.sendTransaction({
-        from: deployerAddress,
-        to: account.address,
-        value: toSend,
-        gas: 30000,
-      });
+      // Set nonce manually, increment on each
+      sends.push(
+        web3.eth.sendTransaction({
+          from: deployerAddress,
+          to: account.address,
+          value: toSend,
+          gas: 30000,
+          nonce: nonce++,
+        })
+      );
     }
   }
+  await Promise.all(sends);
 }
 
 async function runProviders(accounts: AccountDetails[]) {
@@ -65,7 +82,7 @@ async function runProviders(accounts: AccountDetails[]) {
 }
 
 function startDataProvider(id: number, envConfig: any): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-data-provider.ts", id.toString()], {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-data-provider.ts", id.toString(), "random"], {
     env: envConfig,
   });
   process.stdout.on("data", function (data) {

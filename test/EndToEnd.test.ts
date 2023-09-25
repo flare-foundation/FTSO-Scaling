@@ -5,10 +5,10 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
-import { RandomPriceFeed, RandomPriceFeedConfig } from "../test-utils/utils/RandomPriceFeed";
+import { RandomPriceFeed, RandomPriceFeedConfig, createPriceFeedConfigs } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/voting-interfaces";
-import { hexlifyBN, toBN, unprefixedSymbolBytes } from "../src/voting-utils";
+import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import {
   DummyERC20Instance,
@@ -309,21 +309,3 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     }
   }
 });
-
-/**
- * All FTSO clients will have the same price feed configs, but each client will have different price feeds
- * due to randomness noise.
- */
-function createPriceFeedConfigs(symbols: Feed[]) {
-  const priceFeedConfigs: RandomPriceFeedConfig[] = [];
-  for (let j = 0; j < symbols.length; j++) {
-    const priceFeedConfig = {
-      period: 10,
-      factor: 1000 * (j + 1),
-      variance: 100,
-      feedInfo: symbols[j],
-    } as RandomPriceFeedConfig;
-    priceFeedConfigs.push(priceFeedConfig);
-  }
-  return priceFeedConfigs;
-}

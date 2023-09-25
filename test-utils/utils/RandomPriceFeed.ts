@@ -20,8 +20,28 @@ export class RandomPriceFeed implements IPriceFeed {
   }
 
   getPriceForEpoch(priceEpochId: number) {
-    let noise = (Math.random() - 0.5) * this.priceFeedConfig.variance;
-    let result = Math.floor((Math.sin(priceEpochId / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise);
+    const noise = (Math.random() - 0.5) * this.priceFeedConfig.variance;
+    const result = Math.floor(
+      (Math.sin(priceEpochId / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise
+    );
     return Math.max(0, result);
   }
+}
+
+/**
+ * All FTSO clients will have the same price feed configs, but each client will have different price feeds
+ * due to randomness noise.
+ */
+export function createPriceFeedConfigs(symbols: Feed[]) {
+  const priceFeedConfigs: RandomPriceFeedConfig[] = [];
+  for (let j = 0; j < symbols.length; j++) {
+    const priceFeedConfig = {
+      period: 10,
+      factor: 1000 * (j + 1),
+      variance: 100,
+      feedInfo: symbols[j],
+    } as RandomPriceFeedConfig;
+    priceFeedConfigs.push(priceFeedConfig);
+  }
+  return priceFeedConfigs;
 }

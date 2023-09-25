@@ -8,11 +8,13 @@ import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
 import { Feed } from "../../src/voting-interfaces";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/web3-utils";
+import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/RandomPriceFeed";
 
 async function main() {
   const myId = +process.argv[2];
   if (!myId) throw Error("Must provide a data provider id.");
   if (myId <= 0) throw Error("Data provider id must be greater than 0.");
+  const useRandomFeed = process.argv[3] == "random";
 
   setGlobalLogFile(`data-provider-${myId}`);
 
@@ -20,8 +22,7 @@ async function main() {
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-
-  getLogger("data-provider").info(`Initializing data provider ${myId}`);
+  getLogger("data-provider").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
 
   let privateKey: string;
   if (process.env.DATA_PROVIDER_PRIVATE_KEY != undefined) {
@@ -33,8 +34,15 @@ async function main() {
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
   const client = new FTSOClient(provider, await provider.getBlockNumber());
-  const feeds = await getPriceFeeds(parameters.symbols);
-  client.registerPriceFeeds(randomizeFeeds(feeds));
+  let feeds: IPriceFeed[];
+  if (useRandomFeed) {
+    // Uses a fake randomised price feed.
+    feeds = createPriceFeedConfigs(parameters.symbols).map(config => new RandomPriceFeed(config));
+  } else {
+    // Uses a real price feed, with additional random noise.
+    feeds = randomizeFeeds(await getPriceFeeds(parameters.symbols));
+  }
+  client.registerPriceFeeds(feeds);
 
   const dataProvider = new DataProvider(client, myId);
   await dataProvider.run();
@@ -66,4 +74,8 @@ function addNoise(num: number): number {
   return num + noise * sign;
 }
 
-main();
+main().catch(e => {
+  console.error("Data provider error, exiting", e);
+  getLogger("data-provider").error(e);
+  process.exit(1);
+});
