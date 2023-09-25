@@ -66,12 +66,16 @@
       "src/**/!(*.test.*).[tj]s?(x)"
     ],
     "exclude": [
-      "src/voting-test-utils.ts"
+      "src/price-feeds/**/*",
+      "src/providers/Web3Provider.ts"
     ],
     "reporter": [
-      "html"
+      "html",
+      "text-summary"
     ],
-    "report-dir": "coverage/ts"
+    "report-dir": "coverage/ts",
+    "statements": 80,
+    "lines": 80
   },
   "prettier": {
     "printWidth": 120,

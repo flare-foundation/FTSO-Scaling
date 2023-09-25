@@ -8,9 +8,6 @@ stages:
 - build
 - test
   
-
-
-
 build-smart-contracts:
   stage: build
   image: node:18
@@ -33,12 +30,10 @@ build-smart-contracts:
     - typechain-web3
     expire_in: 1 week
 
-
-
-
 .test:
   stage: test
-  needs: []
+  needs:
+    - build-smart-contracts
   image: node:18
   cache:
   - key:
@@ -50,16 +45,7 @@ build-smart-contracts:
   before_script:
   - yarn install --frozen-lockfile
 
-
-test-unit:
-  extends: .test
-  timeout: 1h
-  needs:
-    - build-smart-contracts
-  script:
-  - yarn test
-
-test-coverage:
+test-unit-with-coverage:
   extends: .test
   script:
   - yarn run test-coverage
