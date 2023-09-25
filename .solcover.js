@@ -2,6 +2,6 @@ module.exports = {
   skipFiles: [
     'mock/Imports.sol'
   ],
-  istanbulReporter: ['html'],
+  istanbulReporter: ['html', 'text', 'cobertura'],
   istanbulFolder: './coverage/sol'
 };

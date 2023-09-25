@@ -10,6 +10,10 @@
     "test-coverage": "nyc yarn hardhat coverage",
     "eslint": "eslint . --ext .ts"
   },
+  "engines": {
+    "node": ">=18 <=20"
+  },
+  "engineStrict": true,
   "license": "MIT",
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^4.0.0",

@@ -1,64 +1,71 @@
+workflow:
+  rules:
+  - if: '$CI_OPEN_MERGE_REQUESTS != null && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "webide")'
+    when: never
+  - when: always
+
 stages:
-  - build
-  - test
+- build
+- test
   
-image: node:18
 
-variables:
-  YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
 
-.rules:
-  always:
-    # branch pipelines
-    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null && $CI_PIPELINE_SOURCE == "web"'
-    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null'
-    # MR pipelines
-    - if: '$CI_OPEN_MERGE_REQUESTS != null && $CI_PIPELINE_SOURCE == "web"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "web"'
-    # Prevent duplicate MR && branch pipelines
-    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
-      when: never
 
 build-smart-contracts:
   stage: build
-  rules:
-    - !reference [.rules, always]
+  image: node:18
   needs: []
   before_script:
-    - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
+  - yarn install --frozen-lockfile
   script:
-    - yarn c
+  - yarn compile
   cache:
-    - key:
-        files:
-          - yarn.lock
-      paths:
-        - .yarn-cache/
-        - node_modules/
-      policy: pull-push
+  - key:
+      files:
+      - yarn.lock
+    paths:
+    - node_modules/
+    policy: pull-push
   artifacts:
     paths:
-      - typechain
-      - typechain-truffle
-      - typechain-web3
+    - typechain
+    - typechain-truffle
+    - typechain-web3
     expire_in: 1 week
 
-test-unit:
+
+
+
+.test:
   stage: test
+  needs: []
+  image: node:18
+  cache:
+  - key:
+      files:
+      - yarn.lock
+    paths:
+    - node_modules/
+    policy: pull
+  before_script:
+  - yarn install --frozen-lockfile
+
+
+test-unit:
+  extends: .test
   timeout: 1h
-  rules:
-    - !reference [.rules, always]
   needs:
     - build-smart-contracts
-  before_script:
-    - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
   script:
-    - yarn test
-  cache:
-    - key:
-        files:
-          - yarn.lock
-      paths:
-        - .yarn-cache/
-        - node_modules/
-      policy: pull-push
+  - yarn test
+
+test-coverage:
+  extends: .test
+  script:
+  - yarn run test-coverage
+  coverage: /All files[^|]*\|[^|]*\s+([\d\.]+)/
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/sol/cobertura-coverage.xml
