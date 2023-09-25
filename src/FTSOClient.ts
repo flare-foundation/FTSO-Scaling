@@ -139,28 +139,17 @@ export class FTSOClient {
    * sequentially processing them.
    */
   async processNewBlocks() {
-    const currentBlockNumber = await this.provider.getBlockNumber();
-    const numBlocks = currentBlockNumber - this.lastProcessedBlockNumber;
-    if (numBlocks === 0) return;
-    const numRequestRepeats = Math.ceil(numBlocks / MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
-    const blockPromisesLen = Math.min(numBlocks, MAX_ASYNCHRONOUS_BLOCK_REQUESTS);
-    let blockPromises: Promise<Promise<BlockData>>[] = Array(blockPromisesLen);
-    for (let i = 0; i < numRequestRepeats; i++) {
-      let j: number = 0;
-      let k: number = this.lastProcessedBlockNumber;
-      while (j < MAX_ASYNCHRONOUS_BLOCK_REQUESTS && k < currentBlockNumber) {
-        blockPromises[j] = retry(async () => {
-          return await this.provider.getBlock(k + 1);
+    try {
+      const currentBlockNumber = await this.provider.getBlockNumber();
+      while (this.lastProcessedBlockNumber < currentBlockNumber) {
+        const block = await retry(async () => {
+          return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
         });
-        k++, j++;
-      }
-
-      j = 0;
-      while (j < MAX_ASYNCHRONOUS_BLOCK_REQUESTS && this.lastProcessedBlockNumber < currentBlockNumber) {
-        this.indexer.processBlock(await blockPromises[j]);
+        await this.indexer.processBlock(block);
         this.lastProcessedBlockNumber++;
-        j++;
       }
+    } catch (e: any) {
+      this.logger.error(`Error processing new blocks: ${e.message}\n${e.stack}`);
     }
   }
 
@@ -340,6 +329,7 @@ export class FTSOClient {
 
   private async tryFinalizeEpoch(priceEpochId: number, merkleRoot: string, signatures: SignatureData[]) {
     try {
+      this.logger.info(`Submitting finalization transaction for epoch ${priceEpochId}.`);
       await this.provider.finalize(priceEpochId, merkleRoot, signatures);
       this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}.`);
     } catch (e) {
@@ -442,17 +432,18 @@ export class FTSOClient {
   async tryFinalizeOnceSignaturesReceived(priceEpochId: number) {
     this.indexer.on(Received.Signature, this.signatureListener); // Will atempt to finalize once enough signatures are received.
     await this.processNewBlocks();
+    this.logger.info(`Waiting for finalization of epoch ${priceEpochId}`);
     await this.awaitFinalization(priceEpochId);
     this.indexer.off(Received.Signature, this.signatureListener);
   }
 
   private async awaitFinalization(priceEpochId: number) {
     while (!this.indexer.getFinalize(priceEpochId)) {
-      this.logger.debug(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
+      this.logger.info(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
       await sleepFor(BLOCK_PROCESSING_INTERVAL_MS);
       await this.processNewBlocks();
     }
-    this.logger.debug(`Epoch ${priceEpochId} finalized, continue.`);
+    this.logger.info(`Epoch ${priceEpochId} finalized, continue.`);
   }
 
   /**

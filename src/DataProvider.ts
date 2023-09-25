@@ -64,6 +64,7 @@ export class DataProvider {
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
     await this.client.commit(currentEpochId);
 
+    await sleepFor(2000);
     if (this.hasCommits) {
       const previousEpochId = currentEpochId - 1;
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
@@ -86,7 +87,6 @@ export class DataProvider {
 
     if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(nextRewardEpochId);
     this.client.registerRewardsForRewardEpoch(nextRewardEpochId);
-
     await this.client.registerAsVoter(nextRewardEpochId);
 
     this.registeredRewardEpochs.add(nextRewardEpochId);

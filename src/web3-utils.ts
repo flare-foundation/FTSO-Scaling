@@ -4,6 +4,7 @@ import Web3 from "web3";
 import { Account } from "web3-core";
 import { BareSignature, BlockData, TxData } from "./voting-interfaces";
 import { retry } from "./utils/retry";
+import { getLogger } from "./utils/logger";
 
 export function getWeb3(rpcLink: string, logger?: any): Web3 {
   const web3 = new Web3();
@@ -107,7 +108,16 @@ export async function getFilteredBlock(
 
   const relevantContracts = new Set(contractAddresses);
   const relevantTransactions = rawBlock.transactions.filter(tx => tx.to != null && relevantContracts.has(tx.to));
-  const getReceipts = relevantTransactions.map(tx => retry(async () => web3.eth.getTransactionReceipt(tx.hash)));
+  const getReceipts = relevantTransactions.map(tx => {
+    try {
+      return retry(async () => web3.eth.getTransactionReceipt(tx.hash));
+    } catch (e) {
+      getLogger("getFilteredBlock").error(
+        `Error getting receipt for block ${blockNumber} tx ${JSON.stringify(tx, null, 2)}: ${e}`
+      );
+      return undefined;
+    }
+  });
   const receipts = await Promise.all(getReceipts);
 
   receipts.forEach((receipt, i) => {

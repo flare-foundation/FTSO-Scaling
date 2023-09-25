@@ -26,6 +26,7 @@ import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
 import { getAccount, getFilteredBlock, loadContract, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
+import { retry } from "../utils/retry";
 
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
@@ -78,7 +79,9 @@ export class Web3Provider implements IVotingProvider {
   async claimRewards(claims: RewardClaimWithProof[]): Promise<any> {
     let nonce = await this.getNonce(this.claimAccount);
     for (const claim of claims) {
-      this.logger.info(`Calling claim reward contract with ${claim}, using ${this.claimAccount.address}, nonce ${nonce}`);
+      this.logger.info(
+        `Calling claim reward contract with ${claim}, using ${this.claimAccount.address}, nonce ${nonce}`
+      );
       const methodCall = this.contracts.votingRewardManager.methods.claimReward(
         hexlifyBN(claim),
         this.votingAcccount.address
@@ -234,7 +237,7 @@ export class Web3Provider implements IVotingProvider {
     const signedTx = await from.signTransaction(tx);
     try {
       await this.waitFinalize(from.address, nonce, () => this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!));
-    } catch (e) {
+    } catch (e: unknown) {
       if (e instanceof Error && e.message.indexOf("Transaction has been reverted by the EVM") >= 0) {
         this.logger.debug(`[${label}] Transaction failed: ${e.message}`);
         // This call should throw a new exception containing the revert reason
@@ -242,7 +245,7 @@ export class Web3Provider implements IVotingProvider {
       }
       // Otherwise, either revert reason was already part of the original error or
       // we failed to get any additional information.
-      throw e;
+      throw new Error("Unexpected transaction failure", { cause: e });
     }
   }
 
@@ -253,6 +256,7 @@ export class Web3Provider implements IVotingProvider {
     delay: number = 1000
   ): Promise<T> {
     const res = await func();
+    this.logger.info(`Function called, waiting for nonce to update.`);
     const backoff = 1.5;
     let retries = 0;
     while ((await this.web3.eth.getTransactionCount(address)) <= nonce) {
