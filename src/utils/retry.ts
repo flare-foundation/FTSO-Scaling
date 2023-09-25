@@ -1,7 +1,7 @@
 import { sleepFor } from "../time-utils";
 
 const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_INITIAL_BACKOFF_MS = 500;
+const DEFAULT_INITIAL_BACKOFF_MS = 1000;
 const DEFAULT_BACKOFF_MULTIPLIER = 2;
 
 export async function retry<T>(
