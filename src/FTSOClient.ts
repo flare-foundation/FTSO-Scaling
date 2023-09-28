@@ -221,11 +221,7 @@ export class FTSOClient {
       Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage + randomMessage;
     const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
 
-    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(
-      priceEpochId,
-      results,
-      revealResult.committedFailedReveal
-    );
+    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(priceEpochId, results);
     const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot)!;
 
     const epochResult: EpochResult = {

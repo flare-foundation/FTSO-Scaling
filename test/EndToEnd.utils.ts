@@ -195,6 +195,10 @@ export async function calculateVoteResults(
     finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
     quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
     quartile3Price.push(data.medianData.map(res => res.data.quartile3Price));
+
+    expect(data.random).to.not.be.undefined;
+    const clientRandom = client.priceEpochData.get(calculatePriceEpochId)!.random;
+    expect(data.random.equals(clientRandom)).to.be.false;
   }
 
   const feedNumbers = new Set<number>(ftsoClients.map(client => client.orderedPriceFeeds(priceEpochId).length));
