@@ -91,10 +91,10 @@ export class Web3Provider implements IVotingProvider {
 
   async revealBitvote(epochData: EpochData): Promise<any> {
     const methodCall = this.contracts.voting.methods.revealBitvote(
-      epochData.random!,
-      epochData.merkleRoot!,
-      epochData.bitVote!,
-      epochData.pricesHex!
+      epochData.random.value,
+      epochData.merkleRoot,
+      epochData.bitVote,
+      epochData.pricesHex
     );
     return await this.signAndFinalize("Reveal", this.contracts.voting.options.address, methodCall);
   }

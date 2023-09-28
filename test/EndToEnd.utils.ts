@@ -146,7 +146,7 @@ export async function preparePrices(
     expect(epochData?.epochId).to.be.equal(currentPriceEpoch);
     expect(epochData?.prices?.length).to.be.equal(numberOfFeeds);
     expect(epochData?.pricesHex?.length! - 2).to.be.equal(numberOfFeeds * 4 * 2);
-    expect(epochData?.random?.length).to.be.equal(66);
+    expect(epochData?.random?.value.length).to.be.equal(66);
     expect(epochData?.bitVote).to.be.equal("0x00");
   }
 }

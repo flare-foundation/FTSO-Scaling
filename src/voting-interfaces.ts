@@ -1,5 +1,6 @@
 import BN from "bn.js";
 import { TransactionReceipt } from "web3-core";
+import { Bytes32 } from "./utils/sol-types";
 
 export interface RewardClaim {
   /**
@@ -89,19 +90,22 @@ export interface BlockData {
 }
 
 export interface EpochData {
-  epochId: number;
-  merkleRoot?: string;
-  random?: string;
-  prices?: number[];
-  pricesHex?: string;
-  bitVote?: string;
+  readonly epochId: number;
+  readonly merkleRoot: string;
+  readonly random: Bytes32;
+  readonly prices: number[];
+  readonly pricesHex: string;
+  readonly bitVote: string;
 }
 
 export interface EpochResult {
   readonly priceEpochId: number;
   readonly medianData: readonly MedianCalculationResult[];
+  readonly random: Bytes32;
+  readonly randomQuality: number;
   readonly priceMessage: string;
   readonly symbolMessage: string;
+  readonly randomMessage: string;
   readonly fullPriceMessage: string;
   readonly rewardClaimMerkleRoot: string;
   readonly rewardClaimMerkleProof: string;
@@ -140,5 +144,5 @@ export interface RevealResult {
   readonly revealed: string[];
   readonly failedCommit: string[];
   readonly committedFailedReveal: string[];
-  readonly revealedRandoms: string[];
+  readonly revealedRandoms: Bytes32[];
 }

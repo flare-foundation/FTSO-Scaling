@@ -26,6 +26,7 @@ interface IPriceOracle {
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,
+        bytes calldata _random,
         uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) external;
 
