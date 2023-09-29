@@ -274,9 +274,13 @@ export class FTSOClient {
     return [rewardMerkleRoot, rewardClaims];
   }
 
-  /** We reward signers who submitted valid signatures in blocks preceding the finalization transaction block. */
+  /**
+   * We reward signers whose signatures were recorded in blocks preceding the finalization transaction block.
+   * Note that the sender of a signature transaction may not match the author of that signature. We only want
+   * to reward the author (signer).
+   */
   private async getSignersToReward(finalizationData: [FinalizeData, number], priceEpochId: number): Promise<string[]> {
-    const rewardedSigners: string[] = [];
+    const rewardedSigners = new Set<string>();
     const [data, finalizationTime] = finalizationData;
 
     const currentEpochStartTime = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
@@ -292,15 +296,18 @@ export class FTSOClient {
     }
 
     const epochSignatures = this.indexer.getSignatures(priceEpochId - 1);
-
-    for (const [voter, [signature, signatureTime]] of epochSignatures) {
+    for (const [signature, signatureTime] of epochSignatures.values()) {
       if (signatureTime > finalizationTime) continue; // Only reward signatures with block timestamp no greater than that of finalization
-      const recoveredSigner = await this.provider.recoverSigner(data.merkleRoot, signature);
-      if (voter === recoveredSigner) {
-        rewardedSigners.push(voter);
+      const signer = await this.provider.recoverSigner(data.merkleRoot, signature);
+      // We check if the signer is registered for the _current_ reard epoch, the signature reward epoch might be one earlier.
+      const signerWeight = this.eligibleVoterWeights
+        .get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!
+        .get(signer);
+      if (signerWeight && signerWeight.gt(toBN(0))) {
+        rewardedSigners.add(signer);
       }
     }
-    return rewardedSigners;
+    return Array.from(rewardedSigners);
   }
 
   orderedPriceFeeds(priceEpochId: number): (IPriceFeed | undefined)[] {
@@ -328,21 +335,9 @@ export class FTSOClient {
     this.priceEpochData.set(priceEpochId, data);
   }
 
-  private async tryFinalizeEpoch(priceEpochId: number) {
-    const signatureMap = this.indexer.getSignatures(priceEpochId)!;
-    const signaturesTmp: SignatureData[] = [...signatureMap.values()].map(([s, _]) => s);
-    const mySignatureHash = this.priceEpochResults.get(priceEpochId)!.merkleRoot!;
-    const signatures = signaturesTmp
-      .filter(sig => sig.merkleRoot === mySignatureHash)
-      .map(sig => {
-        return {
-          v: sig.v,
-          r: sig.r,
-          s: sig.s,
-        } as BareSignature;
-      });
+  private async tryFinalizeEpoch(priceEpochId: number, merkleRoot: string, signatures: SignatureData[]) {
     try {
-      let result = await this.provider.finalize(priceEpochId, mySignatureHash, signatures);
+      let result = await this.provider.finalize(priceEpochId, merkleRoot, signatures);
       // TODO: Finalization transaction executed succesfully, but we should check for MerkleRootConfirmed event
       //       to make sure it was recorded in the smart contract.
       this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}. Result: ${result}`);
@@ -473,27 +468,38 @@ export class FTSOClient {
       throw Error(`Invalid state: trying to finalize ${priceEpochId}, but results not yet computed.`);
     }
 
-    const signatureByVoter = this.indexer.getSignatures(priceEpochId)!;
+    const priceEpochMerkleRoot = this.priceEpochResults.get(priceEpochId)!.merkleRoot!;
+    const signatureBySender = this.indexer.getSignatures(priceEpochId)!;
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const weightThreshold = await this.provider.thresholdForRewardEpoch(rewardEpoch);
     const voterWeights = this.eligibleVoterWeights.get(rewardEpoch)!;
-
     let totalWeight = toBN(0);
-    for (const [voter, [signature, _time]] of signatureByVoter) {
-      const weight = voterWeights.get(voter)!;
-      totalWeight = totalWeight.add(weight);
-      if (totalWeight.gt(weightThreshold)) {
-        this.logger.debug(
-          `Weight threshold reached for ${
-            signature.epochId
-          }: ${totalWeight.toString()} >= ${weightThreshold.toString()}!, calling finalize with ${
-            signatureByVoter.size
-          } signatures`
-        );
 
-        this.indexer.off(Received.Signature, this.signatureListener);
-        await this.tryFinalizeEpoch(signature.epochId);
-        return true;
+    const validSignatures = new Map<string, SignatureData>();
+    for (const [signature, _time] of signatureBySender.values()) {
+      if (signature.merkleRoot !== priceEpochMerkleRoot) continue;
+      const signer = await this.provider.recoverSigner(priceEpochMerkleRoot, signature);
+      // Deduplicate signers, since the same signature can in theory be published multiple times by different accounts.
+      if (validSignatures.has(signer)) continue;
+
+      const weight = voterWeights.get(signer) ?? toBN(0);
+      // Weight == 0 could mean that the signer is not registered for this reward epoch OR that the signature is invalid.
+      // We skip the signature in both cases.
+      if (weight.gt(toBN(0))) {
+        validSignatures.set(signer, signature);
+        totalWeight = totalWeight.add(weight);
+
+        if (totalWeight.gt(weightThreshold)) {
+          this.logger.debug(
+            `Weight threshold reached for ${priceEpochId}: ${totalWeight.toString()} >= ${weightThreshold.toString()}, calling finalize with ${
+              validSignatures.size
+            } signatures`
+          );
+
+          this.indexer.off(Received.Signature, this.signatureListener);
+          await this.tryFinalizeEpoch(priceEpochId, priceEpochMerkleRoot, [...validSignatures.values()]);
+          return true;
+        }
       }
     }
     return false;
