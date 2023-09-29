@@ -4,7 +4,7 @@ import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { Feed, RewardOffered, RewardClaim } from "./voting-interfaces";
 import EncodingUtils from "./EncodingUtils";
-
+import { Bytes32 } from "./utils/sol-types";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -210,4 +210,9 @@ export function hashForCommit(voter: string, random: string, merkleRoot: string,
   const values = [voter, random, merkleRoot, prices] as any[];
   const encoded = coder.encodeParameters(types, values);
   return utils.soliditySha3(encoded)!;
+}
+
+/** We XOR the random values provided by each voter to obtain a single combined random value for the price epoch. */
+export function combineRandom(randoms: Bytes32[]): Bytes32 {
+  return randoms.reduce((a, b) => a.xor(b), Bytes32.ZERO);
 }

@@ -1,4 +1,5 @@
 import { ContractAddresses } from "../../deployment/tasks/common";
+import BN from "bn.js";
 import {
   BareSignature,
   BlockData,

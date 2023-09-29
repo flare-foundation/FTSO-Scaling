@@ -85,10 +85,10 @@ export class TruffleProvider implements IVotingProvider {
 
   async revealBitvote(epochData: EpochData): Promise<any> {
     return this.contracts.voting.revealBitvote(
-      epochData.random!,
-      epochData.merkleRoot!,
-      epochData.bitVote!,
-      epochData.pricesHex!,
+      epochData.random.value,
+      epochData.merkleRoot,
+      epochData.bitVote,
+      epochData.pricesHex,
       { from: this.account.address }
     );
   }
@@ -129,6 +129,7 @@ export class TruffleProvider implements IVotingProvider {
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,
+      epochResult.randomMessage,
       symbolIndices,
       { from: this.account.address }
     );

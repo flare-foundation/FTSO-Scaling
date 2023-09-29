@@ -146,7 +146,7 @@ export async function preparePrices(
     expect(epochData?.epochId).to.be.equal(currentPriceEpoch);
     expect(epochData?.prices?.length).to.be.equal(numberOfFeeds);
     expect(epochData?.pricesHex?.length! - 2).to.be.equal(numberOfFeeds * 4 * 2);
-    expect(epochData?.random?.length).to.be.equal(66);
+    expect(epochData?.random?.value.length).to.be.equal(66);
     expect(epochData?.bitVote).to.be.equal("0x00");
   }
 }
@@ -195,6 +195,10 @@ export async function calculateVoteResults(
     finalMedianPrice.push(data.medianData.map(res => res.data.finalMedianPrice));
     quartile1Price.push(data.medianData.map(res => res.data.quartile1Price));
     quartile3Price.push(data.medianData.map(res => res.data.quartile3Price));
+
+    expect(data.random).to.not.be.undefined;
+    const clientRandom = client.priceEpochData.get(calculatePriceEpochId)!.random;
+    expect(data.random.equals(clientRandom)).to.be.false;
   }
 
   const feedNumbers = new Set<number>(ftsoClients.map(client => client.orderedPriceFeeds(priceEpochId).length));

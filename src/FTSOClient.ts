@@ -30,15 +30,18 @@ import {
   sortedHashPair,
   toBN,
   unprefixedSymbolBytes,
+  combineRandom,
 } from "./voting-utils";
 import { getLogger } from "./utils/logger";
 import { BlockIndexer, Received } from "./BlockIndexer";
 import { retry } from "./utils/retry";
 import { sleepFor } from "./time-utils";
+import { Bytes32 } from "./utils/sol-types";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
+const RANDOM_QUALITY_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
 const MAX_ASYNCHRONOUS_BLOCK_REQUESTS = 100;
 const BLOCK_PROCESSING_INTERVAL_MS = 500;
@@ -163,7 +166,7 @@ export class FTSOClient {
     if (!epochData) {
       throw new Error("Epoch data not found");
     }
-    const hash = hashForCommit(this.address, epochData.random!, epochData.merkleRoot!, epochData.pricesHex!);
+    const hash = hashForCommit(this.address, epochData.random.value, epochData.merkleRoot, epochData.pricesHex);
     await this.provider.commit(hash);
   }
 
@@ -198,10 +201,11 @@ export class FTSOClient {
 
     const revealResult = this.calculateRevealers(priceEpochId)!;
     if (revealResult.revealed.length === 0) {
-      this.logger.info("No reveals !!!!!!!!!");
-      // TODO: check when this can happen
-      return;
+      throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
     }
+
+    const randomQuality = revealResult.committedFailedReveal.length;
+    const combinedRandom = combineRandom(revealResult.revealedRandoms);
 
     const results: MedianCalculationResult[] = this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
     let priceMessage = "";
@@ -211,24 +215,31 @@ export class FTSOClient {
       symbolMessage += unprefixedSymbolBytes(data.feed);
     });
 
-    const message = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage;
+    const randomMessage =
+      Web3.utils.padLeft(randomQuality.toString(16), RANDOM_QUALITY_BYTES * 2) + combinedRandom.value.slice(2);
+    const message =
+      Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage + randomMessage;
     const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
 
     const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(priceEpochId, results);
-    const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot);
+    const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot)!;
 
-    this.priceEpochResults.set(priceEpochId, {
+    const epochResult: EpochResult = {
       priceEpochId: priceEpochId,
       medianData: results,
+      random: combinedRandom,
+      randomQuality: randomQuality,
       priceMessage: "0x" + priceMessage,
       symbolMessage: "0x" + symbolMessage,
+      randomMessage: "0x" + randomMessage,
       fullPriceMessage: "0x" + message,
       fullMessage: rewardMerkleRoot + message,
       rewardClaimMerkleRoot: rewardMerkleRoot,
       rewardClaimMerkleProof: priceMessageHash,
       rewardClaims: priceEpochRewards,
       merkleRoot: priceEpochMerkleRoot,
-    } as EpochResult);
+    };
+    this.priceEpochResults.set(priceEpochId, epochResult);
   }
 
   private async calculateRewards(
@@ -268,10 +279,14 @@ export class FTSOClient {
     const rewardedSigners: string[] = [];
     const [data, finalizationTime] = finalizationData;
 
-    const currentEpochStartTime = this.epochs.priceEpochStartTimeSec(priceEpochId + 1); 
+    const currentEpochStartTime = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
     if (finalizationTime >= currentEpochStartTime) {
       this.logger.info(
-        `Previous epoch ${data.epochId} finalization occured outside the price epoch window (at ${(new Date(finalizationTime * 1000)).toUTCString()} vs next epoch start time ${(new Date(currentEpochStartTime * 1000)).toUTCString()}), no signers will be rewarded.`
+        `Previous epoch ${data.epochId} finalization occured outside the price epoch window (at ${new Date(
+          finalizationTime * 1000
+        ).toUTCString()} vs next epoch start time ${new Date(
+          currentEpochStartTime * 1000
+        ).toUTCString()}), no signers will be rewarded.`
       );
       return [];
     }
@@ -296,15 +311,21 @@ export class FTSOClient {
   }
 
   preparePriceFeedsForPriceEpoch(priceEpochId: number) {
-    const data = this.priceEpochData.get(priceEpochId) || { epochId: priceEpochId };
-    this.priceEpochData.set(priceEpochId, data);
-    data.merkleRoot = ZERO_BYTES32;
-    data.prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed =>
+    if (this.priceEpochData.has(priceEpochId)) {
+      throw new Error(`Data for price epoch ${priceEpochId} already exists`);
+    }
+    const prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed =>
       priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE
     );
-    data.pricesHex = packPrices(data.prices);
-    data.random = Web3.utils.randomHex(32);
-    data.bitVote = "0x00";
+    const data: EpochData = {
+      epochId: priceEpochId,
+      merkleRoot: ZERO_BYTES32,
+      prices: prices,
+      pricesHex: packPrices(prices),
+      random: Bytes32.random(),
+      bitVote: "0x00",
+    };
+    this.priceEpochData.set(priceEpochId, data);
   }
 
   private async tryFinalizeEpoch(priceEpochId: number) {
@@ -524,12 +545,16 @@ export class FTSOClient {
     );
     const revealedSet = new Set<string>(revealed);
     const committedFailedReveal = eligibleCommitters.filter(voter => !revealedSet.has(voter.toLowerCase()));
-    const revealedRandoms = revealed.map(voter => reveals!.get(voter.toLowerCase())!.random);
-    return {
+    const revealedRandoms = revealed.map(voter => {
+      const rawRandom = reveals!.get(voter.toLowerCase())!.random;
+      return Bytes32.fromHexString(rawRandom);
+    });
+    const result: RevealResult = {
       revealed,
       failedCommit,
       committedFailedReveal,
       revealedRandoms,
-    } as RevealResult;
+    };
+    return result;
   }
 }

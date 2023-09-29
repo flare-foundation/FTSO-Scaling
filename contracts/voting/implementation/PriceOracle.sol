@@ -33,6 +33,7 @@ contract PriceOracle is Governed, IPriceOracle {
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,
+        bytes calldata _random,
         uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) public {
         // hash for prices includes (priceEpochId, allPrices, allSymbols)
@@ -40,19 +41,21 @@ contract PriceOracle is Governed, IPriceOracle {
             _allPrices.length * 2 == _allSymbols.length,
             "lengths do not match"
         );
-        bytes32 priceHash = keccak256(
-            bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols)
-        );
 
-        bytes32 merkleRoot = _dataMerkleRoot;
-        if (merkleRoot < priceHash) {
-            merkleRoot = keccak256(abi.encode(merkleRoot, priceHash));
-        } else {
-            merkleRoot = keccak256(abi.encode(priceHash, merkleRoot));
+        bytes32 merkleRoot = _dataMerkleRoot; 
+        { // Scope to avoid stack too deep errors
+            bytes32 priceHash = keccak256(
+                bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols, _random)
+            );
+            if (merkleRoot < priceHash) {
+                merkleRoot = keccak256(abi.encode(merkleRoot, priceHash));
+            } else {
+                merkleRoot = keccak256(abi.encode(priceHash, merkleRoot));
+            }
         }
         require(
             merkleRoot == voting.getMerkleRootForPriceEpoch(_priceEpochId),
-            "invalid data"
+            "invalid merkle root"
         );
         for (uint256 i = 0; i < _symbolsIndicesToPublish.length; i++) {
             uint256 symbolIndex = _symbolsIndicesToPublish[i];
