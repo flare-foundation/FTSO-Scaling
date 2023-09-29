@@ -52,8 +52,8 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
 
 async function deployPriceOracle(artifacts: Artifacts, governance: Account, votingManager: VotingManagerInstance, voting: VotingInstance) {
   const priceOracle = await artifacts.require("PriceOracle").new(governance.address);
-  await priceOracle.setVotingManager(votingManager.address);
-  await priceOracle.setVoting(voting.address);
+  await priceOracle.setVotingManager(votingManager.address, { from: governance.address });
+  await priceOracle.setVoting(voting.address, { from: governance.address });
   return priceOracle;
 }
 
@@ -66,10 +66,10 @@ async function deployVotingRewardManager(
 ): Promise<VotingRewardManagerInstance> {
   const votingRewardManager = await artifacts.require("VotingRewardManager").new(governance.address, FEE_PERCENTAGE_UPDATE_OFFSET, DEFAULT_FEE_PERCENTAGE);
 
-  await votingRewardManager.setVoting(voting.address);
-  await votingRewardManager.setVotingManager(votingManager.address);
-  await votingRewardManager.setERC20PriceOracle(erc20PriceOracle.address);
-  await votingRewardManager.setMinimalOfferParameters(MINIMAL_OFFER_VALUE, MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC);
+  await votingRewardManager.setVoting(voting.address, { from: governance.address });
+  await votingRewardManager.setVotingManager(votingManager.address, { from: governance.address });
+  await votingRewardManager.setERC20PriceOracle(erc20PriceOracle.address, { from: governance.address });
+  await votingRewardManager.setMinimalOfferParameters(MINIMAL_OFFER_VALUE, MINIMAL_OFFER_VALUE_PRICE_EXPIRY_SEC, { from: governance.address });
   return votingRewardManager;
 }
 
@@ -85,12 +85,12 @@ async function deployERC20PriceOracle(
 
   const dummyCoin1 = await DummyERC20.new("DummyCoin1", "DC1");
   const dummyCoin2 = await DummyERC20.new("DummyCoin2", "DC2");
-  await dummyCoin1.mint(governance.address, REWARD_VALUE);
-  await dummyCoin2.mint(governance.address, REWARD_VALUE);
+  await dummyCoin1.mint(governance.address, REWARD_VALUE, { from: governance.address });
+  await dummyCoin2.mint(governance.address, REWARD_VALUE, { from: governance.address });
 
-  await erc20PriceOracle.setPriceOracle(priceOracle.address);
-  await erc20PriceOracle.setERC20Settings(dummyCoin1.address, "0x" + unprefixedSymbolBytes(symbols[0]));
-  await erc20PriceOracle.setERC20Settings(dummyCoin2.address, "0x" + unprefixedSymbolBytes(symbols[1]));
+  await erc20PriceOracle.setPriceOracle(priceOracle.address, { from: governance.address });
+  await erc20PriceOracle.setERC20Settings(dummyCoin1.address, "0x" + unprefixedSymbolBytes(symbols[0]), { from: governance.address });
+  await erc20PriceOracle.setERC20Settings(dummyCoin2.address, "0x" + unprefixedSymbolBytes(symbols[1]), { from: governance.address });
 
   return erc20PriceOracle;
 }
@@ -99,8 +99,8 @@ async function deployVotingManager(artifacts: Artifacts, governance: Account): P
   const votingManager = await artifacts.require("VotingManager").new(governance.address);
   const currentPriceEpoch = await votingManager.getCurrentPriceEpochId();
   console.log(`Setting current price epoch to be first rewarded epoch ${currentPriceEpoch}`);
-  await votingManager.configureRewardEpoch(currentPriceEpoch, REWARD_EPOCH_DURATION_PRICE_EPOCHS);
-  await votingManager.configureSigningDuration(180);
+  await votingManager.configureRewardEpoch(currentPriceEpoch, REWARD_EPOCH_DURATION_PRICE_EPOCHS, { from: governance.address });
+  await votingManager.configureSigningDuration(180, { from: governance.address });
   return votingManager;
 }
 

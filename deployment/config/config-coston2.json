@@ -1,0 +1,10 @@
+{
+  "governancePrivateKey": "<set in .env>",
+  "rpcUrl": "https://coston2-api.flare.network/ext/C/rpc",
+  "gasPrice": "3000000000000",
+  "symbols": [
+    { "offerSymbol": "ETH", "quoteSymbol": "USDT" },
+    { "offerSymbol": "BTC", "quoteSymbol": "USDT" },
+    { "offerSymbol": "BCH", "quoteSymbol": "USDT" }
+  ]
+}

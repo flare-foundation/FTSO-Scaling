@@ -67,6 +67,7 @@ export interface SignatureData {
 }
 
 export interface FinalizeData {
+  readonly confirmed: boolean;
   readonly from: string;
   readonly epochId: number;
   readonly merkleRoot: string;
@@ -74,19 +75,20 @@ export interface FinalizeData {
 }
 
 export interface TxData {
-  blockNumber: number;
-  hash: string;
-  input?: string;
-  from: string;
-  to?: string;
-  value?: string;
-  receipt?: TransactionReceipt;
+  readonly blockNumber: number;
+  readonly hash: string;
+  readonly input: string;
+  readonly from: string;
+  /** Will be `null` for contract creation transactions. */
+  readonly to: string | null;
+  readonly value: string;
+  readonly receipt?: TransactionReceipt;
 }
 
 export interface BlockData {
-  number: number;
-  timestamp: number;
-  transactions: readonly TxData[];
+  readonly number: number;
+  readonly timestamp: number;
+  readonly transactions: readonly TxData[];
 }
 
 export interface EpochData {

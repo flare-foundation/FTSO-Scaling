@@ -28,6 +28,7 @@ export default class EncodingUtils {
     this.abiItems.set("revealBitvote", votingABI.find((x: any) => x.name === "revealBitvote")!);
     this.abiItems.set("signResult", votingABI.find((x: any) => x.name === "signResult")!);
     this.abiItems.set("finalize", votingABI.find((x: any) => x.name === "finalize")!);
+    this.abiItems.set("MerkleRootConfirmed", votingABI.find((x: any) => x.name === "MerkleRootConfirmed")!);
     this.abiItems.set("offerRewards", rewardsABI.find((x: any) => x.name === "offerRewards")!);
     this.abiItems.set("RewardOffered", rewardsABI.find((x: any) => x.name === "RewardOffered")!);
     this.abiInputs.set(
@@ -40,6 +41,10 @@ export default class EncodingUtils {
     this.functionSignatures.set("offerRewards", coder.encodeFunctionSignature(this.abiItems.get("offerRewards")!));
     this.functionSignatures.set("finalize", coder.encodeFunctionSignature(this.abiItems.get("finalize")!));
     this.eventSignatures.set("RewardOffered", coder.encodeEventSignature(this.abiItems.get("RewardOffered")!));
+    this.eventSignatures.set(
+      "MerkleRootConfirmed",
+      coder.encodeEventSignature(this.abiItems.get("MerkleRootConfirmed")!)
+    );
   }
 
   functionSignature(name: string): string {
@@ -96,7 +101,9 @@ export default class EncodingUtils {
 
   extractFinalize(tx: TxData): FinalizeData {
     const resultTmp = this.decodeFunctionCall(tx, "finalize");
+    const confirmation = tx.receipt!.logs.find((x: any) => x.topics[0] === this.eventSignature("MerkleRootConfirmed"));
     return {
+      confirmed: confirmation !== undefined,
       from: tx.from.toLowerCase(),
       epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,

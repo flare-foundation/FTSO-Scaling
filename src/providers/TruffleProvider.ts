@@ -17,7 +17,7 @@ import {
   VoterWithWeight,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, recoverSigner, signMessage } from "../web3-utils";
+import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 
 export interface TruffleProviderOptions {
@@ -165,12 +165,7 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    const block = (await this.web3.eth.getBlock(blockNumber, true)) as any as BlockData;
-    block.timestamp = parseInt("" + block.timestamp, 10);
-    for (const tx of block.transactions) {
-      tx.receipt = await this.web3.eth.getTransactionReceipt(tx.hash);
-    }
-    return block;
+    return await getFilteredBlock(this.web3, blockNumber, [this.contractAddresses.voting, this.contractAddresses.votingRewardManager]);
   }
 
   get senderAddressLowercase(): string {
