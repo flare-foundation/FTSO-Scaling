@@ -1,5 +1,5 @@
 import { FTSOClient } from "./FTSOClient";
-import { getLogger } from "./utils/logger";
+import { getLogger, logError } from "./utils/logger";
 import { sleepFor } from "./time-utils";
 
 export class DataProvider {
@@ -21,9 +21,14 @@ export class DataProvider {
     const timeSec = this.currentTimeSec();
     const nextEpochStartSec = this.client.epochs.nextPriceEpochStartSec(timeSec);
 
-    setTimeout(() => {
-      this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
-      this.schedulePriceEpochActions();
+    setTimeout(async () => {
+      try {
+        await this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
+        this.schedulePriceEpochActions();
+      } catch (e) {
+        logError(this.logger, e, "Error in price epoch, terminating");
+        process.exit(1);
+      }
     }, (nextEpochStartSec - timeSec + 1) * 1000);
   }
 
