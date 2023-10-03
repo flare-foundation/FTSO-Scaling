@@ -42,15 +42,13 @@ export class DataProvider {
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
       await this.runVotingProcotol(currentPriceEpochId);
-      await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
     }
-
-    if (!this.isRegisteredForRewardEpoch(nextRewardEpochId) && this.client.rewardEpochOffers.has(nextRewardEpochId)) {
-      await this.registerForRewardEpoch(nextRewardEpochId);
-    }
-
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
+
+    await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
+    await this.maybeRegisterForRewardEpoch(nextRewardEpochId);
+
     this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);
   }
 
@@ -80,7 +78,10 @@ export class DataProvider {
     this.hasCommits = true;
   }
 
-  private async registerForRewardEpoch(nextRewardEpochId: number) {
+  private async maybeRegisterForRewardEpoch(nextRewardEpochId: number) {
+    if (this.isRegisteredForRewardEpoch(nextRewardEpochId) || !this.client.rewardEpochOffers.has(nextRewardEpochId)) {
+      return;
+    }
     this.logger.info(`Registering for next reward epoch ${nextRewardEpochId}`);
 
     if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(nextRewardEpochId);
