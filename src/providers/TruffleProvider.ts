@@ -60,10 +60,15 @@ export class TruffleProvider implements IVotingProvider {
     return this.contracts.voterRegistry.thresholdForRewardEpoch(rewardEpochId);
   }
 
-  async claimReward(claim: RewardClaimWithProof): Promise<any> {
-    return this.contracts.votingRewardManager.claimReward(hexlifyBN(claim), this.account.address, {
-      from: this.account.address,
-    });
+  async claimRewards(claims: RewardClaimWithProof[]): Promise<any> {
+    const receipts: any[] = [];
+    for (const claim of claims) {
+      const receipt = await this.contracts.votingRewardManager.claimReward(hexlifyBN(claim), this.account.address, {
+        from: this.account.address,
+      });
+      receipts.push(receipt);
+    }
+    return receipts;
   }
 
   async offerRewards(offers: Offer[]): Promise<any> {
@@ -165,7 +170,10 @@ export class TruffleProvider implements IVotingProvider {
   }
 
   async getBlock(blockNumber: number): Promise<BlockData> {
-    return await getFilteredBlock(this.web3, blockNumber, [this.contractAddresses.voting, this.contractAddresses.votingRewardManager]);
+    return await getFilteredBlock(this.web3, blockNumber, [
+      this.contractAddresses.voting,
+      this.contractAddresses.votingRewardManager,
+    ]);
   }
 
   get senderAddressLowercase(): string {

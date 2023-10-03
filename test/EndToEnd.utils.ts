@@ -306,7 +306,7 @@ export async function claimRewards(
     }
     const originalFlrBalance = toBN(await web3.eth.getBalance(client.address));
 
-    const receipts = await client.claimReward(claimRewardEpoch);
+    const receipts = await client.claimRewards(claimRewardEpoch);
     let txFee = toBN(0);
     for (const receipt of receipts) {
       txFee = txFee.add(toBN(receipt.receipt.gasUsed).mul(toBN(receipt.receipt.effectiveGasPrice)));

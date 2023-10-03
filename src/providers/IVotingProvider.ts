@@ -28,7 +28,7 @@ export interface IVotingProvider {
   thresholdForRewardEpoch(rewardEpochId: number): Promise<BN>;
 
   ////////////// Contract calls //////////////
-  claimReward(claim: RewardClaimWithProof): Promise<any>;
+  claimRewards(claim: RewardClaimWithProof[]): Promise<any>;
   offerRewards(offer: Offer[]): Promise<any>;
   commit(hash: string): Promise<any>;
   revealBitvote(epochData: EpochData): Promise<any>;

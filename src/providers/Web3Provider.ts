@@ -27,8 +27,6 @@ import { getAccount, getFilteredBlock, loadContract, recoverSigner, signMessage 
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 
-const FORCE_NONCE_RESET_ON = 3;
-
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
   readonly voting: Voting;
@@ -41,9 +39,6 @@ export class Web3Provider implements IVotingProvider {
   private readonly logger = getLogger(Web3Provider.name);
   private readonly votingAcccount: Account;
   private readonly claimAccount: Account;
-
-  private localNonce: number | undefined;
-  private nonceResetCount: number = FORCE_NONCE_RESET_ON;
 
   private constructor(
     readonly contractAddresses: ContractAddresses,
@@ -80,19 +75,23 @@ export class Web3Provider implements IVotingProvider {
     );
   }
 
-  async claimReward(claim: RewardClaimWithProof): Promise<any> {
-    this.logger.info(`Calling claim reward contract with claim ${claim}, using ${this.claimAccount.address}`);
-    const methodCall = this.contracts.votingRewardManager.methods.claimReward(
-      hexlifyBN(claim),
-      this.votingAcccount.address
-    );
-    return await this.signAndFinalize(
-      "Claim reward",
-      this.contracts.votingRewardManager.options.address,
-      methodCall,
-      0,
-      this.claimAccount
-    );
+  async claimRewards(claims: RewardClaimWithProof[]): Promise<any> {
+    let nonce = await this.getNonce(this.claimAccount);
+    for (const claim of claims) {
+      this.logger.info(`Calling claim reward contract with ${claim}, using ${this.claimAccount.address}, nonce ${nonce}`);
+      const methodCall = this.contracts.votingRewardManager.methods.claimReward(
+        hexlifyBN(claim),
+        this.votingAcccount.address
+      );
+      await this.signAndFinalize(
+        "Claim reward",
+        this.contracts.votingRewardManager.options.address,
+        methodCall,
+        0,
+        this.claimAccount,
+        nonce++
+      );
+    }
   }
 
   async offerRewards(offers: Offer[]): Promise<any> {
@@ -210,15 +209,20 @@ export class Web3Provider implements IVotingProvider {
     return +(await this.contracts.votingManager.methods.getCurrentPriceEpochId().call());
   }
 
+  private async getNonce(account: Account): Promise<number> {
+    return await this.web3.eth.getTransactionCount(account.address);
+  }
+
   private async signAndFinalize(
     label: string,
     toAddress: string,
     fnToEncode: NonPayableTransactionObject<void>,
     value: number | BN = 0,
     from: Account = this.votingAcccount,
+    forceNonce?: number,
     gas: string = "2500000"
   ): Promise<void> {
-    const nonce = await this.web3.eth.getTransactionCount(from.address)
+    const nonce = forceNonce ?? (await this.getNonce(from));
     const tx = <TransactionConfig>{
       from: this.votingAcccount.address,
       to: toAddress,
@@ -240,21 +244,6 @@ export class Web3Provider implements IVotingProvider {
       // we failed to get any additional information.
       throw e;
     }
-  }
-
-  /**
-   * We keep track of the transction nonce locally to be able to submit more than one transaction for the same block.
-   * The nonce is reloaded from the network after every {@link FORCE_NONCE_RESET_ON} uses to make sure we don't get out of sync.
-   */
-  private async getNonce(): Promise<number> {
-    this.nonceResetCount--;
-    if (this.localNonce && this.nonceResetCount > 0) {
-      this.localNonce++;
-    } else {
-      this.localNonce = await this.web3.eth.getTransactionCount(this.votingAcccount.address);
-      this.nonceResetCount = FORCE_NONCE_RESET_ON;
-    }
-    return this.localNonce;
   }
 
   private async waitFinalize<T>(

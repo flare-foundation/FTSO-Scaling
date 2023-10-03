@@ -55,7 +55,7 @@ export class DataProvider {
   private async maybeClaimRewards(previousRewardEpochId: number, currentEpochId: number) {
     if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
       this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
-      await this.client.claimReward(previousRewardEpochId);
+      await this.client.claimRewards(previousRewardEpochId);
     }
   }
 
