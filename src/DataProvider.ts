@@ -1,6 +1,7 @@
 import { FTSOClient } from "./FTSOClient";
-import { getLogger, logError } from "./utils/logger";
+import { getLogger } from "./utils/logger";
 import { sleepFor } from "./time-utils";
+import { errorString } from "./utils/error";
 
 export class DataProvider {
   private readonly logger = getLogger(DataProvider.name);
@@ -11,6 +12,8 @@ export class DataProvider {
   private hasCommits: boolean = false;
   /** Tracks reward epochs the data provider is registered as a voter for. */
   private readonly registeredRewardEpochs = new Set<number>();
+
+  private lastProcessedPriceEpochId?: number;
 
   async run() {
     await this.client.processNewBlocks(); // Initial catchup.
@@ -24,16 +27,23 @@ export class DataProvider {
     setTimeout(async () => {
       try {
         await this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
-        this.schedulePriceEpochActions();
       } catch (e) {
-        logError(this.logger, e, "Error in price epoch, terminating");
+        this.logger.error(`Error in price epoch, terminating: ${errorString(e)}`);
         process.exit(1);
       }
+      this.schedulePriceEpochActions();
     }, (nextEpochStartSec - timeSec + 1) * 1000);
   }
 
   async onPriceEpoch() {
     const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
+
+    if (this.lastProcessedPriceEpochId !== undefined && this.lastProcessedPriceEpochId !== currentPriceEpochId - 1) {
+      throw new Error(
+        `Skipped a price epoch. Last processed: ${this.lastProcessedPriceEpochId}, current: ${currentPriceEpochId}.`
+      );
+    }
+
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
     this.logger.info(`[${currentPriceEpochId}] Processing price epoch, current reward epoch: ${currentRewardEpochId}.`);
 
@@ -42,6 +52,7 @@ export class DataProvider {
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
       await this.runVotingProcotol(currentPriceEpochId);
+      this.lastProcessedPriceEpochId = currentPriceEpochId;
     }
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
