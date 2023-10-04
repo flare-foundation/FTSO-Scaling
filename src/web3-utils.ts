@@ -4,7 +4,7 @@ import Web3 from "web3";
 import { Account } from "web3-core";
 import { BareSignature, BlockData, TxData } from "./voting-interfaces";
 import { retry } from "./utils/retry";
-import { getLogger } from "./utils/logger";
+import { TransactionReceipt } from "web3-core/types";
 
 export function getWeb3(rpcLink: string, logger?: any): Web3 {
   const web3 = new Web3();
@@ -108,30 +108,20 @@ export async function getFilteredBlock(
 
   const relevantContracts = new Set(contractAddresses);
   const relevantTransactions = rawBlock.transactions.filter(tx => tx.to != null && relevantContracts.has(tx.to));
-  const getReceipts = relevantTransactions.map(tx => {
+  const receiptPromises = relevantTransactions.map(async tx => {
+    let receipt: TransactionReceipt;
     try {
-      return retry(async () => web3.eth.getTransactionReceipt(tx.hash));
+      receipt = await retry(async () => web3.eth.getTransactionReceipt(tx.hash));
     } catch (e) {
-      getLogger("getFilteredBlock").error(
-        `Error getting receipt for block ${blockNumber} tx ${JSON.stringify(tx, null, 2)}: ${e}`
-      );
-      return undefined;
+      throw new Error(`Error getting receipt for block ${blockNumber} tx ${JSON.stringify(tx, null, 2)}`, { cause: e });
     }
+    if (receipt === null) {
+      throw new Error(`Receipt for transaction ${tx.hash} is null, transaction: ${JSON.stringify(tx, null, 2)}`);
+    }
+    return receipt;
   });
-  const receipts = await Promise.all(getReceipts);
 
-  receipts.forEach((receipt, i) => {
-    if (receipt === null)
-      throw new Error(
-        `Receipt for transaction ${rawBlock.transactions[i].hash} not found, block: ${JSON.stringify(
-          rawBlock,
-          null,
-          2
-        )}\n Tx ${JSON.stringify(rawBlock.transactions[i], null, 2)}\n Tx input: ${web3.utils.toAscii(
-          rawBlock.transactions[i].input
-        )}`
-      );
-  });
+  const receipts = await Promise.all(receiptPromises);
 
   const blockData: BlockData = {
     number: rawBlock.number,
@@ -150,4 +140,24 @@ export async function getFilteredBlock(
     }),
   };
   return blockData;
+}
+
+/**
+ * List of error message excerpts returned by the Web3js client
+ * which indicate a transient issue (for which we can attempt to retry).
+ */
+const transientTxErrorMsgs = [
+  "Failed to check for transaction receipt",
+  "Transaction was not mined",
+  "Invalid JSON RPC response",
+  "nonce too low",
+].map(msg => msg.toLowerCase());
+
+export function isTransientTxError(error: Error): boolean {
+  const errorMsg = error.message.toLowerCase();
+  return transientTxErrorMsgs.some(msg => errorMsg.includes(msg));
+}
+
+export function isRevertError(error: Error): boolean {
+  return error.message.includes("Transaction has been reverted by the EVM");
 }
