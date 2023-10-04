@@ -37,6 +37,7 @@ import { BlockIndexer, Received } from "./BlockIndexer";
 import { retry } from "./utils/retry";
 import { sleepFor } from "./time-utils";
 import { Bytes32 } from "./utils/sol-types";
+import { asError, errorString } from "./utils/error";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
@@ -56,6 +57,8 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
  */
 export class FTSOClient {
   private readonly logger = getLogger(FTSOClient.name);
+
+  private readonly voterWeight = DEFAULT_VOTER_WEIGHT;
 
   rewardCalculator!: RewardCalculator;
   lastProcessedBlockNumber: number = 0;
@@ -109,7 +112,16 @@ export class FTSOClient {
    */
   async registerAsVoter(rewardEpochId: number): Promise<void> {
     this.logger.info(`Registering as a voter for reward epoch ${rewardEpochId}`);
-    await this.provider.registerAsVoter(rewardEpochId, DEFAULT_VOTER_WEIGHT);
+    try {
+      await this.provider.registerAsVoter(rewardEpochId, this.voterWeight);
+    } catch (e) {
+      const error = asError(e);
+      if (error.message.includes("already registered")) {
+        this.logger.info(`Already registered as a voter for reward epoch ${rewardEpochId}`);
+      } else {
+        throw error;
+      }
+    }
     this.logger.info(`Done registering as a voter for reward epoch ${rewardEpochId}`);
   }
 
@@ -142,14 +154,18 @@ export class FTSOClient {
     try {
       const currentBlockNumber = await this.provider.getBlockNumber();
       while (this.lastProcessedBlockNumber < currentBlockNumber) {
-        const block = await retry(async () => {
-          return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
-        });
+        const block = await retry(
+          async () => {
+            return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
+          },
+          3,
+          2000
+        );
         await this.indexer.processBlock(block);
         this.lastProcessedBlockNumber++;
       }
-    } catch (e: any) {
-      this.logger.error(`Error processing new blocks: ${e.message}\n${e.stack}`);
+    } catch (e: unknown) {
+      this.logger.error(`Error processing new blocks: ${errorString(e)}`);
     }
   }
 
@@ -333,7 +349,7 @@ export class FTSOClient {
       await this.provider.finalize(priceEpochId, merkleRoot, signatures);
       this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}.`);
     } catch (e) {
-      this.logger.info(`Failed to submit finalization transaction: ${e}`);
+      this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
     }
   }
 
@@ -347,7 +363,7 @@ export class FTSOClient {
 
   async claimRewards(rewardEpochId: number) {
     const rewardClaims = this.generateClaimsWithProofForClaimer(rewardEpochId, this.address);
-    return await this.provider.claimRewards(rewardClaims);;
+    return await this.provider.claimRewards(rewardClaims);
   }
 
   generateClaimsWithProofForClaimer(rewardEpochId: number, claimer: string): RewardClaimWithProof[] {
