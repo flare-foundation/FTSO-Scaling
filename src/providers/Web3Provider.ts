@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { Account, TransactionConfig } from "web3-core";
+import { Account, TransactionConfig, TransactionReceipt, SignedTransaction } from "web3-core";
 import { ContractAddresses } from "../../deployment/tasks/common";
 
 import Web3 from "web3";
@@ -12,7 +12,6 @@ import {
   VotingRewardManager,
 } from "../../typechain-web3/contracts/voting/implementation";
 import { NonPayableTransactionObject } from "../../typechain-web3/types";
-import { sleepFor } from "../time-utils";
 import {
   BareSignature,
   BlockData,
@@ -23,9 +22,19 @@ import {
   VoterWithWeight,
 } from "../voting-interfaces";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, getFilteredBlock, loadContract, recoverSigner, signMessage } from "../web3-utils";
+import {
+  getAccount,
+  getFilteredBlock,
+  isRevertError as isRevertTxError,
+  isTransientTxError,
+  loadContract,
+  recoverSigner,
+  signMessage,
+} from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
+import { retryPredicate, retryWithTimeout } from "../utils/retry";
+import { RevertedTxError, asError } from "../utils/error";
 
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
@@ -78,7 +87,9 @@ export class Web3Provider implements IVotingProvider {
   async claimRewards(claims: RewardClaimWithProof[]): Promise<any> {
     let nonce = await this.getNonce(this.claimAccount);
     for (const claim of claims) {
-      this.logger.info(`Calling claim reward contract with ${claim}, using ${this.claimAccount.address}, nonce ${nonce}`);
+      this.logger.info(
+        `Calling claim reward contract with ${claim.body.amount}, using ${this.claimAccount.address}, nonce ${nonce}`
+      );
       const methodCall = this.contracts.votingRewardManager.methods.claimReward(
         hexlifyBN(claim),
         this.votingAcccount.address
@@ -220,52 +231,95 @@ export class Web3Provider implements IVotingProvider {
     value: number | BN = 0,
     from: Account = this.votingAcccount,
     forceNonce?: number,
-    gas: string = "2500000"
-  ): Promise<void> {
-    const nonce = forceNonce ?? (await this.getNonce(from));
-    const tx = <TransactionConfig>{
-      from: this.votingAcccount.address,
-      to: toAddress,
-      gas: gas,
-      data: fnToEncode.encodeABI(),
-      value: value,
-      nonce: nonce,
-    };
-    const signedTx = await from.signTransaction(tx);
-    try {
-      await this.waitFinalize(from.address, nonce, () => this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!));
-    } catch (e) {
-      if (e instanceof Error && e.message.indexOf("Transaction has been reverted by the EVM") >= 0) {
-        this.logger.debug(`[${label}] Transaction failed: ${e.message}`);
-        // This call should throw a new exception containing the revert reason
-        await fnToEncode.call({ from: from.address });
-      }
-      // Otherwise, either revert reason was already part of the original error or
-      // we failed to get any additional information.
-      throw e;
+    gasPriceMultiplier: number = this.config.gasPriceMultiplier
+  ): Promise<TransactionReceipt> {
+    // Try a dry-run of the transaction first.
+    // If it fails, we just return the error and skip sending a real transaction.
+    // If it succeeds, we try to send the real transaction. Note that it might still fail if the state changes in the meantime.
+    const dryRunError: Error | undefined = await this.dryRunTx(fnToEncode, from, label);
+    if (dryRunError instanceof Error) {
+      throw dryRunError;
     }
+
+    const gasPrice = toBN(await this.web3.eth.getGasPrice());
+
+    let txNonce: number;
+    const sendTx = async () => {
+      txNonce = forceNonce ?? (await this.getNonce(from));
+      const tx = <TransactionConfig>{
+        from: from.address,
+        to: toAddress,
+        gas: this.config.gasLimit.toString(),
+        gasPrice: gasPrice.muln(gasPriceMultiplier).toString(),
+        data: fnToEncode.encodeABI(),
+        value: value,
+        nonce: txNonce,
+      };
+      const signedTx = await from.signTransaction(tx);
+      return this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!);
+    };
+
+    const receiptOrError: Error | TransactionReceipt = await retryWithTimeout(async () => {
+      try {
+        return await sendTx();
+      } catch (e: unknown) {
+        const error = asError(e);
+        this.logger.info(`[${label}] Transaction failed, raw error: ${JSON.stringify(e)}`);
+
+        if (isRevertTxError(error)) {
+          // Don't retry if transaction has been reverted, propagate error result.
+          return this.getRevertReasonError(label, fnToEncode, from);
+        } else if (isTransientTxError(error)) {
+          // Retry on transient errors
+          this.logger.info(`[${label}] Transaction error, will retry: ${error.message}`);
+          throw error;
+        } else {
+          // Don't retry, propagate unexpected errors.
+          return new Error(`[${label}] Unexpected error sending tx`, { cause: error });
+        }
+      }
+    }, 20_000);
+
+    if (receiptOrError instanceof Error) throw receiptOrError as Error;
+
+    const isTxFinalized = async () => (await this.getNonce(from)) > txNonce;
+    await retryPredicate(isTxFinalized, 8, 1000);
+
+    return receiptOrError as TransactionReceipt;
   }
 
-  private async waitFinalize<T>(
-    address: string,
-    nonce: number,
-    func: () => Promise<T>,
-    delay: number = 1000
-  ): Promise<T> {
-    const res = await func();
-    const backoff = 1.5;
-    let retries = 0;
-    while ((await this.web3.eth.getTransactionCount(address)) <= nonce) {
-      await sleepFor(delay);
-      if (retries < 8) {
-        delay = Math.floor(delay * backoff);
-        retries++;
-      } else {
-        throw new Error("Response timeout");
-      }
-      this.logger.info(`Delay backoff ${delay} (${retries})`);
+  /**
+   * Web3js can be configured to include the revert reason in the original error object when sending a transaction (using `web3.eth.handleRevert`).
+   * However, this doesn't seem to work reliably - it does not always produce the revert reason. So instead, we run the dry-run logic again,
+   * where it seems to be always populated).
+   *
+   * Note that this still might fail if the state changes between the original transaction call and the dry-run call, but that is not very likely to happen.
+   */
+  private async getRevertReasonError(
+    label: string,
+    fnToEncode: NonPayableTransactionObject<void>,
+    from: Account
+  ): Promise<Error> {
+    const revertError = await this.dryRunTx(fnToEncode, from, label);
+    if (revertError === undefined) {
+      return new RevertedTxError(
+        `[${label}] Transaction reverted, but failed to get revert reason - state might have changed since original transaction call.`
+      );
+    } else return revertError;
+  }
+
+  /** Simulates running the transaction. Returns an error object with the revert reason if it fails. */
+  private async dryRunTx(
+    fnToEncode: NonPayableTransactionObject<void>,
+    from: Account,
+    label: string
+  ): Promise<Error | undefined> {
+    try {
+      await fnToEncode.call({ from: from.address });
+      return undefined;
+    } catch (e: unknown) {
+      return new RevertedTxError(`[${label}] Transaction reverted`, asError(e));
     }
-    return res;
   }
 
   static async create(

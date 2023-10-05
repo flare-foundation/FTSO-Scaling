@@ -1,7 +1,8 @@
 {
   "governancePrivateKey": "<set in .env>",
   "rpcUrl": "https://coston2-api.flare.network/ext/C/rpc",
-  "gasPrice": "3000000000000",
+  "gasLimit": "2500000",
+  "gasPriceMultiplier": 1.2,
   "symbols": [
     { "offerSymbol": "ETH", "quoteSymbol": "USDT" },
     { "offerSymbol": "BTC", "quoteSymbol": "USDT" },

@@ -47,17 +47,3 @@ export function getLogger(label: string): Logger {
   loggers.set(label, logger);
   return logger;
 }
-
-/** Logs error and its cause if defined. */
-export function logError(logger: Logger, error: unknown, labelText: string | null = null) {
-  const label = labelText ? `${labelText}: ` : "";
-
-  if (error instanceof Error) {
-    const errorDetails = (e: Error) => (e.stack ? `\n${e.stack}` : e.message);
-    const cause = error.cause instanceof Error ? `\n[Caused by]: ${errorDetails(error.cause)}` : "";
-    const msg = label + errorDetails(error) + cause;
-    logger.error(msg);
-  } else {
-    logger.error(`${label}Caught a non-error objet: ${JSON.stringify(error)}`);
-  }
-}

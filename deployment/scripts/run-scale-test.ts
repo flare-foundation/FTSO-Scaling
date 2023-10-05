@@ -25,12 +25,12 @@ async function main() {
 
   const accounts: AccountDetails[] = JSON.parse(fs.readFileSync("coston2-100-accounts.json", "utf-8")).slice(
     0,
-    numAccounts
+    numAccounts * 2
   );
 
   await fundAccounts(web3, accounts);
   console.log("Funded accounts.");
-  await runProviders(accounts);
+  await runProviders(numAccounts, accounts);
 
   while (true) {
     await sleepFor(10_000);
@@ -50,7 +50,7 @@ async function fundAccounts(web3: Web3, accounts: AccountDetails[]) {
   const sends: Promise<any>[] = [];
   for (const account of accounts) {
     const weiBalance = toBN(await web3.eth.getBalance(account.address));
-    console.log("Account balance: ", weiBalance.toString());
+    console.log(`Account balance: ${account.address} `, weiBalance.toString());
     if (weiBalance.lt(weiValue)) {
       const toSend = weiValue.sub(weiBalance);
       console.log(`Sending ${web3.utils.fromWei(toSend)} to ${account.address}`);
@@ -69,14 +69,14 @@ async function fundAccounts(web3: Web3, accounts: AccountDetails[]) {
   await Promise.all(sends);
 }
 
-async function runProviders(accounts: AccountDetails[]) {
-  for (let i = 0; i < accounts.length; i++) {
-    const id = i + 1;
+async function runProviders(numAccounts: number, accounts: AccountDetails[]) {
+  for (let i = 0; i < numAccounts; i++) {
     const envConfig = {
       ...process.env,
-      DATA_PROVIDER_PRIVATE_KEY: accounts[i].privateKey,
+      DATA_PROVIDER_VOTING_KEY: accounts[i * 2].privateKey,
+      DATA_PROVIDER_CLAIM_KEY: accounts[i * 2 + 1].privateKey,
     };
-    startDataProvider(id, envConfig);
+    startDataProvider(i + 1, envConfig);
     await sleepFor(1000);
   }
 }
