@@ -24,15 +24,18 @@ async function main() {
   const contractAddresses = loadContracts();
   getLogger("data-provider").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
 
-  let privateKey: string;
-  if (process.env.DATA_PROVIDER_PRIVATE_KEY != undefined) {
-    privateKey = process.env.DATA_PROVIDER_PRIVATE_KEY;
+  let votingKey: string;
+  let claimKey: string;
+  if (process.env.DATA_PROVIDER_VOTING_KEY != undefined && process.env.DATA_PROVIDER_CLAIM_KEY != undefined) {
+    votingKey = process.env.DATA_PROVIDER_VOTING_KEY;
+    claimKey = process.env.DATA_PROVIDER_CLAIM_KEY;
   } else {
     const accounts = loadAccounts(web3);
-    privateKey = accounts[myId].privateKey;
+    votingKey = accounts[myId * 2 - 1].privateKey;
+    claimKey = accounts[myId * 2].privateKey;
   }
 
-  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
+  const provider = await Web3Provider.create(contractAddresses, web3, parameters, votingKey, claimKey);
   const client = new FTSOClient(provider, await provider.getBlockNumber());
   let feeds: IPriceFeed[];
   if (useRandomFeed) {

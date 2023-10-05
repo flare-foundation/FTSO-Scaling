@@ -1,5 +1,5 @@
 import { FTSOClient } from "./FTSOClient";
-import { getLogger } from "./utils/logger";
+import { getLogger, logError } from "./utils/logger";
 import { sleepFor } from "./time-utils";
 
 export class DataProvider {
@@ -21,9 +21,14 @@ export class DataProvider {
     const timeSec = this.currentTimeSec();
     const nextEpochStartSec = this.client.epochs.nextPriceEpochStartSec(timeSec);
 
-    setTimeout(() => {
-      this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
-      this.schedulePriceEpochActions();
+    setTimeout(async () => {
+      try {
+        await this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
+        this.schedulePriceEpochActions();
+      } catch (e) {
+        logError(this.logger, e, "Error in price epoch, terminating");
+        process.exit(1);
+      }
     }, (nextEpochStartSec - timeSec + 1) * 1000);
   }
 
@@ -37,22 +42,20 @@ export class DataProvider {
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
       await this.runVotingProcotol(currentPriceEpochId);
-      await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
     }
-
-    if (!this.isRegisteredForRewardEpoch(nextRewardEpochId) && this.client.rewardEpochOffers.has(nextRewardEpochId)) {
-      await this.registerForRewardEpoch(nextRewardEpochId);
-    }
-
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
+
+    await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
+    await this.maybeRegisterForRewardEpoch(nextRewardEpochId);
+
     this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);
   }
 
   private async maybeClaimRewards(previousRewardEpochId: number, currentEpochId: number) {
     if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
       this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
-      await this.client.claimReward(previousRewardEpochId);
+      await this.client.claimRewards(previousRewardEpochId);
     }
   }
 
@@ -75,7 +78,10 @@ export class DataProvider {
     this.hasCommits = true;
   }
 
-  private async registerForRewardEpoch(nextRewardEpochId: number) {
+  private async maybeRegisterForRewardEpoch(nextRewardEpochId: number) {
+    if (this.isRegisteredForRewardEpoch(nextRewardEpochId) || !this.client.rewardEpochOffers.has(nextRewardEpochId)) {
+      return;
+    }
     this.logger.info(`Registering for next reward epoch ${nextRewardEpochId}`);
 
     if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(nextRewardEpochId);

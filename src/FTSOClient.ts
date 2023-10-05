@@ -355,14 +355,9 @@ export class FTSOClient {
     return await this.provider.publishPrices(result, symbolIndices);
   }
 
-  async claimReward(rewardEpochId: number) {
+  async claimRewards(rewardEpochId: number) {
     const rewardClaims = this.generateClaimsWithProofForClaimer(rewardEpochId, this.address);
-    const receipts = [];
-    for (const rewardClaim of rewardClaims) {
-      const receipt = await this.provider.claimReward(rewardClaim);
-      receipts.push(receipt);
-    }
-    return receipts;
+    return await this.provider.claimRewards(rewardClaims);;
   }
 
   generateClaimsWithProofForClaimer(rewardEpochId: number, claimer: string): RewardClaimWithProof[] {

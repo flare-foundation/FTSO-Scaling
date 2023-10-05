@@ -27,8 +27,6 @@ import { getAccount, getFilteredBlock, loadContract, recoverSigner, signMessage 
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 
-const FORCE_NONCE_RESET_ON = 3;
-
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
   readonly voting: Voting;
@@ -39,10 +37,8 @@ interface TypeChainContracts {
 
 export class Web3Provider implements IVotingProvider {
   private readonly logger = getLogger(Web3Provider.name);
-  private account: Account;
-
-  private localNonce: number | undefined;
-  private nonceResetCount: number = FORCE_NONCE_RESET_ON;
+  private readonly votingAcccount: Account;
+  private readonly claimAccount: Account;
 
   private constructor(
     readonly contractAddresses: ContractAddresses,
@@ -54,19 +50,48 @@ export class Web3Provider implements IVotingProvider {
     readonly web3: Web3,
     private contracts: TypeChainContracts,
     private config: FTSOParameters,
-    privateKey: string
+    votingKey: string,
+    claimKey: string
   ) {
-    this.account = getAccount(web3, privateKey);
+    this.votingAcccount = getAccount(web3, votingKey);
+    this.claimAccount = getAccount(web3, claimKey);
   }
+
   async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
     const threshold = await this.contracts.voterRegistry.methods.thresholdForRewardEpoch(rewardEpochId).call();
     return toBN(threshold);
   }
 
-  async claimReward(claim: RewardClaimWithProof): Promise<any> {
-    this.logger.info("Calling claim reward contract with", claim);
-    const methodCall = this.contracts.votingRewardManager.methods.claimReward(hexlifyBN(claim), this.account.address);
-    return await this.signAndFinalize("Claim reward", this.contracts.votingRewardManager.options.address, methodCall);
+  /**
+   * Authorizes the provided claimer account to process reward claims for the voter.
+   * Note: the voter account will still be the beneficiary of the reward value.
+   */
+  private async authorizeClaimer(claimerAddress: string): Promise<any> {
+    const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
+    return await this.signAndFinalize(
+      "Authorize claimer",
+      this.contracts.votingRewardManager.options.address,
+      methodCall
+    );
+  }
+
+  async claimRewards(claims: RewardClaimWithProof[]): Promise<any> {
+    let nonce = await this.getNonce(this.claimAccount);
+    for (const claim of claims) {
+      this.logger.info(`Calling claim reward contract with ${claim}, using ${this.claimAccount.address}, nonce ${nonce}`);
+      const methodCall = this.contracts.votingRewardManager.methods.claimReward(
+        hexlifyBN(claim),
+        this.votingAcccount.address
+      );
+      await this.signAndFinalize(
+        "Claim reward",
+        this.contracts.votingRewardManager.options.address,
+        methodCall,
+        0,
+        this.claimAccount,
+        nonce++
+      );
+    }
   }
 
   async offerRewards(offers: Offer[]): Promise<any> {
@@ -129,13 +154,14 @@ export class Web3Provider implements IVotingProvider {
       epochResult.priceEpochId,
       epochResult.priceMessage,
       epochResult.symbolMessage,
+      epochResult.randomMessage,
       symbolIndices
     );
     return await this.signAndFinalize("Publish prices", this.contracts.priceOracle.options.address, methodCall);
   }
 
   async signMessage(message: string): Promise<BareSignature> {
-    const signature = signMessage(this.web3, message, this.account.privateKey);
+    const signature = signMessage(this.web3, message, this.votingAcccount.privateKey);
     return Promise.resolve(signature);
   }
 
@@ -172,7 +198,7 @@ export class Web3Provider implements IVotingProvider {
   }
 
   get senderAddressLowercase(): string {
-    return this.account.address.toLowerCase();
+    return this.votingAcccount.address.toLowerCase();
   }
 
   async getCurrentRewardEpochId(): Promise<number> {
@@ -183,52 +209,41 @@ export class Web3Provider implements IVotingProvider {
     return +(await this.contracts.votingManager.methods.getCurrentPriceEpochId().call());
   }
 
+  private async getNonce(account: Account): Promise<number> {
+    return await this.web3.eth.getTransactionCount(account.address);
+  }
+
   private async signAndFinalize(
     label: string,
     toAddress: string,
     fnToEncode: NonPayableTransactionObject<void>,
     value: number | BN = 0,
+    from: Account = this.votingAcccount,
+    forceNonce?: number,
     gas: string = "2500000"
   ): Promise<void> {
-    const nonce = await this.getNonce();
+    const nonce = forceNonce ?? (await this.getNonce(from));
     const tx = <TransactionConfig>{
-      from: this.account.address,
+      from: this.votingAcccount.address,
       to: toAddress,
       gas: gas,
       data: fnToEncode.encodeABI(),
       value: value,
       nonce: nonce,
     };
-    const signedTx = await this.account.signTransaction(tx);
+    const signedTx = await from.signTransaction(tx);
     try {
-      await this.waitFinalize(this.account.address, nonce, () =>
-        this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!)
-      );
-    } catch (e: any) {
-      this.logger.debug(`[${label}] Transaction failed: ${e.message}`);
-      if (e.message.indexOf("Transaction has been reverted by the EVM") >= 0) {
+      await this.waitFinalize(from.address, nonce, () => this.web3.eth.sendSignedTransaction(signedTx.rawTransaction!));
+    } catch (e) {
+      if (e instanceof Error && e.message.indexOf("Transaction has been reverted by the EVM") >= 0) {
+        this.logger.debug(`[${label}] Transaction failed: ${e.message}`);
         // This call should throw a new exception containing the revert reason
-        await fnToEncode.call({ from: this.account.address });
+        await fnToEncode.call({ from: from.address });
       }
       // Otherwise, either revert reason was already part of the original error or
       // we failed to get any additional information.
       throw e;
     }
-  }
-
-  /**
-   * We keep track of the transction nonce locally to be able to submit more than one transaction for the same block.
-   * The nonce is reloaded from the network after every {@link FORCE_NONCE_RESET_ON} uses to make sure we don't get out of sync.
-   */
-  private async getNonce(): Promise<number> {
-    this.nonceResetCount--;
-    if (this.localNonce && this.nonceResetCount > 0) {
-      this.localNonce++;
-    } else {
-      this.localNonce = await this.web3.eth.getTransactionCount(this.account.address);
-      this.nonceResetCount = FORCE_NONCE_RESET_ON;
-    }
-    return this.localNonce;
   }
 
   private async waitFinalize<T>(
@@ -253,7 +268,13 @@ export class Web3Provider implements IVotingProvider {
     return res;
   }
 
-  static async create(contractAddresses: ContractAddresses, web3: Web3, config: FTSOParameters, privateKey: string) {
+  static async create(
+    contractAddresses: ContractAddresses,
+    web3: Web3,
+    config: FTSOParameters,
+    votingKey: string,
+    claimKey: string
+  ) {
     const contracts = {
       votingRewardManager: await loadContract<VotingRewardManager>(
         web3,
@@ -272,7 +293,7 @@ export class Web3Provider implements IVotingProvider {
     const rewardEpochDurationInEpochs = +(await contracts.votingManager.methods.rewardEpochDurationInEpochs().call());
     const signingDurationSec = +(await contracts.votingManager.methods.signingDurationSec().call());
 
-    return new Web3Provider(
+    const provider = new Web3Provider(
       contractAddresses,
       firstEpochStartSec,
       epochDurationSec,
@@ -282,7 +303,13 @@ export class Web3Provider implements IVotingProvider {
       web3,
       contracts,
       config,
-      privateKey
+      votingKey,
+      claimKey
     );
+
+    if (votingKey != claimKey) {
+      await provider.authorizeClaimer(provider.claimAccount.address);
+    }
+    return provider;
   }
 }
