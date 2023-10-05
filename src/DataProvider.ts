@@ -25,13 +25,13 @@ export class DataProvider {
     const nextEpochStartSec = this.client.epochs.nextPriceEpochStartSec(timeSec);
 
     setTimeout(async () => {
+      this.schedulePriceEpochActions();
       try {
         await this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
       } catch (e) {
         this.logger.error(`Error in price epoch, terminating: ${errorString(e)}`);
         process.exit(1);
       }
-      this.schedulePriceEpochActions();
     }, (nextEpochStartSec - timeSec + 1) * 1000);
   }
 

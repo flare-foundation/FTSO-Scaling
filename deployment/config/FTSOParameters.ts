@@ -2,12 +2,15 @@ import { readFileSync } from "fs";
 import { Feed } from "../../src/voting-interfaces";
 import * as dotenv from "dotenv";
 import { URL } from "url";
+import BN from "bn.js";
+import { toBN } from "../../src/voting-utils";
 dotenv.config();
 
 export interface FTSOParameters {
   governancePrivateKey: string;
   rpcUrl: URL;
-  gasPrice: number;
+  gasLimit: BN;
+  gasPriceMultiplier: number;
   symbols: Feed[];
 }
 
@@ -15,6 +18,7 @@ function loadParameters(filename: string): FTSOParameters {
   const jsonText = readFileSync(filename).toString();
   const parameters = JSON.parse(jsonText, (key, value) => {
     if (key === "rpcUrl") return new URL(value);
+    if (key === "gasLimit") return toBN(value);
     return value;
   });
   return parameters;
