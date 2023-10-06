@@ -1,9 +1,14 @@
 import BN from "bn.js";
 import { RewardClaim, MedianCalculationResult, RewardOffered, VoterRewarding } from "./voting-interfaces";
-import { feedId, toBN } from "./voting-utils";
+import { ZERO_ADDRESS, feedId, toBN } from "./voting-utils";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { getLogger } from "./utils/logger";
+import { partition } from "./utils/array";
+import { Penalty } from "./RewardCalculator";
+
+/** Address to which we allocate penalised reward amounts. */
+const BURN_ADDRESS = ZERO_ADDRESS;
 
 /**
  * Collection of utility methods used for reward claim calculation.
@@ -180,9 +185,12 @@ export namespace PriceEpochRewards {
 
   /**
    * Merges claims for the same beneficiary, currency and type in the provided {@link unmergedClaims} list.
+   * Applies penalties if there are any. All penalised reward amounts are allocated to the {@link BURN_ADDRESS}
+   * in the form of new reward claims.
    */
   export function mergeClaims(mergePriceEpochId: number, unmergedClaims: readonly RewardClaim[]): RewardClaim[] {
-    function mergeClaimsOfSameType(claims: RewardClaim[]): RewardClaim {
+    function mergeClaimsOfSameType(claims: RewardClaim[]): RewardClaim | undefined {
+      if (claims.length === 0) return undefined;
       const merged: RewardClaim = {
         ...claims[0],
         amount: claims.map(x => x.amount).reduce((a, b) => a.add(b), toBN(0)),
@@ -201,23 +209,93 @@ export namespace PriceEpochRewards {
     }
 
     const mergedClaims: RewardClaim[] = [];
+    const newBurnClaims: RewardClaim[] = [];
+
     for (const voterClaimsByCcy of claimsByVoterAndCcy.values()) {
-      for (const claims of voterClaimsByCcy.values()) {
-        const fixedClaims: RewardClaim[] = [];
-        const weightedClaims: RewardClaim[] = [];
-        for (const claim of claims) {
-          if (claim.isFixedClaim === true) {
-            fixedClaims.push(claim);
-          } else {
-            weightedClaims.push(claim);
+      for (const voterClaims of voterClaimsByCcy.values()) {
+        const [penalties, claims] = partition(voterClaims, claim => claim instanceof Penalty);
+        const [fixedClaims, weightedClaims] = partition(claims, claim => claim.isFixedClaim === true);
+
+        let mergedFixed = mergeClaimsOfSameType(fixedClaims);
+        let mergedWeighted = mergeClaimsOfSameType(weightedClaims);
+        let mergedPenalty = mergeClaimsOfSameType(penalties);
+
+        if (mergedPenalty) {
+          let remPenalty: RewardClaim | undefined = mergedPenalty;
+
+          if (mergedFixed) {
+            [mergedFixed, remPenalty] = applyPenalty(remPenalty, mergedPenalty);
           }
+          if (remPenalty && mergedWeighted) {
+            [mergedWeighted, remPenalty] = applyPenalty(mergedWeighted, remPenalty);
+          }
+
+          let burntAmount = mergedPenalty.amount;
+          if (remPenalty) {
+            burntAmount = burntAmount.sub(remPenalty.amount);
+          }
+          let burnClaim: RewardClaim = {
+            ...mergedPenalty,
+            isFixedClaim: true,
+            amount: burntAmount,
+            beneficiary: BURN_ADDRESS,
+          };
+          newBurnClaims.push(burnClaim);
+          mergedPenalty = remPenalty;
         }
-        if (fixedClaims.length > 0) mergedClaims.push(mergeClaimsOfSameType(fixedClaims));
-        if (weightedClaims.length > 0) mergedClaims.push(mergeClaimsOfSameType(weightedClaims));
+
+        if (mergedFixed) mergedClaims.push(mergedFixed);
+        if (mergedWeighted) mergedClaims.push(mergedWeighted);
+        if (mergedPenalty) mergedClaims.push(mergedPenalty);
       }
     }
 
-    return mergedClaims;
+    // We now have merged claims for all voters and burn address, and need to merge in newly generated burn claims.
+    const [previousBurnClaims, mergedVoterClaims] = partition(
+      mergedClaims,
+      claim => claim.beneficiary === BURN_ADDRESS
+    );
+    const mergedBurnClaim = mergeClaimsOfSameType(previousBurnClaims.concat(newBurnClaims));
+
+    if (mergedBurnClaim) {
+      return mergedVoterClaims.concat([mergedBurnClaim]);
+    } else return mergedVoterClaims;
+  }
+
+  export function applyPenalty(
+    claim: RewardClaim,
+    penalty: RewardClaim
+  ): [RewardClaim | undefined, RewardClaim | undefined] {
+    let penaltyAmountLeft: BN;
+    let claimAmountLeft: BN;
+
+    if (claim.amount.gte(penalty.amount)) {
+      claimAmountLeft = claim.amount.sub(penalty.amount);
+      penaltyAmountLeft = toBN(0);
+    } else {
+      claimAmountLeft = toBN(0);
+      penaltyAmountLeft = penalty.amount.sub(claim.amount);
+    }
+
+    let resultClaim: RewardClaim | undefined;
+    if (claimAmountLeft.gtn(0)) {
+      resultClaim = {
+        ...claim,
+        amount: claimAmountLeft,
+      };
+    } else {
+      resultClaim = undefined;
+    }
+
+    let resultPenalty: RewardClaim | undefined;
+    if (penaltyAmountLeft.gtn(0)) {
+      resultPenalty = {
+        ...penalty,
+        amount: penaltyAmountLeft,
+      };
+    } else resultPenalty = undefined;
+
+    return [resultClaim, resultPenalty];
   }
 
   /**
