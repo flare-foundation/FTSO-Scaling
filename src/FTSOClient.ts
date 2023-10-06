@@ -3,7 +3,7 @@ import Web3 from "web3";
 
 import { EpochSettings } from "./EpochSettings";
 import { MerkleTree } from "./MerkleTree";
-import { RewardCalculator } from "./RewardCalculator";
+import { Penalty, RewardCalculator } from "./RewardCalculator";
 import { calculateResultsForFeed } from "./median-calculation-utils";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
@@ -229,7 +229,11 @@ export class FTSOClient {
       Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage + randomMessage;
     const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
 
-    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(priceEpochId, results);
+    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(
+      priceEpochId,
+      results,
+      revealResult.committedFailedReveal
+    );
     const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot)!;
 
     const epochResult: EpochResult = {
@@ -249,10 +253,10 @@ export class FTSOClient {
     };
     this.priceEpochResults.set(priceEpochId, epochResult);
   }
-
   private async calculateRewards(
     priceEpochId: number,
-    results: MedianCalculationResult[]
+    results: MedianCalculationResult[],
+    committedFailedReveal: string[]
   ): Promise<[string, RewardClaim[]]> {
     const finalizationData = this.indexer.getFinalize(priceEpochId - 1);
     let rewardedSigners: string[] = [];
@@ -268,14 +272,21 @@ export class FTSOClient {
       }
     }
 
+    const voterWeights = this.eligibleVoterWeights.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!;
+
     this.rewardCalculator.calculateClaimsForPriceEpoch(
       priceEpochId,
       finalizationData?.[0].from,
       rewardedSigners,
-      results
+      results,
+      committedFailedReveal,
+      voterWeights
     );
 
-    const rewardClaims = this.rewardCalculator.getRewardClaimsForPriceEpoch(priceEpochId);
+    const rewardClaims = this.rewardCalculator
+      .getRewardClaimsForPriceEpoch(priceEpochId)
+      .filter(claim => !(claim instanceof Penalty));
+    this.logger.info(`Calculated ${rewardClaims.length} reward claims for price epoch ${priceEpochId}.`);
     const rewardClaimHashes: string[] = rewardClaims.map(claim => hashRewardClaim(claim));
     const rewardMerkleTree = new MerkleTree(rewardClaimHashes);
     const rewardMerkleRoot = rewardMerkleTree.root!;

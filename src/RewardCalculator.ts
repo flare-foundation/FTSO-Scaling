@@ -1,13 +1,27 @@
+import BN from "bn.js";
 import { EpochSettings } from "./EpochSettings";
 import { PriceEpochRewards } from "./PriceEpochRewards";
 import { FeedValue, MedianCalculationResult, RewardOffered, RewardClaim } from "./voting-interfaces";
 import { feedId, toBN } from "./voting-utils";
+import { getLogger } from "./utils/logger";
 
 /** 10% of total reward goes to the finalizer. */
 const FINALIZATION_BIPS = toBN(1_000);
 /** 10% of total reward goes to finalization signatures. */
 const SIGNING_BIPS = toBN(1_000);
 const TOTAL_BIPS = toBN(10_000);
+
+const MISSED_REVEAL_PENALIZATION: BN = toBN(10);
+
+export class Penalty implements RewardClaim {
+  readonly isFixedClaim = true;
+  constructor(
+    readonly amount: BN,
+    readonly currencyAddress: string,
+    readonly beneficiary: string,
+    readonly priceEpochId: number
+  ) {}
+}
 
 /**
  * Reward calculator for sequence of reward epochs.
@@ -35,9 +49,9 @@ export class RewardCalculator {
   readonly rewardOffersBySymbol = new Map<number, Map<string, RewardOffered[]>>();
 
   ////////////// Claim data //////////////
-  /** rewardEpochId => list of cumulative claims */
+  /** rewardEpochId => list of cumulative claims and penalties. */
   private readonly rewardEpochCumulativeRewards = new Map<number, RewardClaim[]>();
-  /** rewardEpochId => canonical list of feeds in the reward epoch */
+  /** rewardEpochId => canonical list of feeds in the reward epoch. */
   private readonly feedSequenceForRewardEpoch = new Map<number, FeedValue[]>();
 
   constructor(private readonly epochs: EpochSettings, initialRewardEpoch: number) {
@@ -181,6 +195,8 @@ export class RewardCalculator {
     finalizerAddress: string | undefined,
     signers: string[],
     calculationResults: MedianCalculationResult[],
+    committedFailedReveal: string[],
+    voterWeights: Map<string, BN>
   ) {
     if (priceEpochId !== this.currentUnprocessedPriceEpoch) {
       throw new Error(
@@ -235,8 +251,44 @@ export class RewardCalculator {
 
     PriceEpochRewards.assertOffersVsClaimsStats(priceEpochOffers, currentPriceEpochClaims);
 
+    if (committedFailedReveal.length > 0) {
+      console.log(
+        `Penalizing ${committedFailedReveal.length} voters for missed reveal: ${Array.from(
+          committedFailedReveal.entries()
+        )} `
+      );
+      const penalties = this.computePenalties(priceEpochId, committedFailedReveal, priceEpochOffers, voterWeights);
+      currentPriceEpochClaims.push(...penalties);
+    }
+
     this.addToCumulativeClaims(priceEpochId, currentPriceEpochClaims);
     this.currentUnprocessedPriceEpoch++;
+  }
+
+  private computePenalties(
+    priceEpochId: number,
+    committedFailedReveal: string[],
+    priceEpochOffers: RewardOffered[],
+    voterWeights: Map<string, BN>
+  ): Penalty[] {
+    const penaltyClaims: Penalty[] = [];
+
+    let totalWeight = toBN(0);
+    for (const voterWeight of voterWeights.values()) totalWeight = totalWeight.add(voterWeight);
+
+    for (const voter of committedFailedReveal) {
+      const voterWeight = voterWeights.get(voter);
+      if (voterWeight === undefined) throw new Error(`Illegal state: weight for voter ${voter} is undefined.`);
+
+      for (const offer of priceEpochOffers) {
+        const penaltyAmount = offer.amount.mul(voterWeight).div(totalWeight).mul(MISSED_REVEAL_PENALIZATION);
+        const penalty = new Penalty(penaltyAmount, offer.currencyAddress, voter, priceEpochId);
+        getLogger("RewardClaims").info(`Created penalty for missed reveal: ${JSON.stringify(penalty)}`);
+        penaltyClaims.push(penalty);
+      }
+    }
+
+    return penaltyClaims;
   }
 
   private addToCumulativeClaims(priceEpochId: number, currentClaims: RewardClaim[]) {

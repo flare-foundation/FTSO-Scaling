@@ -89,6 +89,8 @@ describe(`RewardCalculator; ${getTestFile(__filename)}`, () => {
       voters[0],
       voters.slice(0, 2),
       [calculationResults],
+      [],
+      voterWeights
     );
 
     const claimsByVoter = calculator.getRewardMappingForPriceEpoch(priceEpochId);
