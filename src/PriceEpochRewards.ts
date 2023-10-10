@@ -4,8 +4,8 @@ import { ZERO_ADDRESS, feedId, toBN } from "./voting-utils";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { getLogger } from "./utils/logger";
-import { partition } from "./utils/array";
 import { Penalty } from "./RewardCalculator";
+import _ from "lodash";
 
 /** Address to which we allocate penalised reward amounts. */
 const BURN_ADDRESS = ZERO_ADDRESS;
@@ -213,8 +213,8 @@ export namespace PriceEpochRewards {
 
     for (const voterClaimsByCcy of claimsByVoterAndCcy.values()) {
       for (const voterClaims of voterClaimsByCcy.values()) {
-        const [penalties, claims] = partition(voterClaims, claim => claim instanceof Penalty);
-        const [fixedClaims, weightedClaims] = partition(claims, claim => claim.isFixedClaim === true);
+        const [penalties, claims] = _.partition(voterClaims, claim => claim instanceof Penalty);
+        const [fixedClaims, weightedClaims] = _.partition(claims, claim => claim.isFixedClaim === true);
 
         let mergedFixed = mergeClaimsOfSameType(fixedClaims);
         let mergedWeighted = mergeClaimsOfSameType(weightedClaims);
@@ -251,7 +251,7 @@ export namespace PriceEpochRewards {
     }
 
     // We now have merged claims for all voters and burn address, and need to merge in newly generated burn claims.
-    const [previousBurnClaims, mergedVoterClaims] = partition(
+    const [previousBurnClaims, mergedVoterClaims] = _.partition(
       mergedClaims,
       claim => claim.beneficiary === BURN_ADDRESS
     );

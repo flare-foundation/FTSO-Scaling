@@ -3,7 +3,6 @@ import { EpochSettings } from "./EpochSettings";
 import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./EncodingUtils";
-import { getLogger } from "./utils/logger";
 
 declare type Address = string;
 declare type EpochId = number;
@@ -126,6 +125,6 @@ export class BlockIndexer extends AsyncEventEmitter {
     this.priceEpochSignatures.set(signatureData.epochId, signaturesInEpoch);
     signaturesInEpoch.set(from.toLowerCase(), [signatureData, blockTimestampSec]);
 
-    await this.emit(Received.Signature, signatureData.epochId);
+    await this.emit(Received.Signature, signatureData);
   }
 }

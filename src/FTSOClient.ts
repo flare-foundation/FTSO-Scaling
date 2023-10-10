@@ -44,7 +44,6 @@ const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
-const MAX_ASYNCHRONOUS_BLOCK_REQUESTS = 100;
 const BLOCK_PROCESSING_INTERVAL_MS = 500;
 
 function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
@@ -70,14 +69,14 @@ export class FTSOClient {
 
   // reward epoch => voter => weight
   private eligibleVotersForRewardEpoch = new Map<number, VoterWithWeight[]>();
-  private eligibleVoterWeights = new Map<number, Map<string, BN>>();
+  eligibleVoterWeights = new Map<number, Map<string, BN>>();
   private eligibleVoterTotalWeight = new Map<number, BN>();
 
   readonly rewardEpochOffers = new Map<number, RewardOffered[]>();
   private readonly rewardEpochOffersClosed = new Map<number, boolean>();
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
-  private readonly signatureListener = async (e: number) => this.checkSignaturesAndTryFinalize(e);
+  private readonly signatureListener = async (s: SignatureData) => this.checkSignaturesAndTryFinalize(s);
 
   get address() {
     return this.provider.senderAddressLowercase;
@@ -464,7 +463,7 @@ export class FTSOClient {
     this.indexer.off(Received.Signature, this.signatureListener);
   }
 
-  private async awaitFinalization(priceEpochId: number) {
+  async awaitFinalization(priceEpochId: number) {
     while (!this.indexer.getFinalize(priceEpochId)) {
       this.logger.info(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
       await sleepFor(BLOCK_PROCESSING_INTERVAL_MS);
@@ -477,7 +476,8 @@ export class FTSOClient {
    * Once sufficient voter weight in received signatures is observed, will call finalize.
    * @returns true if enough signatures were found and finalization was attempted.
    */
-  private async checkSignaturesAndTryFinalize(priceEpochId: number): Promise<boolean> {
+  private async checkSignaturesAndTryFinalize(signatureData: SignatureData): Promise<boolean> {
+    const priceEpochId = signatureData.epochId;
     if (priceEpochId! in this.priceEpochResults) {
       throw Error(`Invalid state: trying to finalize ${priceEpochId}, but results not yet computed.`);
     }
