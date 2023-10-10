@@ -84,7 +84,7 @@ export class DataProvider {
       await this.client.processNewBlocks(); // Get reveals
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
       await this.client.calculateResultsAndSign(previousEpochId);
-      await this.client.tryFinalizeOnceSignaturesReceived(previousEpochId);
+      await this.client.awaitFinalization(previousEpochId);
     }
 
     this.hasCommits = true;

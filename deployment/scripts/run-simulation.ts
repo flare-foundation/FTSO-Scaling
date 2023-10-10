@@ -7,6 +7,7 @@ import { promisify } from "util";
 import Web3 from "web3";
 
 const DATA_PROVIDER_COUNT = 3;
+const FINALIZER_COUNT = 2;
 const RPC = "http://127.0.0.1:8545";
 
 /**
@@ -34,9 +35,13 @@ async function main() {
     deployContracts(envConfig);
     childProcesses.push(startAdminDaemon());
 
-    const startId = 1; // 0 is reserved for governance account
-    for (let i = startId; i <= DATA_PROVIDER_COUNT; i++) {
-      childProcesses.push(startDataProvider(i));
+    let id = 1; // 0 is reserved for governance account
+    for (let i = 0; i < DATA_PROVIDER_COUNT; i++) {
+      childProcesses.push(startDataProvider(id++));
+      await sleepFor(1000);
+    }
+    for (let i = 0; i < FINALIZER_COUNT; i++) {
+      childProcesses.push(startFinalizer(id++));
       await sleepFor(1000);
     }
 
@@ -89,6 +94,21 @@ function startDataProvider(id: number): ChildProcess {
   process.on("close", function (code) {
     console.log("closing code: " + code);
     throw Error(`Provider ${id} exited with code ${code}`);
+  });
+  return process;
+}
+
+function startFinalizer(id: number): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-finalizer.ts", id.toString()]);
+  process.stdout.on("data", function (data) {
+    console.log(`[Finalizer ${id}]: ${data}`);
+  });
+  process.stderr.on("data", function (data) {
+    console.log(`[Finalizer ${id}] ERROR: ${data}`);
+  });
+  process.on("close", function (code) {
+    console.log("closing code: " + code);
+    throw Error(`Finalizer ${id} exited with code ${code}`);
   });
   return process;
 }
