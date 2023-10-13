@@ -34,6 +34,8 @@ export interface IVotingProvider {
   revealBitvote(epochData: EpochData): Promise<any>;
   signResult(priceEpochId: number, merkleRoot: string, signature: BareSignature): Promise<any>;
   finalize(priceEpochId: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
+  signRewards(rewardEpoch: number, merkleRoot: string, signature: BareSignature): Promise<any>;
+  finalizeRewards(rewardEpoch: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
   publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
   allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
@@ -41,6 +43,7 @@ export interface IVotingProvider {
 
   ////////////// Signing //////////////
   signMessage(message: string): Promise<BareSignature>;
+  signMessageWithKey(message: string, key: string): Promise<BareSignature>;
   recoverSigner(message: string, signature: BareSignature): Promise<string>;
 
   ////////////// Block calls //////////////

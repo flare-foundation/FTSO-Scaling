@@ -15,7 +15,7 @@ import { hexlifyBN } from "../../src/voting-utils";
 import { MerkleTree } from "../../src/MerkleTree";
 import { moveToNextRewardEpochStart } from "../../test-utils/utils/voting-test-utils";
 import Prando from "prando";
-import { PriceEpochRewards } from "../../src/PriceEpochRewards";
+import { PriceEpochRewards } from "../../src/rewards/PriceEpochRewards";
 
 chai.use(chaiBN(BN));
 

@@ -155,6 +155,24 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Finalize", this.contracts.voting.options.address, methodCall);
   }
 
+  async signRewards(rewardEpoch: number, merkleRoot: string, signature: BareSignature): Promise<any> {
+    const methodCall = this.contracts.voting.methods.signRewards(rewardEpoch, merkleRoot, [
+      signature.v,
+      signature.r,
+      signature.s,
+    ]);
+    return await this.signAndFinalize("Sign rewards", this.contracts.voting.options.address, methodCall);
+  }
+
+  async finalizeRewards(rewardEpoch: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any> {
+    const methodCall = this.contracts.voting.methods.finalizeRewards(
+      rewardEpoch,
+      mySignatureHash,
+      signatures.map(s => [s.v, s.r, s.s])
+    );
+    return await this.signAndFinalize("Finalize rewards", this.contracts.voting.options.address, methodCall);
+  }
+
   async getMerkleRoot(priceEpochId: number): Promise<string> {
     return await this.contracts.voting.methods.getMerkleRootForPriceEpoch(priceEpochId).call();
   }
@@ -170,9 +188,13 @@ export class Web3Provider implements IVotingProvider {
     );
     return await this.signAndFinalize("Publish prices", this.contracts.priceOracle.options.address, methodCall);
   }
-
   async signMessage(message: string): Promise<BareSignature> {
     const signature = signMessage(this.web3, message, this.votingAcccount.privateKey);
+    return Promise.resolve(signature);
+  }
+
+  async signMessageWithKey(message: string, key: string = this.votingAcccount.privateKey): Promise<BareSignature> {
+    const signature = signMessage(this.web3, message, key);
     return Promise.resolve(signature);
   }
 

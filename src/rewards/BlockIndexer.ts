@@ -1,0 +1,47 @@
+import { ContractAddresses } from "../../deployment/tasks/common";
+import { BlockIndex } from "../BlockIndex";
+import { EpochSettings } from "../EpochSettings";
+import { IVotingProvider } from "../providers/IVotingProvider";
+import { sleepFor } from "../time-utils";
+import { errorString } from "../utils/error";
+import { getLogger } from "../utils/logger";
+import { retry } from "../utils/retry";
+
+export class BlockIndexer extends BlockIndex {
+  private logger = getLogger(BlockIndexer.name);
+  private lastProcessedBlockNumber = 0;
+
+  constructor(epochs: EpochSettings, private readonly provider: IVotingProvider) {
+    super(epochs, provider.contractAddresses);
+  }
+
+  async run(startBlock: number) {
+    this.lastProcessedBlockNumber = startBlock - 1;
+
+    while (true) {
+      await this.processNewBlocks();
+      await sleepFor(500);
+    }
+  }
+
+  async processNewBlocks() {
+    // this.logger.info(`Processing new blocks from ${this.lastProcessedBlockNumber + 1}.`);
+    try {
+      const currentBlockNumber = await this.provider.getBlockNumber();
+      while (this.lastProcessedBlockNumber < currentBlockNumber) {
+        const block = await retry(
+          async () => {
+            return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
+          },
+          3,
+          2000
+        );
+        await this.processBlock(block);
+        this.lastProcessedBlockNumber++;
+      }
+    } catch (e: unknown) {
+      this.logger.error(`Error processing new blocks ${this.lastProcessedBlockNumber}: ${errorString(e)}`);
+      throw e;
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { PriceEpochRewards } from "../../src/PriceEpochRewards";
+import { PriceEpochRewards } from "../../src/rewards/PriceEpochRewards";
 import { toBN } from "../../src/voting-utils";
 import { getTestFile } from "../../test-utils/utils/constants";
 

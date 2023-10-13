@@ -33,17 +33,25 @@ async function main() {
     process.env = envConfig;
 
     deployContracts(envConfig);
-    childProcesses.push(startAdminDaemon());
 
     let id = 1; // 0 is reserved for governance account
     for (let i = 0; i < DATA_PROVIDER_COUNT; i++) {
       childProcesses.push(startDataProvider(id++));
       await sleepFor(1000);
     }
+    setTimeout(() => {
+      for (let i = 0; i < DATA_PROVIDER_COUNT; i++) {
+        childProcesses.push(startRewardManager(id++));
+        sleepFor(1000);
+      }
+    }, 30_000);
+
     for (let i = 0; i < FINALIZER_COUNT; i++) {
       childProcesses.push(startFinalizer(id++));
       await sleepFor(1000);
     }
+
+    childProcesses.push(startAdminDaemon());
 
     while (true) {
       await sleepFor(10_000);
@@ -109,6 +117,21 @@ function startFinalizer(id: number): ChildProcess {
   process.on("close", function (code) {
     console.log("closing code: " + code);
     throw Error(`Finalizer ${id} exited with code ${code}`);
+  });
+  return process;
+}
+
+function startRewardManager(id: number): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-manager.ts", (id - DATA_PROVIDER_COUNT - FINALIZER_COUNT).toString(), id.toString()]);
+  process.stdout.on("data", function (data) {
+    console.log(`[Reward manager ${id}]: ${data}`);
+  });
+  process.stderr.on("data", function (data) {
+    console.log(`[Reward manager ${id}] ERROR: ${data}`);
+  });
+  process.on("close", function (code) {
+    console.log("closing code: " + code);
+    throw Error(`Reward manager ${id} exited with code ${code}`);
   });
   return process;
 }

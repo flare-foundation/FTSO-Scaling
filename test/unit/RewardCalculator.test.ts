@@ -1,5 +1,5 @@
 import { EpochSettings } from "../../src/EpochSettings";
-import { RewardCalculator } from "../../src/RewardCalculator";
+import { RewardCalculator } from "../../src/rewards/RewardCalculator";
 import { calculateResultsForFeed } from "../../src/median-calculation-utils";
 import { Feed, Offer, RewardOffered } from "../../src/voting-interfaces";
 import { feedToText, toBN } from "../../src/voting-utils";

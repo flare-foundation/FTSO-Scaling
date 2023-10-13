@@ -1,9 +1,9 @@
 import BN from "bn.js";
-import { EpochSettings } from "./EpochSettings";
+import { EpochSettings } from "../EpochSettings";
 import { PriceEpochRewards } from "./PriceEpochRewards";
-import { FeedValue, MedianCalculationResult, RewardOffered, RewardClaim } from "./voting-interfaces";
-import { feedId, toBN } from "./voting-utils";
-import { getLogger } from "./utils/logger";
+import { FeedValue, MedianCalculationResult, RewardOffered, RewardClaim } from "../voting-interfaces";
+import { feedId, toBN } from "../voting-utils";
+import { getLogger } from "../utils/logger";
 
 /** 10% of total reward goes to the finalizer. */
 const FINALIZATION_BIPS = toBN(1_000);
@@ -44,7 +44,7 @@ export class RewardCalculator {
 
   ////////////// Offer data //////////////
   /** rewardEpochId => list of reward offers */
-  private readonly rewardOffers = new Map<number, RewardOffered[]>();
+  readonly rewardOffers = new Map<number, RewardOffered[]>();
   /** rewardEpochId => feedId => list of reward offers. The offers in the same currency are accumulated. */
   readonly rewardOffersBySymbol = new Map<number, Map<string, RewardOffered[]>>();
 
@@ -55,6 +55,8 @@ export class RewardCalculator {
   private readonly feedSequenceForRewardEpoch = new Map<number, FeedValue[]>();
 
   constructor(private readonly epochs: EpochSettings, initialRewardEpoch: number) {
+    getLogger("RewardCalculator").info(`Initializing reward calculator for reward epoch ${initialRewardEpoch}`);
+
     this.initialPriceEpoch = epochs.firstRewardedPriceEpoch + epochs.rewardEpochDurationInEpochs * initialRewardEpoch;
     // Progress counters initialization
     this.currentUnprocessedPriceEpoch = this.initialPriceEpoch;

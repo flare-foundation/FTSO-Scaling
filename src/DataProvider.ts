@@ -39,7 +39,7 @@ export class DataProvider {
     const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
 
     if (this.lastProcessedPriceEpochId !== undefined && this.lastProcessedPriceEpochId !== currentPriceEpochId - 1) {
-      throw new Error(
+      this.logger.error(
         `Skipped a price epoch. Last processed: ${this.lastProcessedPriceEpochId}, current: ${currentPriceEpochId}.`
       );
     }

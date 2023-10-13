@@ -2,18 +2,22 @@ import BN from "bn.js";
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { errorString } from "./utils/error";
-import { BlockIndexer, Received } from "./BlockIndexer";
+import { BlockIndex, Received } from "./BlockIndex";
 import { FinalizeData, SignatureData } from "./voting-interfaces";
 import { toBN } from "./voting-utils";
 import _ from "lodash";
 
 export class Finalizer {
   private readonly logger = getLogger(Finalizer.name);
-  private readonly indexer: BlockIndexer;
+  private readonly index: BlockIndex;
 
   constructor(private client: FTSOClient) {
-    this.indexer = this.client.indexer;
+    this.index = this.client.index;
   }
+
+  readonly signaturesByEpoch = new Map<number, SignatureData[]>();
+
+  finalizedEpoch = 0;
 
   async run() {
     await this.client.processNewBlocks(); // Initial catchup.
@@ -23,82 +27,92 @@ export class Finalizer {
       await this.client.processNewBlocks();
     }, 1000);
 
-    this.schedulePriceEpochActions();
-  }
+    this.index.on(Received.Finalize, (fd: FinalizeData) => {
+      this.finalizedEpoch = Math.max(this.finalizedEpoch, fd.epochId);
+      this.signaturesByEpoch.delete(fd.epochId);
+    });
 
-  schedulePriceEpochActions() {
-    const timeSec = this.currentTimeSec();
-    const nextEpochStartSec = this.client.epochs.nextPriceEpochStartSec(timeSec);
+    this.index.on(Received.Signature, async (signature: SignatureData) => {
+      this.logger.info(`Received signature for epoch ${signature.epochId}.`);
+      if (signature.epochId <= this.finalizedEpoch) return;
 
-    setTimeout(async () => {
-      this.schedulePriceEpochActions();
-      try {
-        await this.onPriceEpoch();
-      } catch (e) {
-        this.logger.error(`Error in price epoch: ${errorString(e)}`);
-      }
-    }, (nextEpochStartSec - timeSec + 1) * 1000);
-  }
+      const signaturesForEpoch = this.signaturesByEpoch.get(signature.epochId) ?? [];
+      signaturesForEpoch.push(signature);
+      this.signaturesByEpoch.set(signature.epochId, signaturesForEpoch);
 
-  async onPriceEpoch() {
-    const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
-    const previousEpochId = currentPriceEpochId - 1;
+      const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(signature.epochId);
+      const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
+      const voterWeights = await this.getVoterWeights(rewardEpoch);
 
-    const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(previousEpochId);
-    const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
-    const voterWeights = await this.getVoterWeights(rewardEpoch);
-
-    this.logger.info(`[${currentPriceEpochId}] Processing price epoch.`);
-
-    const signatures: SignatureData[] = [];
-
-    const signatureListener = async (signature: SignatureData) => {
-      if (signature.epochId != previousEpochId) {
-        this.logger.info(
-          `[${currentPriceEpochId}] Received signature for different epoch than the previous one. Expected: ${previousEpochId}, received: ${signature.epochId}. Ignoring.`
-        );
-        if (signature.epochId > previousEpochId + 1) {
-          // Assume voting did not take place for the previous epoch.
-          this.logger.info(
-            `[${currentPriceEpochId}] Received signature is 2 or more epochs ahead of the current one, aborting processing.`
-          );
-          this.indexer.off(Received.Signature, signatureListener);
+      const res = await this.checkSignatures(signaturesForEpoch, weightThreshold, voterWeights);
+      if (res !== undefined) {
+        const [mroot, sigs] = res;
+        if (await this.tryFinalizePriceEpoch(signature.epochId, mroot, [...sigs.values()])) {
+          this.finalizedEpoch = Math.max(this.finalizedEpoch, signature.epochId);
         }
-        return;
-      }
 
-      signatures.push(signature);
-      await this.checkSignaturesAndTryFinalize(
-        signatures,
-        previousEpochId,
-        weightThreshold,
-        voterWeights,
-        signatureListener
-      );
-    };
-    const finalizeListener = (_from: string, fd: FinalizeData) => {
-      if (fd.epochId == previousEpochId) {
-        this.indexer.off(Received.Signature, signatureListener);
-        this.indexer.off(Received.Finalize, finalizeListener);
-        this.logger.info(`[${currentPriceEpochId}] Epoch finalized, listener for ${previousEpochId} removed.`);
+        return true;
       }
-    };
-
-    this.indexer.on(Received.Signature, signatureListener);
-    this.indexer.on(Received.Finalize, finalizeListener);
+    });
   }
+
+  // async onPriceEpoch() {
+  //   const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
+  //   const previousEpochId = currentPriceEpochId - 1;
+
+  //   const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(previousEpochId);
+  //   const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
+  //   const voterWeights = await this.getVoterWeights(rewardEpoch);
+
+  //   this.logger.info(`[${currentPriceEpochId}] Processing price epoch.`);
+
+  //   const signatures: SignatureData[] = [];
+
+  //   const signatureListener = async (signature: SignatureData) => {
+  //     if (signature.epochId != previousEpochId) {
+  //       this.logger.info(
+  //         `[${currentPriceEpochId}] Received signature for different epoch than the previous one. Expected: ${previousEpochId}, received: ${signature.epochId}. Ignoring.`
+  //       );
+  //       if (signature.epochId > previousEpochId + 1) {
+  //         // Assume voting did not take place for the previous epoch.
+  //         this.logger.info(
+  //           `[${currentPriceEpochId}] Received signature is 2 or more epochs ahead of the current one, aborting processing.`
+  //         );
+  //         this.index.off(Received.Signature, signatureListener);
+  //       }
+  //       return;
+  //     }
+
+  //     signatures.push(signature);
+  //     const res = await this.checkSignatures(signatures, weightThreshold, voterWeights);
+  //     if (res !== undefined) {
+  //       const [mroot, sigs] = res;
+  //       if (await this.tryFinalizePriceEpoch(previousEpochId, mroot, [...sigs.values()])) {
+  //         this.index.off(Received.Signature, signatureListener);
+  //       }
+  //       return true;
+  //     }
+  //   };
+  //   const finalizeListener = (_from: string, fd: FinalizeData) => {
+  //     if (fd.epochId == previousEpochId) {
+  //       this.index.off(Received.Signature, signatureListener);
+  //       this.index.off(Received.Finalize, finalizeListener);
+  //       this.logger.info(`[${currentPriceEpochId}] Epoch finalized, listener for ${previousEpochId} removed.`);
+  //     }
+  //   };
+
+  //   this.index.on(Received.Signature, signatureListener);
+  //   this.index.on(Received.Finalize, finalizeListener);
+  // }
 
   /**
    * Once sufficient voter weight in received signatures is observed, will call finalize.
-   * @returns true if enough signatures were found and finalization was attempted.
    */
-  private async checkSignaturesAndTryFinalize(
+  private async checkSignatures(
     signatures: SignatureData[],
-    priceEpochId: number,
     weightThreshold: BN,
-    voterWeights: Map<string, BN>,
-    listener: any
-  ): Promise<boolean> {
+    voterWeights: Map<string, BN>
+  ): Promise<[string, SignatureData[]] | undefined> {
     const signaturesByMerkleRoot = _.groupBy(signatures, s => s.merkleRoot);
     // We don't know what the correct merkle root for the epoch is,
     // so we'll try all and use the one with enough weight behind it for finalization.
@@ -118,25 +132,16 @@ export class Finalizer {
           totalWeight = totalWeight.add(weight);
 
           if (totalWeight.gt(weightThreshold)) {
-            this.logger.debug(
-              `Weight threshold reached for ${priceEpochId}: ${totalWeight.toString()} >= ${weightThreshold.toString()}, calling finalize with ${
-                validatedSignatures.size
-              } signatures`
-            );
-
-            if (await this.tryFinalizeEpoch(priceEpochId, mroot, [...validatedSignatures.values()])) {
-              this.indexer.off(Received.Signature, listener);
-            }
-            return true;
+            return [mroot, Array.from(validatedSignatures.values())];
           }
         }
       }
     }
 
-    return false;
+    return undefined;
   }
 
-  private async tryFinalizeEpoch(
+  private async tryFinalizePriceEpoch(
     priceEpochId: number,
     merkleRoot: string,
     signatures: SignatureData[]
@@ -145,6 +150,22 @@ export class Finalizer {
       this.logger.info(`Submitting finalization transaction for epoch ${priceEpochId}.`);
       await this.client.provider.finalize(priceEpochId, merkleRoot, signatures);
       this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}.`);
+      return true;
+    } catch (e) {
+      this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
+      return false;
+    }
+  }
+
+  private async tryFinalizeRewardEpoch(
+    rewardEpoch: number,
+    merkleRoot: string,
+    signatures: SignatureData[]
+  ): Promise<boolean> {
+    try {
+      this.logger.info(`Submitting finalization transaction for reward epoch ${rewardEpoch}.`);
+      await this.client.provider.finalizeRewards(rewardEpoch, merkleRoot, signatures);
+      this.logger.info(`Successfully submitted finalization transaction for reward epoch ${rewardEpoch}.`);
       return true;
     } catch (e) {
       this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
