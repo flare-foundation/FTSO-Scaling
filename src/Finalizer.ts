@@ -16,8 +16,10 @@ export class Finalizer {
   }
 
   readonly signaturesByEpoch = new Map<number, SignatureData[]>();
+  readonly rewardSignaturesByEpoch = new Map<number, SignatureData[]>();
 
   finalizedEpoch = 0;
+  finalizedRewardEpoch = 0;
 
   async run() {
     await this.client.processNewBlocks(); // Initial catchup.
@@ -49,6 +51,33 @@ export class Finalizer {
         const [mroot, sigs] = res;
         if (await this.tryFinalizePriceEpoch(signature.epochId, mroot, [...sigs.values()])) {
           this.finalizedEpoch = Math.max(this.finalizedEpoch, signature.epochId);
+        }
+
+        return true;
+      }
+    });
+
+    this.index.on(Received.RewardFinalize, (fd: FinalizeData) => {
+      this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, fd.epochId);
+      this.rewardSignaturesByEpoch.delete(fd.epochId);
+    });
+
+    this.index.on(Received.RewardSignature, async (signature: SignatureData) => {
+      this.logger.info(`Received reward signature for epoch ${signature.epochId}.`);
+      if (signature.epochId <= this.finalizedRewardEpoch) return;
+
+      const signaturesForEpoch = this.rewardSignaturesByEpoch.get(signature.epochId) ?? [];
+      signaturesForEpoch.push(signature);
+      this.rewardSignaturesByEpoch.set(signature.epochId, signaturesForEpoch);
+
+      const weightThreshold = await this.client.provider.thresholdForRewardEpoch(signature.epochId);
+      const voterWeights = await this.getVoterWeights(signature.epochId);
+
+      const res = await this.checkSignatures(signaturesForEpoch, weightThreshold, voterWeights);
+      if (res !== undefined) {
+        const [mroot, sigs] = res;
+        if (await this.tryFinalizeRewardEpoch(signature.epochId, mroot, [...sigs.values()])) {
+          this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, signature.epochId);
         }
 
         return true;
@@ -152,7 +181,7 @@ export class Finalizer {
       this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}.`);
       return true;
     } catch (e) {
-      this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
+      // this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
       return false;
     }
   }

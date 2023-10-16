@@ -108,8 +108,13 @@ contract Voting {
         (_priceEpochId, _merkleRoot, block.timestamp);
     }
 
-    function getMerkleRootForPriceEpoch(uint256 _priceRpochId) public view returns (bytes32) {
-        bytes32 merkleRoot = merkleRoots[_priceRpochId];
+    function getMerkleRootForPriceEpoch(uint256 _priceEpochId) public view returns (bytes32) {
+        bytes32 merkleRoot = merkleRoots[_priceEpochId];
+        return merkleRoot;
+    }
+
+    function getMerkleRootForRewardEpoch(uint256 _rewardEpochId) public view returns (bytes32) {
+        bytes32 merkleRoot = rewardMerkleRoots[_rewardEpochId];
         return merkleRoot;
     }
 
@@ -233,7 +238,7 @@ contract Voting {
                             _rewardEpochId - votingManager.TOTAL_STORED_PROOFS()
                         ] = 0;
                     }
-                    emit MerkleRootConfirmed(
+                    emit RewardMerkleRootConfirmed(
                         _rewardEpochId,
                         _merkleRoot,
                         block.timestamp
@@ -242,7 +247,7 @@ contract Voting {
                 }
             }
         }
-        emit MerkleRootConfirmationFailed(
+        emit RewardMerkleRootConfirmationFailed(
             _rewardEpochId,
             _merkleRoot,
             weightSum,

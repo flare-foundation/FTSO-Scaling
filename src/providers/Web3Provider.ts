@@ -84,15 +84,31 @@ export class Web3Provider implements IVotingProvider {
     );
   }
 
-  async claimRewards(claims: RewardClaimWithProof[]): Promise<any> {
+    /**
+   * Authorizes the provided claimer account to process reward claims for the voter.
+   * Note: the voter account will still be the beneficiary of the reward value.
+   */
+    async authorizeClaimerFrom(claimerAddress: string, fromAccount: Account): Promise<any> {
+      const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
+      return await this.signAndFinalize(
+        "Authorize claimer",
+        this.contracts.votingRewardManager.options.address,
+        methodCall,
+        0,
+        fromAccount
+      );
+    }
+  
+
+  async claimRewards(claims: RewardClaimWithProof[], beneficiary: string): Promise<any> {
     let nonce = await this.getNonce(this.claimAccount);
     for (const claim of claims) {
       this.logger.info(
-        `Calling claim reward contract with ${claim.body.amount}, using ${this.claimAccount.address}, nonce ${nonce}`
+        `Calling claim reward contract with ${claim.body.amount.toString()}, using ${beneficiary}, nonce ${nonce}`
       );
       const methodCall = this.contracts.votingRewardManager.methods.claimReward(
         hexlifyBN(claim),
-        this.votingAcccount.address
+        beneficiary
       );
       await this.signAndFinalize(
         "Claim reward",
@@ -383,9 +399,9 @@ export class Web3Provider implements IVotingProvider {
       claimKey
     );
 
-    if (votingKey != claimKey) {
-      await provider.authorizeClaimer(provider.claimAccount.address);
-    }
+    // if (votingKey != claimKey) {
+    //   await provider.authorizeClaimer(provider.claimAccount.address);
+    // }
     return provider;
   }
 }

@@ -207,6 +207,11 @@ export class FTSOClient {
 
   async calculateResults(priceEpochId: number) {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+
+    this.logger.info(
+      `Reward epoch offer for ${priceEpochId} rewards: ${JSON.stringify(this.rewardEpochOffers.get(rewardEpoch))}`
+    );
+
     await this.refreshVoterToWeightMaps(rewardEpoch);
 
     const revealResult = this.calculateRevealers(priceEpochId)!;
@@ -236,6 +241,9 @@ export class FTSOClient {
       results,
       revealResult.committedFailedReveal
     );
+
+    this.logger.info(`Reward merkle root for epoch ${priceEpochId}: ${rewardMerkleRoot}`);
+
     const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot)!;
 
     const epochResult: EpochResult = {
@@ -383,7 +391,7 @@ export class FTSOClient {
 
   async claimRewards(rewardEpochId: number) {
     const rewardClaims = this.generateClaimsWithProofForClaimer(rewardEpochId, this.address);
-    return await this.provider.claimRewards(rewardClaims);
+    return await this.provider.claimRewards(rewardClaims, this.address);
   }
 
   generateClaimsWithProofForClaimer(rewardEpochId: number, claimer: string): RewardClaimWithProof[] {
@@ -411,12 +419,17 @@ export class FTSOClient {
         });
       }
     }
+
+    this.logger.info(
+      `Generating claims for ${claimer}, mroot ${merkleTree.root}, generated ${claimsWithProof.length} claims.`
+    );
+
     return claimsWithProof;
 
     function getProof(i: number) {
       const proof = merkleTree.getProof(allHashes[i]);
       if (!proof) throw new Error(`No Merkle proof exists for claim hash ${allHashes[i]}`);
-      proof.push(mroot);
+      // proof.push(mroot);
       return proof;
     }
   }

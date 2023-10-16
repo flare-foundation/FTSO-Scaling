@@ -92,7 +92,7 @@ function startAdminDaemon(): ChildProcess {
 }
 
 function startDataProvider(id: number): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-data-provider.ts", id.toString()]);
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-data-provider.ts", id.toString(), "random"]);
   process.stdout.on("data", function (data) {
     console.log(`[Provider ${id}]: ${data}`);
   });

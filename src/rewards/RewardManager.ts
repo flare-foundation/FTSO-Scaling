@@ -8,6 +8,9 @@ import Web3 from "web3";
 import { Penalty } from "./RewardCalculator";
 import { hashRewardClaim } from "../voting-utils";
 import { MerkleTree } from "../MerkleTree";
+import { asError } from "../utils/error";
+import { Web3Provider } from "../providers/Web3Provider";
+import { Account } from "web3-core";
 
 /*
 
@@ -32,14 +35,27 @@ export class RewardManager {
   private readonly logger = getLogger(RewardManager.name);
   private readonly indexer: BlockIndexer;
 
+  private voterAccount: Account;
   private voterAdress: string;
 
   constructor(private client: FTSOClient, private voterKey: string, private web3: Web3) {
     this.indexer = client.index as BlockIndexer;
-    this.voterAdress = getAccount(this.web3, this.voterKey).address;
+    this.voterAccount = getAccount(this.web3, this.voterKey);
+    this.voterAdress = this.voterAccount.address;
   }
 
   async run() {
+    try {
+      await this.runLogic();
+    } catch (e: unknown) {
+      this.logger.error(`Error while running logic, ${asError(e)}`);
+      throw e;
+    }
+  }
+
+  async runLogic() {
+    await (this.client.provider as Web3Provider).authorizeClaimerFrom(this.client.address, this.voterAccount);
+
     const currentPriceEpoch = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
     const currentRewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpoch);
 
@@ -65,7 +81,8 @@ export class RewardManager {
 
     this.logger.info(`Starting from block ${startBlock} for reward epoch ${previousRewardEpoch}.`);
 
-    this.indexer.on(Received.Offers, (pe: number, o: RewardOffered[]) => this.client.onRewardOffers(pe, o));
+    // Already called in FTSO client:
+    // this.indexer.on(Received.Offers, (pe: number, o: RewardOffered[]) => this.client.onRewardOffers(pe, o));
 
     this.indexer.on(Received.Finalize, async (from: string, finalizeData: FinalizeData) => {
       this.logger.info(`[${finalizeData.epochId}] Received finalize from ${from}.`);
@@ -90,18 +107,19 @@ export class RewardManager {
         );
 
         if (this.isLastPriceEpochInRewardEpoch(finalizedEpoch)) {
-          await this.signRewards(cumulativeClaims, rewardEpoch);
+          await this.signRewards(cumulativeClaims, rewardEpoch, finalizedEpoch);
         }
       }
+    });
 
-      this.indexer.on(Received.RewardFinalize, async (fd: FinalizeData) => {
-        const rewardClaims = this.client.rewardCalculator
-          .getRewardClaimsForPriceEpoch(fd.epochId)
-          .filter(claim => !(claim instanceof Penalty));
+    this.indexer.on(Received.RewardFinalize, async (from: string, fd: FinalizeData) => {
+      this.logger.info(`[${fd.epochId}] Received reward finalize from ${from}`);
+      const rewardClaims = this.client.rewardCalculator.getRewardClaimsForRewardEpoch(fd.epochId);
+      const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
 
-        const cwp = this.client.generateProofsForClaims(rewardClaims, fd.merkleRoot, this.voterAdress);
-        return await this.client.provider.claimRewards(cwp);
-      });
+      const cwp = this.client.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAdress);
+      this.logger.info(`[${fd.epochId}] Claiming ${cwp.length} rewards for epoch.`);
+      return await this.client.provider.claimRewards(cwp, this.voterAdress);
     });
 
     // this.indexer.on(Received.Reveal, async (signature: any) => {});
@@ -109,12 +127,14 @@ export class RewardManager {
     this.indexer.run(startBlock);
   }
 
-  private async signRewards(cumulativeClaims: RewardClaim[], rewardEpoch: number) {
+  private async signRewards(cumulativeClaims: RewardClaim[], rewardEpoch: number, priceEpoch: number) {
     this.logger.info(`[${rewardEpoch}] Signing rewards for epoch.`);
     const rewardClaims = cumulativeClaims.filter(claim => !(claim instanceof Penalty));
     const rewardClaimHashes: string[] = rewardClaims.map(claim => hashRewardClaim(claim));
     const rewardMerkleTree = new MerkleTree(rewardClaimHashes);
     const rewardMerkleRoot = rewardMerkleTree.root!;
+
+    this.logger.info(`Signing reward merkle root for epoch ${priceEpoch}: ${rewardMerkleRoot}`);
 
     const signature = await this.client.provider.signMessageWithKey(rewardMerkleRoot, this.voterKey);
 

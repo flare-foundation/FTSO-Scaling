@@ -294,6 +294,7 @@ export class RewardCalculator {
   }
 
   private addToCumulativeClaims(priceEpochId: number, currentClaims: RewardClaim[]) {
+    getLogger("RewardMerge").info(`Adding claims for price epoch ${priceEpochId}: ${JSON.stringify(currentClaims)}`);
     if (priceEpochId < this.firstPriceEpochInNextRewardEpoch - 1) {
       if (priceEpochId === this.initialPriceEpoch) {
         this.rewardEpochCumulativeRewards.set(
@@ -330,6 +331,10 @@ export class RewardCalculator {
   public getRewardClaimsForPriceEpoch(priceEpoch: number): RewardClaim[] {
     return this.rewardEpochCumulativeRewards.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpoch))!;
   }
+  public getRewardClaimsForRewardEpoch(rewardEpoch: number): RewardClaim[] {
+    return this.rewardEpochCumulativeRewards.get(rewardEpoch)!;
+  }
+
 
   /**
    * Calculates the map from voter address to the list of claims for the given price epoch.

@@ -57,7 +57,7 @@ export class DataProvider {
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
 
-    await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
+    // await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
     await this.maybeRegisterForRewardEpoch(nextRewardEpochId);
 
     this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);

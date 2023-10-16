@@ -10,6 +10,7 @@ import {
   TxData,
 } from "./voting-interfaces";
 import { convertRewardOfferedEvent } from "./voting-utils";
+import { getLogger } from "./utils/logger";
 
 const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
 const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
@@ -27,7 +28,7 @@ export default class EncodingUtils {
     this.abiItems.set("commit", votingABI.find((x: AbiItem) => x.name === "commit")!);
     this.abiItems.set("revealBitvote", votingABI.find((x: any) => x.name === "revealBitvote")!);
     this.abiItems.set("signResult", votingABI.find((x: any) => x.name === "signResult")!);
-    this.abiItems.set("signRewards", votingABI.find((x: any) => x.name === "signResult")!);
+    this.abiItems.set("signRewards", votingABI.find((x: any) => x.name === "signRewards")!);
     this.abiItems.set("finalize", votingABI.find((x: any) => x.name === "finalize")!);
     this.abiItems.set("finalizeRewards", votingABI.find((x: any) => x.name === "finalizeRewards")!);
     this.abiItems.set("MerkleRootConfirmed", votingABI.find((x: any) => x.name === "MerkleRootConfirmed")!);
@@ -133,7 +134,7 @@ export default class EncodingUtils {
     const resultTmp = this.decodeFunctionCall(tx, "signRewards");
 
     return {
-      epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
+      epochId: parseIntOrThrow(resultTmp._rewardEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
       v: parseIntOrThrow(resultTmp._signature.v, 10),
       r: resultTmp._signature.r,
@@ -142,14 +143,16 @@ export default class EncodingUtils {
   }
 
   extractRewardFinalize(tx: TxData): FinalizeData {
+    getLogger("encoding-utils").info(`Received finalize rewareds tx: ${tx.blockNumber}`);
     const resultTmp = this.decodeFunctionCall(tx, "finalizeRewards");
     const confirmation = tx.receipt!.logs.find(
       (x: any) => x.topics[0] === this.eventSignature("RewardMerkleRootConfirmed")
     );
+    getLogger("encoding-utils").info(`Got confirmation ${JSON.stringify(confirmation)}`);
     return {
       confirmed: confirmation !== undefined,
       from: tx.from.toLowerCase(),
-      epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
+      epochId: parseIntOrThrow(resultTmp._rewardEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
       signatures: resultTmp._signatures.map((s: any) => {
         return {

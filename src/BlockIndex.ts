@@ -122,6 +122,7 @@ export class BlockIndex extends AsyncEventEmitter {
         `Received finalize for epoch ${finalizeData.epochId} from ${tx.from}, block ts ${blockTimestampSec}`
       );
       this.rewardFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
+      getLogger(BlockIndex.name).info(`Emitting reward finalize for ${finalizeData.epochId}`);
       await this.emit(Received.RewardFinalize, tx.from, finalizeData);
     }
   }
