@@ -109,10 +109,6 @@ export interface EpochResult {
   readonly symbolMessage: string;
   readonly randomMessage: string;
   readonly fullPriceMessage: string;
-  readonly rewardClaimMerkleRoot: string;
-  readonly rewardClaimMerkleProof: string;
-  readonly rewardClaims: readonly RewardClaim[];
-  readonly fullMessage: string;
   readonly merkleRoot: string;
 }
 

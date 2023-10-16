@@ -47,7 +47,6 @@ export class DataProvider {
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
     this.logger.info(`[${currentPriceEpochId}] Processing price epoch, current reward epoch: ${currentRewardEpochId}.`);
 
-    const previousRewardEpochId = currentRewardEpochId - 1;
     const nextRewardEpochId = currentRewardEpochId + 1;
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
@@ -57,18 +56,11 @@ export class DataProvider {
     // Process new blocks to make sure we pick up reward offers.
     await this.client.processNewBlocks();
 
-    // await this.maybeClaimRewards(previousRewardEpochId, currentPriceEpochId);
     await this.maybeRegisterForRewardEpoch(nextRewardEpochId);
 
     this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);
   }
 
-  private async maybeClaimRewards(previousRewardEpochId: number, currentEpochId: number) {
-    if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
-      this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
-      await this.client.claimRewards(previousRewardEpochId);
-    }
-  }
 
   private async runVotingProcotol(currentEpochId: number) {
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
@@ -107,11 +99,6 @@ export class DataProvider {
     return this.registeredRewardEpochs.has(rewardEpochId);
   }
 
-  private isFirstPriceEpochInRewardEpoch(priceEpochId: number): boolean {
-    const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const rewardEpochForPrevious = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId - 1);
-    return rewardEpochForPrevious != 0 && rewardEpochForPrevious < rewardEpoch;
-  }
 
   private async waitForRevealEpochEnd() {
     const revealPeriodDurationMs = this.client.epochs.revealDurationSec * 1000;

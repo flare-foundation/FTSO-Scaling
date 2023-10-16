@@ -99,7 +99,7 @@ export class RewardManager {
         if (!this.client.rewardCalculator.rewardOffers.has(rewardEpoch)) {
           this.client.registerRewardsForRewardEpoch(rewardEpoch);
         }
-        await this.client.calculateResults(finalizedEpoch);
+        await this.client.calculateRewards(finalizedEpoch);
 
         const cumulativeClaims = this.client.rewardCalculator.getRewardClaimsForPriceEpoch(finalizedEpoch);
         this.logger.info(

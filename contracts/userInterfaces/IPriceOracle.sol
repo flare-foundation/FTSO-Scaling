@@ -22,7 +22,6 @@ interface IPriceOracle {
     );
 
     function publishPrices(
-        bytes32 _dataMerkleRoot, // one step Merkle proof
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,

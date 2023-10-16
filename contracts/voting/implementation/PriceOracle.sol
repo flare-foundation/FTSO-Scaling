@@ -29,7 +29,6 @@ contract PriceOracle is Governed, IPriceOracle {
     }
 
     function publishPrices(
-        bytes32 _dataMerkleRoot, // one step Merkle proof
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,
@@ -42,17 +41,10 @@ contract PriceOracle is Governed, IPriceOracle {
             "lengths do not match"
         );
 
-        bytes32 merkleRoot = _dataMerkleRoot; 
-        { // Scope to avoid stack too deep errors
-            bytes32 priceHash = keccak256(
-                bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols, _random)
-            );
-            if (merkleRoot < priceHash) {
-                merkleRoot = keccak256(abi.encode(merkleRoot, priceHash));
-            } else {
-                merkleRoot = keccak256(abi.encode(priceHash, merkleRoot));
-            }
-        }
+        bytes32 merkleRoot = keccak256(
+            bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols, _random)
+        );
+        
         require(
             merkleRoot == voting.getMerkleRootForPriceEpoch(_priceEpochId),
             "invalid merkle root"

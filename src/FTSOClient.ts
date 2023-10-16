@@ -236,16 +236,6 @@ export class FTSOClient {
       Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage + randomMessage;
     const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
 
-    const [rewardMerkleRoot, priceEpochRewards] = await this.calculateRewards(
-      priceEpochId,
-      results,
-      revealResult.committedFailedReveal
-    );
-
-    this.logger.info(`Reward merkle root for epoch ${priceEpochId}: ${rewardMerkleRoot}`);
-
-    const priceEpochMerkleRoot = sortedHashPair(priceMessageHash, rewardMerkleRoot)!;
-
     const epochResult: EpochResult = {
       priceEpochId: priceEpochId,
       medianData: results,
@@ -255,20 +245,25 @@ export class FTSOClient {
       symbolMessage: "0x" + symbolMessage,
       randomMessage: "0x" + randomMessage,
       fullPriceMessage: "0x" + message,
-      fullMessage: rewardMerkleRoot + message,
-      rewardClaimMerkleRoot: rewardMerkleRoot,
-      rewardClaimMerkleProof: priceMessageHash,
-      rewardClaims: priceEpochRewards,
-      merkleRoot: priceEpochMerkleRoot,
+      merkleRoot: priceMessageHash,
     };
     this.priceEpochResults.set(priceEpochId, epochResult);
   }
 
-  private async calculateRewards(
-    priceEpochId: number,
-    results: MedianCalculationResult[],
-    committedFailedReveal: string[]
-  ): Promise<[string, RewardClaim[]]> {
+  async calculateRewards(priceEpochId: number): Promise<void> {
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    await this.refreshVoterToWeightMaps(rewardEpoch);
+
+    const revealResult = this.calculateRevealers(priceEpochId)!;
+    if (revealResult.revealed.length === 0) {
+      throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
+    }
+
+
+
+    const results: MedianCalculationResult[] = this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
+    const committedFailedReveal = revealResult.committedFailedReveal;
+
     const finalizationData = this.index.getFinalize(priceEpochId - 1);
     let rewardedSigners: string[] = [];
 
@@ -293,15 +288,6 @@ export class FTSOClient {
       committedFailedReveal,
       voterWeights
     );
-
-    const rewardClaims = this.rewardCalculator
-      .getRewardClaimsForPriceEpoch(priceEpochId)
-      .filter(claim => !(claim instanceof Penalty));
-    this.logger.info(`Calculated ${rewardClaims.length} reward claims for price epoch ${priceEpochId}.`);
-    const rewardClaimHashes: string[] = rewardClaims.map(claim => hashRewardClaim(claim));
-    const rewardMerkleTree = new MerkleTree(rewardClaimHashes);
-    const rewardMerkleRoot = rewardMerkleTree.root!;
-    return [rewardMerkleRoot, rewardClaims];
   }
 
   /**
@@ -387,19 +373,6 @@ export class FTSOClient {
       throw new Error("Result not found");
     }
     return await this.provider.publishPrices(result, symbolIndices);
-  }
-
-  async claimRewards(rewardEpochId: number) {
-    const rewardClaims = this.generateClaimsWithProofForClaimer(rewardEpochId, this.address);
-    return await this.provider.claimRewards(rewardClaims, this.address);
-  }
-
-  generateClaimsWithProofForClaimer(rewardEpochId: number, claimer: string): RewardClaimWithProof[] {
-    const claimPriceEpochId = this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId);
-    const result = this.priceEpochResults.get(claimPriceEpochId)!;
-
-    const allClaims = result.rewardClaims;
-    return this.generateProofsForClaims(allClaims, result.merkleRoot, claimer);
   }
 
   generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: string) {
