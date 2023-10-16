@@ -37,7 +37,7 @@ export interface IVotingProvider {
   signRewards(rewardEpoch: number, merkleRoot: string, signature: BareSignature): Promise<any>;
   finalizeRewards(rewardEpoch: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
   publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
-  allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]>;
+  getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<string, BN>>;
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
   getMerkleRoot(priceEpochId: number): Promise<string>;
 

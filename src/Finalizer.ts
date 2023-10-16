@@ -38,7 +38,7 @@ export class Finalizer {
 
       const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(signature.epochId);
       const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
-      const voterWeights = await this.getVoterWeights(rewardEpoch);
+      const voterWeights = await this.client.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
 
       const res = await this.checkSignatures(signaturesForEpoch, weightThreshold, voterWeights);
       if (res !== undefined) {
@@ -65,7 +65,7 @@ export class Finalizer {
       this.rewardSignaturesByEpoch.set(signature.epochId, signaturesForEpoch);
 
       const weightThreshold = await this.client.provider.thresholdForRewardEpoch(signature.epochId);
-      const voterWeights = await this.getVoterWeights(signature.epochId);
+      const voterWeights = await this.client.provider.getVoterWeightsForRewardEpoch(signature.epochId);
 
       const res = await this.checkSignatures(signaturesForEpoch, weightThreshold, voterWeights);
       if (res !== undefined) {
@@ -147,15 +147,5 @@ export class Finalizer {
       this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
       return false;
     }
-  }
-
-  private async getVoterWeights(rewardEpoch: number): Promise<Map<string, BN>> {
-    const eligibleVoters = await this.client.provider.allVotersWithWeightsForRewardEpoch(rewardEpoch);
-    const weightMap = new Map(eligibleVoters.map(v => [v.voterAddress.toLowerCase(), v.weight]));
-    return weightMap;
-  }
-
-  private currentTimeSec(): number {
-    return Math.floor(Date.now() / 1000);
   }
 }

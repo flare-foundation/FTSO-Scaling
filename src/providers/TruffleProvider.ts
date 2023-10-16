@@ -150,7 +150,7 @@ export class TruffleProvider implements IVotingProvider {
     return Promise.resolve(signer);
   }
 
-  async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
+  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
     const data = await this.contracts.voterRegistry.votersForRewardEpoch(rewardEpoch);
     const voters = data[0];
     const weights = data[1];

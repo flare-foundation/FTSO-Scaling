@@ -66,11 +66,6 @@ export class FTSOClient {
   readonly priceEpochData = new Map<number, EpochData>();
   readonly priceEpochResults = new Map<number, EpochResult>();
 
-  // reward epoch => voter => weight
-  private eligibleVotersForRewardEpoch = new Map<number, VoterWithWeight[]>();
-  eligibleVoterWeights = new Map<number, Map<string, BN>>();
-  private eligibleVoterTotalWeight = new Map<number, BN>();
-
   readonly rewardEpochOffers = new Map<number, RewardOffered[]>();
   private readonly rewardEpochOffersClosed = new Map<number, boolean>();
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
@@ -207,9 +202,7 @@ export class FTSOClient {
       `Reward epoch offer for ${priceEpochId} rewards: ${JSON.stringify(this.rewardEpochOffers.get(rewardEpoch))}`
     );
 
-    await this.refreshVoterToWeightMaps(rewardEpoch);
-
-    const revealResult = this.calculateRevealers(priceEpochId)!;
+    const revealResult = await this.calculateRevealers(priceEpochId)!;
     if (revealResult.revealed.length === 0) {
       throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
     }
@@ -217,7 +210,7 @@ export class FTSOClient {
     const randomQuality = revealResult.committedFailedReveal.length;
     const combinedRandom = combineRandom(revealResult.revealedRandoms);
 
-    const results: MedianCalculationResult[] = this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
+    const results: MedianCalculationResult[] = await this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
     let priceMessage = "";
     let symbolMessage = "";
     results.map(data => {
@@ -247,14 +240,13 @@ export class FTSOClient {
 
   async calculateRewards(priceEpochId: number): Promise<void> {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    await this.refreshVoterToWeightMaps(rewardEpoch);
 
-    const revealResult = this.calculateRevealers(priceEpochId)!;
+    const revealResult = await this.calculateRevealers(priceEpochId)!;
     if (revealResult.revealed.length === 0) {
       throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
     }
 
-    const results: MedianCalculationResult[] = this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
+    const results: MedianCalculationResult[] = await this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
     const committedFailedReveal = revealResult.committedFailedReveal;
 
     const finalizationData = this.index.getFinalize(priceEpochId - 1);
@@ -271,7 +263,7 @@ export class FTSOClient {
       }
     }
 
-    const voterWeights = this.eligibleVoterWeights.get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!;
+    const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
 
     this.rewardCalculator.calculateClaimsForPriceEpoch(
       priceEpochId,
@@ -303,15 +295,15 @@ export class FTSOClient {
       );
       return [];
     }
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
 
     const epochSignatures = this.index.getSignatures(priceEpochId - 1);
     for (const [signature, signatureTime] of epochSignatures.values()) {
       if (signatureTime > finalizationTime) continue; // Only reward signatures with block timestamp no greater than that of finalization
       const signer = await this.provider.recoverSigner(data.merkleRoot, signature);
       // We check if the signer is registered for the _current_ reard epoch, the signature reward epoch might be one earlier.
-      const signerWeight = this.eligibleVoterWeights
-        .get(this.epochs.rewardEpochIdForPriceEpochId(priceEpochId))!
-        .get(signer);
+
+      const signerWeight = (await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch)).get(signer);
       if (signerWeight && signerWeight.gt(toBN(0))) {
         rewardedSigners.add(signer);
       }
@@ -350,16 +342,6 @@ export class FTSOClient {
     this.priceEpochData.set(priceEpochId, data);
   }
 
-  private async tryFinalizeEpoch(priceEpochId: number, merkleRoot: string, signatures: SignatureData[]) {
-    try {
-      this.logger.info(`Submitting finalization transaction for epoch ${priceEpochId}.`);
-      await this.provider.finalize(priceEpochId, merkleRoot, signatures);
-      this.logger.info(`Successfully submitted finalization transaction for epoch ${priceEpochId}.`);
-    } catch (e) {
-      this.logger.info(`Failed to submit finalization transaction: ${errorString(e)}`);
-    }
-  }
-
   async publishPrices(peiceEpochId: number, symbolIndices: number[]) {
     const result = this.priceEpochResults.get(peiceEpochId);
     if (!result) {
@@ -368,67 +350,16 @@ export class FTSOClient {
     return await this.provider.publishPrices(result, symbolIndices);
   }
 
-  generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: string) {
-    const allHashes = allClaims.map(claim => hashRewardClaim(claim));
-    const merkleTree = new MerkleTree(allHashes);
-    if (merkleTree.root !== mroot) {
-      throw new Error("Invalid Merkle root for reward claims");
-    }
-
-    const claimsWithProof: RewardClaimWithProof[] = [];
-    for (let i = 0; i < allClaims.length; i++) {
-      const claim = allClaims[i];
-      if (claim.beneficiary.toLowerCase() === claimer.toLowerCase()) {
-        claimsWithProof.push({
-          merkleProof: getProof(i),
-          body: claim,
-        });
-      }
-    }
-
-    this.logger.info(
-      `Generating claims for ${claimer}, mroot ${merkleTree.root}, generated ${claimsWithProof.length} claims.`
-    );
-
-    return claimsWithProof;
-
-    function getProof(i: number) {
-      const proof = merkleTree.getProof(allHashes[i]);
-      if (!proof) throw new Error(`No Merkle proof exists for claim hash ${allHashes[i]}`);
-      // proof.push(mroot);
-      return proof;
-    }
-  }
-
-  /**
-   * Returns the list of eligible voters with their weights for the given reward epoch.
-   * It reads the data from the provider and caches it.
-   */
-  private async refreshVoterToWeightMaps(rewardEpoch: number): Promise<void> {
-    let eligibleVoters = this.eligibleVotersForRewardEpoch.get(rewardEpoch);
-    if (!this.eligibleVoterWeights.has(rewardEpoch)) {
-      eligibleVoters = await this.provider.allVotersWithWeightsForRewardEpoch(rewardEpoch);
-      this.eligibleVotersForRewardEpoch.set(rewardEpoch, eligibleVoters);
-      const weightMap = new Map<string, BN>();
-      this.eligibleVoterWeights.set(rewardEpoch, weightMap);
-      let totalWeight = toBN(0);
-      for (const voter of eligibleVoters) {
-        weightMap.set(voter.voterAddress.toLowerCase(), voter.weight);
-        totalWeight = totalWeight.add(voter.weight);
-      }
-      this.eligibleVoterTotalWeight.set(rewardEpoch, totalWeight);
-    }
-  }
-
-  private calculateFeedMedians(
+  private async calculateFeedMedians(
     priceEpochId: number,
     revealResult: RevealResult,
     rewardEpoch: number
-  ): MedianCalculationResult[] {
+  ): Promise<MedianCalculationResult[]> {
     const orderedPriceFeeds = this.orderedPriceFeedIds(priceEpochId);
     const numberOfFeeds = orderedPriceFeeds.length;
     const voters = revealResult.revealed;
-    const weights = voters.map(voter => this.eligibleVoterWeights.get(rewardEpoch)!.get(voter.toLowerCase())!);
+    const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
+    const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
 
     const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
     voters.forEach(voter => {
@@ -475,7 +406,7 @@ export class FTSOClient {
 
   // Encoding of signed result
   // [4 epochId][32-byte merkle root][4-byte price sequence]
-  private calculateRevealers(priceEpochId: number): RevealResult {
+  private async calculateRevealers(priceEpochId: number): Promise<RevealResult> {
     const rewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const commits = this.index.getCommits(priceEpochId);
     const reveals = this.index.getReveals(priceEpochId);
@@ -485,9 +416,11 @@ export class FTSOClient {
       throw new Error("Commits or reveals not found");
     }
 
+    const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(rewardEpochId);
+
     const eligibleCommitters = [...commits.keys()]
       .map(sender => sender.toLowerCase())
-      .filter(voter => this.eligibleVoterWeights.get(rewardEpochId)?.has(voter.toLowerCase())!);
+      .filter(voter => voterWeights.has(voter.toLowerCase())!);
     const revealed = eligibleCommitters.filter(sender => {
       const revealData = reveals!.get(sender);
       if (!revealData) {
@@ -496,9 +429,7 @@ export class FTSOClient {
       const commitHash = this.index.getCommits(priceEpochId)?.get(sender);
       return commitHash === hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
     });
-    const failedCommit = [...this.eligibleVoterWeights.get(rewardEpochId)?.keys()!].filter(
-      voter => !revealed.includes(voter.toLowerCase())
-    );
+    const failedCommit = [...voterWeights.keys()!].filter(voter => !revealed.includes(voter.toLowerCase()));
     const revealedSet = new Set<string>(revealed);
     const committedFailedReveal = eligibleCommitters.filter(voter => !revealedSet.has(voter.toLowerCase()));
     const revealedRandoms = revealed.map(voter => {

@@ -84,21 +84,20 @@ export class Web3Provider implements IVotingProvider {
     );
   }
 
-    /**
+  /**
    * Authorizes the provided claimer account to process reward claims for the voter.
    * Note: the voter account will still be the beneficiary of the reward value.
    */
-    async authorizeClaimerFrom(claimerAddress: string, fromAccount: Account): Promise<any> {
-      const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
-      return await this.signAndFinalize(
-        "Authorize claimer",
-        this.contracts.votingRewardManager.options.address,
-        methodCall,
-        0,
-        fromAccount
-      );
-    }
-  
+  async authorizeClaimerFrom(claimerAddress: string, fromAccount: Account): Promise<any> {
+    const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
+    return await this.signAndFinalize(
+      "Authorize claimer",
+      this.contracts.votingRewardManager.options.address,
+      methodCall,
+      0,
+      fromAccount
+    );
+  }
 
   async claimRewards(claims: RewardClaimWithProof[], beneficiary: string): Promise<any> {
     let nonce = await this.getNonce(this.claimAccount);
@@ -106,10 +105,7 @@ export class Web3Provider implements IVotingProvider {
       this.logger.info(
         `Calling claim reward contract with ${claim.body.amount.toString()}, using ${beneficiary}, nonce ${nonce}`
       );
-      const methodCall = this.contracts.votingRewardManager.methods.claimReward(
-        hexlifyBN(claim),
-        beneficiary
-      );
+      const methodCall = this.contracts.votingRewardManager.methods.claimReward(hexlifyBN(claim), beneficiary);
       await this.signAndFinalize(
         "Claim reward",
         this.contracts.votingRewardManager.options.address,
@@ -218,15 +214,15 @@ export class Web3Provider implements IVotingProvider {
     return Promise.resolve(signer);
   }
 
-  async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
+  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<string, BN>> {
     const data = await this.contracts.voterRegistry.methods.votersForRewardEpoch(rewardEpoch).call();
     const voters = data[0];
     const weights = data[1].map(w => toBN(w));
-    const result: VoterWithWeight[] = [];
+    const weightMap = new Map<string, BN>();
     for (let i = 0; i < voters.length; i++) {
-      result.push({ voterAddress: voters[i], weight: weights[i], originalWeight: weights[i] });
+      weightMap.set(voters[i].toLowerCase(), weights[i]);
     }
-    return result;
+    return weightMap;
   }
 
   async registerAsVoter(rewardEpochId: number, weight: number): Promise<any> {
