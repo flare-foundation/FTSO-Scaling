@@ -1,38 +1,20 @@
 import { getLogger } from "../utils/logger";
 import { Received } from "../BlockIndex";
-import { FinalizeData, RewardClaim, RewardOffered } from "../voting-interfaces";
+import { FinalizeData, RewardClaim } from "../lib/voting-interfaces";
 import { BlockIndexer } from "./BlockIndexer";
 import { getAccount, getBlockNumberBefore } from "../web3-utils";
 import { FTSOClient } from "../FTSOClient";
 import Web3 from "web3";
 import { Penalty } from "./RewardCalculator";
-import { hashRewardClaim } from "../voting-utils";
-import { MerkleTree } from "../MerkleTree";
+import { hashRewardClaim } from "../lib/voting-utils";
+
 import { asError } from "../utils/error";
 import { Web3Provider } from "../providers/Web3Provider";
 import { Account } from "web3-core";
+import { MerkleTree } from "../utils/MerkleTree";
 
-/*
-
-On startup, replay everything from the beginning of the reward epoch.
-For every price epoch, need:
-- Median results - reveals
-- Randoms - reveals
-- Finalizations and signatures - rewards
-- Penalisations - missed reveals, needs commits for missed reveals
-- Reward offers
-
-Track all transactions up to finalization for each price epoch.
-Once finalized, calculate rewards. Merge into cumulative ones.
-
-On reward epoch x + 1, vote for merkle root of all rewards for x.
-
-Claims should be done for last price epoch of x.
-
-*/
-
-export class RewardManager {
-  private readonly logger = getLogger(RewardManager.name);
+export class RewardVoter {
+  private readonly logger = getLogger(RewardVoter.name);
   private readonly indexer: BlockIndexer;
 
   private voterAccount: Account;
@@ -64,8 +46,6 @@ export class RewardManager {
 
     // We should process data from the start of the previuos reward epoch so we pick up reward offers for the current one.
     const previousRewardEpoch = Math.max(currentRewardEpoch - 1, 0);
-    // const startPriceEpoch = this.client.epochs.firstPriceEpochForRewardEpoch(previousRewardEpoch);
-
     const previousRewardEpochStartTimeSec = this.client.epochs.priceEpochStartTimeSec(
       this.client.epochs.firstPriceEpochForRewardEpoch(previousRewardEpoch)
     );
@@ -122,8 +102,6 @@ export class RewardManager {
       return await this.client.provider.claimRewards(cwp, this.voterAdress);
     });
 
-    // this.indexer.on(Received.Reveal, async (signature: any) => {});
-
     this.indexer.run(startBlock);
   }
 
@@ -143,19 +121,6 @@ export class RewardManager {
       r: signature.r,
       s: signature.s,
     });
-  }
-
-  // private async maybeClaimRewards(previousRewardEpochId: number, currentEpochId: number) {
-  //   if (this.isRegisteredForRewardEpoch(previousRewardEpochId) && this.isFirstPriceEpochInRewardEpoch(currentEpochId)) {
-  //     this.logger.info(`[${currentEpochId}] Claiming rewards for last reward epoch ${previousRewardEpochId}`);
-  //     await this.client.claimRewards(previousRewardEpochId);
-  //   }
-  // }
-
-  private isFirstPriceEpochInRewardEpoch(priceEpochId: number): boolean {
-    const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const rewardEpochForPrevious = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId - 1);
-    return rewardEpochForPrevious != 0 && rewardEpochForPrevious < rewardEpoch;
   }
 
   private isLastPriceEpochInRewardEpoch(priceEpochId: number): boolean {

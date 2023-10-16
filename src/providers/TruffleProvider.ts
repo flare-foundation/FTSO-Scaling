@@ -15,8 +15,8 @@ import {
   EpochResult,
   Offer,
   VoterWithWeight,
-} from "../voting-interfaces";
-import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
+} from "../lib/voting-interfaces";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../lib/voting-utils";
 import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../web3-utils";
 import { IVotingProvider } from "./IVotingProvider";
 

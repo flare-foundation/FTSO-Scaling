@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import { getWeb3, recoverSigner, signMessage } from "../../src/web3-utils";
-import { BareSignature } from "../../src/voting-interfaces";
+import { BareSignature } from "../../src/lib/voting-interfaces";
 import { getTestFile } from "../../test-utils/utils/constants";
 
 const rpcLink = "http://localhost:8545";

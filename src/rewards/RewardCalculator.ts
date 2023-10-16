@@ -1,8 +1,8 @@
 import BN from "bn.js";
 import { EpochSettings } from "../EpochSettings";
 import { PriceEpochRewards } from "./PriceEpochRewards";
-import { FeedValue, MedianCalculationResult, RewardOffered, RewardClaim } from "../voting-interfaces";
-import { feedId, toBN } from "../voting-utils";
+import { FeedValue, MedianCalculationResult, RewardOffered, RewardClaim } from "../lib/voting-interfaces";
+import { feedId, toBN } from "../lib/voting-utils";
 import { getLogger } from "../utils/logger";
 
 /** 10% of total reward goes to the finalizer. */

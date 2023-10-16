@@ -1,6 +1,6 @@
 import { ContractAddresses } from "../deployment/tasks/common";
 import { EpochSettings } from "./EpochSettings";
-import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./voting-interfaces";
+import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./lib/voting-interfaces";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./EncodingUtils";
 import { getLogger } from "./utils/logger";

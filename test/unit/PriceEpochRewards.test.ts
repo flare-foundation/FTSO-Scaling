@@ -1,5 +1,5 @@
 import { PriceEpochRewards } from "../../src/rewards/PriceEpochRewards";
-import { toBN } from "../../src/voting-utils";
+import { toBN } from "../../src/lib/voting-utils";
 import { getTestFile } from "../../test-utils/utils/constants";
 
 describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {

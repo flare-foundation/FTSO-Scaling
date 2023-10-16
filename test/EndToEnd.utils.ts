@@ -1,7 +1,7 @@
 import { time, expectEvent } from "@openzeppelin/test-helpers";
 import { FTSOClient } from "../src/FTSOClient";
-import { Feed, Offer } from "../src/voting-interfaces";
-import { unprefixedSymbolBytes, toBN, ZERO_ADDRESS, toBytes4, hexlifyBN, feedId } from "../src/voting-utils";
+import { Feed, Offer } from "../src/lib/voting-interfaces";
+import { unprefixedSymbolBytes, toBN, ZERO_ADDRESS, toBytes4, hexlifyBN, feedId } from "../src/lib/voting-utils";
 import { DummyERC20 } from "../typechain";
 import {
   DummyERC20Instance,

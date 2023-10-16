@@ -2,14 +2,11 @@ import BN from "bn.js";
 import Web3 from "web3";
 
 import { EpochSettings } from "./EpochSettings";
-import { MerkleTree } from "./MerkleTree";
-import { Penalty, RewardCalculator } from "./rewards/RewardCalculator";
-import { calculateResultsForFeed } from "./median-calculation-utils";
+import { RewardCalculator } from "./rewards/RewardCalculator";
+import { calculateResultsForFeed } from "./lib/median-calculation";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import {
-  BareSignature,
-  BlockData,
   RewardClaimWithProof,
   EpochData,
   EpochResult,
@@ -21,25 +18,25 @@ import {
   VoterWithWeight,
   RewardClaim,
   Feed,
-} from "./voting-interfaces";
+} from "./lib/voting-interfaces";
 import {
   ZERO_BYTES32,
   feedId,
   hashRewardClaim,
   hashForCommit,
   packPrices,
-  sortedHashPair,
   toBN,
   unprefixedSymbolBytes,
   combineRandom,
-} from "./voting-utils";
+} from "./lib/voting-utils";
 import { getLogger } from "./utils/logger";
 import { BlockIndex, Received } from "./BlockIndex";
 import { retry } from "./utils/retry";
-import { sleepFor } from "./time-utils";
-import { Bytes32 } from "./utils/sol-types";
+import { sleepFor } from "./utils/time";
+import { Bytes32 } from "./lib/sol-types";
 import { asError, errorString } from "./utils/error";
 import { BlockIndexer } from "./rewards/BlockIndexer";
+import { MerkleTree } from "./utils/MerkleTree";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
@@ -77,8 +74,6 @@ export class FTSOClient {
   readonly rewardEpochOffers = new Map<number, RewardOffered[]>();
   private readonly rewardEpochOffersClosed = new Map<number, boolean>();
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
-
-  private readonly signatureListener = async (s: SignatureData) => this.checkSignaturesAndTryFinalize(s);
 
   get address() {
     return this.provider.senderAddressLowercase;
@@ -258,8 +253,6 @@ export class FTSOClient {
     if (revealResult.revealed.length === 0) {
       throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
     }
-
-
 
     const results: MedianCalculationResult[] = this.calculateFeedMedians(priceEpochId, revealResult, rewardEpoch);
     const committedFailedReveal = revealResult.committedFailedReveal;
@@ -453,14 +446,6 @@ export class FTSOClient {
     return orderedPriceFeeds.map((feed, i) => calculateResultsForFeed(voters, feedPrices[i], weights, feed));
   }
 
-  async tryFinalizeOnceSignaturesReceived(priceEpochId: number) {
-    this.index.on(Received.Signature, this.signatureListener); // Will atempt to finalize once enough signatures are received.
-    await this.processNewBlocks();
-    this.logger.info(`Waiting for finalization of epoch ${priceEpochId}`);
-    await this.awaitFinalization(priceEpochId);
-    this.index.off(Received.Signature, this.signatureListener);
-  }
-
   async awaitFinalization(priceEpochId: number) {
     while (!this.index.getFinalize(priceEpochId)) {
       this.logger.info(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
@@ -468,53 +453,6 @@ export class FTSOClient {
       await this.processNewBlocks();
     }
     this.logger.info(`Epoch ${priceEpochId} finalized, continue.`);
-  }
-
-  /**
-   * Once sufficient voter weight in received signatures is observed, will call finalize.
-   * @returns true if enough signatures were found and finalization was attempted.
-   */
-  private async checkSignaturesAndTryFinalize(signatureData: SignatureData): Promise<boolean> {
-    const priceEpochId = signatureData.epochId;
-    if (priceEpochId! in this.priceEpochResults) {
-      throw Error(`Invalid state: trying to finalize ${priceEpochId}, but results not yet computed.`);
-    }
-
-    const priceEpochMerkleRoot = this.priceEpochResults.get(priceEpochId)!.merkleRoot!;
-    const signatureBySender = this.index.getSignatures(priceEpochId)!;
-    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const weightThreshold = await this.provider.thresholdForRewardEpoch(rewardEpoch);
-    const voterWeights = this.eligibleVoterWeights.get(rewardEpoch)!;
-    let totalWeight = toBN(0);
-
-    const validSignatures = new Map<string, SignatureData>();
-    for (const [signature, _time] of signatureBySender.values()) {
-      if (signature.merkleRoot !== priceEpochMerkleRoot) continue;
-      const signer = await this.provider.recoverSigner(priceEpochMerkleRoot, signature);
-      // Deduplicate signers, since the same signature can in theory be published multiple times by different accounts.
-      if (validSignatures.has(signer)) continue;
-
-      const weight = voterWeights.get(signer) ?? toBN(0);
-      // Weight == 0 could mean that the signer is not registered for this reward epoch OR that the signature is invalid.
-      // We skip the signature in both cases.
-      if (weight.gt(toBN(0))) {
-        validSignatures.set(signer, signature);
-        totalWeight = totalWeight.add(weight);
-
-        if (totalWeight.gt(weightThreshold)) {
-          this.logger.debug(
-            `Weight threshold reached for ${priceEpochId}: ${totalWeight.toString()} >= ${weightThreshold.toString()}, calling finalize with ${
-              validSignatures.size
-            } signatures`
-          );
-
-          this.index.off(Received.Signature, this.signatureListener);
-          await this.tryFinalizeEpoch(priceEpochId, priceEpochMerkleRoot, [...validSignatures.values()]);
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   async onRewardOffers(priceEpoch: number, offers: RewardOffered[]) {

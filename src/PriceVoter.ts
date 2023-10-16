@@ -1,12 +1,12 @@
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
-import { sleepFor } from "./time-utils";
+import { sleepFor } from "./utils/time";
 import { errorString } from "./utils/error";
 
-export class DataProvider {
-  private readonly logger = getLogger(DataProvider.name);
+export class PriceVoter {
+  private readonly logger = getLogger(PriceVoter.name);
 
-  constructor(private client: FTSOClient, private myId: number) {}
+  constructor(private client: FTSOClient) {}
 
   /** Used for checking if we need to send reveals in the current price epoch. */
   private hasCommits: boolean = false;
@@ -61,7 +61,6 @@ export class DataProvider {
     this.logger.info(`[${currentPriceEpochId}] Finished processing price epoch.`);
   }
 
-
   private async runVotingProcotol(currentEpochId: number) {
     this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
@@ -98,7 +97,6 @@ export class DataProvider {
   private isRegisteredForRewardEpoch(rewardEpochId: number): boolean {
     return this.registeredRewardEpochs.has(rewardEpochId);
   }
-
 
   private async waitForRevealEpochEnd() {
     const revealPeriodDurationMs = this.client.epochs.revealDurationSec * 1000;

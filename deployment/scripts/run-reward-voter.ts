@@ -5,7 +5,7 @@ import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, loadAccounts } from "../tasks/common";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/web3-utils";
-import { RewardManager } from "../../src/rewards/RewardManager";
+import { RewardVoter } from "../../src/rewards/RewardVoter";
 
 async function main() {
   const voterId = +process.argv[2];
@@ -35,8 +35,8 @@ async function main() {
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey, privateKey);
   const client = new FTSOClient(provider, await provider.getBlockNumber());
 
-  const rewardManager = new RewardManager(client, voterKey, web3);
-  await rewardManager.run();
+  const rewardVoter = new RewardVoter(client, voterKey, web3);
+  await rewardVoter.run();
 }
 
 function loadContracts(): ContractAddresses {
@@ -46,7 +46,7 @@ function loadContracts(): ContractAddresses {
 }
 
 main().catch(e => {
-  console.error("Reward manager error, exiting", e);
+  console.error("Reward voter error, exiting", e);
   getLogger("reward-manager").error(e);
   process.exit(1);
 });

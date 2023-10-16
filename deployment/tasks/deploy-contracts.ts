@@ -1,5 +1,5 @@
-import { Feed } from "../../src/voting-interfaces";
-import { unprefixedSymbolBytes } from "../../src/voting-utils";
+import { Feed } from "../../src/lib/voting-interfaces";
+import { unprefixedSymbolBytes } from "../../src/lib/voting-utils";
 import { Account } from "web3-core";
 import { FTSOParameters } from "../config/FTSOParameters";
 import { ERC20PriceOracleInstance, PriceOracleInstance, VotingInstance, VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";

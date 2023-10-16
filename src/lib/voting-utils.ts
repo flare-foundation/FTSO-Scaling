@@ -3,8 +3,8 @@ import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { Feed, RewardOffered, RewardClaim } from "./voting-interfaces";
-import EncodingUtils from "./EncodingUtils";
-import { Bytes32 } from "./utils/sol-types";
+import EncodingUtils from "../EncodingUtils";
+import { Bytes32 } from "./sol-types";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";

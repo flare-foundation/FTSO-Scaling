@@ -2,7 +2,7 @@ import { ContractAddresses } from "../../deployment/tasks/common";
 import { BlockIndex } from "../BlockIndex";
 import { EpochSettings } from "../EpochSettings";
 import { IVotingProvider } from "../providers/IVotingProvider";
-import { sleepFor } from "../time-utils";
+import { sleepFor } from "../utils/time";
 import { errorString } from "../utils/error";
 import { getLogger } from "../utils/logger";
 import { retry } from "../utils/retry";
@@ -15,8 +15,12 @@ export class BlockIndexer extends BlockIndex {
     super(epochs, provider.contractAddresses);
   }
 
-  async run(startBlock: number) {
-    this.lastProcessedBlockNumber = startBlock - 1;
+  async run(startBlock: number | undefined = undefined) {
+    if (startBlock) {
+      this.lastProcessedBlockNumber = startBlock - 1;
+    } else {
+      this.lastProcessedBlockNumber = (await this.provider.getBlockNumber()) - 1;
+    }
 
     while (true) {
       await this.processNewBlocks();

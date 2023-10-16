@@ -1,5 +1,5 @@
 import AsyncEventEmitter from "../../src/utils/AsyncEventEmitter";
-import { sleepFor } from "../../src/time-utils";
+import { sleepFor } from "../../src/utils/time";
 import { getTestFile } from "../../test-utils/utils/constants";
 
 describe(`AsyncEventEmitter; ${getTestFile(__filename)}`, () => {

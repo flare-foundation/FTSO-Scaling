@@ -2,7 +2,7 @@ import { toBN } from "web3-utils";
 
 import { getWeb3 } from "../../src/web3-utils";
 import { loadFTSOParameters } from "../config/FTSOParameters";
-import { sleepFor } from "../../src/time-utils";
+import { sleepFor } from "../../src/utils/time";
 
 import fs from "fs";
 import Web3 from "web3";
@@ -18,20 +18,20 @@ const DEFAULT_FINALIZER_COUNT = 10;
 
 // gov pub key: 0xc783df8a850f42e7f7e57013759c285caa701eb6
 async function main() {
-  let dataProviderCount = +process.argv[2];
-  if (!dataProviderCount) dataProviderCount = DEEFAULT_DATA_PROVIDER_COUNT;
+  let priceVoterCount = +process.argv[2];
+  if (!priceVoterCount) priceVoterCount = DEEFAULT_DATA_PROVIDER_COUNT;
 
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const accounts: AccountDetails[] = JSON.parse(fs.readFileSync("coston2-100-accounts.json", "utf-8")).slice(
     0,
-    dataProviderCount * 2 + DEFAULT_FINALIZER_COUNT
+    priceVoterCount * 2 + DEFAULT_FINALIZER_COUNT
   );
 
   await fundAccounts(web3, accounts);
   console.log("Funded accounts.");
-  await runProviders(dataProviderCount, accounts);
+  await runProviders(priceVoterCount, accounts);
   await runFinalizers(DEFAULT_FINALIZER_COUNT, accounts);
 
   while (true) {
@@ -78,24 +78,24 @@ async function runProviders(providerCount: number, accounts: AccountDetails[]) {
       DATA_PROVIDER_VOTING_KEY: accounts[i * 2].privateKey,
       DATA_PROVIDER_CLAIM_KEY: accounts[i * 2 + 1].privateKey,
     };
-    startDataProvider(i + 1, envConfig);
+    startPriceVoter(i + 1, envConfig);
     await sleepFor(1000);
   }
 }
 
-function startDataProvider(id: number, envConfig: any): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-data-provider.ts", id.toString(), "random"], {
+function startPriceVoter(id: number, envConfig: any): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-price-voter.ts", id.toString(), "random"], {
     env: envConfig,
   });
   process.stdout.on("data", function (data) {
-    console.log(`[Provider ${id}]: ${data}`);
+    console.log(`[PriceVoter ${id}]: ${data}`);
   });
   process.stderr.on("data", function (data) {
-    console.log(`[Provider ${id}] ERROR: ${data}`);
+    console.log(`[PriceVoter ${id}] ERROR: ${data}`);
   });
   process.on("close", function (code) {
     console.log("closing code: " + code);
-    throw Error(`Provider ${id} exited with code ${code}`);
+    throw Error(`PriceVoter ${id} exited with code ${code}`);
   });
   return process;
 }

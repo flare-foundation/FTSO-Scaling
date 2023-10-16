@@ -2,17 +2,18 @@ import BN from "bn.js";
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { errorString } from "./utils/error";
-import { BlockIndex, Received } from "./BlockIndex";
-import { FinalizeData, SignatureData } from "./voting-interfaces";
-import { toBN } from "./voting-utils";
+import { Received } from "./BlockIndex";
+import { FinalizeData, SignatureData } from "./lib/voting-interfaces";
+import { toBN } from "./lib/voting-utils";
 import _ from "lodash";
+import { BlockIndexer } from "./rewards/BlockIndexer";
 
 export class Finalizer {
   private readonly logger = getLogger(Finalizer.name);
-  private readonly index: BlockIndex;
+  private readonly indexer: BlockIndexer;
 
   constructor(private client: FTSOClient) {
-    this.index = this.client.index;
+    this.indexer = client.index as BlockIndexer;
   }
 
   readonly signaturesByEpoch = new Map<number, SignatureData[]>();
@@ -22,19 +23,12 @@ export class Finalizer {
   finalizedRewardEpoch = 0;
 
   async run() {
-    await this.client.processNewBlocks(); // Initial catchup.
-
-    // Process new blocks continuously
-    setInterval(async () => {
-      await this.client.processNewBlocks();
-    }, 1000);
-
-    this.index.on(Received.Finalize, (fd: FinalizeData) => {
+    this.indexer.on(Received.Finalize, (fd: FinalizeData) => {
       this.finalizedEpoch = Math.max(this.finalizedEpoch, fd.epochId);
       this.signaturesByEpoch.delete(fd.epochId);
     });
 
-    this.index.on(Received.Signature, async (signature: SignatureData) => {
+    this.indexer.on(Received.Signature, async (signature: SignatureData) => {
       this.logger.info(`Received signature for epoch ${signature.epochId}.`);
       if (signature.epochId <= this.finalizedEpoch) return;
 
@@ -57,12 +51,12 @@ export class Finalizer {
       }
     });
 
-    this.index.on(Received.RewardFinalize, (fd: FinalizeData) => {
+    this.indexer.on(Received.RewardFinalize, (fd: FinalizeData) => {
       this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, fd.epochId);
       this.rewardSignaturesByEpoch.delete(fd.epochId);
     });
 
-    this.index.on(Received.RewardSignature, async (signature: SignatureData) => {
+    this.indexer.on(Received.RewardSignature, async (signature: SignatureData) => {
       this.logger.info(`Received reward signature for epoch ${signature.epochId}.`);
       if (signature.epochId <= this.finalizedRewardEpoch) return;
 
@@ -83,56 +77,9 @@ export class Finalizer {
         return true;
       }
     });
+
+    this.indexer.run();
   }
-
-  // async onPriceEpoch() {
-  //   const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
-  //   const previousEpochId = currentPriceEpochId - 1;
-
-  //   const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(previousEpochId);
-  //   const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
-  //   const voterWeights = await this.getVoterWeights(rewardEpoch);
-
-  //   this.logger.info(`[${currentPriceEpochId}] Processing price epoch.`);
-
-  //   const signatures: SignatureData[] = [];
-
-  //   const signatureListener = async (signature: SignatureData) => {
-  //     if (signature.epochId != previousEpochId) {
-  //       this.logger.info(
-  //         `[${currentPriceEpochId}] Received signature for different epoch than the previous one. Expected: ${previousEpochId}, received: ${signature.epochId}. Ignoring.`
-  //       );
-  //       if (signature.epochId > previousEpochId + 1) {
-  //         // Assume voting did not take place for the previous epoch.
-  //         this.logger.info(
-  //           `[${currentPriceEpochId}] Received signature is 2 or more epochs ahead of the current one, aborting processing.`
-  //         );
-  //         this.index.off(Received.Signature, signatureListener);
-  //       }
-  //       return;
-  //     }
-
-  //     signatures.push(signature);
-  //     const res = await this.checkSignatures(signatures, weightThreshold, voterWeights);
-  //     if (res !== undefined) {
-  //       const [mroot, sigs] = res;
-  //       if (await this.tryFinalizePriceEpoch(previousEpochId, mroot, [...sigs.values()])) {
-  //         this.index.off(Received.Signature, signatureListener);
-  //       }
-  //       return true;
-  //     }
-  //   };
-  //   const finalizeListener = (_from: string, fd: FinalizeData) => {
-  //     if (fd.epochId == previousEpochId) {
-  //       this.index.off(Received.Signature, signatureListener);
-  //       this.index.off(Received.Finalize, finalizeListener);
-  //       this.logger.info(`[${currentPriceEpochId}] Epoch finalized, listener for ${previousEpochId} removed.`);
-  //     }
-  //   };
-
-  //   this.index.on(Received.Signature, signatureListener);
-  //   this.index.on(Received.Finalize, finalizeListener);
-  // }
 
   /**
    * Once sufficient voter weight in received signatures is observed, will call finalize.

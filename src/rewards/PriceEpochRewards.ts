@@ -1,6 +1,6 @@
 import BN from "bn.js";
-import { RewardClaim, MedianCalculationResult, RewardOffered, VoterRewarding } from "../voting-interfaces";
-import { ZERO_ADDRESS, feedId, toBN } from "../voting-utils";
+import { RewardClaim, MedianCalculationResult, RewardOffered, VoterRewarding } from "../lib/voting-interfaces";
+import { ZERO_ADDRESS, feedId, toBN } from "../lib/voting-utils";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { getLogger } from "../utils/logger";

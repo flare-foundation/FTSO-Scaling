@@ -1,11 +1,11 @@
 import { readFileSync } from "fs";
-import { DataProvider } from "../../src/DataProvider";
+import { PriceVoter as PriceVoter } from "../../src/PriceVoter";
 import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
-import { Feed } from "../../src/voting-interfaces";
+import { Feed } from "../../src/lib/voting-interfaces";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/web3-utils";
 import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/RandomPriceFeed";
@@ -16,13 +16,13 @@ async function main() {
   if (myId <= 0) throw Error("Data provider id must be greater than 0.");
   const useRandomFeed = process.argv[3] == "random";
 
-  setGlobalLogFile(`data-provider-${myId}`);
+  setGlobalLogFile(`price-voter-${myId}`);
 
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-  getLogger("data-provider").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
+  getLogger("price-voter").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
 
   let votingKey: string;
   let claimKey: string;
@@ -47,8 +47,8 @@ async function main() {
   }
   client.registerPriceFeeds(feeds);
 
-  const dataProvider = new DataProvider(client, myId);
-  await dataProvider.run();
+  const priceVoter = new PriceVoter(client);
+  await priceVoter.run();
 }
 
 function loadContracts(): ContractAddresses {
@@ -79,6 +79,6 @@ function addNoise(num: number): number {
 
 main().catch(e => {
   console.error("Data provider error, exiting", e);
-  getLogger("data-provider").error(e);
+  getLogger("price-voter").error(e);
   process.exit(1);
 });

@@ -2,11 +2,11 @@ import { loadAccounts } from "../tasks/common";
 import { getWeb3 } from "../../src/web3-utils";
 import { ChildProcess, execSync, spawn } from "child_process";
 import { retry } from "../../src/utils/retry";
-import { sleepFor } from "../../src/time-utils";
+import { sleepFor } from "../../src/utils/time";
 import { promisify } from "util";
 import Web3 from "web3";
 
-const DATA_PROVIDER_COUNT = 3;
+const PRICE_VOTER_COUNT = 3;
 const FINALIZER_COUNT = 2;
 const RPC = "http://127.0.0.1:8545";
 
@@ -35,13 +35,13 @@ async function main() {
     deployContracts(envConfig);
 
     let id = 1; // 0 is reserved for governance account
-    for (let i = 0; i < DATA_PROVIDER_COUNT; i++) {
-      childProcesses.push(startDataProvider(id++));
+    for (let i = 0; i < PRICE_VOTER_COUNT; i++) {
+      childProcesses.push(startPriceVoter(id++));
       await sleepFor(1000);
     }
     setTimeout(() => {
-      for (let i = 0; i < DATA_PROVIDER_COUNT; i++) {
-        childProcesses.push(startRewardManager(id++));
+      for (let i = 0; i < PRICE_VOTER_COUNT; i++) {
+        childProcesses.push(startRewardVoter(id++));
         sleepFor(1000);
       }
     }, 30_000);
@@ -91,17 +91,17 @@ function startAdminDaemon(): ChildProcess {
   return process;
 }
 
-function startDataProvider(id: number): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-data-provider.ts", id.toString(), "random"]);
+function startPriceVoter(id: number): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-price-voter.ts", id.toString(), "random"]);
   process.stdout.on("data", function (data) {
-    console.log(`[Provider ${id}]: ${data}`);
+    console.log(`[PriceVoter ${id}]: ${data}`);
   });
   process.stderr.on("data", function (data) {
-    console.log(`[Provider ${id}] ERROR: ${data}`);
+    console.log(`[PriceVoter ${id}] ERROR: ${data}`);
   });
   process.on("close", function (code) {
     console.log("closing code: " + code);
-    throw Error(`Provider ${id} exited with code ${code}`);
+    throw Error(`PriceVoter ${id} exited with code ${code}`);
   });
   return process;
 }
@@ -121,17 +121,17 @@ function startFinalizer(id: number): ChildProcess {
   return process;
 }
 
-function startRewardManager(id: number): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-manager.ts", (id - DATA_PROVIDER_COUNT - FINALIZER_COUNT).toString(), id.toString()]);
+function startRewardVoter(id: number): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-voter.ts", (id - PRICE_VOTER_COUNT - FINALIZER_COUNT).toString(), id.toString()]);
   process.stdout.on("data", function (data) {
-    console.log(`[Reward manager ${id}]: ${data}`);
+    console.log(`[Reward voter ${id}]: ${data}`);
   });
   process.stderr.on("data", function (data) {
-    console.log(`[Reward manager ${id}] ERROR: ${data}`);
+    console.log(`[Reward voter ${id}] ERROR: ${data}`);
   });
   process.on("close", function (code) {
     console.log("closing code: " + code);
-    throw Error(`Reward manager ${id} exited with code ${code}`);
+    throw Error(`Reward voter ${id} exited with code ${code}`);
   });
   return process;
 }

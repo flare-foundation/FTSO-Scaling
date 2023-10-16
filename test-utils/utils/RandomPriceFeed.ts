@@ -1,4 +1,4 @@
-import { Feed } from "../../src/voting-interfaces";
+import { Feed } from "../../src/lib/voting-interfaces";
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
 
 export interface RandomPriceFeedConfig {

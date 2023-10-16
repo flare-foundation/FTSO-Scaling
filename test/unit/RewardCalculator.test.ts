@@ -1,8 +1,8 @@
 import { EpochSettings } from "../../src/EpochSettings";
 import { RewardCalculator } from "../../src/rewards/RewardCalculator";
-import { calculateResultsForFeed } from "../../src/median-calculation-utils";
-import { Feed, Offer, RewardOffered } from "../../src/voting-interfaces";
-import { feedToText, toBN } from "../../src/voting-utils";
+import { calculateResultsForFeed } from "../../src/lib/median-calculation";
+import { Feed, Offer, RewardOffered } from "../../src/lib/voting-interfaces";
+import { feedToText, toBN } from "../../src/lib/voting-utils";
 import { getTestFile } from "../../test-utils/utils/constants";
 import { generateOfferForSymbol, prepareSymbols } from "../EndToEnd.utils";
 

@@ -1,4 +1,4 @@
-import { sleepFor } from "../time-utils";
+import { sleepFor } from "./time";
 import { asError, errorString } from "./error";
 import { getLogger } from "./logger";
 
