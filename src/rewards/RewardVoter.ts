@@ -12,6 +12,7 @@ import { asError } from "../utils/error";
 import { Web3Provider } from "../providers/Web3Provider";
 import { Account } from "web3-core";
 import { MerkleTree } from "../utils/MerkleTree";
+import { generateProofsForClaims } from "./reward-utils";
 
 export class RewardVoter {
   private readonly logger = getLogger(RewardVoter.name);
@@ -97,7 +98,7 @@ export class RewardVoter {
       const rewardClaims = this.client.rewardCalculator.getRewardClaimsForRewardEpoch(fd.epochId);
       const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
 
-      const cwp = this.client.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAdress);
+      const cwp = generateProofsForClaims(claimable, fd.merkleRoot, this.voterAdress);
       this.logger.info(`[${fd.epochId}] Claiming ${cwp.length} rewards for epoch.`);
       return await this.client.provider.claimRewards(cwp, this.voterAdress);
     });
