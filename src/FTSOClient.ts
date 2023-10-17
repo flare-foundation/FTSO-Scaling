@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import Web3 from "web3";
 
-import { EpochSettings } from "./EpochSettings";
+import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { calculateResultsForFeed } from "./protocol/median-calculation";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
@@ -23,13 +23,13 @@ import {
   toBN,
   unprefixedSymbolBytes,
   combineRandom,
-} from "./protocol/voting-utils";
+} from "./protocol/utils/voting-utils";
 import { getLogger } from "./utils/logger";
 import { BlockIndex } from "./BlockIndex";
 import { sleepFor } from "./utils/time";
-import { Bytes32 } from "./protocol/sol-types";
+import { Bytes32 } from "./protocol/utils/sol-types";
 import { asError } from "./utils/error";
-import { BlockIndexer } from "./rewards/BlockIndexer";
+import { BlockIndexer } from "./BlockIndexer";
 import { RewardLogic } from "./protocol/RewardLogic";
 
 const DEFAULT_VOTER_WEIGHT = 1000;

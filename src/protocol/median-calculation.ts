@@ -1,11 +1,11 @@
 import BN from "bn.js";
 import { Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
-import { toBN } from "./voting-utils";
+import { toBN } from "./utils/voting-utils";
 
 /**
  * Data for a single vote.
  */
-export interface VoteData {
+interface VoteData {
   voter: string;
   price: BN;
   weight: BN;

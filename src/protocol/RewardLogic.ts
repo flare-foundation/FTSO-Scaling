@@ -7,13 +7,13 @@ import {
   Feed,
   RewardClaimWithProof,
 } from "./voting-types";
-import { ZERO_ADDRESS, feedId, hashRewardClaim, toBN } from "./voting-utils";
+import { ZERO_ADDRESS, feedId, hashRewardClaim, toBN } from "./utils/voting-utils";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { getLogger } from "../utils/logger";
 import _ from "lodash";
-import { EpochSettings } from "../EpochSettings";
-import { MerkleTree } from "../utils/MerkleTree";
+import { EpochSettings } from "./utils/EpochSettings";
+import { MerkleTree } from "./utils/MerkleTree";
 
 /** Address to which we allocate penalised reward amounts. */
 const BURN_ADDRESS = ZERO_ADDRESS;

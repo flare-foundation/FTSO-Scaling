@@ -1,8 +1,8 @@
-import { EpochSettings } from "../../src/EpochSettings";
+import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import { RewardCalculator } from "../../src/rewards/RewardCalculator";
 import { calculateResultsForFeed } from "../../src/protocol/median-calculation";
 import { Feed, Offer, RewardOffered } from "../../src/protocol/voting-types";
-import { feedToText, toBN } from "../../src/protocol/voting-utils";
+import { feedToText, toBN } from "../../src/protocol/utils/voting-utils";
 import { getTestFile } from "../../test-utils/utils/constants";
 import { generateOfferForSymbol, prepareSymbols } from "../EndToEnd.utils";
 

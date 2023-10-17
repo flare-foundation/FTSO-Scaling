@@ -3,7 +3,7 @@ import { Feed } from "../../src/protocol/voting-types";
 import * as dotenv from "dotenv";
 import { URL } from "url";
 import BN from "bn.js";
-import { toBN } from "../../src/protocol/voting-utils";
+import { toBN } from "../../src/protocol/utils/voting-utils";
 dotenv.config();
 
 export interface FTSOParameters {

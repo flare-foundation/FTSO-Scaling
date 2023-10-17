@@ -20,7 +20,7 @@ import {
   EpochResult,
   Offer,
 } from "../protocol/voting-types";
-import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/voting-utils";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/utils/voting-utils";
 import {
   getAccount,
   getFilteredBlock,

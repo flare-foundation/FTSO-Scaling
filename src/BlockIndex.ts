@@ -1,5 +1,5 @@
 import { ContractAddresses } from "../deployment/tasks/common";
-import { EpochSettings } from "./EpochSettings";
+import { EpochSettings } from "./protocol/utils/EpochSettings";
 import {
   Address,
   BlockData,
@@ -13,7 +13,7 @@ import {
   TxData,
 } from "./protocol/voting-types";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
-import EncodingUtils from "./EncodingUtils";
+import EncodingUtils from "./protocol/utils/EncodingUtils";
 import { getLogger } from "./utils/logger";
 import { RewardLogic } from "./protocol/RewardLogic";
 

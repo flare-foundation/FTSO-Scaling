@@ -1,7 +1,7 @@
 import { VotingManagerInstance } from "../../typechain-truffle";
 import { getTestFile } from "../../test-utils/utils/constants";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import { EpochSettings } from "../../src/EpochSettings";
+import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import Prando from "prando";
 
 const VotingManager = artifacts.require("VotingManager");

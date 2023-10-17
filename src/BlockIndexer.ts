@@ -1,10 +1,10 @@
-import { BlockIndex } from "../BlockIndex";
-import { EpochSettings } from "../EpochSettings";
-import { IVotingProvider } from "../providers/IVotingProvider";
-import { sleepFor } from "../utils/time";
-import { errorString } from "../utils/error";
-import { getLogger } from "../utils/logger";
-import { retry } from "../utils/retry";
+import { BlockIndex } from "./BlockIndex";
+import { EpochSettings } from "./protocol/utils/EpochSettings";
+import { IVotingProvider } from "./providers/IVotingProvider";
+import { sleepFor } from "./utils/time";
+import { errorString } from "./utils/error";
+import { getLogger } from "./utils/logger";
+import { retry } from "./utils/retry";
 
 export class BlockIndexer extends BlockIndex {
   private logger = getLogger(BlockIndexer.name);

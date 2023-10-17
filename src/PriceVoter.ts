@@ -2,7 +2,7 @@ import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { sleepFor } from "./utils/time";
 import { errorString } from "./utils/error";
-import { BlockIndexer } from "./rewards/BlockIndexer";
+import { BlockIndexer } from "./BlockIndexer";
 
 export class PriceVoter {
   private readonly logger = getLogger(PriceVoter.name);

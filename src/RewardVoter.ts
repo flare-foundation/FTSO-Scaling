@@ -1,17 +1,17 @@
-import { getLogger } from "../utils/logger";
-import { Received } from "../BlockIndex";
-import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "../protocol/voting-types";
+import { getLogger } from "./utils/logger";
+import { Received } from "./BlockIndex";
+import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "./protocol/voting-types";
 import { BlockIndexer } from "./BlockIndexer";
-import { getAccount, getBlockNumberBefore } from "../utils/web3";
-import { FTSOClient } from "../FTSOClient";
+import { getAccount, getBlockNumberBefore } from "./utils/web3";
+import { FTSOClient } from "./FTSOClient";
 import Web3 from "web3";
-import { hashRewardClaim } from "../protocol/voting-utils";
+import { hashRewardClaim } from "./protocol/utils/voting-utils";
 
-import { asError } from "../utils/error";
-import { Web3Provider } from "../providers/Web3Provider";
+import { asError } from "./utils/error";
+import { Web3Provider } from "./providers/Web3Provider";
 import { Account } from "web3-core";
-import { MerkleTree } from "../utils/MerkleTree";
-import { Penalty, RewardLogic } from "../protocol/RewardLogic";
+import { MerkleTree } from "./protocol/utils/MerkleTree";
+import { Penalty, RewardLogic } from "./protocol/RewardLogic";
 
 export class RewardVoter {
   private readonly logger = getLogger(RewardVoter.name);

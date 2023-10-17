@@ -8,7 +8,7 @@ import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig, createPriceFeedConfigs } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/protocol/voting-types";
-import { toBN, unprefixedSymbolBytes } from "../src/protocol/voting-utils";
+import { toBN, unprefixedSymbolBytes } from "../src/protocol/utils/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import {
   DummyERC20Instance,

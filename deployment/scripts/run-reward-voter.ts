@@ -5,7 +5,7 @@ import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, loadAccounts } from "../tasks/common";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
-import { RewardVoter } from "../../src/rewards/RewardVoter";
+import { RewardVoter } from "../../src/RewardVoter";
 
 async function main() {
   const voterId = +process.argv[2]; // Should match the id of a running price voter.

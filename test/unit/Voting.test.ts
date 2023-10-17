@@ -8,7 +8,7 @@ import { getTestFile } from "../../test-utils/utils/constants";
 import { increaseTimeTo } from "../../test-utils/utils/test-helpers";
 import { BareSignature } from "../../src/protocol/voting-types";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import { toBN } from "../../src/protocol/voting-utils";
+import { toBN } from "../../src/protocol/utils/voting-utils";
 import { loadAccounts } from "../../deployment/tasks/common";
 import { Account } from "web3-core";
 import { moveToNextRewardEpochStart } from "../../test-utils/utils/voting-test-utils";

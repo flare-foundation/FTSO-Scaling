@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { TransactionReceipt } from "web3-core";
-import { Bytes32 } from "./sol-types";
+import { Bytes32 } from "./utils/sol-types";
 
 export type Address = string;
 export type PriceEpochId = number;

@@ -1,16 +1,9 @@
 import { readFileSync } from "fs";
 import coder from "web3-eth-abi";
 import { AbiItem, AbiInput } from "web3-utils/types";
-import {
-  BareSignature,
-  FinalizeData,
-  RevealBitvoteData,
-  RewardOffered,
-  SignatureData,
-  TxData,
-} from "./protocol/voting-types";
-import { convertRewardOfferedEvent } from "./protocol/voting-utils";
-import { getLogger } from "./utils/logger";
+import { BareSignature, FinalizeData, RevealBitvoteData, RewardOffered, SignatureData, TxData } from "../voting-types";
+import { toBN } from "./voting-utils";
+import Web3 from "web3";
 
 const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
 const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
@@ -143,12 +136,10 @@ export default class EncodingUtils {
   }
 
   extractRewardFinalize(tx: TxData): FinalizeData {
-    getLogger("encoding-utils").info(`Received finalize rewards tx: ${tx.blockNumber}`);
     const resultTmp = this.decodeFunctionCall(tx, "finalizeRewards");
     const confirmation = tx.receipt!.logs.find(
       (x: any) => x.topics[0] === this.eventSignature("RewardMerkleRootConfirmed")
     );
-    getLogger("encoding-utils").info(`Got confirmation ${JSON.stringify(confirmation)}`);
     return {
       confirmed: confirmation !== undefined,
       from: tx.from.toLowerCase(),
@@ -181,4 +172,52 @@ function parseIntOrThrow(input: string, base: number): number {
   const parsed: number = parseInt(input, base);
   if (Number.isNaN(parsed)) throw new Error(`Could not parse ${input} as number`);
   return parsed;
+}
+
+/**
+ * Converts an offer from web3 response to a more usable format, matching
+ * the Offer interface.
+ */
+function convertRewardOfferedEvent(offer: any): RewardOffered {
+  let newOffer = removeIndexFields(offer);
+  delete newOffer.__length__;
+  newOffer.leadProviders = [...offer.leadProviders];
+  const result: RewardOffered = {
+    ...newOffer,
+    offerSymbol: bytes4ToText(newOffer.offerSymbol),
+    quoteSymbol: bytes4ToText(newOffer.quoteSymbol),
+    amount: toBN(newOffer.amount),
+    flrValue: toBN(newOffer.flrValue),
+    rewardBeltPPM: toBN(newOffer.rewardBeltPPM),
+    elasticBandWidthPPM: toBN(newOffer.elasticBandWidthPPM),
+    iqrSharePPM: toBN(newOffer.iqrSharePPM),
+    pctSharePPM: toBN(newOffer.pctSharePPM),
+  };
+  return result;
+}
+
+/**
+ * Removes annoying index fields from an object.
+ */
+function removeIndexFields<T>(obj: T): T {
+  return Object.keys(obj as any)
+    .filter(key => !key!.match(/^[0-9]+$/))
+    .reduce((result: any, key: string) => {
+      return Object.assign(result, {
+        [key]: (obj as any)[key],
+      });
+    }, {}) as T;
+}
+
+/**
+ * Converts bytes4 representation of a symbol to text.
+ */
+export function bytes4ToText(bytes4: string) {
+  if (!bytes4 || bytes4.length === 0) {
+    throw new Error(`Bytes4 should be non-null and non-empty`);
+  }
+  if (!/^0x[0-9a-f]{8}$/i.test(bytes4)) {
+    throw new Error(`Bytes4 should be a 4-byte hex string`);
+  }
+  return Web3.utils.hexToAscii(bytes4).replace(/\u0000/g, "");
 }

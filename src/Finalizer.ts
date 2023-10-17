@@ -4,9 +4,9 @@ import { getLogger } from "./utils/logger";
 import { errorString } from "./utils/error";
 import { Received } from "./BlockIndex";
 import { FinalizeData, PriceEpochId, RewardEpochId, SignatureData } from "./protocol/voting-types";
-import { toBN } from "./protocol/voting-utils";
+import { toBN } from "./protocol/utils/voting-utils";
 import _ from "lodash";
-import { BlockIndexer } from "./rewards/BlockIndexer";
+import { BlockIndexer } from "./BlockIndexer";
 
 export class Finalizer {
   private readonly logger = getLogger(Finalizer.name);

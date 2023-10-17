@@ -2,8 +2,8 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { Feed, RewardOffered, RewardClaim } from "./voting-types";
-import EncodingUtils from "../EncodingUtils";
+import { Feed, RewardClaim } from "../voting-types";
+import EncodingUtils, { bytes4ToText } from "./EncodingUtils";
 import { Bytes32 } from "./sol-types";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -14,7 +14,6 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
  */
 export function toBN(x: BN | number | string): BN {
   if (x instanceof BN) return x;
-  // if (x instanceof BigNumber) return new BN(x.toHexString().slice(2), 16)
   return utils.toBN(x);
 }
 
@@ -56,19 +55,6 @@ export function toBytes4(text: string) {
 }
 
 /**
- * Converts bytes4 representation of a symbol to text.
- */
-export function bytes4ToText(bytes4: string) {
-  if (!bytes4 || bytes4.length === 0) {
-    throw new Error(`Bytes4 should be non-null and non-empty`);
-  }
-  if (!/^0x[0-9a-f]{8}$/i.test(bytes4)) {
-    throw new Error(`Bytes4 should be a 4-byte hex string`);
-  }
-  return utils.hexToAscii(bytes4).replace(/\u0000/g, "");
-}
-
-/**
  * Converts feed symbols withing the Feed from text to bytes.
  */
 export function feedToBytes4(feed: Feed): Feed {
@@ -91,41 +77,6 @@ export function feedToText(feed: Feed): Feed {
     offerSymbol: bytes4ToText(feed.offerSymbol),
     quoteSymbol: bytes4ToText(feed.quoteSymbol),
   } as Feed;
-}
-
-/**
- * Removes annoying index fields from an object.
- */
-export function removeIndexFields<T>(obj: T): T {
-  return Object.keys(obj as any)
-    .filter(key => !key!.match(/^[0-9]+$/))
-    .reduce((result: any, key: string) => {
-      return Object.assign(result, {
-        [key]: (obj as any)[key],
-      });
-    }, {}) as T;
-}
-
-/**
- * Converts an offer from web3 response to a more usable format, matching
- * the Offer interface.
- */
-export function convertRewardOfferedEvent(offer: any): RewardOffered {
-  let newOffer = removeIndexFields(offer);
-  delete newOffer.__length__;
-  newOffer.leadProviders = [...offer.leadProviders];
-  const result: RewardOffered = {
-    ...newOffer,
-    offerSymbol: bytes4ToText(newOffer.offerSymbol),
-    quoteSymbol: bytes4ToText(newOffer.quoteSymbol),
-    amount: toBN(newOffer.amount),
-    flrValue: toBN(newOffer.flrValue),
-    rewardBeltPPM: toBN(newOffer.rewardBeltPPM),
-    elasticBandWidthPPM: toBN(newOffer.elasticBandWidthPPM),
-    iqrSharePPM: toBN(newOffer.iqrSharePPM),
-    pctSharePPM: toBN(newOffer.pctSharePPM),
-  };
-  return result;
 }
 
 /**

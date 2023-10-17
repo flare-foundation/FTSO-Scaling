@@ -9,9 +9,9 @@ import {
   VotingManagerInstance,
   VotingRewardManagerInstance,
 } from "../../typechain-truffle";
-import { ZERO_ADDRESS, hashRewardClaim, toBN, toBytes4 } from "../../src/protocol/voting-utils";
+import { ZERO_ADDRESS, hashRewardClaim, toBN, toBytes4 } from "../../src/protocol/utils/voting-utils";
 import { Feed, RewardClaim, RewardClaimWithProof, RewardOffered } from "../../src/protocol/voting-types";
-import { hexlifyBN } from "../../src/protocol/voting-utils";
+import { hexlifyBN } from "../../src/protocol/utils/voting-utils";
 import { MerkleTree } from "../../src/MerkleTree";
 import { moveToNextRewardEpochStart } from "../../test-utils/utils/voting-test-utils";
 import Prando from "prando";
