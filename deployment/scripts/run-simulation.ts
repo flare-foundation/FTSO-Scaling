@@ -1,5 +1,5 @@
 import { loadAccounts } from "../tasks/common";
-import { getWeb3 } from "../../src/web3-utils";
+import { getWeb3 } from "../../src/utils/web3";
 import { ChildProcess, execSync, spawn } from "child_process";
 import { retry } from "../../src/utils/retry";
 import { sleepFor } from "../../src/utils/time";

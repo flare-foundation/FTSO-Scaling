@@ -1,6 +1,6 @@
 import { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
 import { IPriceFeed } from "./IPriceFeed";
-import { Feed } from "../lib/voting-interfaces";
+import { Feed } from "../protocol/voting-types";
 import { getLogger } from "../utils/logger";
 
 const UPDATE_INTERVAL_MS = 1_000;

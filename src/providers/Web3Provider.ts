@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { Account, TransactionConfig, TransactionReceipt, SignedTransaction } from "web3-core";
+import { Account, TransactionConfig, TransactionReceipt } from "web3-core";
 import { ContractAddresses } from "../../deployment/tasks/common";
 
 import Web3 from "web3";
@@ -19,9 +19,8 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  VoterWithWeight,
-} from "../lib/voting-interfaces";
-import { ZERO_ADDRESS, hexlifyBN, toBN } from "../lib/voting-utils";
+} from "../protocol/voting-types";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/voting-utils";
 import {
   getAccount,
   getFilteredBlock,
@@ -30,7 +29,7 @@ import {
   loadContract,
   recoverSigner,
   signMessage,
-} from "../web3-utils";
+} from "../utils/web3";
 import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 import { retryPredicate, retryWithTimeout } from "../utils/retry";

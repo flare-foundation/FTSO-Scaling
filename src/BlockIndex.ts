@@ -1,13 +1,22 @@
 import { ContractAddresses } from "../deployment/tasks/common";
 import { EpochSettings } from "./EpochSettings";
-import { BlockData, FinalizeData, RevealBitvoteData, SignatureData, TxData } from "./lib/voting-interfaces";
+import {
+  Address,
+  BlockData,
+  Feed,
+  FinalizeData,
+  PriceEpochId,
+  RevealBitvoteData,
+  RewardEpochId,
+  RewardOffered,
+  SignatureData,
+  TxData,
+} from "./protocol/voting-types";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./EncodingUtils";
 import { getLogger } from "./utils/logger";
+import { RewardLogic } from "./protocol/RewardLogic";
 
-declare type Address = string;
-declare type PriceEpochId = number;
-declare type RewqardEpochId = number;
 declare type CommitHash = string;
 declare type Timestamp = number;
 
@@ -27,8 +36,10 @@ export class BlockIndex extends AsyncEventEmitter {
   private readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
   private readonly priceEpochSignatures = new Map<PriceEpochId, Map<Address, [SignatureData, Timestamp]>>();
   private readonly priceEpochFinalizes = new Map<PriceEpochId, [FinalizeData, Timestamp]>();
-  private readonly rewardSignatures = new Map<RewqardEpochId, Map<Address, [SignatureData, Timestamp]>>();
-  private readonly rewardFinalizes = new Map<RewqardEpochId, [FinalizeData, Timestamp]>();
+  private readonly rewardSignatures = new Map<RewardEpochId, Map<Address, [SignatureData, Timestamp]>>();
+  private readonly rewardFinalizes = new Map<RewardEpochId, [FinalizeData, Timestamp]>();
+  private readonly rewardEpochOffers = new Map<RewardEpochId, RewardOffered[]>();
+
   private readonly encodingUtils = EncodingUtils.instance;
 
   constructor(protected readonly epochs: EpochSettings, protected readonly contractAddresses: ContractAddresses) {
@@ -51,12 +62,22 @@ export class BlockIndex extends AsyncEventEmitter {
     return this.priceEpochFinalizes.get(priceEpochId);
   }
 
-  getRewardSignatures(rewardEpochId: RewqardEpochId): Map<Address, [SignatureData, Timestamp]> {
+  getRewardSignatures(rewardEpochId: RewardEpochId): Map<Address, [SignatureData, Timestamp]> {
     return this.rewardSignatures.get(rewardEpochId) ?? new Map();
   }
 
-  getRewardFinalize(rewardEpochId: RewqardEpochId): [FinalizeData, Timestamp] | undefined {
+  getRewardFinalize(rewardEpochId: RewardEpochId): [FinalizeData, Timestamp] | undefined {
     return this.rewardFinalizes.get(rewardEpochId);
+  }
+
+  getRewardOffers(rewardEpochId: RewardEpochId): RewardOffered[] {
+    return this.rewardEpochOffers.get(rewardEpochId) ?? [];
+  }
+
+  /** Returns deterministic ordering of feeds based on reward offers for the given reward epoch. */
+  getFeedSequence(rewardEpochId: RewardEpochId): Feed[] {
+    const offers = this.getRewardOffers(rewardEpochId);
+    return RewardLogic.feedSequenceByOfferValue(offers);
   }
 
   async processBlock(block: BlockData) {
@@ -131,9 +152,18 @@ export class BlockIndex extends AsyncEventEmitter {
    * Extract offers from transaction input.
    * Assumption: the transaction is a call to `offerRewards` function.
    */
+  // TODO: we need to somehow lock the reward offer set once the reward epoch starts – maybe take a snapshot in the beginning of the epoch?
   private async extractOffers(tx: TxData, blockTimestampSec: number): Promise<void> {
     const offers = this.encodingUtils.extractOffers(tx);
     const priceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
+    const offerRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+
+    const forRewardEpoch = offerRewardEpochId + 1;
+    const offersInEpoch = this.rewardEpochOffers.get(forRewardEpoch) ?? [];
+    this.rewardEpochOffers.set(forRewardEpoch, offersInEpoch);
+    for (const offer of offers) {
+      offersInEpoch.push(offer);
+    }
     await this.emit(Received.Offers, priceEpochId, offers);
   }
 

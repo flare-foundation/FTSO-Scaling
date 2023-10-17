@@ -7,8 +7,7 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  VoterWithWeight,
-} from "../lib/voting-interfaces";
+} from "../protocol/voting-types";
 
 /**
  * The role of a Voting provider is to provide a generic interface to blockchain calls needed by the FTSO providers

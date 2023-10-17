@@ -15,9 +15,9 @@ import {
   EpochResult,
   Offer,
   VoterWithWeight,
-} from "../lib/voting-interfaces";
-import { ZERO_ADDRESS, hexlifyBN, toBN } from "../lib/voting-utils";
-import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../web3-utils";
+} from "../protocol/voting-types";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/voting-utils";
+import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../utils/web3";
 import { IVotingProvider } from "./IVotingProvider";
 
 export interface TruffleProviderOptions {

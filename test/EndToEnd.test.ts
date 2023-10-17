@@ -7,8 +7,8 @@ import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig, createPriceFeedConfigs } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
-import { Feed } from "../src/lib/voting-interfaces";
-import { toBN, unprefixedSymbolBytes } from "../src/lib/voting-utils";
+import { Feed } from "../src/protocol/voting-types";
+import { toBN, unprefixedSymbolBytes } from "../src/protocol/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import {
   DummyERC20Instance,

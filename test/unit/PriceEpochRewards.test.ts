@@ -1,5 +1,5 @@
-import { PriceEpochRewards } from "../../src/rewards/PriceEpochRewards";
-import { toBN } from "../../src/lib/voting-utils";
+import { RewardLogic } from "../../src/protocol/RewardLogic";
+import { toBN } from "../../src/protocol/voting-utils";
 import { getTestFile } from "../../test-utils/utils/constants";
 
 describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
@@ -86,7 +86,7 @@ describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
       },
     ]);
 
-    const mergedClaims = PriceEpochRewards.mergeClaims(mergePriceEpochId, unmergedClaims);
+    const mergedClaims = RewardLogic.mergeClaims(mergePriceEpochId, unmergedClaims);
     expect(new Set(mergedClaims)).deep.be.equal(expectedMergedClaims);
   });
 
@@ -106,7 +106,7 @@ describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
         isFixedClaim: false,
         priceEpochId: 1,
       };
-      const [resultClaim, resultPenalty] = PriceEpochRewards.applyPenalty(claim, penalty);
+      const [resultClaim, resultPenalty] = RewardLogic.applyPenalty(claim, penalty);
       expect(resultClaim).to.deep.equal({
         ...claim,
         amount: toBN(90),
@@ -129,7 +129,7 @@ describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
         isFixedClaim: false,
         priceEpochId: 1,
       };
-      const [resultClaim, resultPenalty] = PriceEpochRewards.applyPenalty(claim, penalty);
+      const [resultClaim, resultPenalty] = RewardLogic.applyPenalty(claim, penalty);
       expect(resultClaim).to.deep.equal({
         ...claim,
         amount: toBN(90),
@@ -152,7 +152,7 @@ describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
         isFixedClaim: false,
         priceEpochId: 1,
       };
-      const [resultClaim, resultPenalty] = PriceEpochRewards.applyPenalty(claim, penalty);
+      const [resultClaim, resultPenalty] = RewardLogic.applyPenalty(claim, penalty);
       expect(resultClaim).to.be.undefined;
       expect(resultPenalty).to.deep.equal({
         ...penalty,

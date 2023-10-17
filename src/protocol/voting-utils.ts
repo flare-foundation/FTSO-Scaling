@@ -2,7 +2,7 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { Feed, RewardOffered, RewardClaim } from "./voting-interfaces";
+import { Feed, RewardOffered, RewardClaim } from "./voting-types";
 import EncodingUtils from "../EncodingUtils";
 import { Bytes32 } from "./sol-types";
 

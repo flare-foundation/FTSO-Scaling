@@ -3,8 +3,8 @@ import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { errorString } from "./utils/error";
 import { Received } from "./BlockIndex";
-import { FinalizeData, SignatureData } from "./lib/voting-interfaces";
-import { toBN } from "./lib/voting-utils";
+import { FinalizeData, SignatureData } from "./protocol/voting-types";
+import { toBN } from "./protocol/voting-utils";
 import _ from "lodash";
 import { BlockIndexer } from "./rewards/BlockIndexer";
 

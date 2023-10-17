@@ -2,41 +2,36 @@ import BN from "bn.js";
 import Web3 from "web3";
 
 import { EpochSettings } from "./EpochSettings";
-import { RewardCalculator } from "./rewards/RewardCalculator";
-import { calculateResultsForFeed } from "./lib/median-calculation";
+import { calculateResultsForFeed } from "./protocol/median-calculation";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import {
-  RewardClaimWithProof,
   EpochData,
   EpochResult,
   FinalizeData,
   MedianCalculationResult,
   RevealResult,
   RewardOffered,
-  SignatureData,
-  VoterWithWeight,
-  RewardClaim,
   Feed,
-} from "./lib/voting-interfaces";
+  RewardClaim,
+} from "./protocol/voting-types";
 import {
   ZERO_BYTES32,
   feedId,
-  hashRewardClaim,
   hashForCommit,
   packPrices,
   toBN,
   unprefixedSymbolBytes,
   combineRandom,
-} from "./lib/voting-utils";
+} from "./protocol/voting-utils";
 import { getLogger } from "./utils/logger";
 import { BlockIndex, Received } from "./BlockIndex";
 import { retry } from "./utils/retry";
 import { sleepFor } from "./utils/time";
-import { Bytes32 } from "./lib/sol-types";
+import { Bytes32 } from "./protocol/sol-types";
 import { asError, errorString } from "./utils/error";
 import { BlockIndexer } from "./rewards/BlockIndexer";
-import { MerkleTree } from "./utils/MerkleTree";
+import { RewardLogic } from "./protocol/RewardLogic";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const EPOCH_BYTES = 4;
@@ -58,16 +53,13 @@ export class FTSOClient {
 
   private readonly voterWeight = DEFAULT_VOTER_WEIGHT;
 
-  rewardCalculator!: RewardCalculator;
   lastProcessedBlockNumber: number = 0;
-  epochs: EpochSettings;
+  readonly epochs: EpochSettings;
 
   readonly index: BlockIndex;
   readonly priceEpochData = new Map<number, EpochData>();
   readonly priceEpochResults = new Map<number, EpochResult>();
 
-  readonly rewardEpochOffers = new Map<number, RewardOffered[]>();
-  private readonly rewardEpochOffersClosed = new Map<number, boolean>();
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
   get address() {
@@ -82,13 +74,8 @@ export class FTSOClient {
       provider.rewardEpochDurationInEpochs
     );
     this.index = new BlockIndexer(this.epochs, this.provider);
-    this.index.on(Received.Offers, (pe: number, o: RewardOffered[]) => this.onRewardOffers(pe, o));
 
     this.lastProcessedBlockNumber = startBlockNumber - 1;
-  }
-
-  initializeRewardCalculator(initialRewardEpoch: number) {
-    this.rewardCalculator = new RewardCalculator(this.epochs, initialRewardEpoch);
   }
 
   registerPriceFeeds(priceFeeds: IPriceFeed[]) {
@@ -114,27 +101,6 @@ export class FTSOClient {
       }
     }
     this.logger.info(`Done registering as a voter for reward epoch ${rewardEpochId}`);
-  }
-
-  registerRewardsForRewardEpoch(rewardEpochId: number, forceClosure = false) {
-    this.logger.debug(`Registering rewards for reward epoch ${rewardEpochId}`);
-
-    if (!this.rewardCalculator) {
-      throw new Error("Reward calculator not initialized");
-    }
-    let rewardOffers = this.rewardEpochOffers.get(rewardEpochId);
-    if (!rewardOffers) {
-      if (forceClosure) {
-        rewardOffers = [];
-      } else {
-        throw new Error(`Reward offers for reward epoch ${rewardEpochId} not found`);
-      }
-    }
-    if (this.rewardEpochOffersClosed.get(rewardEpochId)) {
-      throw new Error("Reward epoch is already closed");
-    }
-    this.rewardCalculator.setRewardOffers(rewardEpochId, rewardOffers);
-    this.rewardEpochOffersClosed.set(rewardEpochId, true);
   }
 
   /**
@@ -199,7 +165,7 @@ export class FTSOClient {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
 
     this.logger.info(
-      `Reward epoch offer for ${priceEpochId} rewards: ${JSON.stringify(this.rewardEpochOffers.get(rewardEpoch))}`
+      `Reward epoch offer for ${priceEpochId} rewards: ${JSON.stringify(this.index.getRewardOffers(rewardEpoch))}`
     );
 
     const revealResult = await this.calculateRevealers(priceEpochId)!;
@@ -238,7 +204,7 @@ export class FTSOClient {
     this.priceEpochResults.set(priceEpochId, epochResult);
   }
 
-  async calculateRewards(priceEpochId: number): Promise<void> {
+  async calculateRewards(priceEpochId: number, rewardOffers: RewardOffered[]): Promise<RewardClaim[]> {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
 
     const revealResult = await this.calculateRevealers(priceEpochId)!;
@@ -265,13 +231,15 @@ export class FTSOClient {
 
     const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
 
-    this.rewardCalculator.calculateClaimsForPriceEpoch(
+    return RewardLogic.calculateClaimsForPriceEpoch(
+      rewardOffers,
       priceEpochId,
       finalizationData?.[0].from,
       rewardedSigners,
       results,
       committedFailedReveal,
-      voterWeights
+      voterWeights,
+      this.epochs
     );
   }
 
@@ -313,15 +281,12 @@ export class FTSOClient {
 
   orderedPriceFeeds(priceEpochId: number): (IPriceFeed | undefined)[] {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    return this.rewardCalculator
-      .getFeedSequenceForRewardEpoch(rewardEpoch)
-      .map(feed => this.priceFeeds.get(feedId(feed)));
+    return this.index.getFeedSequence(rewardEpoch).map(feed => this.priceFeeds.get(feedId(feed)));
   }
 
   orderedPriceFeedIds(priceEpochId: number): Feed[] {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    return this.rewardCalculator.getFeedSequenceForRewardEpoch(rewardEpoch);
-    // .map(feed => feed.feedId);
+    return this.index.getFeedSequence(rewardEpoch);
   }
 
   preparePriceFeedsForPriceEpoch(priceEpochId: number) {
@@ -384,24 +349,6 @@ export class FTSOClient {
       await this.processNewBlocks();
     }
     this.logger.info(`Epoch ${priceEpochId} finalized, continue.`);
-  }
-
-  async onRewardOffers(priceEpoch: number, offers: RewardOffered[]) {
-    const currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpoch);
-    const nextRewardEpoch = currentRewardEpochId + 1;
-    this.logger.info(`Got reward offers for price epoch ${priceEpoch}, setting for ${nextRewardEpoch}`);
-    if (offers && offers.length > 0) {
-      if (this.rewardEpochOffersClosed.get(nextRewardEpoch)) {
-        this.logger.error("Reward epoch is closed");
-        return;
-      }
-    }
-    const offersInEpoch = this.rewardEpochOffers.get(nextRewardEpoch) ?? [];
-    this.rewardEpochOffers.set(nextRewardEpoch, offersInEpoch);
-    for (const offer of offers) {
-      offersInEpoch.push(offer);
-    }
-    this.logger.info(`Set reward offers for reward epoch ${nextRewardEpoch}`);
   }
 
   // Encoding of signed result

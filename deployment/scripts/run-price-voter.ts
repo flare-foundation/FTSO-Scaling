@@ -1,14 +1,14 @@
 import { readFileSync } from "fs";
-import { PriceVoter as PriceVoter } from "../../src/PriceVoter";
 import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
-import { Feed } from "../../src/lib/voting-interfaces";
+import { Feed } from "../../src/protocol/voting-types";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
-import { getWeb3 } from "../../src/web3-utils";
+import { getWeb3 } from "../../src/utils/web3";
 import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/RandomPriceFeed";
+import { PriceVoter } from "../../src/PriceVoter";
 
 async function main() {
   const myId = +process.argv[2];
@@ -78,7 +78,7 @@ function addNoise(num: number): number {
 }
 
 main().catch(e => {
-  console.error("Data provider error, exiting", e);
+  console.error("Price voter error, exiting", e);
   getLogger("price-voter").error(e);
   process.exit(1);
 });

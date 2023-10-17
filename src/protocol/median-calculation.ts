@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-interfaces";
+import { Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
 import { toBN } from "./voting-utils";
 
 /**

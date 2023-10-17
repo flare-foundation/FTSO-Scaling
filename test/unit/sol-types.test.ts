@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Bytes32 } from "../../src/lib/sol-types";
+import { Bytes32 } from "../../src/protocol/sol-types";
 
 describe("Bytes32", () => {
   const VALID_HEX = "0x" + "01".repeat(32);

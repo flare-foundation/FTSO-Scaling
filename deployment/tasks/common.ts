@@ -1,4 +1,4 @@
-import { Feed } from "../../src/lib/voting-interfaces";
+import { Feed } from "../../src/protocol/voting-types";
 import { readFileSync } from "fs";
 import { Account } from "web3-core";
 

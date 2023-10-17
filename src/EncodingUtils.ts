@@ -8,8 +8,8 @@ import {
   RewardOffered,
   SignatureData,
   TxData,
-} from "./lib/voting-interfaces";
-import { convertRewardOfferedEvent } from "./lib/voting-utils";
+} from "./protocol/voting-types";
+import { convertRewardOfferedEvent } from "./protocol/voting-utils";
 import { getLogger } from "./utils/logger";
 
 const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";

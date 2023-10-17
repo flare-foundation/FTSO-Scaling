@@ -3,7 +3,7 @@ import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { VoterRegistryInstance, VotingInstance, VotingManagerInstance } from "../../typechain-truffle";
 import { getTestFile } from "../../test-utils/utils/constants";
-import { toBN } from "../../src/lib/voting-utils";
+import { toBN } from "../../src/protocol/voting-utils";
 
 chai.use(chaiBN(BN));
 

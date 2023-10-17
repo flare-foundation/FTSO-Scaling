@@ -1,31 +1,31 @@
 import { getLogger } from "../utils/logger";
 import { Received } from "../BlockIndex";
-import { FinalizeData, RewardClaim } from "../lib/voting-interfaces";
+import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "../protocol/voting-types";
 import { BlockIndexer } from "./BlockIndexer";
-import { getAccount, getBlockNumberBefore } from "../web3-utils";
+import { getAccount, getBlockNumberBefore } from "../utils/web3";
 import { FTSOClient } from "../FTSOClient";
 import Web3 from "web3";
-import { Penalty } from "./RewardCalculator";
-import { hashRewardClaim } from "../lib/voting-utils";
+import { hashRewardClaim } from "../protocol/voting-utils";
 
 import { asError } from "../utils/error";
 import { Web3Provider } from "../providers/Web3Provider";
 import { Account } from "web3-core";
 import { MerkleTree } from "../utils/MerkleTree";
-import { generateProofsForClaims } from "./reward-utils";
+import { Penalty, RewardLogic } from "../protocol/RewardLogic";
 
 export class RewardVoter {
   private readonly logger = getLogger(RewardVoter.name);
   private readonly indexer: BlockIndexer;
 
   private voterAccount: Account;
-  private voterAdress: string;
+  private voterAdress: Address;
 
   constructor(private client: FTSOClient, private voterKey: string, private web3: Web3) {
     this.indexer = client.index as BlockIndexer;
     this.voterAccount = getAccount(this.web3, this.voterKey);
     this.voterAdress = this.voterAccount.address;
   }
+  private readonly rewardClaimsForEpoch = new Map<RewardEpochId, RewardClaim[]>();
 
   async run() {
     try {
@@ -62,9 +62,13 @@ export class RewardVoter {
 
     this.logger.info(`Starting from block ${startBlock} for reward epoch ${previousRewardEpoch}.`);
 
-    // Already called in FTSO client:
-    // this.indexer.on(Received.Offers, (pe: number, o: RewardOffered[]) => this.client.onRewardOffers(pe, o));
+    this.calculateRewards();
+    this.claimRewards();
 
+    this.indexer.run(startBlock);
+  }
+
+  private calculateRewards() {
     this.indexer.on(Received.Finalize, async (from: string, finalizeData: FinalizeData) => {
       this.logger.info(`[${finalizeData.epochId}] Received finalize from ${from}.`);
       const finalizedEpoch = finalizeData.epochId;
@@ -72,41 +76,39 @@ export class RewardVoter {
 
       this.logger.info(`Block number before now: ${getBlockNumberBefore(this.web3, Date.now())}}`);
 
-      if (this.client.rewardEpochOffers.has(rewardEpoch)) {
+      const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
+      if (rewardOffers.length > 0) {
         this.logger.info(`[${finalizedEpoch}] We have offers for reward epoch ${rewardEpoch}, calculating rewards.`);
         // We have offers, means we started processing for previous reward epoch and should have all
         // required information for calculating rewards.
-        if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(rewardEpoch);
-        if (!this.client.rewardCalculator.rewardOffers.has(rewardEpoch)) {
-          this.client.registerRewardsForRewardEpoch(rewardEpoch);
-        }
-        await this.client.calculateRewards(finalizedEpoch);
+        const priceEpochRewardClaims = await this.client.calculateRewards(finalizedEpoch, rewardOffers);
 
-        const cumulativeClaims = this.client.rewardCalculator.getRewardClaimsForPriceEpoch(finalizedEpoch);
-        this.logger.info(
-          `[${finalizedEpoch}] Calculated ${cumulativeClaims.length} cumulative reward claims for epoch.`
-        );
+        this.logger.info(`[${finalizedEpoch}] Calculated ${priceEpochRewardClaims.length} reward claims for epoch.`);
+
+        const existing = this.rewardClaimsForEpoch.get(rewardEpoch) ?? [];
+        const mergedClaims = RewardLogic.mergeClaims(finalizedEpoch, existing.concat(priceEpochRewardClaims));
+        this.rewardClaimsForEpoch.set(rewardEpoch, mergedClaims);
 
         if (this.isLastPriceEpochInRewardEpoch(finalizedEpoch)) {
-          await this.signRewards(cumulativeClaims, rewardEpoch, finalizedEpoch);
+          await this.signRewards(mergedClaims, rewardEpoch, finalizedEpoch);
         }
       }
     });
+  }
 
-    this.indexer.on(Received.RewardFinalize, async (from: string, fd: FinalizeData) => {
+  private claimRewards() {
+    this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
       this.logger.info(`[${fd.epochId}] Received reward finalize from ${from}`);
-      const rewardClaims = this.client.rewardCalculator.getRewardClaimsForRewardEpoch(fd.epochId);
+      const rewardClaims = this.rewardClaimsForEpoch.get(fd.epochId)!;
       const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
 
-      const cwp = generateProofsForClaims(claimable, fd.merkleRoot, this.voterAdress);
+      const cwp = RewardLogic.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAdress);
       this.logger.info(`[${fd.epochId}] Claiming ${cwp.length} rewards for epoch.`);
       return await this.client.provider.claimRewards(cwp, this.voterAdress);
     });
-
-    this.indexer.run(startBlock);
   }
 
-  private async signRewards(cumulativeClaims: RewardClaim[], rewardEpoch: number, priceEpoch: number) {
+  private async signRewards(cumulativeClaims: RewardClaim[], rewardEpoch: RewardEpochId, priceEpoch: PriceEpochId) {
     this.logger.info(`[${rewardEpoch}] Signing rewards for epoch.`);
     const rewardClaims = cumulativeClaims.filter(claim => !(claim instanceof Penalty));
     const rewardClaimHashes: string[] = rewardClaims.map(claim => hashRewardClaim(claim));
@@ -124,7 +126,7 @@ export class RewardVoter {
     });
   }
 
-  private isLastPriceEpochInRewardEpoch(priceEpochId: number): boolean {
+  private isLastPriceEpochInRewardEpoch(priceEpochId: PriceEpochId): boolean {
     const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const rewardEpochForNext = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId + 1);
     return rewardEpochForNext > rewardEpoch;

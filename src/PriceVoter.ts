@@ -82,13 +82,13 @@ export class PriceVoter {
   }
 
   private async maybeRegisterForRewardEpoch(nextRewardEpochId: number) {
-    if (this.isRegisteredForRewardEpoch(nextRewardEpochId) || !this.client.rewardEpochOffers.has(nextRewardEpochId)) {
+    if (
+      this.isRegisteredForRewardEpoch(nextRewardEpochId) ||
+      this.client.index.getRewardOffers(nextRewardEpochId).length === 0
+    ) {
       return;
     }
     this.logger.info(`Registering for next reward epoch ${nextRewardEpochId}`);
-
-    if (this.client.rewardCalculator == undefined) this.client.initializeRewardCalculator(nextRewardEpochId);
-    this.client.registerRewardsForRewardEpoch(nextRewardEpochId);
     await this.client.registerAsVoter(nextRewardEpochId);
 
     this.registeredRewardEpochs.add(nextRewardEpochId);

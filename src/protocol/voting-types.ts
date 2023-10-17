@@ -2,6 +2,10 @@ import BN from "bn.js";
 import { TransactionReceipt } from "web3-core";
 import { Bytes32 } from "./sol-types";
 
+export type Address = string;
+export type PriceEpochId = number;
+export type RewardEpochId = number;
+
 export interface RewardClaim {
   /**
    * `true`if the claim is for the full amount claimable by the specified beneficiary. E.g: back claims, signer and finalization claims.
@@ -37,11 +41,6 @@ export interface Offer extends Feed {
 export interface RewardOffered extends Offer {
   priceEpochId?: number;
   transactionId?: string;
-  flrValue: BN;
-}
-
-export interface FeedValue extends Feed {
-  feedId: string;
   flrValue: BN;
 }
 
