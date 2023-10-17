@@ -2,11 +2,15 @@ import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { sleepFor } from "./utils/time";
 import { errorString } from "./utils/error";
+import { BlockIndexer } from "./rewards/BlockIndexer";
 
 export class PriceVoter {
   private readonly logger = getLogger(PriceVoter.name);
+  private readonly indexer: BlockIndexer;
 
-  constructor(private client: FTSOClient) {}
+  constructor(private client: FTSOClient) {
+    this.indexer = client.index as BlockIndexer;
+  }
 
   /** Used for checking if we need to send reveals in the current price epoch. */
   private hasCommits: boolean = false;
@@ -16,8 +20,8 @@ export class PriceVoter {
   private lastProcessedPriceEpochId?: number;
 
   async run() {
-    await this.client.processNewBlocks(); // Initial catchup.
     this.schedulePriceEpochActions();
+    await this.indexer.run();
   }
 
   schedulePriceEpochActions() {
@@ -53,8 +57,6 @@ export class PriceVoter {
       await this.runVotingProcotol(currentPriceEpochId);
       this.lastProcessedPriceEpochId = currentPriceEpochId;
     }
-    // Process new blocks to make sure we pick up reward offers.
-    await this.client.processNewBlocks();
 
     await this.maybeRegisterForRewardEpoch(nextRewardEpochId);
 
@@ -72,7 +74,6 @@ export class PriceVoter {
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
       await this.client.reveal(previousEpochId);
       await this.waitForRevealEpochEnd();
-      await this.client.processNewBlocks(); // Get reveals
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
       await this.client.calculateResultsAndSign(previousEpochId);
       await this.client.awaitFinalization(previousEpochId);

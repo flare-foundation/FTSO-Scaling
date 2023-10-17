@@ -25,11 +25,10 @@ import {
   combineRandom,
 } from "./protocol/voting-utils";
 import { getLogger } from "./utils/logger";
-import { BlockIndex, Received } from "./BlockIndex";
-import { retry } from "./utils/retry";
+import { BlockIndex } from "./BlockIndex";
 import { sleepFor } from "./utils/time";
 import { Bytes32 } from "./protocol/sol-types";
-import { asError, errorString } from "./utils/error";
+import { asError } from "./utils/error";
 import { BlockIndexer } from "./rewards/BlockIndexer";
 import { RewardLogic } from "./protocol/RewardLogic";
 
@@ -101,30 +100,6 @@ export class FTSOClient {
       }
     }
     this.logger.info(`Done registering as a voter for reward epoch ${rewardEpochId}`);
-  }
-
-  /**
-   * Processes new blocks by first asynchronously requesting blocks and then
-   * sequentially processing them.
-   */
-  async processNewBlocks() {
-    try {
-      const currentBlockNumber = await this.provider.getBlockNumber();
-      while (this.lastProcessedBlockNumber < currentBlockNumber) {
-        const block = await retry(
-          async () => {
-            return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
-          },
-          3,
-          2000
-        );
-        // this.logger.info(`Processing block ${block.number}`);
-        await this.index.processBlock(block);
-        this.lastProcessedBlockNumber++;
-      }
-    } catch (e: unknown) {
-      this.logger.error(`Error processing new blocks: ${errorString(e)}`);
-    }
   }
 
   async commit(priceEpochId: number) {
@@ -346,7 +321,6 @@ export class FTSOClient {
     while (!this.index.getFinalize(priceEpochId)) {
       this.logger.info(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
       await sleepFor(BLOCK_PROCESSING_INTERVAL_MS);
-      await this.processNewBlocks();
     }
     this.logger.info(`Epoch ${priceEpochId} finalized, continue.`);
   }
