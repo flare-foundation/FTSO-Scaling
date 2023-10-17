@@ -74,7 +74,7 @@ export class RewardVoter {
       const finalizedEpoch = finalizeData.epochId;
       const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(finalizedEpoch);
 
-      this.logger.info(`Block number before now: ${getBlockNumberBefore(this.web3, Date.now())}}`);
+      this.logger.info(`Block number before now: ${await getBlockNumberBefore(this.web3, Date.now())}`);
 
       const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
       if (rewardOffers.length > 0) {

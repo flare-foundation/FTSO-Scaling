@@ -25,11 +25,11 @@ async function main() {
     privateKey = process.env.FINALIZER_KEY;
   } else {
     const accounts = loadAccounts(web3);
-    privateKey = accounts[myId * 2 - 1].privateKey;
+    privateKey = accounts[myId].privateKey;
   }
 
-  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey, privateKey);
-  const client = new FTSOClient(provider, await provider.getBlockNumber());
+  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
+  const client = new FTSOClient(provider);
 
   const finalizer = new Finalizer(client);
   await finalizer.run();

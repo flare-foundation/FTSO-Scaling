@@ -143,7 +143,7 @@ export default class EncodingUtils {
   }
 
   extractRewardFinalize(tx: TxData): FinalizeData {
-    getLogger("encoding-utils").info(`Received finalize rewareds tx: ${tx.blockNumber}`);
+    getLogger("encoding-utils").info(`Received finalize rewards tx: ${tx.blockNumber}`);
     const resultTmp = this.decodeFunctionCall(tx, "finalizeRewards");
     const confirmation = tx.receipt!.logs.find(
       (x: any) => x.topics[0] === this.eventSignature("RewardMerkleRootConfirmed")

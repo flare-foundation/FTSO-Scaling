@@ -116,7 +116,7 @@ export namespace RewardLogic {
     const finalizationOffers: RewardOffered[] = [];
     const medianOffers: RewardOffered[] = [];
 
-    const currentPriceEpochClaims: RewardClaim[] = [];
+    const generatedClaims: RewardClaim[] = [];
 
     if (finalizerAddress === undefined) {
       medianOffers.push(...priceEpochOffers);
@@ -141,15 +141,15 @@ export namespace RewardLogic {
       }
 
       const finalizationClaims = claimsForFinalizer(finalizationOffers, finalizerAddress, priceEpochId);
-      currentPriceEpochClaims.push(...finalizationClaims);
+      generatedClaims.push(...finalizationClaims);
 
       const signerClaims = claimsForSigners(signingOffers, signers, priceEpochId);
-      currentPriceEpochClaims.push(...signerClaims);
+      generatedClaims.push(...signerClaims);
     }
     const resultClaims = claimsForSymbols(priceEpochId, calculationResults, medianOffers);
-    currentPriceEpochClaims.push(...resultClaims);
+    generatedClaims.push(...resultClaims);
 
-    assertOffersVsClaimsStats(priceEpochOffers, currentPriceEpochClaims);
+    assertOffersVsClaimsStats(priceEpochOffers, generatedClaims);
 
     if (committedFailedReveal.length > 0) {
       console.log(
@@ -158,10 +158,10 @@ export namespace RewardLogic {
         )} `
       );
       const penalties = computePenalties(priceEpochId, committedFailedReveal, priceEpochOffers, voterWeights);
-      currentPriceEpochClaims.push(...penalties);
+      generatedClaims.push(...penalties);
     }
 
-    return currentPriceEpochClaims;
+    return generatedClaims;
   }
 
   export function generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: string) {

@@ -1,4 +1,3 @@
-import { ContractAddresses } from "../../deployment/tasks/common";
 import { BlockIndex } from "../BlockIndex";
 import { EpochSettings } from "../EpochSettings";
 import { IVotingProvider } from "../providers/IVotingProvider";

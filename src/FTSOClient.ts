@@ -49,23 +49,17 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
  */
 export class FTSOClient {
   private readonly logger = getLogger(FTSOClient.name);
-
   private readonly voterWeight = DEFAULT_VOTER_WEIGHT;
-
   lastProcessedBlockNumber: number = 0;
   readonly epochs: EpochSettings;
-
   readonly index: BlockIndex;
-  readonly priceEpochData = new Map<number, EpochData>();
-  readonly priceEpochResults = new Map<number, EpochResult>();
-
   private readonly priceFeeds: Map<string, IPriceFeed> = new Map<string, IPriceFeed>();
 
   get address() {
     return this.provider.senderAddressLowercase;
   }
 
-  constructor(public provider: IVotingProvider, startBlockNumber: number) {
+  constructor(public provider: IVotingProvider) {
     this.epochs = new EpochSettings(
       provider.firstEpochStartSec,
       provider.epochDurationSec,
@@ -73,8 +67,6 @@ export class FTSOClient {
       provider.rewardEpochDurationInEpochs
     );
     this.index = new BlockIndexer(this.epochs, this.provider);
-
-    this.lastProcessedBlockNumber = startBlockNumber - 1;
   }
 
   registerPriceFeeds(priceFeeds: IPriceFeed[]) {
@@ -102,34 +94,19 @@ export class FTSOClient {
     this.logger.info(`Done registering as a voter for reward epoch ${rewardEpochId}`);
   }
 
-  async commit(priceEpochId: number) {
-    const epochData = this.priceEpochData.get(priceEpochId);
-    if (!epochData) {
-      throw new Error("Epoch data not found");
-    }
-    const hash = hashForCommit(this.address, epochData.random.value, epochData.merkleRoot, epochData.pricesHex);
+  async commit(data: EpochData) {
+    const hash = hashForCommit(this.address, data.random.value, data.merkleRoot, data.pricesHex);
     await this.provider.commit(hash);
   }
 
-  async reveal(priceEpochId: number) {
-    const epochData = this.priceEpochData.get(priceEpochId);
-    if (!epochData) {
-      throw new Error("Epoch data not found for epoch " + priceEpochId);
-    }
-    await this.provider.revealBitvote(epochData);
+  async reveal(data: EpochData) {
+    await this.provider.revealBitvote(data);
   }
 
-  async calculateResultsAndSign(priceEpochId: number, skipCalculation = false) {
-    if (!skipCalculation) {
-      await this.calculateResults(priceEpochId);
-    }
-    const result = this.priceEpochResults.get(priceEpochId);
-    if (!result) {
-      throw new Error("Result not found");
-    }
-
-    const signature = await this.provider.signMessage(result.merkleRoot!);
-    await this.provider.signResult(priceEpochId, result.merkleRoot!, {
+  async calculateResultsAndSign(priceEpochId: number) {
+    const result = await this.calculateResults(priceEpochId);
+    const signature = await this.provider.signMessage(result.merkleRoot);
+    await this.provider.signResult(priceEpochId, result.merkleRoot, {
       v: signature.v,
       r: signature.r,
       s: signature.s,
@@ -176,7 +153,7 @@ export class FTSOClient {
       fullPriceMessage: "0x" + message,
       merkleRoot: priceMessageHash,
     };
-    this.priceEpochResults.set(priceEpochId, epochResult);
+    return epochResult;
   }
 
   async calculateRewards(priceEpochId: number, rewardOffers: RewardOffered[]): Promise<RewardClaim[]> {
@@ -244,7 +221,7 @@ export class FTSOClient {
     for (const [signature, signatureTime] of epochSignatures.values()) {
       if (signatureTime > finalizationTime) continue; // Only reward signatures with block timestamp no greater than that of finalization
       const signer = await this.provider.recoverSigner(data.merkleRoot, signature);
-      // We check if the signer is registered for the _current_ reard epoch, the signature reward epoch might be one earlier.
+      // We check if the signer is registered for the _current_ reward epoch, the signature reward epoch might be one earlier.
 
       const signerWeight = (await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch)).get(signer);
       if (signerWeight && signerWeight.gt(toBN(0))) {
@@ -264,10 +241,7 @@ export class FTSOClient {
     return this.index.getFeedSequence(rewardEpoch);
   }
 
-  preparePriceFeedsForPriceEpoch(priceEpochId: number) {
-    if (this.priceEpochData.has(priceEpochId)) {
-      throw new Error(`Data for price epoch ${priceEpochId} already exists`);
-    }
+  getPricesForEpoch(priceEpochId: number): EpochData {
     const prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed =>
       priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE
     );
@@ -279,15 +253,11 @@ export class FTSOClient {
       random: Bytes32.random(),
       bitVote: "0x00",
     };
-    this.priceEpochData.set(priceEpochId, data);
+    return data;
   }
 
-  async publishPrices(peiceEpochId: number, symbolIndices: number[]) {
-    const result = this.priceEpochResults.get(peiceEpochId);
-    if (!result) {
-      throw new Error("Result not found");
-    }
-    return await this.provider.publishPrices(result, symbolIndices);
+  async publishPrices(prices: EpochResult, symbolIndices: number[]) {
+    return await this.provider.publishPrices(prices, symbolIndices);
   }
 
   private async calculateFeedMedians(
@@ -347,7 +317,7 @@ export class FTSOClient {
       if (!revealData) {
         return false;
       }
-      const commitHash = this.index.getCommits(priceEpochId)?.get(sender);
+      const commitHash = commits?.get(sender);
       return commitHash === hashForCommit(sender, revealData.random, revealData.merkleRoot, revealData.prices);
     });
     const failedCommit = [...voterWeights.keys()!].filter(voter => !revealed.includes(voter.toLowerCase()));

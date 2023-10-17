@@ -116,9 +116,9 @@ export class BlockIndex extends AsyncEventEmitter {
     if (finalizeData.confirmed) {
       if (this.priceEpochFinalizes.has(finalizeData.epochId)) {
         throw new Error(
-          `Finalize data already exists for epoch ${finalizeData.epochId}: ${this.priceEpochFinalizes.get(
-            finalizeData.epochId
-          )}, received ${finalizeData}`
+          `Finalize data already exists for epoch ${finalizeData.epochId}: ${JSON.stringify(
+            this.priceEpochFinalizes.get(finalizeData.epochId)
+          )}, received ${JSON.stringify(finalizeData)}`
         );
       }
       getLogger(BlockIndex.name).info(
@@ -134,7 +134,7 @@ export class BlockIndex extends AsyncEventEmitter {
     if (finalizeData.confirmed) {
       if (this.rewardFinalizes.has(finalizeData.epochId)) {
         throw new Error(
-          `Finalize data already exists for epoch ${finalizeData.epochId}: ${this.priceEpochFinalizes.get(
+          `Finalize rewards data already exists for epoch ${finalizeData.epochId}: ${this.priceEpochFinalizes.get(
             finalizeData.epochId
           )}, received ${finalizeData}`
         );

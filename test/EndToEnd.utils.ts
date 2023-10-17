@@ -139,7 +139,7 @@ export async function preparePrices(
   expect(currentPriceEpoch).to.be.equal(priceEpochId);
   // initialPriceEpoch = currentPriceEpoch;
   for (const client of ftsoClients) {
-    client.preparePriceFeedsForPriceEpoch(currentPriceEpoch);
+    client.getPricesForEpoch(currentPriceEpoch);
     const numberOfFeeds = client.orderedPriceFeeds(priceEpochId).length;
     const epochData = client.priceEpochData.get(currentPriceEpoch);
     expect(epochData).to.not.be.undefined;

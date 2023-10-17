@@ -17,14 +17,15 @@ export interface RewardClaim {
   readonly beneficiary: string;
   readonly priceEpochId: number;
 }
+
 export interface RewardClaimWithProof {
   readonly merkleProof: readonly string[];
   readonly body: RewardClaim;
 }
 
 export interface Feed {
-  offerSymbol: string; // 4 characters/bytes
-  quoteSymbol: string; // 4 characters/bytes
+  readonly offerSymbol: string; // 4 characters/bytes
+  readonly quoteSymbol: string; // 4 characters/bytes
 }
 
 export interface Offer extends Feed {

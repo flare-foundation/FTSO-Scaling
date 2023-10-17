@@ -31,7 +31,7 @@ export class PriceVoter {
     setTimeout(async () => {
       this.schedulePriceEpochActions();
       try {
-        await this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleave with the next price epoch - is this a problem?
+        await this.onPriceEpoch(); // TODO: If this runs for a long time, it might get interleaved with the next price epoch - is this a problem?
       } catch (e) {
         this.logger.error(`Error in price epoch, terminating: ${errorString(e)}`);
         process.exit(1);
@@ -44,8 +44,9 @@ export class PriceVoter {
 
     if (this.lastProcessedPriceEpochId !== undefined && this.lastProcessedPriceEpochId !== currentPriceEpochId - 1) {
       this.logger.error(
-        `Skipped a price epoch. Last processed: ${this.lastProcessedPriceEpochId}, current: ${currentPriceEpochId}.`
+        `Skipped a price epoch. Last processed: ${this.lastProcessedPriceEpochId}, current: ${currentPriceEpochId}. Will to participate in this round.`
       );
+      this.hasCommits = false;
     }
 
     const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
@@ -64,15 +65,15 @@ export class PriceVoter {
   }
 
   private async runVotingProcotol(currentEpochId: number) {
-    this.client.preparePriceFeedsForPriceEpoch(currentEpochId);
+    const priceEpochData = this.client.getPricesForEpoch(currentEpochId);
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
-    await this.client.commit(currentEpochId);
+    await this.client.commit(priceEpochData);
 
     await sleepFor(2000);
     if (this.hasCommits) {
       const previousEpochId = currentEpochId - 1;
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
-      await this.client.reveal(previousEpochId);
+      await this.client.reveal(priceEpochData);
       await this.waitForRevealEpochEnd();
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
       await this.client.calculateResultsAndSign(previousEpochId);

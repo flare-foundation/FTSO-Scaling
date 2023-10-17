@@ -45,8 +45,7 @@ interface TypeChainContracts {
 
 export class Web3Provider implements IVotingProvider {
   private readonly logger = getLogger(Web3Provider.name);
-  private readonly votingAcccount: Account;
-  private readonly claimAccount: Account;
+  private readonly account: Account;
 
   private constructor(
     readonly contractAddresses: ContractAddresses,
@@ -58,11 +57,9 @@ export class Web3Provider implements IVotingProvider {
     readonly web3: Web3,
     private contracts: TypeChainContracts,
     private config: FTSOParameters,
-    votingKey: string,
-    claimKey: string
+    privateKey: string,
   ) {
-    this.votingAcccount = getAccount(web3, votingKey);
-    this.claimAccount = getAccount(web3, claimKey);
+    this.account = getAccount(web3, privateKey);
   }
 
   async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
@@ -74,32 +71,19 @@ export class Web3Provider implements IVotingProvider {
    * Authorizes the provided claimer account to process reward claims for the voter.
    * Note: the voter account will still be the beneficiary of the reward value.
    */
-  private async authorizeClaimer(claimerAddress: string): Promise<any> {
-    const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
-    return await this.signAndFinalize(
-      "Authorize claimer",
-      this.contracts.votingRewardManager.options.address,
-      methodCall
-    );
-  }
-
-  /**
-   * Authorizes the provided claimer account to process reward claims for the voter.
-   * Note: the voter account will still be the beneficiary of the reward value.
-   */
-  async authorizeClaimerFrom(claimerAddress: string, fromAccount: Account): Promise<any> {
+  async authorizeClaimerFrom(claimerAddress: string, voter: Account): Promise<any> {
     const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
     return await this.signAndFinalize(
       "Authorize claimer",
       this.contracts.votingRewardManager.options.address,
       methodCall,
       0,
-      fromAccount
+      voter
     );
   }
 
   async claimRewards(claims: RewardClaimWithProof[], beneficiary: string): Promise<any> {
-    let nonce = await this.getNonce(this.claimAccount);
+    let nonce = await this.getNonce(this.account);
     for (const claim of claims) {
       this.logger.info(
         `Calling claim reward contract with ${claim.body.amount.toString()}, using ${beneficiary}, nonce ${nonce}`
@@ -110,7 +94,7 @@ export class Web3Provider implements IVotingProvider {
         this.contracts.votingRewardManager.options.address,
         methodCall,
         0,
-        this.claimAccount,
+        this.account,
         nonce++
       );
     }
@@ -199,11 +183,11 @@ export class Web3Provider implements IVotingProvider {
     return await this.signAndFinalize("Publish prices", this.contracts.priceOracle.options.address, methodCall);
   }
   async signMessage(message: string): Promise<BareSignature> {
-    const signature = signMessage(this.web3, message, this.votingAcccount.privateKey);
+    const signature = signMessage(this.web3, message, this.account.privateKey);
     return Promise.resolve(signature);
   }
 
-  async signMessageWithKey(message: string, key: string = this.votingAcccount.privateKey): Promise<BareSignature> {
+  async signMessageWithKey(message: string, key: string = this.account.privateKey): Promise<BareSignature> {
     const signature = signMessage(this.web3, message, key);
     return Promise.resolve(signature);
   }
@@ -241,7 +225,7 @@ export class Web3Provider implements IVotingProvider {
   }
 
   get senderAddressLowercase(): string {
-    return this.votingAcccount.address.toLowerCase();
+    return this.account.address.toLowerCase();
   }
 
   async getCurrentRewardEpochId(): Promise<number> {
@@ -261,7 +245,7 @@ export class Web3Provider implements IVotingProvider {
     toAddress: string,
     fnToEncode: NonPayableTransactionObject<void>,
     value: number | BN = 0,
-    from: Account = this.votingAcccount,
+    from: Account = this.account,
     forceNonce?: number,
     gasPriceMultiplier: number = this.config.gasPriceMultiplier
   ): Promise<TransactionReceipt> {
@@ -358,8 +342,7 @@ export class Web3Provider implements IVotingProvider {
     contractAddresses: ContractAddresses,
     web3: Web3,
     config: FTSOParameters,
-    votingKey: string,
-    claimKey: string
+    privateKey: string,
   ) {
     const contracts = {
       votingRewardManager: await loadContract<VotingRewardManager>(
@@ -389,13 +372,8 @@ export class Web3Provider implements IVotingProvider {
       web3,
       contracts,
       config,
-      votingKey,
-      claimKey
+      privateKey,
     );
-
-    // if (votingKey != claimKey) {
-    //   await provider.authorizeClaimer(provider.claimAccount.address);
-    // }
     return provider;
   }
 }

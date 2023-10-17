@@ -3,7 +3,7 @@ import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { errorString } from "./utils/error";
 import { Received } from "./BlockIndex";
-import { FinalizeData, SignatureData } from "./protocol/voting-types";
+import { FinalizeData, PriceEpochId, RewardEpochId, SignatureData } from "./protocol/voting-types";
 import { toBN } from "./protocol/voting-utils";
 import _ from "lodash";
 import { BlockIndexer } from "./rewards/BlockIndexer";
@@ -16,41 +16,20 @@ export class Finalizer {
     this.indexer = client.index as BlockIndexer;
   }
 
-  readonly signaturesByEpoch = new Map<number, SignatureData[]>();
-  readonly rewardSignaturesByEpoch = new Map<number, SignatureData[]>();
+  private readonly priceSignaturesByEpoch = new Map<PriceEpochId, SignatureData[]>();
+  private readonly rewardSignaturesByEpoch = new Map<RewardEpochId, SignatureData[]>();
 
-  finalizedEpoch = 0;
-  finalizedRewardEpoch = 0;
+  private finalizedEpoch = 0;
+  private finalizedRewardEpoch = 0;
 
   async run() {
-    this.indexer.on(Received.Finalize, (fd: FinalizeData) => {
-      this.finalizedEpoch = Math.max(this.finalizedEpoch, fd.epochId);
-      this.signaturesByEpoch.delete(fd.epochId);
-    });
+    this.listenAndFinalizePriceEpoch();
+    this.listenAndFinalizeRewardEpoch();
 
-    this.indexer.on(Received.Signature, async (signature: SignatureData) => {
-      this.logger.info(`Received signature for epoch ${signature.epochId}.`);
-      if (signature.epochId <= this.finalizedEpoch) return;
+    this.indexer.run();
+  }
 
-      const signaturesForEpoch = this.signaturesByEpoch.get(signature.epochId) ?? [];
-      signaturesForEpoch.push(signature);
-      this.signaturesByEpoch.set(signature.epochId, signaturesForEpoch);
-
-      const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(signature.epochId);
-      const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
-      const voterWeights = await this.client.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
-
-      const res = await this.checkSignatures(signaturesForEpoch, weightThreshold, voterWeights);
-      if (res !== undefined) {
-        const [mroot, sigs] = res;
-        if (await this.tryFinalizePriceEpoch(signature.epochId, mroot, [...sigs.values()])) {
-          this.finalizedEpoch = Math.max(this.finalizedEpoch, signature.epochId);
-        }
-
-        return true;
-      }
-    });
-
+  private listenAndFinalizeRewardEpoch() {
     this.indexer.on(Received.RewardFinalize, (fd: FinalizeData) => {
       this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, fd.epochId);
       this.rewardSignaturesByEpoch.delete(fd.epochId);
@@ -67,9 +46,9 @@ export class Finalizer {
       const weightThreshold = await this.client.provider.thresholdForRewardEpoch(signature.epochId);
       const voterWeights = await this.client.provider.getVoterWeightsForRewardEpoch(signature.epochId);
 
-      const res = await this.checkSignatures(signaturesForEpoch, weightThreshold, voterWeights);
-      if (res !== undefined) {
-        const [mroot, sigs] = res;
+      const signatures = await this.getSignaturesForFinalization(signaturesForEpoch, weightThreshold, voterWeights);
+      if (signatures !== undefined) {
+        const [mroot, sigs] = signatures;
         if (await this.tryFinalizeRewardEpoch(signature.epochId, mroot, [...sigs.values()])) {
           this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, signature.epochId);
         }
@@ -77,14 +56,42 @@ export class Finalizer {
         return true;
       }
     });
+  }
 
-    this.indexer.run();
+  private listenAndFinalizePriceEpoch() {
+    this.indexer.on(Received.Finalize, (fd: FinalizeData) => {
+      this.finalizedEpoch = Math.max(this.finalizedEpoch, fd.epochId);
+      this.priceSignaturesByEpoch.delete(fd.epochId);
+    });
+
+    this.indexer.on(Received.Signature, async (signature: SignatureData) => {
+      this.logger.info(`Received signature for epoch ${signature.epochId}.`);
+      if (signature.epochId <= this.finalizedEpoch) return;
+
+      const signaturesForEpoch = this.priceSignaturesByEpoch.get(signature.epochId) ?? [];
+      signaturesForEpoch.push(signature);
+      this.priceSignaturesByEpoch.set(signature.epochId, signaturesForEpoch);
+
+      const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(signature.epochId);
+      const weightThreshold = await this.client.provider.thresholdForRewardEpoch(rewardEpoch);
+      const voterWeights = await this.client.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
+
+      const signatures = await this.getSignaturesForFinalization(signaturesForEpoch, weightThreshold, voterWeights);
+      if (signatures !== undefined) {
+        const [mroot, sigs] = signatures;
+        if (await this.tryFinalizePriceEpoch(signature.epochId, mroot, [...sigs.values()])) {
+          this.finalizedEpoch = Math.max(this.finalizedEpoch, signature.epochId);
+        }
+
+        return true;
+      }
+    });
   }
 
   /**
    * Once sufficient voter weight in received signatures is observed, will call finalize.
    */
-  private async checkSignatures(
+  private async getSignaturesForFinalization(
     signatures: SignatureData[],
     weightThreshold: BN,
     voterWeights: Map<string, BN>

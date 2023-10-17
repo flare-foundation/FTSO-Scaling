@@ -114,16 +114,18 @@ export function convertRewardOfferedEvent(offer: any): RewardOffered {
   let newOffer = removeIndexFields(offer);
   delete newOffer.__length__;
   newOffer.leadProviders = [...offer.leadProviders];
-  let tmp = newOffer as RewardOffered;
-  tmp.offerSymbol = bytes4ToText(tmp.offerSymbol);
-  tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol);
-  tmp.amount = toBN(tmp.amount);
-  tmp.flrValue = toBN(tmp.flrValue);
-  tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
-  tmp.elasticBandWidthPPM = toBN(tmp.elasticBandWidthPPM);
-  tmp.iqrSharePPM = toBN(tmp.iqrSharePPM);
-  tmp.pctSharePPM = toBN(tmp.pctSharePPM);
-  return tmp;
+  const result: RewardOffered = {
+    ...newOffer,
+    offerSymbol: bytes4ToText(newOffer.offerSymbol),
+    quoteSymbol: bytes4ToText(newOffer.quoteSymbol),
+    amount: toBN(newOffer.amount),
+    flrValue: toBN(newOffer.flrValue),
+    rewardBeltPPM: toBN(newOffer.rewardBeltPPM),
+    elasticBandWidthPPM: toBN(newOffer.elasticBandWidthPPM),
+    iqrSharePPM: toBN(newOffer.iqrSharePPM),
+    pctSharePPM: toBN(newOffer.pctSharePPM),
+  };
+  return result;
 }
 
 /**

@@ -8,7 +8,7 @@ import { getWeb3 } from "../../src/utils/web3";
 import { RewardVoter } from "../../src/rewards/RewardVoter";
 
 async function main() {
-  const voterId = +process.argv[2];
+  const voterId = +process.argv[2]; // Should match the id of a running price voter.
   const myId = +process.argv[3];
   if (!myId) throw Error("Must provide an id.");
   if (myId <= 0) throw Error("Id must be greater than 0.");
@@ -19,7 +19,7 @@ async function main() {
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-  getLogger("reward-manager").info(`Initializing reward-manager ${myId}, connecting to ${parameters.rpcUrl}`);
+  getLogger("reward-manager").info(`Initializing reward-manager ${myId}, for voter ${voterId} connecting to ${parameters.rpcUrl}`);
 
   let privateKey: string;
   let voterKey: string;
@@ -28,12 +28,12 @@ async function main() {
     voterKey = process.env.VOTER_KEY;
   } else {
     const accounts = loadAccounts(web3);
-    privateKey = accounts[myId * 2 - 1].privateKey;
-    voterKey = accounts[voterId * 2 - 1].privateKey;
+    privateKey = accounts[myId].privateKey;
+    voterKey = accounts[voterId].privateKey;
   }
 
-  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey, privateKey);
-  const client = new FTSOClient(provider, await provider.getBlockNumber());
+  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
+  const client = new FTSOClient(provider);
 
   const rewardVoter = new RewardVoter(client, voterKey, web3);
   await rewardVoter.run();
