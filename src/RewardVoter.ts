@@ -3,27 +3,30 @@ import { Received } from "./BlockIndex";
 import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "./protocol/voting-types";
 import { BlockIndexer } from "./BlockIndexer";
 import { getAccount, getBlockNumberBefore } from "./utils/web3";
-import { FTSOClient } from "./FTSOClient";
 import Web3 from "web3";
 import { hashRewardClaim } from "./protocol/utils/voting-utils";
 
 import { asError } from "./utils/error";
-import { Web3Provider } from "./providers/Web3Provider";
 import { Account } from "web3-core";
 import { MerkleTree } from "./protocol/utils/MerkleTree";
 import { Penalty, RewardLogic } from "./protocol/RewardLogic";
+import { IVotingProvider } from "./providers/IVotingProvider";
+import { EpochSettings } from "./protocol/utils/EpochSettings";
+import { FTSOClient } from "./FTSOClient";
 
 export class RewardVoter {
   private readonly logger = getLogger(RewardVoter.name);
+  private readonly client: FTSOClient;
+  private readonly epochs: EpochSettings;
   private readonly indexer: BlockIndexer;
 
   private voterAccount: Account;
-  private voterAdress: Address;
 
-  constructor(private client: FTSOClient, private voterKey: string, private web3: Web3) {
-    this.indexer = client.index as BlockIndexer;
+  constructor(private readonly provider: IVotingProvider, private voterKey: string, private web3: Web3) {
+    this.epochs = EpochSettings.fromProvider(provider);
+    this.indexer = new BlockIndexer(provider);
+    this.client = new FTSOClient(this.provider, this.indexer, this.epochs);
     this.voterAccount = getAccount(this.web3, this.voterKey);
-    this.voterAdress = this.voterAccount.address;
   }
   private readonly rewardClaimsForEpoch = new Map<RewardEpochId, RewardClaim[]>();
 
@@ -37,22 +40,20 @@ export class RewardVoter {
   }
 
   async runLogic() {
-    await (this.client.provider as Web3Provider).authorizeClaimerFrom(this.client.address, this.voterAccount);
+    await this.provider.authorizeClaimer(this.provider.senderAddressLowercase, this.voterAccount);
 
-    const currentPriceEpoch = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
-    const currentRewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpoch);
-
-    const currBlock = await this.web3.eth.getBlock("latest");
-    const tsMs = +currBlock.timestamp * 1000;
+    const currentPriceEpoch = this.epochs.priceEpochIdForTime(this.currentTimeSec());
+    const currentRewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(currentPriceEpoch);
 
     // We should process data from the start of the previuos reward epoch so we pick up reward offers for the current one.
     const previousRewardEpoch = Math.max(currentRewardEpoch - 1, 0);
-    const previousRewardEpochStartTimeSec = this.client.epochs.priceEpochStartTimeSec(
-      this.client.epochs.firstPriceEpochForRewardEpoch(previousRewardEpoch)
+    const previousRewardEpochStartTimeSec = this.epochs.priceEpochStartTimeSec(
+      this.epochs.firstPriceEpochForRewardEpoch(previousRewardEpoch)
     );
 
+    const currBlock = await this.web3.eth.getBlock("latest");
     this.logger.info(
-      `Current block time ${new Date(tsMs).toISOString()}, want to get block before ${new Date(
+      `Current block time ${new Date(+currBlock.timestamp * 1000).toISOString()}, want to get block before ${new Date(
         previousRewardEpochStartTimeSec * 1000
       ).toISOString()}`
     );
@@ -62,17 +63,17 @@ export class RewardVoter {
 
     this.logger.info(`Starting from block ${startBlock} for reward epoch ${previousRewardEpoch}.`);
 
-    this.calculateRewards();
-    this.claimRewards();
+    this.setUpCalculateRewards();
+    this.setUpClaimRewards();
 
     this.indexer.run(startBlock);
   }
 
-  private calculateRewards() {
+  private setUpCalculateRewards() {
     this.indexer.on(Received.Finalize, async (from: string, finalizeData: FinalizeData) => {
       this.logger.info(`[${finalizeData.epochId}] Received finalize from ${from}.`);
       const finalizedEpoch = finalizeData.epochId;
-      const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(finalizedEpoch);
+      const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(finalizedEpoch);
 
       this.logger.info(`Block number before now: ${await getBlockNumberBefore(this.web3, Date.now())}`);
 
@@ -96,15 +97,15 @@ export class RewardVoter {
     });
   }
 
-  private claimRewards() {
+  private setUpClaimRewards() {
     this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
       this.logger.info(`[${fd.epochId}] Received reward finalize from ${from}`);
       const rewardClaims = this.rewardClaimsForEpoch.get(fd.epochId)!;
       const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
 
-      const cwp = RewardLogic.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAdress);
+      const cwp = RewardLogic.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAccount.address);
       this.logger.info(`[${fd.epochId}] Claiming ${cwp.length} rewards for epoch.`);
-      return await this.client.provider.claimRewards(cwp, this.voterAdress);
+      return await this.provider.claimRewards(cwp, this.voterAccount.address);
     });
   }
 
@@ -117,9 +118,9 @@ export class RewardVoter {
 
     this.logger.info(`Signing reward merkle root for epoch ${priceEpoch}: ${rewardMerkleRoot}`);
 
-    const signature = await this.client.provider.signMessageWithKey(rewardMerkleRoot, this.voterKey);
+    const signature = await this.provider.signMessageWithKey(rewardMerkleRoot, this.voterKey);
 
-    await this.client.provider.signRewards(rewardEpoch, rewardMerkleRoot!, {
+    await this.provider.signRewards(rewardEpoch, rewardMerkleRoot!, {
       v: signature.v,
       r: signature.r,
       s: signature.s,
@@ -127,8 +128,8 @@ export class RewardVoter {
   }
 
   private isLastPriceEpochInRewardEpoch(priceEpochId: PriceEpochId): boolean {
-    const rewardEpoch = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const rewardEpochForNext = this.client.epochs.rewardEpochIdForPriceEpochId(priceEpochId + 1);
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const rewardEpochForNext = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId + 1);
     return rewardEpochForNext > rewardEpoch;
   }
 

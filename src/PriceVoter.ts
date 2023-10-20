@@ -3,17 +3,19 @@ import { getLogger } from "./utils/logger";
 import { sleepFor } from "./utils/time";
 import { errorString } from "./utils/error";
 import { BlockIndexer } from "./BlockIndexer";
+import { EpochSettings } from "./protocol/utils/EpochSettings";
+import { EpochData } from "./protocol/voting-types";
 
 export class PriceVoter {
   private readonly logger = getLogger(PriceVoter.name);
-  private readonly indexer: BlockIndexer;
 
-  constructor(private client: FTSOClient) {
-    this.indexer = client.index as BlockIndexer;
-  }
+  constructor(
+    private readonly client: FTSOClient,
+    private readonly index: BlockIndexer,
+    private readonly epochs: EpochSettings
+  ) {}
 
-  /** Used for checking if we need to send reveals in the current price epoch. */
-  private hasCommits: boolean = false;
+  private previousPriceEpochData: EpochData | undefined;
   /** Tracks reward epochs the data provider is registered as a voter for. */
   private readonly registeredRewardEpochs = new Set<number>();
 
@@ -21,12 +23,11 @@ export class PriceVoter {
 
   async run() {
     this.schedulePriceEpochActions();
-    await this.indexer.run();
   }
 
   schedulePriceEpochActions() {
     const timeSec = this.currentTimeSec();
-    const nextEpochStartSec = this.client.epochs.nextPriceEpochStartSec(timeSec);
+    const nextEpochStartSec = this.epochs.nextPriceEpochStartSec(timeSec);
 
     setTimeout(async () => {
       this.schedulePriceEpochActions();
@@ -40,16 +41,16 @@ export class PriceVoter {
   }
 
   async onPriceEpoch() {
-    const currentPriceEpochId = this.client.epochs.priceEpochIdForTime(this.currentTimeSec());
+    const currentPriceEpochId = this.epochs.priceEpochIdForTime(this.currentTimeSec());
 
     if (this.lastProcessedPriceEpochId !== undefined && this.lastProcessedPriceEpochId !== currentPriceEpochId - 1) {
       this.logger.error(
         `Skipped a price epoch. Last processed: ${this.lastProcessedPriceEpochId}, current: ${currentPriceEpochId}. Will to participate in this round.`
       );
-      this.hasCommits = false;
+      this.previousPriceEpochData = undefined;
     }
 
-    const currentRewardEpochId = this.client.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
+    const currentRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(currentPriceEpochId);
     this.logger.info(`[${currentPriceEpochId}] Processing price epoch, current reward epoch: ${currentRewardEpochId}.`);
 
     const nextRewardEpochId = currentRewardEpochId + 1;
@@ -70,23 +71,31 @@ export class PriceVoter {
     await this.client.commit(priceEpochData);
 
     await sleepFor(2000);
-    if (this.hasCommits) {
+    if (this.previousPriceEpochData !== undefined) {
       const previousEpochId = currentEpochId - 1;
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
-      await this.client.reveal(priceEpochData);
+      await this.client.reveal(this.previousPriceEpochData);
       await this.waitForRevealEpochEnd();
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
       await this.client.calculateResultsAndSign(previousEpochId);
-      await this.client.awaitFinalization(previousEpochId);
-    }
+      await this.awaitFinalization(previousEpochId);
 
-    this.hasCommits = true;
+      this.previousPriceEpochData = priceEpochData;
+    }
+  }
+
+  private async awaitFinalization(priceEpochId: number) {
+    while (!this.index.getFinalize(priceEpochId)) {
+      this.logger.info(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
+      await sleepFor(500);
+    }
+    this.logger.info(`Epoch ${priceEpochId} finalized, continue.`);
   }
 
   private async maybeRegisterForRewardEpoch(nextRewardEpochId: number) {
     if (
       this.isRegisteredForRewardEpoch(nextRewardEpochId) ||
-      this.client.index.getRewardOffers(nextRewardEpochId).length === 0
+      this.index.getRewardOffers(nextRewardEpochId).length === 0
     ) {
       return;
     }
@@ -101,7 +110,7 @@ export class PriceVoter {
   }
 
   private async waitForRevealEpochEnd() {
-    const revealPeriodDurationMs = this.client.epochs.revealDurationSec * 1000;
+    const revealPeriodDurationMs = this.epochs.revealDurationSec * 1000;
     await sleepFor(revealPeriodDurationMs + 1);
   }
 

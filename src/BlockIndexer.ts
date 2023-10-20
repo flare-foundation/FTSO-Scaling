@@ -10,8 +10,8 @@ export class BlockIndexer extends BlockIndex {
   private logger = getLogger(BlockIndexer.name);
   private lastProcessedBlockNumber = 0;
 
-  constructor(epochs: EpochSettings, private readonly provider: IVotingProvider) {
-    super(epochs, provider.contractAddresses);
+  constructor(private readonly provider: IVotingProvider) {
+    super(EpochSettings.fromProvider(provider), provider.contractAddresses);
   }
 
   async run(startBlock: number | undefined = undefined) {

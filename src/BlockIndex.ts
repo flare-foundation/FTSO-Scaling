@@ -15,7 +15,6 @@ import {
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./protocol/utils/EncodingUtils";
 import { getLogger } from "./utils/logger";
-import { RewardLogic } from "./protocol/RewardLogic";
 
 declare type CommitHash = string;
 declare type Timestamp = number;
@@ -36,6 +35,7 @@ export class BlockIndex extends AsyncEventEmitter {
   private readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
   private readonly priceEpochSignatures = new Map<PriceEpochId, Map<Address, [SignatureData, Timestamp]>>();
   private readonly priceEpochFinalizes = new Map<PriceEpochId, [FinalizeData, Timestamp]>();
+  
   private readonly rewardSignatures = new Map<RewardEpochId, Map<Address, [SignatureData, Timestamp]>>();
   private readonly rewardFinalizes = new Map<RewardEpochId, [FinalizeData, Timestamp]>();
   private readonly rewardEpochOffers = new Map<RewardEpochId, RewardOffered[]>();
@@ -72,12 +72,6 @@ export class BlockIndex extends AsyncEventEmitter {
 
   getRewardOffers(rewardEpochId: RewardEpochId): RewardOffered[] {
     return this.rewardEpochOffers.get(rewardEpochId) ?? [];
-  }
-
-  /** Returns deterministic ordering of feeds based on reward offers for the given reward epoch. */
-  getFeedSequence(rewardEpochId: RewardEpochId): Feed[] {
-    const offers = this.getRewardOffers(rewardEpochId);
-    return RewardLogic.feedSequenceByOfferValue(offers);
   }
 
   async processBlock(block: BlockData) {
@@ -178,7 +172,7 @@ export class BlockIndex extends AsyncEventEmitter {
     getLogger(BlockIndex.name).info(
       `Received commit for epoch ${priceEpochId} from ${from}, block ts ${blockTimestampSec}`
     );
-    getLogger(BlockIndex.name).info(`Commit set`);
+    getLogger(BlockIndex.name).info(`Commit set: ${from.toLowerCase()}: ${hash}`);
   }
 
   // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices)
@@ -195,7 +189,7 @@ export class BlockIndex extends AsyncEventEmitter {
       const revealsInEpoch = this.priceEpochReveals.get(priceEpochId) || new Map<Address, RevealBitvoteData>();
       this.priceEpochReveals.set(priceEpochId, revealsInEpoch);
       revealsInEpoch.set(from.toLowerCase(), result);
-      getLogger(BlockIndex.name).info(`Reveal set`);
+      getLogger(BlockIndex.name).info(`Reveal set for ${priceEpochId}`);
     }
   }
 

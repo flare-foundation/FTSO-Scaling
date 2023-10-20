@@ -1,11 +1,12 @@
 import { readFileSync } from "fs";
-import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, loadAccounts } from "../tasks/common";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
 import { Finalizer } from "../../src/Finalizer";
+import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
+import { BlockIndexer } from "../../src/BlockIndexer";
 
 async function main() {
   const myId = +process.argv[2];
@@ -29,10 +30,12 @@ async function main() {
   }
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
-  const client = new FTSOClient(provider);
-
-  const finalizer = new Finalizer(client);
+  const indexer = new BlockIndexer(provider);
+  const epochSettings = EpochSettings.fromProvider(provider);
+  const finalizer = new Finalizer(provider, indexer, epochSettings);
   await finalizer.run();
+
+  indexer.run();
 }
 
 function loadContracts(): ContractAddresses {

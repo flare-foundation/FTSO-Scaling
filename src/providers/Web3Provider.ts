@@ -19,6 +19,7 @@ import {
   EpochData,
   EpochResult,
   Offer,
+  Address,
 } from "../protocol/voting-types";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/utils/voting-utils";
 import {
@@ -59,7 +60,7 @@ export class Web3Provider implements IVotingProvider {
     private config: FTSOParameters,
     privateKey: string,
   ) {
-    this.account = getAccount(web3, privateKey);
+    this.account = getAccount(this.web3, privateKey);
   }
 
   async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
@@ -71,7 +72,7 @@ export class Web3Provider implements IVotingProvider {
    * Authorizes the provided claimer account to process reward claims for the voter.
    * Note: the voter account will still be the beneficiary of the reward value.
    */
-  async authorizeClaimerFrom(claimerAddress: string, voter: Account): Promise<any> {
+  async authorizeClaimer(claimerAddress: Address, voter: Account): Promise<any> {
     const methodCall = this.contracts.votingRewardManager.methods.authorizeClaimer(claimerAddress);
     return await this.signAndFinalize(
       "Authorize claimer",
@@ -82,7 +83,7 @@ export class Web3Provider implements IVotingProvider {
     );
   }
 
-  async claimRewards(claims: RewardClaimWithProof[], beneficiary: string): Promise<any> {
+  async claimRewards(claims: RewardClaimWithProof[], beneficiary: Address): Promise<any> {
     let nonce = await this.getNonce(this.account);
     for (const claim of claims) {
       this.logger.info(
@@ -197,11 +198,11 @@ export class Web3Provider implements IVotingProvider {
     return Promise.resolve(signer);
   }
 
-  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<string, BN>> {
+  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<Address, BN>> {
     const data = await this.contracts.voterRegistry.methods.votersForRewardEpoch(rewardEpoch).call();
     const voters = data[0];
     const weights = data[1].map(w => toBN(w));
-    const weightMap = new Map<string, BN>();
+    const weightMap = new Map<Address, BN>();
     for (let i = 0; i < voters.length; i++) {
       weightMap.set(voters[i].toLowerCase(), weights[i]);
     }

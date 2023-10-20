@@ -6,6 +6,7 @@ import {
   VoterRewarding,
   Feed,
   RewardClaimWithProof,
+  Address,
 } from "./voting-types";
 import { ZERO_ADDRESS, feedId, hashRewardClaim, toBN } from "./utils/voting-utils";
 import coder from "web3-eth-abi";
@@ -103,11 +104,11 @@ export namespace RewardLogic {
     rewardEpochOffers: RewardOffered[],
     priceEpochId: number,
     /** Can only be undefined during for the very first price epoch in FTSO. */
-    finalizerAddress: string | undefined,
-    signers: string[],
+    finalizerAddress: Address | undefined,
+    signers: Address[],
     calculationResults: MedianCalculationResult[],
-    committedFailedReveal: string[],
-    voterWeights: Map<string, BN>,
+    committedFailedReveal: Address[],
+    voterWeights: Map<Address, BN>,
     epochs: EpochSettings
   ): RewardClaim[] {
     const priceEpochOffers = rewardEpochOffers?.map(offer => rewardOfferForPriceEpoch(priceEpochId, offer, epochs))!;
@@ -164,7 +165,7 @@ export namespace RewardLogic {
     return generatedClaims;
   }
 
-  export function generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: string) {
+  export function generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: Address) {
     const allHashes = allClaims.map(claim => hashRewardClaim(claim));
     const merkleTree = new MerkleTree(allHashes);
     if (merkleTree.root !== mroot) {
@@ -202,18 +203,19 @@ export namespace RewardLogic {
     if (priceEpoch - firstPriceEpochInRewardEpoch < remainder) {
       reward = reward.add(toBN(1));
     }
-    return {
+    const rewardOffer: RewardOffered = {
       ...offer,
       priceEpochId: priceEpoch,
       amount: reward,
-    } as RewardOffered;
+    };
+    return rewardOffer;
   }
 
   function computePenalties(
     priceEpochId: number,
-    committedFailedReveal: string[],
+    committedFailedReveal: Address[],
     priceEpochOffers: RewardOffered[],
-    voterWeights: Map<string, BN>
+    voterWeights: Map<Address, BN>
   ): Penalty[] {
     const penaltyClaims: Penalty[] = [];
 
@@ -407,7 +409,7 @@ export namespace RewardLogic {
       return merged;
     }
 
-    const claimsByVoterAndCcy = new Map<string, Map<string, RewardClaim[]>>();
+    const claimsByVoterAndCcy = new Map<Address, Map<string, RewardClaim[]>>();
     for (const claim of unmergedClaims) {
       const voterClaimsByCcy = claimsByVoterAndCcy.get(claim.beneficiary) || new Map<string, RewardClaim[]>();
       claimsByVoterAndCcy.set(claim.beneficiary, voterClaimsByCcy);
@@ -572,7 +574,7 @@ export namespace RewardLogic {
   /**
    * Generates reward claims for the party that submitted the finalization transaction in the previous price epoch.
    */
-  function claimsForFinalizer(finalizationOffers: RewardOffered[], finalizerAddress: string, priceEpochId: number) {
+  function claimsForFinalizer(finalizationOffers: RewardOffered[], finalizerAddress: Address, priceEpochId: number) {
     const claims: RewardClaim[] = [];
     for (const offer of finalizationOffers) {
       const claim: RewardClaim = {
@@ -590,7 +592,7 @@ export namespace RewardLogic {
   /**
    * Generates reward claims for voters whose signatures were included the the previous epoch's finalization transaction.
    */
-  function claimsForSigners(signingOffers: RewardOffered[], signers: string[], priceEpochId: number): RewardClaim[] {
+  function claimsForSigners(signingOffers: RewardOffered[], signers: Address[], priceEpochId: number): RewardClaim[] {
     if (signers.length == 0) {
       logger.info(`No signers to be rewarded, generating back claims.`);
       return generateBackClaims(signingOffers, priceEpochId);
@@ -636,7 +638,7 @@ export namespace RewardLogic {
    * Pseudo random selection based on the hash of (slotId, priceEpoch, voterAddress).
    * Used to get deterministic randomization for border cases of IQR belt.
    */
-  function randomSelect(symbol: string, priceEpoch: number, voterAddress: string) {
+  function randomSelect(symbol: string, priceEpoch: number, voterAddress: Address) {
     return toBN(
       utils.soliditySha3(coder.encodeParameters(["string", "uint256", "address"], [symbol, priceEpoch, voterAddress]))!
     )

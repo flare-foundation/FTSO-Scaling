@@ -126,21 +126,17 @@ export interface MedianCalculationSummary {
   readonly quartile3Price: number;
 }
 
-export interface VoterWithWeight {
+export interface VoterRewarding {
   readonly voterAddress: string;
   weight: BN;
   readonly originalWeight: BN;
-}
-
-export interface VoterRewarding extends VoterWithWeight {
   readonly pct: boolean; // gets PCT reward
   readonly iqr: boolean; // gets IQR reward
   readonly eligible: boolean; // is eligible for reward
 }
 
 export interface RevealResult {
-  readonly revealed: string[];
-  readonly failedCommit: string[];
-  readonly committedFailedReveal: string[];
+  readonly revealers: Address[];
+  readonly committedFailedReveal: Address[];
   readonly revealedRandoms: Bytes32[];
 }

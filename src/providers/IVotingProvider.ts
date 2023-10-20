@@ -7,7 +7,9 @@ import {
   EpochData,
   EpochResult,
   Offer,
+  Address,
 } from "../protocol/voting-types";
+import { Account } from "web3-core";
 
 /**
  * The role of a Voting provider is to provide a generic interface to blockchain calls needed by the FTSO providers
@@ -27,7 +29,8 @@ export interface IVotingProvider {
   thresholdForRewardEpoch(rewardEpochId: number): Promise<BN>;
 
   ////////////// Contract calls //////////////
-  claimRewards(claim: RewardClaimWithProof[], beneficiary: string): Promise<any>;
+  authorizeClaimer(claimerAddress: Address, voter: Account): Promise<any>;
+  claimRewards(claim: RewardClaimWithProof[], beneficiary: Address): Promise<any>;
   offerRewards(offer: Offer[]): Promise<any>;
   commit(hash: string): Promise<any>;
   revealBitvote(epochData: EpochData): Promise<any>;
@@ -36,7 +39,7 @@ export interface IVotingProvider {
   signRewards(rewardEpoch: number, merkleRoot: string, signature: BareSignature): Promise<any>;
   finalizeRewards(rewardEpoch: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any>;
   publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any>;
-  getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<string, BN>>;
+  getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<Address, BN>>;
   registerAsVoter(rewardEpochId: number, weight: number): Promise<any>;
   getMerkleRoot(priceEpochId: number): Promise<string>;
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { loadFTSOParameters } from "../config/FTSOParameters";
+import { FTSOParameters, loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
 import { Feed } from "../../src/protocol/voting-types";
@@ -9,6 +9,8 @@ import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
 import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/RandomPriceFeed";
 import { PriceVoter } from "../../src/PriceVoter";
+import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
+import { BlockIndexer } from "../../src/BlockIndexer";
 
 async function main() {
   const myId = +process.argv[2];
@@ -33,7 +35,17 @@ async function main() {
   }
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
-  const client = new FTSOClient(provider);
+  const epochSettings = EpochSettings.fromProvider(provider);
+  const feeds = await getFeeds(useRandomFeed, parameters);
+  const indexer = new BlockIndexer(provider);
+  indexer.run();
+
+  const client = new FTSOClient(provider, indexer, epochSettings, feeds);
+  const priceVoter = new PriceVoter(client, indexer, epochSettings);
+  await priceVoter.run();
+}
+
+async function getFeeds(useRandomFeed: boolean, parameters: FTSOParameters) {
   let feeds: IPriceFeed[];
   if (useRandomFeed) {
     // Uses a fake randomised price feed.
@@ -42,10 +54,7 @@ async function main() {
     // Uses a real price feed, with additional random noise.
     feeds = randomizeFeeds(await getPriceFeeds(parameters.symbols));
   }
-  client.registerPriceFeeds(feeds);
-
-  const priceVoter = new PriceVoter(client);
-  await priceVoter.run();
+  return feeds;
 }
 
 function loadContracts(): ContractAddresses {

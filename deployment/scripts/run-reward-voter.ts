@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, loadAccounts } from "../tasks/common";
@@ -19,7 +18,9 @@ async function main() {
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-  getLogger("reward-manager").info(`Initializing reward-manager ${myId}, for voter ${voterId} connecting to ${parameters.rpcUrl}`);
+  getLogger("reward-manager").info(
+    `Initializing reward-manager ${myId}, for voter ${voterId} connecting to ${parameters.rpcUrl}`
+  );
 
   let privateKey: string;
   let voterKey: string;
@@ -33,9 +34,7 @@ async function main() {
   }
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
-  const client = new FTSOClient(provider);
-
-  const rewardVoter = new RewardVoter(client, voterKey, web3);
+  const rewardVoter = new RewardVoter(provider, voterKey, web3);
   await rewardVoter.run();
 }
 

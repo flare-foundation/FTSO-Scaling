@@ -158,9 +158,24 @@ export function packPrices(prices: (number | string)[]) {
   );
 }
 
+export function parsePrices(packedPrices: string, numberOfFeeds: number) {
+  let feedPrice =
+    packedPrices
+      .slice(2)
+      .match(/(.{1,8})/g)
+      ?.map(hex => toBN(hex)) || [];
+  feedPrice = feedPrice.slice(0, numberOfFeeds);
+  feedPrice = padEndArray(feedPrice, numberOfFeeds, 0);
+  return feedPrice;
+}
+
+function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
+  return Object.assign(new Array(minLength).fill(fillValue), array);
+}
+
 export function hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
   const types = ["address", "uint256", "bytes32", "bytes"];
-  const values = [voter, random, merkleRoot, prices] as any[];
+  const values = [voter.toLowerCase(), random, merkleRoot, prices];
   const encoded = coder.encodeParameters(types, values);
   return utils.soliditySha3(encoded)!;
 }
