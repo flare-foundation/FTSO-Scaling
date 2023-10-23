@@ -46,6 +46,11 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
   return result;
 }
 
+/**
+ * Builds a Merkle tree containing price epoch results.
+ * The tree is built from the bulk price hash, individual price hashes and the hash of the combined random value.
+ * The bulk price hash contains all prices and symbols, and is used for more efficiently retrieving prices for all feeds in the epoch.
+ */
 export function calculateEpochResult(
   medianResults: MedianCalculationResult[],
   revealResult: RevealResult,
@@ -54,19 +59,19 @@ export function calculateEpochResult(
   const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
   const encodedIndividualPrices: string[] = [];
 
-  let priceMessage = "";
-  let symbolMessage = "";
+  let encodedBulkPrices = "";
+  let encodedBulkSymbols = "";
   medianResults.forEach(data => {
     const encodedPrice = Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
     const encodedSymbol = unprefixedSymbolBytes(data.feed);
-    priceMessage += encodedPrice;
-    symbolMessage += encodedSymbol;
+    encodedBulkPrices += encodedPrice;
+    encodedBulkSymbols += encodedSymbol;
     encodedIndividualPrices.push(encodedPriceEpochId + encodedSymbol + encodedPrice);
   });
 
-  const encodedBulkFeedPrices = encodedPriceEpochId + priceMessage + symbolMessage;
-  const bulkFeedPriceHash = Web3.utils.soliditySha3("0x" + encodedBulkFeedPrices)!;
-  const priceHashes = encodedIndividualPrices.map(tuple => Web3.utils.soliditySha3("0x" + tuple)!);
+  const encodedBulkPricesWithSymbols = encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
+  const bulkHash = Web3.utils.soliditySha3("0x" + encodedBulkPricesWithSymbols)!;
+  const individualPriceHashes = encodedIndividualPrices.map(tuple => Web3.utils.soliditySha3("0x" + tuple)!);
 
   const randomQuality = revealResult.committedFailedReveal.length;
   const combinedRandom = combineRandom(revealResult.revealedRandoms);
@@ -76,19 +81,18 @@ export function calculateEpochResult(
     combinedRandom.value.slice(2);
   const randomHash = Web3.utils.soliditySha3("0x" + encodedRandom)!;
 
-  const merkleTree = new MerkleTree([bulkFeedPriceHash, ...priceHashes, randomHash]);
-
-  const bulkProof: Bytes32[] = merkleTree.getProof(bulkFeedPriceHash)!.map(p => Bytes32.fromHexString(p));
+  const merkleTree = new MerkleTree([bulkHash, ...individualPriceHashes, randomHash]);
+  const bulkProof: Bytes32[] = merkleTree.getProof(bulkHash)!.map(p => Bytes32.fromHexString(p));
 
   const epochResult: EpochResult = {
     priceEpochId: priceEpochId,
     medianData: medianResults,
     random: combinedRandom,
     randomQuality: randomQuality,
-    bulkPriceMessage: "0x" + priceMessage,
-    bulkSymbolMessage: "0x" + symbolMessage,
+    encodedBulkPrices: "0x" + encodedBulkPrices,
+    encodedBulkSymbols: "0x" + encodedBulkSymbols,
     randomMessage: "0x" + encodedRandom,
-    bulkFeedPriceMessage: "0x" + encodedBulkFeedPrices,
+    encodedBulkPricesWithSymbols: "0x" + encodedBulkPricesWithSymbols,
     bulkPriceProof: bulkProof,
     merkleRoot: merkleTree.root!,
   };

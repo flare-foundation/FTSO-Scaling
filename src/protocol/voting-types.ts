@@ -105,10 +105,10 @@ export interface EpochResult {
   readonly medianData: readonly MedianCalculationResult[];
   readonly random: Bytes32;
   readonly randomQuality: number;
-  readonly bulkPriceMessage: string;
-  readonly bulkSymbolMessage: string;
+  readonly encodedBulkPrices: string;
+  readonly encodedBulkSymbols: string;
   readonly randomMessage: string;
-  readonly bulkFeedPriceMessage: string;
+  readonly encodedBulkPricesWithSymbols: string;
   readonly bulkPriceProof: readonly Bytes32[];
   readonly merkleRoot: string;
 }

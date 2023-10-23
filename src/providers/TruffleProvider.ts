@@ -131,8 +131,8 @@ export class TruffleProvider implements IVotingProvider {
     return this.contracts.priceOracle.publishPrices(
       epochResult.rewardClaimMerkleRoot,
       epochResult.priceEpochId,
-      epochResult.bulkPriceMessage,
-      epochResult.bulkSymbolMessage,
+      epochResult.encodedBulkPrices,
+      epochResult.encodedBulkSymbols,
       epochResult.randomMessage,
       symbolIndices,
       { from: this.account.address }
