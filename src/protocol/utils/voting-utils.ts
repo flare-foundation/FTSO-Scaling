@@ -41,7 +41,7 @@ export function hashRewardClaim(data: RewardClaim): string {
 /**
  * Converts text representation of a symbol to bytes4.
  */
-export function toBytes4(text: string) {
+export function toBytes4(text: string): string {
   if (!text || text.length === 0) {
     throw new Error(`Text should be non-null and non-empty`);
   }
@@ -183,4 +183,12 @@ export function hashForCommit(voter: string, random: string, merkleRoot: string,
 /** We XOR the random values provided by each voter to obtain a single combined random value for the price epoch. */
 export function combineRandom(randoms: Bytes32[]): Bytes32 {
   return randoms.reduce((a, b) => a.xor(b), Bytes32.ZERO);
+}
+
+export function hashBytes(hexString: string): string {
+  if (hexString.length === 0) throw new Error("Cannot hash empty string");
+
+  let toHash = hexString;
+  if (!hexString.startsWith("0x")) toHash = "0x" + hexString;
+  return utils.soliditySha3({ type: "bytes", value: toHash })!;
 }

@@ -7,7 +7,7 @@ import {
   MedianCalculationSummary,
   RevealResult,
 } from "./voting-types";
-import { combineRandom, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
+import { combineRandom, hashBytes, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
 import Web3 from "web3";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
@@ -66,20 +66,21 @@ export function calculateEpochResult(
     const encodedSymbol = unprefixedSymbolBytes(data.feed);
     encodedBulkPrices += encodedPrice;
     encodedBulkSymbols += encodedSymbol;
-    encodedIndividualPrices.push(encodedPriceEpochId + encodedSymbol + encodedPrice);
+    encodedIndividualPrices.push("0x" + encodedPriceEpochId + encodedSymbol + encodedPrice);
   });
 
-  const encodedBulkPricesWithSymbols = encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
-  const bulkHash = Web3.utils.soliditySha3("0x" + encodedBulkPricesWithSymbols)!;
-  const individualPriceHashes = encodedIndividualPrices.map(tuple => Web3.utils.soliditySha3("0x" + tuple)!);
+  const encodedBulkPricesWithSymbols = "0x" + encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
+  const bulkHash = hashBytes(encodedBulkPricesWithSymbols);
+  const individualPriceHashes = encodedIndividualPrices.map(tuple => hashBytes(tuple));
 
   const randomQuality = revealResult.committedFailedReveal.length;
   const combinedRandom = combineRandom(revealResult.revealedRandoms);
   const encodedRandom =
+    "0x" +
     encodedPriceEpochId +
     Web3.utils.padLeft(randomQuality.toString(16), RANDOM_QUALITY_BYTES * 2) +
     combinedRandom.value.slice(2);
-  const randomHash = Web3.utils.soliditySha3("0x" + encodedRandom)!;
+  const randomHash = hashBytes(encodedRandom);
 
   const merkleTree = new MerkleTree([bulkHash, ...individualPriceHashes, randomHash]);
   const bulkProof: Bytes32[] = merkleTree.getProof(bulkHash)!.map(p => Bytes32.fromHexString(p));
@@ -91,8 +92,8 @@ export function calculateEpochResult(
     randomQuality: randomQuality,
     encodedBulkPrices: "0x" + encodedBulkPrices,
     encodedBulkSymbols: "0x" + encodedBulkSymbols,
-    randomMessage: "0x" + encodedRandom,
-    encodedBulkPricesWithSymbols: "0x" + encodedBulkPricesWithSymbols,
+    randomMessage: encodedRandom,
+    encodedBulkPricesWithSymbols: encodedBulkPricesWithSymbols,
     bulkPriceProof: bulkProof,
     merkleRoot: merkleTree.root!,
   };
