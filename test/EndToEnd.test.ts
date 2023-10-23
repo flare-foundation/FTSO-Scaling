@@ -7,8 +7,8 @@ import { web3 } from "hardhat";
 import { FTSOClient } from "../src/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig, createPriceFeedConfigs } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
-import { Feed } from "../src/voting-interfaces";
-import { toBN, unprefixedSymbolBytes } from "../src/voting-utils";
+import { Feed } from "../src/protocol/voting-types";
+import { toBN, unprefixedSymbolBytes } from "../src/protocol/utils/voting-utils";
 import { getTestFile } from "../test-utils/utils/constants";
 import {
   DummyERC20Instance,
@@ -40,7 +40,7 @@ import {
   signAndSend,
   syncToLastBlock,
 } from "./EndToEnd.utils";
-import { sleepFor } from "../src/time-utils";
+import { sleepFor } from "../src/utils/time";
 
 chai.use(chaiBN(BN));
 

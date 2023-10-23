@@ -9,13 +9,13 @@ import {
   VotingManagerInstance,
   VotingRewardManagerInstance,
 } from "../../typechain-truffle";
-import { ZERO_ADDRESS, hashRewardClaim, toBN, toBytes4 } from "../../src/voting-utils";
-import { Feed, RewardClaim, RewardClaimWithProof, RewardOffered } from "../../src/voting-interfaces";
-import { hexlifyBN } from "../../src/voting-utils";
+import { ZERO_ADDRESS, hashRewardClaim, toBN, toBytes4 } from "../../src/protocol/utils/voting-utils";
+import { Feed, RewardClaim, RewardClaimWithProof, RewardOffered } from "../../src/protocol/voting-types";
+import { hexlifyBN } from "../../src/protocol/utils/voting-utils";
 import { MerkleTree } from "../../src/MerkleTree";
 import { moveToNextRewardEpochStart } from "../../test-utils/utils/voting-test-utils";
 import Prando from "prando";
-import { PriceEpochRewards } from "../../src/PriceEpochRewards";
+import { RewardLogic } from "../../src/protocol/RewardLogic";
 
 chai.use(chaiBN(BN));
 
@@ -351,7 +351,7 @@ contract(`VotingRewardManager.sol; ${getTestFile(__filename)}`, async accounts =
 
           const existingClaims = claimsForParties.get(offerSender) ?? [];
           existingClaims.push(backClaim);
-          claimsForParties.set(offerSender, PriceEpochRewards.mergeClaims(claimPriceEpoch, existingClaims));
+          claimsForParties.set(offerSender, RewardLogic.mergeClaims(claimPriceEpoch, existingClaims));
         }
 
         await submitClaimsAndCheckBalances(claimsForParties);

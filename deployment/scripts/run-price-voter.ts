@@ -1,14 +1,16 @@
 import { readFileSync } from "fs";
-import { DataProvider } from "../../src/DataProvider";
 import { FTSOClient } from "../../src/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { loadFTSOParameters } from "../config/FTSOParameters";
+import { FTSOParameters, loadFTSOParameters } from "../config/FTSOParameters";
 import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
-import { Feed } from "../../src/voting-interfaces";
+import { Feed } from "../../src/protocol/voting-types";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
-import { getWeb3 } from "../../src/web3-utils";
+import { getWeb3 } from "../../src/utils/web3";
 import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/RandomPriceFeed";
+import { PriceVoter } from "../../src/PriceVoter";
+import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
+import { BlockIndexer } from "../../src/BlockIndexer";
 
 async function main() {
   const myId = +process.argv[2];
@@ -16,27 +18,34 @@ async function main() {
   if (myId <= 0) throw Error("Data provider id must be greater than 0.");
   const useRandomFeed = process.argv[3] == "random";
 
-  setGlobalLogFile(`data-provider-${myId}`);
+  setGlobalLogFile(`price-voter-${myId}`);
 
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-  getLogger("data-provider").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
+  getLogger("price-voter").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
 
-  let votingKey: string;
-  let claimKey: string;
-  if (process.env.DATA_PROVIDER_VOTING_KEY != undefined && process.env.DATA_PROVIDER_CLAIM_KEY != undefined) {
-    votingKey = process.env.DATA_PROVIDER_VOTING_KEY;
-    claimKey = process.env.DATA_PROVIDER_CLAIM_KEY;
+  let privateKey: string;
+  if (process.env.DATA_PROVIDER_VOTING_KEY != undefined) {
+    privateKey = process.env.DATA_PROVIDER_VOTING_KEY;
   } else {
     const accounts = loadAccounts(web3);
-    votingKey = accounts[myId * 2 - 1].privateKey;
-    claimKey = accounts[myId * 2].privateKey;
+    privateKey = accounts[myId].privateKey;
   }
 
-  const provider = await Web3Provider.create(contractAddresses, web3, parameters, votingKey, claimKey);
-  const client = new FTSOClient(provider, await provider.getBlockNumber());
+  const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
+  const epochSettings = EpochSettings.fromProvider(provider);
+  const feeds = await getFeeds(useRandomFeed, parameters);
+  const indexer = new BlockIndexer(provider);
+  indexer.run();
+
+  const client = new FTSOClient(provider, indexer, epochSettings, feeds);
+  const priceVoter = new PriceVoter(client, indexer, epochSettings);
+  await priceVoter.run();
+}
+
+async function getFeeds(useRandomFeed: boolean, parameters: FTSOParameters) {
   let feeds: IPriceFeed[];
   if (useRandomFeed) {
     // Uses a fake randomised price feed.
@@ -45,10 +54,7 @@ async function main() {
     // Uses a real price feed, with additional random noise.
     feeds = randomizeFeeds(await getPriceFeeds(parameters.symbols));
   }
-  client.registerPriceFeeds(feeds);
-
-  const dataProvider = new DataProvider(client, myId);
-  await dataProvider.run();
+  return feeds;
 }
 
 function loadContracts(): ContractAddresses {
@@ -78,7 +84,7 @@ function addNoise(num: number): number {
 }
 
 main().catch(e => {
-  console.error("Data provider error, exiting", e);
-  getLogger("data-provider").error(e);
+  console.error("Price voter error, exiting", e);
+  getLogger("price-voter").error(e);
   process.exit(1);
 });

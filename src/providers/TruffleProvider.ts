@@ -14,10 +14,9 @@ import {
   EpochData,
   EpochResult,
   Offer,
-  VoterWithWeight,
-} from "../voting-interfaces";
-import { ZERO_ADDRESS, hexlifyBN, toBN } from "../voting-utils";
-import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../web3-utils";
+} from "../protocol/voting-types";
+import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/utils/voting-utils";
+import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../utils/web3";
 import { IVotingProvider } from "./IVotingProvider";
 
 export interface TruffleProviderOptions {
@@ -150,7 +149,7 @@ export class TruffleProvider implements IVotingProvider {
     return Promise.resolve(signer);
   }
 
-  async allVotersWithWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
+  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
     const data = await this.contracts.voterRegistry.votersForRewardEpoch(rewardEpoch);
     const voters = data[0];
     const weights = data[1];

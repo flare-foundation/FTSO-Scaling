@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import { increaseTimeTo } from "./test-helpers";
 import { VotingManagerInstance } from "../../typechain-truffle";
-import { toBN } from "../../src/voting-utils";
+import { toBN } from "../../src/protocol/utils/voting-utils";
 
 /**
  * Moves time to the start of the next price epoch, relative to the position in the current price epoch.

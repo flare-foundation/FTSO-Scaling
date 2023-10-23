@@ -1,5 +1,4 @@
-import { DataProvider } from "../../src/DataProvider";
-import { sleepFor } from "../../src/time-utils";
+import { sleepFor } from "../../src/utils/time";
 import { TimeoutError, retry, retryWithTimeout } from "../../src/utils/retry";
 import { getTestFile } from "../../test-utils/utils/constants";
 import { expect } from "chai";

@@ -1,11 +1,11 @@
 import BN from "bn.js";
-import { Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-interfaces";
-import { toBN } from "./voting-utils";
+import { Address, Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
+import { toBN } from "./utils/voting-utils";
 
 /**
  * Data for a single vote.
  */
-export interface VoteData {
+interface VoteData {
   voter: string;
   price: BN;
   weight: BN;
@@ -49,7 +49,7 @@ export function calculateResultsForFeed(voters: string[], prices: BN[], weights:
 /**
  * Given a list of voters, prices and weights, it calculates the median and other statistics.
  */
-export function calculateMedian(voters: string[], prices: BN[], weights: BN[]): MedianCalculationSummary {
+export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]): MedianCalculationSummary {
   let voteData = repack(voters, prices, weights);
   // Sort by price
   voteData.sort((a, b) => {

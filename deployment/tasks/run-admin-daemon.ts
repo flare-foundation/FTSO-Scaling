@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
-import { sleepFor } from "../../src/time-utils";
-import { Feed, Offer } from "../../src/voting-interfaces";
+import { sleepFor } from "../../src/utils/time";
+import { Feed, Offer } from "../../src/protocol/voting-types";
 import { Account } from "web3-core";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { ZERO_ADDRESS, toBytes4, hexlifyBN } from "../../src/voting-utils";
+import { ZERO_ADDRESS, toBytes4, hexlifyBN } from "../../src/protocol/utils/voting-utils";
 import { VotingManagerInstance, VotingRewardManagerInstance } from "../../typechain-truffle";
 import { toBN } from "web3-utils";
 import { OUTPUT_FILE } from "./common";

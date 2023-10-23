@@ -108,8 +108,13 @@ contract Voting {
         (_priceEpochId, _merkleRoot, block.timestamp);
     }
 
-    function getMerkleRootForPriceEpoch(uint256 _priceRpochId) public view returns (bytes32) {
-        bytes32 merkleRoot = merkleRoots[_priceRpochId];
+    function getMerkleRootForPriceEpoch(uint256 _priceEpochId) public view returns (bytes32) {
+        bytes32 merkleRoot = merkleRoots[_priceEpochId];
+        return merkleRoot;
+    }
+
+    function getMerkleRootForRewardEpoch(uint256 _rewardEpochId) public view returns (bytes32) {
+        bytes32 merkleRoot = rewardMerkleRoots[_rewardEpochId];
         return merkleRoot;
     }
 
@@ -121,6 +126,17 @@ contract Voting {
             voterRegistry.getVoterWeightForRewardEpoch(
                 _voter,
                 votingManager.getRewardEpochIdForPriceEpoch(_priceEpochId)
+            );
+    }
+
+    function getVoterWeightForRewardEpoch(
+        address _voter,
+        uint256 _rewardEpochId
+    ) public view returns (uint256) {
+        return
+            voterRegistry.getVoterWeightForRewardEpoch(
+                _voter,
+                _rewardEpochId
             );
     }
 
@@ -173,6 +189,72 @@ contract Voting {
             _signature.s
         );
         return signer;
+    }
+
+    event RewardMerkleRootConfirmed(
+        uint256 indexed rewardEpoch,
+        bytes32 merkleRoot,
+        uint256 timestamp
+    );
+
+    event RewardMerkleRootConfirmationFailed(
+        uint256 indexed rewardEpoch,
+        bytes32 merkleRoot,
+        uint256 weight,
+        uint256 threshold,
+        uint256 timestamp
+    );
+
+    // list of reward merkle roots, indexed by reward epoch id
+    mapping(uint256 => bytes32) public rewardMerkleRoots;
+
+    function signRewards(
+        uint256 _rewardEpochId,
+        bytes32 _merkleRoot,
+        Signature calldata _signature
+    ) public {}
+
+    function finalizeRewards(
+        uint256 _rewardEpochId,
+        bytes32 _merkleRoot,
+        Signature[] calldata _signatures
+    ) public {
+        require(rewardMerkleRoots[_rewardEpochId] == 0, "epochId already finalized");
+        
+        // TODO: add signing window limits
+
+        uint256 threshold = voterRegistry.thresholdForRewardEpoch(_rewardEpochId);
+        uint256 weightSum = 0;
+        for (uint256 i = 0; i < _signatures.length; i++) {
+            address signer = recoverSigner(_merkleRoot, _signatures[i]);
+
+            if (signer != address(0)) {
+                uint256 weight = getVoterWeightForRewardEpoch(signer, _rewardEpochId);
+                weightSum += weight;                
+                if (weightSum > threshold) {
+                    rewardMerkleRoots[_rewardEpochId] = _merkleRoot;
+                    if (_rewardEpochId >= votingManager.TOTAL_STORED_PROOFS()) {
+                        rewardMerkleRoots[
+                            _rewardEpochId - votingManager.TOTAL_STORED_PROOFS()
+                        ] = 0;
+                    }
+                    emit RewardMerkleRootConfirmed(
+                        _rewardEpochId,
+                        _merkleRoot,
+                        block.timestamp
+                    );
+                    return;
+                }
+            }
+        }
+        emit RewardMerkleRootConfirmationFailed(
+            _rewardEpochId,
+            _merkleRoot,
+            weightSum,
+            threshold,
+            block.timestamp
+        );
+        (_rewardEpochId, _merkleRoot, block.timestamp);
     }
 
 }

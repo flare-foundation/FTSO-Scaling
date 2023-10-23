@@ -2,6 +2,10 @@ import BN from "bn.js";
 import { TransactionReceipt } from "web3-core";
 import { Bytes32 } from "./utils/sol-types";
 
+export type Address = string;
+export type PriceEpochId = number;
+export type RewardEpochId = number;
+
 export interface RewardClaim {
   /**
    * `true`if the claim is for the full amount claimable by the specified beneficiary. E.g: back claims, signer and finalization claims.
@@ -13,14 +17,15 @@ export interface RewardClaim {
   readonly beneficiary: string;
   readonly priceEpochId: number;
 }
+
 export interface RewardClaimWithProof {
   readonly merkleProof: readonly string[];
   readonly body: RewardClaim;
 }
 
 export interface Feed {
-  offerSymbol: string; // 4 characters/bytes
-  quoteSymbol: string; // 4 characters/bytes
+  readonly offerSymbol: string; // 4 characters/bytes
+  readonly quoteSymbol: string; // 4 characters/bytes
 }
 
 export interface Offer extends Feed {
@@ -37,11 +42,6 @@ export interface Offer extends Feed {
 export interface RewardOffered extends Offer {
   priceEpochId?: number;
   transactionId?: string;
-  flrValue: BN;
-}
-
-export interface FeedValue extends Feed {
-  feedId: string;
   flrValue: BN;
 }
 
@@ -109,10 +109,6 @@ export interface EpochResult {
   readonly symbolMessage: string;
   readonly randomMessage: string;
   readonly fullPriceMessage: string;
-  readonly rewardClaimMerkleRoot: string;
-  readonly rewardClaimMerkleProof: string;
-  readonly rewardClaims: readonly RewardClaim[];
-  readonly fullMessage: string;
   readonly merkleRoot: string;
 }
 
@@ -130,21 +126,17 @@ export interface MedianCalculationSummary {
   readonly quartile3Price: number;
 }
 
-export interface VoterWithWeight {
+export interface VoterRewarding {
   readonly voterAddress: string;
   weight: BN;
   readonly originalWeight: BN;
-}
-
-export interface VoterRewarding extends VoterWithWeight {
   readonly pct: boolean; // gets PCT reward
   readonly iqr: boolean; // gets IQR reward
   readonly eligible: boolean; // is eligible for reward
 }
 
 export interface RevealResult {
-  readonly revealed: string[];
-  readonly failedCommit: string[];
-  readonly committedFailedReveal: string[];
+  readonly revealers: Address[];
+  readonly committedFailedReveal: Address[];
   readonly revealedRandoms: Bytes32[];
 }

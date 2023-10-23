@@ -1,7 +1,7 @@
 import { time, expectEvent } from "@openzeppelin/test-helpers";
 import { FTSOClient } from "../src/FTSOClient";
-import { Feed, Offer } from "../src/voting-interfaces";
-import { unprefixedSymbolBytes, toBN, ZERO_ADDRESS, toBytes4, hexlifyBN, feedId } from "../src/voting-utils";
+import { Feed, Offer } from "../src/protocol/voting-types";
+import { unprefixedSymbolBytes, toBN, ZERO_ADDRESS, toBytes4, hexlifyBN, feedId } from "../src/protocol/utils/voting-utils";
 import { DummyERC20 } from "../typechain";
 import {
   DummyERC20Instance,
@@ -10,7 +10,7 @@ import {
   VotingRewardManagerInstance,
   VotingManagerInstance,
 } from "../typechain-truffle";
-import { Received } from "../src/BlockIndexer";
+import { Received } from "../src/BlockIndex";
 import BN from "bn.js";
 
 const DummyERC20 = artifacts.require("DummyERC20");
@@ -139,7 +139,7 @@ export async function preparePrices(
   expect(currentPriceEpoch).to.be.equal(priceEpochId);
   // initialPriceEpoch = currentPriceEpoch;
   for (const client of ftsoClients) {
-    client.preparePriceFeedsForPriceEpoch(currentPriceEpoch);
+    client.getPricesForEpoch(currentPriceEpoch);
     const numberOfFeeds = client.orderedPriceFeeds(priceEpochId).length;
     const epochData = client.priceEpochData.get(currentPriceEpoch);
     expect(epochData).to.not.be.undefined;
@@ -160,7 +160,7 @@ export async function commit(priceEpochId: number, ftsoClients: FTSOClient[], vo
   }
   for (const client of ftsoClients) {
     await client.processNewBlocks();
-    expect(client.indexer.getCommits(currentEpoch)?.size).to.be.equal(ftsoClients.length);
+    expect(client.index.getCommits(currentEpoch)?.size).to.be.equal(ftsoClients.length);
   }
 }
 
@@ -173,7 +173,7 @@ export async function reveal(priceEpochId: number, ftsoClients: FTSOClient[], vo
   }
   for (const client of ftsoClients) {
     await client.processNewBlocks();
-    expect(client.indexer.getReveals(revealEpoch)?.size).to.be.equal(ftsoClients.length);
+    expect(client.index.getReveals(revealEpoch)?.size).to.be.equal(ftsoClients.length);
   }
 }
 
@@ -237,7 +237,7 @@ export async function signAndSend(
   const setFinalized = () => {
     finalized = true;
   };
-  firstClient.indexer.once(Received.Finalize, setFinalized);
+  firstClient.index.once(Received.Finalize, setFinalized);
 
   for (const client of ftsoClients) {
     await client.calculateResultsAndSign(priceEpochId, true); // skip calculation, since we already did it
@@ -247,7 +247,7 @@ export async function signAndSend(
     await client.tryFinalizeOnceSignaturesReceived(priceEpochId);
   }
 
-  const signaturesTmp = [...firstClient.indexer.getSignatures(priceEpochId)!.values()].map(([s, _]) => s);
+  const signaturesTmp = [...firstClient.index.getSignatures(priceEpochId)!.values()].map(([s, _]) => s);
   const merkleRoots = [...new Set(signaturesTmp.map(sig => sig.merkleRoot)).values()];
   expect(merkleRoots.length).to.be.equal(1);
   expect(finalized).to.be.true;

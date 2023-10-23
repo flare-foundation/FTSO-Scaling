@@ -1,3 +1,5 @@
+import { IVotingProvider } from "../../providers/IVotingProvider";
+
 export class EpochSettings {
   constructor(
     readonly firstPriceEpochStartSec: number,
@@ -16,7 +18,8 @@ export class EpochSettings {
 
   revealPriceEpochIdForTime(timestampSec: number): number | undefined {
     let priceEpochId = this.priceEpochIdForTime(timestampSec);
-    let revealDeadlineSec = this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec + this.revealDurationSec;
+    let revealDeadlineSec =
+      this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec + this.revealDurationSec;
     if (timestampSec > revealDeadlineSec) {
       return undefined;
     }
@@ -51,5 +54,14 @@ export class EpochSettings {
 
   priceEpochStartTimeSec(priceEpochId: number): number {
     return this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec;
+  }
+
+  static fromProvider(provider: IVotingProvider): EpochSettings {
+    return new EpochSettings(
+      provider.firstEpochStartSec,
+      provider.epochDurationSec,
+      provider.firstRewardedPriceEpoch,
+      provider.rewardEpochDurationInEpochs
+    );
   }
 }

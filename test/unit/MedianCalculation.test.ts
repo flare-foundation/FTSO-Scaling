@@ -1,8 +1,8 @@
 import BN from "bn.js";
 import { expect } from "chai";
-import { MedianCalculationSummary } from "../../src/voting-interfaces";
-import { toBN } from "../../src/voting-utils";
-import { calculateMedian } from "../../src/median-calculation-utils";
+import { MedianCalculationSummary } from "../../src/protocol/voting-types";
+import { toBN } from "../../src/protocol/utils/voting-utils";
+import { calculateMedian } from "../../src/protocol/median-calculation";
 import { getTestFile } from "../../test-utils/utils/constants";
 
 describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {

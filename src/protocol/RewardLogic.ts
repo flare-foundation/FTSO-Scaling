@@ -1,30 +1,240 @@
 import BN from "bn.js";
-import { RewardClaim, MedianCalculationResult, RewardOffered, VoterRewarding } from "./voting-interfaces";
-import { ZERO_ADDRESS, feedId, toBN } from "./voting-utils";
+import {
+  RewardClaim,
+  MedianCalculationResult,
+  RewardOffered,
+  VoterRewarding,
+  Feed,
+  RewardClaimWithProof,
+  Address,
+} from "./voting-types";
+import { ZERO_ADDRESS, feedId, hashRewardClaim, toBN } from "./utils/voting-utils";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { getLogger } from "./utils/logger";
-import { Penalty } from "./RewardCalculator";
+import { getLogger } from "../utils/logger";
 import _ from "lodash";
+import { EpochSettings } from "./utils/EpochSettings";
+import { MerkleTree } from "./utils/MerkleTree";
 
 /** Address to which we allocate penalised reward amounts. */
 const BURN_ADDRESS = ZERO_ADDRESS;
+/** 10% of total reward goes to the finalizer. */
+const FINALIZATION_BIPS = toBN(1_000);
+/** 10% of total reward goes to finalization signatures. */
+const SIGNING_BIPS = toBN(1_000);
+const TOTAL_BIPS = toBN(10_000);
+
+const MISSED_REVEAL_PENALIZATION: BN = toBN(10);
+
+export class Penalty implements RewardClaim {
+  readonly isFixedClaim = true;
+  constructor(
+    readonly amount: BN,
+    readonly currencyAddress: string,
+    readonly beneficiary: string,
+    readonly priceEpochId: number
+  ) {}
+}
 
 /**
  * Collection of utility methods used for reward claim calculation.
  */
-export namespace PriceEpochRewards {
-  const logger = getLogger("PriceEpochRewards");
+export namespace RewardLogic {
+  const logger = getLogger("RewardLogic");
+
   /**
-   * Pseudo random selection based on the hash of (slotId, priceEpoch, voterAddress).
-   * Used to get deterministic randomization for border cases of IQR belt.
+   * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
+   * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
+   * In case of equal values the feedId is used to sort in increasing order.
+   * The sequence defines positions of the feeds in the price vectors for the reward epoch.
    */
-  export function randomSelect(symbol: string, priceEpoch: number, voterAddress: string) {
-    return toBN(
-      utils.soliditySha3(coder.encodeParameters(["string", "uint256", "address"], [symbol, priceEpoch, voterAddress]))!
-    )
-      .mod(toBN(2))
-      .eq(toBN(1));
+  export function feedSequenceByOfferValue(rewardOffers: RewardOffered[]): Feed[] {
+    const feedValues = new Map<string, FeedValue>();
+    for (const offer of rewardOffers) {
+      let feedValue = feedValues.get(feedId(offer));
+      if (feedValue === undefined) {
+        feedValue = {
+          feedId: feedId(offer),
+          offerSymbol: offer.offerSymbol,
+          quoteSymbol: offer.quoteSymbol,
+          flrValue: toBN(0),
+        };
+        feedValues.set(feedValue.feedId, feedValue);
+      }
+      feedValue.flrValue = feedValue.flrValue.add(offer.flrValue);
+    }
+
+    const feedSequence = Array.from(feedValues.values());
+    feedSequence.sort((a: FeedValue, b: FeedValue) => {
+      // sort decreasing by value and on same value increasing by feedId
+      if (a.flrValue.lt(b.flrValue)) {
+        return 1;
+      } else if (a.flrValue.gt(b.flrValue)) {
+        return -1;
+      }
+      if (feedId(a) < feedId(b)) {
+        return -1;
+      } else if (feedId(a) > feedId(b)) {
+        return 1;
+      }
+      return 0;
+    });
+    return feedSequence;
+
+    interface FeedValue extends Feed {
+      feedId: string;
+      flrValue: BN;
+    }
+  }
+
+  /**
+   * Calculates the claims for the given price epoch.
+   *
+   * Price epoch reward offers are divided into three parts:
+   * - 10% for finalizer of the previous epoch: {@link finalizerAddress}.
+   * - 10% for signers of the previous epoch results: {@link signers}.
+   * - 80% + remainder for the median calculation results.
+   *
+   * During each price epoch the claims are incrementally merged into cumulative claims for the
+   * reward epoch which are stored in the {@link rewardEpochCumulativeRewards} map.
+   *
+   * The function must be called for sequential price epochs.
+   */
+  export function calculateClaimsForPriceEpoch(
+    rewardEpochOffers: RewardOffered[],
+    priceEpochId: number,
+    /** Can only be undefined during for the very first price epoch in FTSO. */
+    finalizerAddress: Address | undefined,
+    signers: Address[],
+    calculationResults: MedianCalculationResult[],
+    committedFailedReveal: Address[],
+    voterWeights: Map<Address, BN>,
+    epochs: EpochSettings
+  ): RewardClaim[] {
+    const priceEpochOffers = rewardEpochOffers?.map(offer => rewardOfferForPriceEpoch(priceEpochId, offer, epochs))!;
+
+    const signingOffers: RewardOffered[] = [];
+    const finalizationOffers: RewardOffered[] = [];
+    const medianOffers: RewardOffered[] = [];
+
+    const generatedClaims: RewardClaim[] = [];
+
+    if (finalizerAddress === undefined) {
+      medianOffers.push(...priceEpochOffers);
+    } else {
+      for (const offer of priceEpochOffers) {
+        const forSigning = offer.amount.mul(FINALIZATION_BIPS).div(TOTAL_BIPS);
+        const forFinalization = offer.amount.mul(SIGNING_BIPS).div(TOTAL_BIPS);
+        const forMedian = offer.amount.sub(forSigning).sub(forFinalization);
+
+        signingOffers.push({
+          ...offer,
+          amount: forSigning,
+        } as RewardOffered);
+        finalizationOffers.push({
+          ...offer,
+          amount: forFinalization,
+        } as RewardOffered);
+        medianOffers.push({
+          ...offer,
+          amount: forMedian,
+        } as RewardOffered);
+      }
+
+      const finalizationClaims = claimsForFinalizer(finalizationOffers, finalizerAddress, priceEpochId);
+      generatedClaims.push(...finalizationClaims);
+
+      const signerClaims = claimsForSigners(signingOffers, signers, priceEpochId);
+      generatedClaims.push(...signerClaims);
+    }
+    const resultClaims = claimsForSymbols(priceEpochId, calculationResults, medianOffers);
+    generatedClaims.push(...resultClaims);
+
+    assertOffersVsClaimsStats(priceEpochOffers, generatedClaims);
+
+    if (committedFailedReveal.length > 0) {
+      console.log(
+        `Penalizing ${committedFailedReveal.length} voters for missed reveal: ${Array.from(
+          committedFailedReveal.entries()
+        )} `
+      );
+      const penalties = computePenalties(priceEpochId, committedFailedReveal, priceEpochOffers, voterWeights);
+      generatedClaims.push(...penalties);
+    }
+
+    return generatedClaims;
+  }
+
+  export function generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: Address) {
+    const allHashes = allClaims.map(claim => hashRewardClaim(claim));
+    const merkleTree = new MerkleTree(allHashes);
+    if (merkleTree.root !== mroot) {
+      throw new Error("Invalid Merkle root for reward claims");
+    }
+
+    const claimsWithProof: RewardClaimWithProof[] = [];
+    for (let i = 0; i < allClaims.length; i++) {
+      const claim = allClaims[i];
+      if (claim.beneficiary.toLowerCase() === claimer.toLowerCase()) {
+        claimsWithProof.push({
+          merkleProof: getProof(i),
+          body: claim,
+        });
+      }
+    }
+
+    return claimsWithProof;
+
+    function getProof(i: number) {
+      const proof = merkleTree.getProof(allHashes[i]);
+      if (!proof) throw new Error(`No Merkle proof exists for claim hash ${allHashes[i]}`);
+      return proof;
+    }
+  }
+
+  /**
+   * Returns customized reward offer with the share of the reward for the given price epoch.
+   */
+  function rewardOfferForPriceEpoch(priceEpoch: number, offer: RewardOffered, epochs: EpochSettings): RewardOffered {
+    const rewardEpoch = epochs.rewardEpochIdForPriceEpochId(priceEpoch);
+    let reward = offer.amount.div(toBN(epochs.rewardEpochDurationInEpochs));
+    const remainder = offer.amount.mod(toBN(epochs.rewardEpochDurationInEpochs)).toNumber();
+    const firstPriceEpochInRewardEpoch = epochs.firstPriceEpochForRewardEpoch(rewardEpoch);
+    if (priceEpoch - firstPriceEpochInRewardEpoch < remainder) {
+      reward = reward.add(toBN(1));
+    }
+    const rewardOffer: RewardOffered = {
+      ...offer,
+      priceEpochId: priceEpoch,
+      amount: reward,
+    };
+    return rewardOffer;
+  }
+
+  function computePenalties(
+    priceEpochId: number,
+    committedFailedReveal: Address[],
+    priceEpochOffers: RewardOffered[],
+    voterWeights: Map<Address, BN>
+  ): Penalty[] {
+    const penaltyClaims: Penalty[] = [];
+
+    let totalWeight = toBN(0);
+    for (const voterWeight of voterWeights.values()) totalWeight = totalWeight.add(voterWeight);
+
+    for (const voter of committedFailedReveal) {
+      const voterWeight = voterWeights.get(voter);
+      if (voterWeight === undefined) throw new Error(`Illegal state: weight for voter ${voter} is undefined.`);
+
+      for (const offer of priceEpochOffers) {
+        const penaltyAmount = offer.amount.mul(voterWeight).div(totalWeight).mul(MISSED_REVEAL_PENALIZATION);
+        const penalty = new Penalty(penaltyAmount, offer.currencyAddress, voter, priceEpochId);
+        getLogger("RewardClaims").info(`Created penalty for missed reveal: ${JSON.stringify(penalty)}`);
+        penaltyClaims.push(penalty);
+      }
+    }
+
+    return penaltyClaims;
   }
 
   /**
@@ -199,7 +409,7 @@ export namespace PriceEpochRewards {
       return merged;
     }
 
-    const claimsByVoterAndCcy = new Map<string, Map<string, RewardClaim[]>>();
+    const claimsByVoterAndCcy = new Map<Address, Map<string, RewardClaim[]>>();
     for (const claim of unmergedClaims) {
       const voterClaimsByCcy = claimsByVoterAndCcy.get(claim.beneficiary) || new Map<string, RewardClaim[]>();
       claimsByVoterAndCcy.set(claim.beneficiary, voterClaimsByCcy);
@@ -262,10 +472,7 @@ export namespace PriceEpochRewards {
     } else return mergedVoterClaims;
   }
 
-  export function applyPenalty(
-    claim: RewardClaim,
-    penalty: RewardClaim
-  ): [RewardClaim | undefined, RewardClaim | undefined] {
+  function applyPenalty(claim: RewardClaim, penalty: RewardClaim): [RewardClaim | undefined, RewardClaim | undefined] {
     let penaltyAmountLeft: BN;
     let claimAmountLeft: BN;
 
@@ -301,7 +508,7 @@ export namespace PriceEpochRewards {
   /**
    * Calculates claims for all slots in the price epoch.
    */
-  export function claimsForSymbols(
+  function claimsForSymbols(
     priceEpoch: number,
     calculationResults: MedianCalculationResult[],
     offers: RewardOffered[]
@@ -344,7 +551,7 @@ export namespace PriceEpochRewards {
   /**
    * Asserts that the sum of all offers is equal to the sum of all claims, for each currencyAddress
    */
-  export function assertOffersVsClaimsStats(offers: RewardOffered[], claims: RewardClaim[]) {
+  function assertOffersVsClaimsStats(offers: RewardOffered[], claims: RewardClaim[]) {
     let offersRewards = new Map<string, BN>();
 
     for (let offer of offers) {
@@ -367,11 +574,7 @@ export namespace PriceEpochRewards {
   /**
    * Generates reward claims for the party that submitted the finalization transaction in the previous price epoch.
    */
-  export function claimsForFinalizer(
-    finalizationOffers: RewardOffered[],
-    finalizerAddress: string,
-    priceEpochId: number
-  ) {
+  function claimsForFinalizer(finalizationOffers: RewardOffered[], finalizerAddress: Address, priceEpochId: number) {
     const claims: RewardClaim[] = [];
     for (const offer of finalizationOffers) {
       const claim: RewardClaim = {
@@ -389,11 +592,7 @@ export namespace PriceEpochRewards {
   /**
    * Generates reward claims for voters whose signatures were included the the previous epoch's finalization transaction.
    */
-  export function claimsForSigners(
-    signingOffers: RewardOffered[],
-    signers: string[],
-    priceEpochId: number
-  ): RewardClaim[] {
+  function claimsForSigners(signingOffers: RewardOffered[], signers: Address[], priceEpochId: number): RewardClaim[] {
     if (signers.length == 0) {
       logger.info(`No signers to be rewarded, generating back claims.`);
       return generateBackClaims(signingOffers, priceEpochId);
@@ -433,5 +632,17 @@ export namespace PriceEpochRewards {
       backClaims.push(backClaim);
     }
     return backClaims;
+  }
+
+  /**
+   * Pseudo random selection based on the hash of (slotId, priceEpoch, voterAddress).
+   * Used to get deterministic randomization for border cases of IQR belt.
+   */
+  function randomSelect(symbol: string, priceEpoch: number, voterAddress: Address) {
+    return toBN(
+      utils.soliditySha3(coder.encodeParameters(["string", "uint256", "address"], [symbol, priceEpoch, voterAddress]))!
+    )
+      .mod(toBN(2))
+      .eq(toBN(1));
   }
 }

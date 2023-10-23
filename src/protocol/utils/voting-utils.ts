@@ -2,9 +2,9 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { Feed, RewardOffered, RewardClaim } from "./voting-interfaces";
-import EncodingUtils from "./EncodingUtils";
-import { Bytes32 } from "./utils/sol-types";
+import { Feed, RewardClaim } from "../voting-types";
+import EncodingUtils, { bytes4ToText } from "./EncodingUtils";
+import { Bytes32 } from "./sol-types";
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -14,7 +14,6 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
  */
 export function toBN(x: BN | number | string): BN {
   if (x instanceof BN) return x;
-  // if (x instanceof BigNumber) return new BN(x.toHexString().slice(2), 16)
   return utils.toBN(x);
 }
 
@@ -56,19 +55,6 @@ export function toBytes4(text: string) {
 }
 
 /**
- * Converts bytes4 representation of a symbol to text.
- */
-export function bytes4ToText(bytes4: string) {
-  if (!bytes4 || bytes4.length === 0) {
-    throw new Error(`Bytes4 should be non-null and non-empty`);
-  }
-  if (!/^0x[0-9a-f]{8}$/i.test(bytes4)) {
-    throw new Error(`Bytes4 should be a 4-byte hex string`);
-  }
-  return utils.hexToAscii(bytes4).replace(/\u0000/g, "");
-}
-
-/**
  * Converts feed symbols withing the Feed from text to bytes.
  */
 export function feedToBytes4(feed: Feed): Feed {
@@ -91,39 +77,6 @@ export function feedToText(feed: Feed): Feed {
     offerSymbol: bytes4ToText(feed.offerSymbol),
     quoteSymbol: bytes4ToText(feed.quoteSymbol),
   } as Feed;
-}
-
-/**
- * Removes annoying index fields from an object.
- */
-export function removeIndexFields<T>(obj: T): T {
-  return Object.keys(obj as any)
-    .filter(key => !key!.match(/^[0-9]+$/))
-    .reduce((result: any, key: string) => {
-      return Object.assign(result, {
-        [key]: (obj as any)[key],
-      });
-    }, {}) as T;
-}
-
-/**
- * Converts an offer from web3 response to a more usable format, matching
- * the Offer interface.
- */
-export function convertRewardOfferedEvent(offer: any): RewardOffered {
-  let newOffer = removeIndexFields(offer);
-  delete newOffer.__length__;
-  newOffer.leadProviders = [...offer.leadProviders];
-  let tmp = newOffer as RewardOffered;
-  tmp.offerSymbol = bytes4ToText(tmp.offerSymbol);
-  tmp.quoteSymbol = bytes4ToText(tmp.quoteSymbol);
-  tmp.amount = toBN(tmp.amount);
-  tmp.flrValue = toBN(tmp.flrValue);
-  tmp.rewardBeltPPM = toBN(tmp.rewardBeltPPM);
-  tmp.elasticBandWidthPPM = toBN(tmp.elasticBandWidthPPM);
-  tmp.iqrSharePPM = toBN(tmp.iqrSharePPM);
-  tmp.pctSharePPM = toBN(tmp.pctSharePPM);
-  return tmp;
 }
 
 /**
@@ -205,9 +158,24 @@ export function packPrices(prices: (number | string)[]) {
   );
 }
 
+export function parsePrices(packedPrices: string, numberOfFeeds: number) {
+  let feedPrice =
+    packedPrices
+      .slice(2)
+      .match(/(.{1,8})/g)
+      ?.map(hex => toBN(hex)) || [];
+  feedPrice = feedPrice.slice(0, numberOfFeeds);
+  feedPrice = padEndArray(feedPrice, numberOfFeeds, 0);
+  return feedPrice;
+}
+
+function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
+  return Object.assign(new Array(minLength).fill(fillValue), array);
+}
+
 export function hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
   const types = ["address", "uint256", "bytes32", "bytes"];
-  const values = [voter, random, merkleRoot, prices] as any[];
+  const values = [voter.toLowerCase(), random, merkleRoot, prices];
   const encoded = coder.encodeParameters(types, values);
   return utils.soliditySha3(encoded)!;
 }
