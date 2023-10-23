@@ -1,6 +1,20 @@
 import BN from "bn.js";
-import { Address, Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
-import { toBN } from "./utils/voting-utils";
+import {
+  Address,
+  EpochResult,
+  Feed,
+  MedianCalculationResult,
+  MedianCalculationSummary,
+  RevealResult,
+} from "./voting-types";
+import { combineRandom, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
+import Web3 from "web3";
+import { MerkleTree } from "./utils/MerkleTree";
+import { Bytes32 } from "./utils/sol-types";
+
+const EPOCH_BYTES = 4;
+const PRICE_BYTES = 4;
+const RANDOM_QUALITY_BYTES = 4;
 
 /**
  * Data for a single vote.
@@ -30,6 +44,55 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
     });
   }
   return result;
+}
+
+export function calculateEpochResult(
+  medianResults: MedianCalculationResult[],
+  revealResult: RevealResult,
+  priceEpochId: number
+): EpochResult {
+  const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
+  const encodedIndividualPrices: string[] = [];
+
+  let priceMessage = "";
+  let symbolMessage = "";
+  medianResults.forEach(data => {
+    const encodedPrice = Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
+    const encodedSymbol = unprefixedSymbolBytes(data.feed);
+    priceMessage += encodedPrice;
+    symbolMessage += encodedSymbol;
+    encodedIndividualPrices.push(encodedPriceEpochId + encodedSymbol + encodedPrice);
+  });
+
+  const encodedBulkFeedPrices = encodedPriceEpochId + priceMessage + symbolMessage;
+  const bulkFeedPriceHash = Web3.utils.soliditySha3("0x" + encodedBulkFeedPrices)!;
+  const priceHashes = encodedIndividualPrices.map(tuple => Web3.utils.soliditySha3("0x" + tuple)!);
+
+  const randomQuality = revealResult.committedFailedReveal.length;
+  const combinedRandom = combineRandom(revealResult.revealedRandoms);
+  const encodedRandom =
+    encodedPriceEpochId +
+    Web3.utils.padLeft(randomQuality.toString(16), RANDOM_QUALITY_BYTES * 2) +
+    combinedRandom.value.slice(2);
+  const randomHash = Web3.utils.soliditySha3("0x" + encodedRandom)!;
+
+  const merkleTree = new MerkleTree([bulkFeedPriceHash, ...priceHashes, randomHash]);
+
+  const bulkProof: Bytes32[] = merkleTree.getProof(bulkFeedPriceHash)!.map(p => Bytes32.fromHexString(p));
+
+  const epochResult: EpochResult = {
+    priceEpochId: priceEpochId,
+    medianData: medianResults,
+    random: combinedRandom,
+    randomQuality: randomQuality,
+    bulkPriceMessage: "0x" + priceMessage,
+    bulkSymbolMessage: "0x" + symbolMessage,
+    randomMessage: "0x" + encodedRandom,
+    bulkFeedPriceMessage: "0x" + encodedBulkFeedPrices,
+    bulkPriceProof: bulkProof,
+    merkleRoot: merkleTree.root!,
+  };
+  return epochResult;
 }
 
 export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {

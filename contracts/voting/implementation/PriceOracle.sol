@@ -5,10 +5,11 @@ import "../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
 import "../../userInterfaces/IPriceOracle.sol";
-
-// import "hardhat/console.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract PriceOracle is Governed, IPriceOracle {
+    using MerkleProof for bytes32[];
+
     // VotingManager contract
     VotingManager public votingManager;
 
@@ -32,7 +33,7 @@ contract PriceOracle is Governed, IPriceOracle {
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,
-        bytes calldata _random,
+        bytes32[] calldata _bulkPriceProof,
         uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) public {
         // hash for prices includes (priceEpochId, allPrices, allSymbols)
@@ -40,15 +41,17 @@ contract PriceOracle is Governed, IPriceOracle {
             _allPrices.length * 2 == _allSymbols.length,
             "lengths do not match"
         );
+        {
+            bytes32 bulkPriceHash = keccak256(
+                bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols)
+            );
+            bytes32 epochMerkleRoot = voting.getMerkleRootForPriceEpoch(_priceEpochId);
+            require(
+                _bulkPriceProof.verify(epochMerkleRoot, bulkPriceHash),
+                "invalid merkle root"
+            );
+        }
 
-        bytes32 merkleRoot = keccak256(
-            bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols, _random)
-        );
-        
-        require(
-            merkleRoot == voting.getMerkleRootForPriceEpoch(_priceEpochId),
-            "invalid merkle root"
-        );
         for (uint256 i = 0; i < _symbolsIndicesToPublish.length; i++) {
             uint256 symbolIndex = _symbolsIndicesToPublish[i];
             bytes8 symbol = bytes8(_allSymbols[symbolIndex * 8: symbolIndex * 8 + 8]);

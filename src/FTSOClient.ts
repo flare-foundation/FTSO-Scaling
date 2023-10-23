@@ -1,9 +1,8 @@
 import BN from "bn.js";
-import Web3 from "web3";
 import _ from "lodash";
 
 import { EpochSettings } from "./protocol/utils/EpochSettings";
-import { calculateResultsForFeed } from "./protocol/median-calculation";
+import { calculateEpochResult, calculateResultsForFeed } from "./protocol/price-calculation";
 import { IPriceFeed } from "./price-feeds/IPriceFeed";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import {
@@ -17,16 +16,7 @@ import {
   RewardClaim,
   Address,
 } from "./protocol/voting-types";
-import {
-  ZERO_BYTES32,
-  feedId,
-  hashForCommit,
-  packPrices,
-  toBN,
-  unprefixedSymbolBytes,
-  combineRandom,
-  parsePrices,
-} from "./protocol/utils/voting-utils";
+import { ZERO_BYTES32, feedId, hashForCommit, packPrices, toBN, parsePrices } from "./protocol/utils/voting-utils";
 import { getLogger } from "./utils/logger";
 import { Bytes32 } from "./protocol/utils/sol-types";
 import { asError } from "./utils/error";
@@ -34,9 +24,6 @@ import { RewardLogic } from "./protocol/RewardLogic";
 import { BlockIndex } from "./BlockIndex";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
-const EPOCH_BYTES = 4;
-const PRICE_BYTES = 4;
-const RANDOM_QUALITY_BYTES = 4;
 const NON_EXISTENT_PRICE = 0;
 
 /**
@@ -94,7 +81,7 @@ export class FTSOClient {
     await this.provider.revealBitvote(data);
   }
 
-  async calculateResultsAndSign(priceEpochId: number) {
+  async calculateResultsAndSign(priceEpochId: number): Promise<EpochResult> {
     const result = await this.calculateResults(priceEpochId);
     const signature = await this.provider.signMessage(result.merkleRoot);
     await this.provider.signResult(priceEpochId, result.merkleRoot, {
@@ -102,6 +89,7 @@ export class FTSOClient {
       r: signature.r,
       s: signature.s,
     });
+    return result;
   }
 
   async calculateResults(priceEpochId: number) {
@@ -119,34 +107,7 @@ export class FTSOClient {
       voterWeights
     );
 
-    let priceMessage = "";
-    let symbolMessage = "";
-    results.map(data => {
-      priceMessage += Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
-      symbolMessage += unprefixedSymbolBytes(data.feed);
-    });
-
-    const randomQuality = revealResult.committedFailedReveal.length;
-    const combinedRandom = combineRandom(revealResult.revealedRandoms);
-
-    const randomMessage =
-      Web3.utils.padLeft(randomQuality.toString(16), RANDOM_QUALITY_BYTES * 2) + combinedRandom.value.slice(2);
-    const message =
-      Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2) + priceMessage + symbolMessage + randomMessage;
-    const priceMessageHash = Web3.utils.soliditySha3("0x" + message)!;
-
-    const epochResult: EpochResult = {
-      priceEpochId: priceEpochId,
-      medianData: results,
-      random: combinedRandom,
-      randomQuality: randomQuality,
-      priceMessage: "0x" + priceMessage,
-      symbolMessage: "0x" + symbolMessage,
-      randomMessage: "0x" + randomMessage,
-      fullPriceMessage: "0x" + message,
-      merkleRoot: priceMessageHash,
-    };
-    return epochResult;
+    return calculateEpochResult(results, revealResult, priceEpochId);
   }
 
   async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
@@ -156,24 +117,12 @@ export class FTSOClient {
       .map(sender => sender.toLowerCase())
       .filter(voter => voterWeights.has(voter.toLowerCase())!);
 
-    this.logger.info(
-      `Eligible committers for price epoch ${priceEpochId}: ${eligibleCommitters}, commits size ${commits.size}, reveals size ${reveals.size}`
-    );
     const [revealed, committedFailedReveal] = _.partition(eligibleCommitters, committer => {
       const revealData = reveals.get(committer);
-      this.logger.info(`Reveal data for ${committer} is ${revealData}`);
       if (!revealData) {
         return false;
       }
       const commitHash = commits.get(committer);
-      this.logger.info(
-        `Commit hash for ${committer} is ${commitHash}, reveal hash is ${hashForCommit(
-          committer,
-          revealData.random,
-          revealData.merkleRoot,
-          revealData.prices
-        )}`
-      );
       return commitHash === hashForCommit(committer, revealData.random, revealData.merkleRoot, revealData.prices);
     });
     const revealedRandoms = revealed.map(voter => {
@@ -275,12 +224,6 @@ export class FTSOClient {
     );
   }
 
-  /** Returns deterministic ordering of feeds based on reward offers for the given reward epoch. */
-  orderedPriceFeedIds(priceEpochId: number): Feed[] {
-    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    return RewardLogic.feedSequenceByOfferValue(this.index.getRewardOffers(rewardEpoch));
-  }
-
   getPricesForEpoch(priceEpochId: number): EpochData {
     if (this.priceFeedsById.size === 0) throw new Error("No price feeds registered.");
 
@@ -299,6 +242,7 @@ export class FTSOClient {
   }
 
   async publishPrices(prices: EpochResult, symbolIndices: number[]) {
+    this.logger.info(`Publishing prices for price epoch ${prices.priceEpochId}.`);
     return await this.provider.publishPrices(prices, symbolIndices);
   }
 
@@ -307,7 +251,8 @@ export class FTSOClient {
     revealResult: RevealResult,
     voterWeights: Map<Address, BN>
   ): Promise<MedianCalculationResult[]> {
-    const orderedPriceFeeds = this.orderedPriceFeedIds(priceEpochId);
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
+    const orderedPriceFeeds: Feed[] = RewardLogic.feedSequenceByOfferValue(this.index.getRewardOffers(rewardEpoch));
     const numberOfFeeds = orderedPriceFeeds.length;
     const voters = revealResult.revealers;
     const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
