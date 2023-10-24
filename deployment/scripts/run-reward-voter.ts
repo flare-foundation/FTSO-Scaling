@@ -24,9 +24,9 @@ async function main() {
 
   let privateKey: string;
   let voterKey: string;
-  if (process.env.REWARD_MANAGER_KEY != undefined && process.env.VOTER_KEY != undefined) {
-    privateKey = process.env.REWARD_MANAGER_KEY;
-    voterKey = process.env.VOTER_KEY;
+  if (process.env.REWARD_VOTER_PRIVATE_KEY != undefined && process.env.VOTER_PRIVATE_KEY != undefined) {
+    privateKey = process.env.REWARD_VOTER_PRIVATE_KEY;
+    voterKey = process.env.VOTER_PRIVATE_KEY;
   } else {
     const accounts = loadAccounts(web3);
     privateKey = accounts[myId].privateKey;

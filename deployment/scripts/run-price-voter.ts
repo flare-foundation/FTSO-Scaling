@@ -27,8 +27,8 @@ async function main() {
   getLogger("price-voter").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
 
   let privateKey: string;
-  if (process.env.DATA_PROVIDER_VOTING_KEY != undefined) {
-    privateKey = process.env.DATA_PROVIDER_VOTING_KEY;
+  if (process.env.VOTER_PRIVATE_KEY != undefined) {
+    privateKey = process.env.VOTER_PRIVATE_KEY;
   } else {
     const accounts = loadAccounts(web3);
     privateKey = accounts[myId].privateKey;
