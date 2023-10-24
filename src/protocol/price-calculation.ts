@@ -5,9 +5,8 @@ import {
   Feed,
   MedianCalculationResult,
   MedianCalculationSummary,
-  RevealResult,
 } from "./voting-types";
-import { combineRandom, hashBytes, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
+import { hashBytes, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
 import Web3 from "web3";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
@@ -53,7 +52,7 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
  */
 export function calculateEpochResult(
   medianResults: MedianCalculationResult[],
-  revealResult: RevealResult,
+  epochRandom: [Bytes32, number],
   priceEpochId: number
 ): EpochResult {
   const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
@@ -73,13 +72,12 @@ export function calculateEpochResult(
   const bulkHash = hashBytes(encodedBulkPricesWithSymbols);
   const individualPriceHashes = encodedIndividualPrices.map(tuple => hashBytes(tuple));
 
-  const randomQuality = revealResult.committedFailedReveal.length;
-  const combinedRandom = combineRandom(revealResult.revealedRandoms);
+  const [random, quality] = epochRandom;
   const encodedRandom =
     "0x" +
     encodedPriceEpochId +
-    Web3.utils.padLeft(randomQuality.toString(16), RANDOM_QUALITY_BYTES * 2) +
-    combinedRandom.value.slice(2);
+    Web3.utils.padLeft(quality.toString(16), RANDOM_QUALITY_BYTES * 2) +
+    random.value.slice(2);
   const randomHash = hashBytes(encodedRandom);
 
   const merkleTree = new MerkleTree([bulkHash, ...individualPriceHashes, randomHash]);
@@ -88,30 +86,28 @@ export function calculateEpochResult(
   const epochResult: EpochResult = {
     priceEpochId: priceEpochId,
     medianData: medianResults,
-    random: combinedRandom,
-    randomQuality: randomQuality,
+    random: random,
+    randomQuality: quality,
     encodedBulkPrices: "0x" + encodedBulkPrices,
     encodedBulkSymbols: "0x" + encodedBulkSymbols,
     randomMessage: encodedRandom,
     encodedBulkPricesWithSymbols: encodedBulkPricesWithSymbols,
     bulkPriceProof: bulkProof,
-    merkleRoot: merkleTree.root!,
+    merkleRoot: Bytes32.fromHexString(merkleTree.root!),
   };
   return epochResult;
 }
 
 export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {
   const medianSummary = calculateMedian(voters, prices, weights);
-  return {
-    feed: {
-      offerSymbol: feed.offerSymbol,
-      quoteSymbol: feed.quoteSymbol,
-    } as Feed,
+  const result: MedianCalculationResult = {
+    feed: feed,
     voters: voters,
     prices: prices.map(price => price.toNumber()),
     data: medianSummary,
     weights: weights,
-  } as MedianCalculationResult;
+  };
+  return result;
 }
 
 /**

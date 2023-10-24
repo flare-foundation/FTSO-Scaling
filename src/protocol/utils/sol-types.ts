@@ -14,7 +14,7 @@ export class Bytes32 {
     return new Bytes32(bytes, input);
   }
 
-  /** Returns the hexadecimal representation of the value (prefixed with "0x"). */
+  /** Returns the hexadecimal representation of the value, prefixed with "0x". */
   get value(): string {
     if (this.hex === undefined) this.hex = Web3.utils.bytesToHex(this.bytes);
     return this.hex;

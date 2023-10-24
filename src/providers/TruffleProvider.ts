@@ -14,6 +14,7 @@ import {
   EpochData,
   EpochResult,
   Offer,
+  Address,
 } from "../protocol/voting-types";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/utils/voting-utils";
 import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../utils/web3";
@@ -53,6 +54,19 @@ export class TruffleProvider implements IVotingProvider {
     privateKey: string
   ) {
     this.account = getAccount(web3, privateKey);
+  }
+
+  authorizeClaimer(claimerAddress: string, voter: Account): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  signRewards(rewardEpoch: number, merkleRoot: string, signature: BareSignature): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  finalizeRewards(rewardEpoch: number, mySignatureHash: string, signatures: BareSignature[]): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  signMessageWithKey(message: string, key: string): Promise<BareSignature> {
+    throw new Error("Method not implemented.");
   }
 
   async thresholdForRewardEpoch(rewardEpochId: number): Promise<BN> {
@@ -129,11 +143,10 @@ export class TruffleProvider implements IVotingProvider {
 
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     return this.contracts.priceOracle.publishPrices(
-      epochResult.rewardClaimMerkleRoot,
       epochResult.priceEpochId,
       epochResult.encodedBulkPrices,
       epochResult.encodedBulkSymbols,
-      epochResult.randomMessage,
+      epochResult.bulkPriceProof.map(p => p.value),
       symbolIndices,
       { from: this.account.address }
     );
@@ -149,15 +162,15 @@ export class TruffleProvider implements IVotingProvider {
     return Promise.resolve(signer);
   }
 
-  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<VoterWithWeight[]> {
+  async getVoterWeightsForRewardEpoch(rewardEpoch: number): Promise<Map<Address, BN>> {
     const data = await this.contracts.voterRegistry.votersForRewardEpoch(rewardEpoch);
     const voters = data[0];
-    const weights = data[1];
-    const result: VoterWithWeight[] = [];
+    const weights = data[1].map((w: string) => toBN(w));
+    const weightMap = new Map<Address, BN>();
     for (let i = 0; i < voters.length; i++) {
-      result.push({ voterAddress: voters[i], weight: weights[i], originalWeight: weights[i] });
+      weightMap.set(voters[i].toLowerCase(), weights[i]);
     }
-    return result;
+    return weightMap;
   }
 
   async registerAsVoter(rewardEpochId: number, weight: number): Promise<any> {

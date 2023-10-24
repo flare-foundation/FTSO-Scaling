@@ -16,7 +16,15 @@ import {
   RewardClaim,
   Address,
 } from "./protocol/voting-types";
-import { ZERO_BYTES32, feedId, hashForCommit, packPrices, toBN, parsePrices } from "./protocol/utils/voting-utils";
+import {
+  ZERO_BYTES32,
+  feedId,
+  hashForCommit,
+  packPrices,
+  toBN,
+  parsePrices,
+  combineRandom,
+} from "./protocol/utils/voting-utils";
 import { getLogger } from "./utils/logger";
 import { Bytes32 } from "./protocol/utils/sol-types";
 import { asError } from "./utils/error";
@@ -83,8 +91,8 @@ export class FTSOClient {
 
   async calculateResultsAndSign(priceEpochId: number): Promise<EpochResult> {
     const result = await this.calculateResults(priceEpochId);
-    const signature = await this.provider.signMessage(result.merkleRoot);
-    await this.provider.signResult(priceEpochId, result.merkleRoot, {
+    const signature = await this.provider.signMessage(result.merkleRoot.value);
+    await this.provider.signResult(priceEpochId, result.merkleRoot.value, {
       v: signature.v,
       r: signature.r,
       s: signature.s,
@@ -107,7 +115,11 @@ export class FTSOClient {
       voterWeights
     );
 
-    return calculateEpochResult(results, revealResult, priceEpochId);
+    const random: [Bytes32, number] = [
+      combineRandom(revealResult.revealedRandoms),
+      revealResult.committedFailedReveal.length,
+    ];
+    return calculateEpochResult(results, random, priceEpochId);
   }
 
   async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {

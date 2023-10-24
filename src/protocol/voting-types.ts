@@ -110,13 +110,13 @@ export interface EpochResult {
   readonly randomMessage: string;
   readonly encodedBulkPricesWithSymbols: string;
   readonly bulkPriceProof: readonly Bytes32[];
-  readonly merkleRoot: string;
+  readonly merkleRoot: Bytes32;
 }
 
 export interface MedianCalculationResult {
   readonly feed: Feed;
-  readonly voters?: readonly string[];
-  readonly prices?: readonly number[];
+  readonly voters: readonly string[];
+  readonly prices: readonly number[];
   readonly data: MedianCalculationSummary;
   readonly weights: readonly BN[];
 }

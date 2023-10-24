@@ -12,10 +12,10 @@ import {
 import { ZERO_ADDRESS, hashRewardClaim, toBN, toBytes4 } from "../../src/protocol/utils/voting-utils";
 import { Feed, RewardClaim, RewardClaimWithProof, RewardOffered } from "../../src/protocol/voting-types";
 import { hexlifyBN } from "../../src/protocol/utils/voting-utils";
-import { MerkleTree } from "../../src/MerkleTree";
 import { moveToNextRewardEpochStart } from "../../test-utils/utils/voting-test-utils";
 import Prando from "prando";
 import { RewardLogic } from "../../src/protocol/RewardLogic";
+import { MerkleTree } from "../../src/protocol/utils/MerkleTree";
 
 chai.use(chaiBN(BN));
 
