@@ -111,9 +111,15 @@ function startRewardVoter(voterId: number, id: number, envConfig: any): ChildPro
   const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-voter.ts", voterId.toString(), id.toString()], {
     env: envConfig,
   });
+  process.stdout.on("data", function (data) {
+    console.log(`[RewardVoter ${id}]: ${data}`);
+  });
+  process.stderr.on("data", function (data) {
+    console.log(`[RewardVoter ${id}] ERROR: ${data}`);
+  });
   process.on("close", function (code) {
     console.log("closing code: " + code);
-    throw Error(`PriceVoter ${id} exited with code ${code}`);
+    throw Error(`RewardVoter ${id} exited with code ${code}`);
   });
   return process;
 }
