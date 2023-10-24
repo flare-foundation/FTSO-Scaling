@@ -24,11 +24,9 @@ contract PriceOracle is Governed, IPriceOracle {
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,
-        bytes32[] calldata _bulkPriceProof,
+        bytes32[] calldata _priceProof,
         uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) public {
-        console.log("Publish prices called");
-        // hash for prices includes (priceEpochId, allPrices, allSymbols)
         require(
             _allPrices.length * 2 == _allSymbols.length,
             "lengths do not match"
@@ -38,9 +36,8 @@ contract PriceOracle is Governed, IPriceOracle {
                 bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols)
             );
             bytes32 epochMerkleRoot = voting.getMerkleRootForPriceEpoch(_priceEpochId);
-            console.log("Attempting to verify merkle root, %s", bytes32ToString(epochMerkleRoot));
             require(
-                _bulkPriceProof.verify(epochMerkleRoot, bulkPriceHash),
+                _priceProof.verify(epochMerkleRoot, bulkPriceHash),
                 "invalid merkle root"
             );
         }
@@ -49,7 +46,6 @@ contract PriceOracle is Governed, IPriceOracle {
             uint256 symbolIndex = _symbolsIndicesToPublish[i];
             bytes8 symbol = bytes8(_allSymbols[symbolIndex * 8: symbolIndex * 8 + 8]);
             uint32 price = uint32(bytes4(_allPrices[symbolIndex * 4: symbolIndex * 4 + 4]));
-            console.log("Attempting to publish price");
             if (
                 publishAnchorPrice(
                     anchorPrices[symbol],
@@ -58,7 +54,6 @@ contract PriceOracle is Governed, IPriceOracle {
                     uint32(block.timestamp)
                 )
             ) {
-                console.log("Price published"); 
                 emit PriceFeedPublished(
                     _priceEpochId,
                     bytes4(_allSymbols[symbolIndex * 8: symbolIndex * 8 + 4]),
@@ -106,17 +101,5 @@ contract PriceOracle is Governed, IPriceOracle {
         _anchorPrice.timestamp = _timestamp;
         _anchorPrice.priceEpochId = _priceEpochId;
         return true;
-    }
-
- function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
-        uint8 i = 0;
-        while(i < 32 && _bytes32[i] != 0) {
-            i++;
-        }
-        bytes memory bytesArray = new bytes(i);
-        for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
-            bytesArray[i] = _bytes32[i];
-        }
-        return string(bytesArray);
     }
 }
