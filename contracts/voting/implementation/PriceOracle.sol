@@ -5,24 +5,16 @@ import "../../governance/implementation/Governed.sol";
 import "./VotingManager.sol";
 import "./Voting.sol";
 import "../../userInterfaces/IPriceOracle.sol";
-
-// import "hardhat/console.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "hardhat/console.sol";
 
 contract PriceOracle is Governed, IPriceOracle {
-    // VotingManager contract
-    VotingManager public votingManager;
+    using MerkleProof for bytes32[];
 
     Voting public voting;
-
     mapping(bytes32 => AnchorPrice) public anchorPrices;
 
     constructor(address _governance) Governed(_governance) {}
-
-    function setVotingManager(
-        VotingManager _votingManager
-    ) public onlyGovernance {
-        votingManager = _votingManager;
-    }
 
     function setVoting(Voting _voting) public onlyGovernance {
         voting = _voting;
@@ -32,23 +24,24 @@ contract PriceOracle is Governed, IPriceOracle {
         uint32 _priceEpochId,
         bytes calldata _allPrices,
         bytes calldata _allSymbols,
-        bytes calldata _random,
+        bytes32[] calldata _priceProof,
         uint256[] calldata _symbolsIndicesToPublish // must be ordered
     ) public {
-        // hash for prices includes (priceEpochId, allPrices, allSymbols)
         require(
             _allPrices.length * 2 == _allSymbols.length,
             "lengths do not match"
         );
+        {
+            bytes32 bulkPriceHash = keccak256(
+                bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols)
+            );
+            bytes32 epochMerkleRoot = voting.getMerkleRootForPriceEpoch(_priceEpochId);
+            require(
+                _priceProof.verify(epochMerkleRoot, bulkPriceHash),
+                "invalid merkle root"
+            );
+        }
 
-        bytes32 merkleRoot = keccak256(
-            bytes.concat(bytes4(_priceEpochId), _allPrices, _allSymbols, _random)
-        );
-        
-        require(
-            merkleRoot == voting.getMerkleRootForPriceEpoch(_priceEpochId),
-            "invalid merkle root"
-        );
         for (uint256 i = 0; i < _symbolsIndicesToPublish.length; i++) {
             uint256 symbolIndex = _symbolsIndicesToPublish[i];
             bytes8 symbol = bytes8(_allSymbols[symbolIndex * 8: symbolIndex * 8 + 8]);

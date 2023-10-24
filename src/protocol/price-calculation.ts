@@ -1,6 +1,19 @@
 import BN from "bn.js";
-import { Address, Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
-import { toBN } from "./utils/voting-utils";
+import {
+  Address,
+  EpochResult,
+  Feed,
+  MedianCalculationResult,
+  MedianCalculationSummary,
+} from "./voting-types";
+import { hashBytes, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
+import Web3 from "web3";
+import { MerkleTree } from "./utils/MerkleTree";
+import { Bytes32 } from "./utils/sol-types";
+
+const EPOCH_BYTES = 4;
+const PRICE_BYTES = 4;
+const RANDOM_QUALITY_BYTES = 4;
 
 /**
  * Data for a single vote.
@@ -32,18 +45,69 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
   return result;
 }
 
+/**
+ * Builds a Merkle tree containing price epoch results.
+ * The tree is built from the bulk price hash, individual price hashes and the hash of the combined random value.
+ * The bulk price hash contains all prices and symbols, and is used for more efficiently retrieving prices for all feeds in the epoch.
+ */
+export function calculateEpochResult(
+  medianResults: MedianCalculationResult[],
+  epochRandom: [Bytes32, number],
+  priceEpochId: number
+): EpochResult {
+  const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
+  const encodedIndividualPrices: string[] = [];
+
+  let encodedBulkPrices = "";
+  let encodedBulkSymbols = "";
+  medianResults.forEach(data => {
+    const encodedPrice = Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
+    const encodedSymbol = unprefixedSymbolBytes(data.feed);
+    encodedBulkPrices += encodedPrice;
+    encodedBulkSymbols += encodedSymbol;
+    encodedIndividualPrices.push("0x" + encodedPriceEpochId + encodedSymbol + encodedPrice);
+  });
+
+  const encodedBulkPricesWithSymbols = "0x" + encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
+  const bulkHash = hashBytes(encodedBulkPricesWithSymbols);
+  const individualPriceHashes = encodedIndividualPrices.map(tuple => hashBytes(tuple));
+
+  const [random, quality] = epochRandom;
+  const encodedRandom =
+    "0x" +
+    encodedPriceEpochId +
+    Web3.utils.padLeft(quality.toString(16), RANDOM_QUALITY_BYTES * 2) +
+    random.value.slice(2);
+  const randomHash = hashBytes(encodedRandom);
+
+  const merkleTree = new MerkleTree([bulkHash, ...individualPriceHashes, randomHash]);
+  const bulkProof: Bytes32[] = merkleTree.getProof(bulkHash)!.map(p => Bytes32.fromHexString(p));
+
+  const epochResult: EpochResult = {
+    priceEpochId: priceEpochId,
+    medianData: medianResults,
+    random: random,
+    randomQuality: quality,
+    encodedBulkPrices: "0x" + encodedBulkPrices,
+    encodedBulkSymbols: "0x" + encodedBulkSymbols,
+    randomMessage: encodedRandom,
+    encodedBulkPricesWithSymbols: encodedBulkPricesWithSymbols,
+    bulkPriceProof: bulkProof,
+    merkleRoot: Bytes32.fromHexString(merkleTree.root!),
+  };
+  return epochResult;
+}
+
 export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {
   const medianSummary = calculateMedian(voters, prices, weights);
-  return {
-    feed: {
-      offerSymbol: feed.offerSymbol,
-      quoteSymbol: feed.quoteSymbol,
-    } as Feed,
+  const result: MedianCalculationResult = {
+    feed: feed,
     voters: voters,
     prices: prices.map(price => price.toNumber()),
     data: medianSummary,
     weights: weights,
-  } as MedianCalculationResult;
+  };
+  return result;
 }
 
 /**

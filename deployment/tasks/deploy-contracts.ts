@@ -30,7 +30,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const voterRegistry = await artifacts.require("VoterRegistry").new(governance.address, votingManager.address, THRESHOLD);
   const voting = await artifacts.require("Voting").new(voterRegistry.address, votingManager.address);
 
-  const priceOracle = await deployPriceOracle(artifacts, governance, votingManager, voting);
+  const priceOracle = await deployPriceOracle(artifacts, governance, voting);
   const erc20PriceOracle = await deployERC20PriceOracle(artifacts, governance, parameters.symbols, priceOracle);
 
   const votingRewardManager = await deployVotingRewardManager(artifacts, governance, voting, votingManager, erc20PriceOracle);
@@ -50,9 +50,8 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   return deployed;
 }
 
-async function deployPriceOracle(artifacts: Artifacts, governance: Account, votingManager: VotingManagerInstance, voting: VotingInstance) {
+async function deployPriceOracle(artifacts: Artifacts, governance: Account, voting: VotingInstance) {
   const priceOracle = await artifacts.require("PriceOracle").new(governance.address);
-  await priceOracle.setVotingManager(votingManager.address, { from: governance.address });
   await priceOracle.setVoting(voting.address, { from: governance.address });
   return priceOracle;
 }

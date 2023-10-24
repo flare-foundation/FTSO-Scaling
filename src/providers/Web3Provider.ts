@@ -176,9 +176,9 @@ export class Web3Provider implements IVotingProvider {
   async publishPrices(epochResult: EpochResult, symbolIndices: number[]): Promise<any> {
     const methodCall = this.contracts.priceOracle.methods.publishPrices(
       epochResult.priceEpochId,
-      epochResult.priceMessage,
-      epochResult.symbolMessage,
-      epochResult.randomMessage,
+      epochResult.encodedBulkPrices,
+      epochResult.encodedBulkSymbols,
+      epochResult.bulkPriceProof.map(p => p.value),
       symbolIndices
     );
     return await this.signAndFinalize("Publish prices", this.contracts.priceOracle.options.address, methodCall);
