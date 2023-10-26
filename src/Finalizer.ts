@@ -7,6 +7,7 @@ import { toBN } from "./protocol/utils/voting-utils";
 import _ from "lodash";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { IVotingProvider } from "./providers/IVotingProvider";
+import { runWithDuration } from "./utils/time";
 
 export class Finalizer {
   private readonly logger = getLogger(Finalizer.name);
@@ -45,12 +46,17 @@ export class Finalizer {
       const weightThreshold = await this.provider.thresholdForRewardEpoch(signature.epochId);
       const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(signature.epochId);
 
-      const signatures = await this.getSignaturesForFinalization(signaturesForEpoch, weightThreshold, voterWeights);
+      const signatures = await runWithDuration(
+        "REWARD_SIGS",
+        async () => await this.getSignaturesForFinalization(signaturesForEpoch, weightThreshold, voterWeights)
+      );
       if (signatures !== undefined) {
         const [mroot, sigs] = signatures;
-        if (await this.tryFinalizeRewardEpoch(signature.epochId, mroot, [...sigs.values()])) {
-          this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, signature.epochId);
-        }
+        await runWithDuration("REWARD_FINALIZE", async () => {
+          if (await this.tryFinalizeRewardEpoch(signature.epochId, mroot, [...sigs.values()])) {
+            this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, signature.epochId);
+          }
+        });
 
         return true;
       }
@@ -75,12 +81,17 @@ export class Finalizer {
       const weightThreshold = await this.provider.thresholdForRewardEpoch(rewardEpoch);
       const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
 
-      const signatures = await this.getSignaturesForFinalization(signaturesForEpoch, weightThreshold, voterWeights);
+      const signatures = await runWithDuration(
+        "PRICE_SIGS",
+        async () => await this.getSignaturesForFinalization(signaturesForEpoch, weightThreshold, voterWeights)
+      );
       if (signatures !== undefined) {
         const [mroot, sigs] = signatures;
-        if (await this.tryFinalizePriceEpoch(signature.epochId, mroot, [...sigs.values()])) {
-          this.finalizedEpoch = Math.max(this.finalizedEpoch, signature.epochId);
-        }
+        await runWithDuration("PRICE_FINALIZE", async () => {
+          if (await this.tryFinalizePriceEpoch(signature.epochId, mroot, [...sigs.values()])) {
+            this.finalizedEpoch = Math.max(this.finalizedEpoch, signature.epochId);
+          }
+        });
 
         return true;
       }

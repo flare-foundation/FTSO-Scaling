@@ -13,6 +13,7 @@ import { Penalty, RewardLogic } from "./protocol/RewardLogic";
 import { IVotingProvider } from "./providers/IVotingProvider";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { FTSOClient } from "./FTSOClient";
+import { runWithDuration } from "./utils/time";
 
 export class RewardVoter {
   private readonly logger = getLogger(RewardVoter.name);
@@ -67,7 +68,7 @@ export class RewardVoter {
       await this.calculateRewards(finalizeData, from);
     });
     this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
-      return await this.claimRewards(fd, from);
+      await runWithDuration("CLAIM_REWARDS", async () => await this.claimRewards(fd, from));
     });
     this.indexer.run(startBlock);
   }
@@ -84,16 +85,19 @@ export class RewardVoter {
       this.logger.info(`[${finalizedEpoch}] We have offers for reward epoch ${rewardEpoch}, calculating rewards.`);
       // We have offers, means we started processing for previous reward epoch and should have all
       // required information for calculating rewards.
-      const priceEpochRewardClaims = await this.client.calculateRewards(finalizedEpoch, rewardOffers);
+      const claims = await runWithDuration("CALCULATE_REWARDS", async () => {
+        const priceEpochRewardClaims = await this.client.calculateRewards(finalizedEpoch, rewardOffers);
 
-      this.logger.info(`[${finalizedEpoch}] Calculated ${priceEpochRewardClaims.length} reward claims for epoch.`);
+        this.logger.info(`[${finalizedEpoch}] Calculated ${priceEpochRewardClaims.length} reward claims for epoch.`);
 
-      const existing = this.rewardClaimsForEpoch.get(rewardEpoch) ?? [];
-      const mergedClaims = RewardLogic.mergeClaims(finalizedEpoch, existing.concat(priceEpochRewardClaims));
-      this.rewardClaimsForEpoch.set(rewardEpoch, mergedClaims);
+        const existing = this.rewardClaimsForEpoch.get(rewardEpoch) ?? [];
+        const mergedClaims = RewardLogic.mergeClaims(finalizedEpoch, existing.concat(priceEpochRewardClaims));
+        this.rewardClaimsForEpoch.set(rewardEpoch, mergedClaims);
+        return mergedClaims;
+      });
 
       if (this.isLastPriceEpochInRewardEpoch(finalizedEpoch)) {
-        await this.signRewards(mergedClaims, rewardEpoch, finalizedEpoch);
+        await runWithDuration("SIGN_REWARDS", async () => await this.signRewards(claims, rewardEpoch, finalizedEpoch));
       }
     }
   }

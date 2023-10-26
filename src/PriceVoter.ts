@@ -1,6 +1,6 @@
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
-import { sleepFor } from "./utils/time";
+import { runWithDuration, sleepFor } from "./utils/time";
 import { asError, errorString } from "./utils/error";
 import { BlockIndexer } from "./BlockIndexer";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
@@ -57,7 +57,7 @@ export class PriceVoter {
     const nextRewardEpochId = currentRewardEpochId + 1;
 
     if (this.isRegisteredForRewardEpoch(currentRewardEpochId)) {
-      await this.runVotingProcotol(currentPriceEpochId);
+      await runWithDuration("VOTING_ROUND", async () => await this.runVotingProcotol(currentPriceEpochId));
       this.lastProcessedPriceEpochId = currentPriceEpochId;
     }
 
@@ -69,20 +69,23 @@ export class PriceVoter {
   private async runVotingProcotol(currentEpochId: number) {
     const priceEpochData = this.client.getPricesForEpoch(currentEpochId);
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
-    await this.client.commit(priceEpochData);
+    await runWithDuration("COMMIT", async () => await this.client.commit(priceEpochData));
 
     await sleepFor(2000);
     if (this.previousPriceEpochData !== undefined) {
       const previousEpochId = currentEpochId - 1;
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
-      await this.client.reveal(this.previousPriceEpochData);
+      await runWithDuration("REVEAL", async () => await this.client.reveal(this.previousPriceEpochData!));
       await this.waitForRevealEpochEnd();
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
-      const result = await this.client.calculateResultsAndSign(previousEpochId);
+      const result = await runWithDuration(
+        "RESULTS",
+        async () => await this.client.calculateResultsAndSign(previousEpochId)
+      );
 
-      await this.awaitFinalizationOrTimeout(previousEpochId);
+      await runWithDuration("FINALIZATION", async () => await this.awaitFinalizationOrTimeout(previousEpochId));
 
-      await this.client.publishPrices(result, [0, 1]);
+      await runWithDuration("PUBLISH", async () => await this.client.publishPrices(result, [0, 1]));
     }
     this.previousPriceEpochData = priceEpochData;
   }
