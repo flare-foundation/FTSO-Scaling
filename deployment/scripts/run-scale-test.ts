@@ -13,8 +13,8 @@ interface AccountDetails {
   privateKey: string;
 }
 
-const DEFAULT_VOTER_COUNT = 10;
-const DEFAULT_FINALIZER_COUNT = 3;
+const DEFAULT_VOTER_COUNT = 3;
+const DEFAULT_FINALIZER_COUNT = 2;
 
 // gov pub key: 0xc783df8a850f42e7f7e57013759c285caa701eb6
 async function main() {
@@ -100,26 +100,32 @@ function startPriceVoter(id: number, envConfig: any): ChildProcess {
   process.stderr.on("data", function (data) {
     console.log(`[PriceVoter ${id}] ERROR: ${data}`);
   });
-  process.on("close", function (code) {
-    console.log("closing code: " + code);
-    throw Error(`PriceVoter ${id} exited with code ${code}`);
+  process.on("close", async function (code) {
+    console.error(`PriceVoter ${id} exited with code ${code}, restarting...`);
+    await sleepFor(1000);
+    startPriceVoter(id, envConfig);
   });
   return process;
 }
 
 function startRewardVoter(voterId: number, id: number, envConfig: any): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-voter.ts", voterId.toString(), id.toString()], {
-    env: envConfig,
-  });
+  const process = spawn(
+    "yarn",
+    ["ts-node", "deployment/scripts/run-reward-voter.ts", voterId.toString(), id.toString()],
+    {
+      env: envConfig,
+    }
+  );
   process.stdout.on("data", function (data) {
     console.log(`[RewardVoter ${id}]: ${data}`);
   });
   process.stderr.on("data", function (data) {
     console.log(`[RewardVoter ${id}] ERROR: ${data}`);
   });
-  process.on("close", function (code) {
-    console.log("closing code: " + code);
-    throw Error(`RewardVoter ${id} exited with code ${code}`);
+  process.on("close", async function (code) {
+    console.error(`RewardVoter ${id} exited with code ${code}, restarting...`);
+    await sleepFor(1000);
+    startRewardVoter(voterId, id, envConfig);
   });
   return process;
 }
@@ -139,9 +145,10 @@ function startFinalizer(id: number, envConfig: any): ChildProcess {
   const process = spawn("yarn", ["ts-node", "deployment/scripts/run-finalizer.ts", id.toString()], {
     env: envConfig,
   });
-  process.on("close", function (code) {
-    console.log("closing code: " + code);
-    throw Error(`Finalizer ${id} exited with code ${code}`);
+  process.on("close", async function (code) {
+    console.error(`Finalizer ${id} exited with code ${code}, restarting...`);
+    await sleepFor(1000);
+    startFinalizer(id, envConfig);
   });
   return process;
 }
