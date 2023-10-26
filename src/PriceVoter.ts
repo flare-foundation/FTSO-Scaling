@@ -1,6 +1,6 @@
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
-import { runWithDuration, sleepFor } from "./utils/time";
+import { randomDelay, runWithDuration, sleepFor } from "./utils/time";
 import { asError, errorString } from "./utils/error";
 import { BlockIndexer } from "./BlockIndexer";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
@@ -67,6 +67,7 @@ export class PriceVoter {
   }
 
   private async runVotingProcotol(currentEpochId: number) {
+    await randomDelay(0, 2000); // Random delay to avoid transaction contention.
     const priceEpochData = this.client.getPricesForEpoch(currentEpochId);
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
     await runWithDuration("COMMIT", async () => await this.client.commit(priceEpochData));
@@ -78,13 +79,14 @@ export class PriceVoter {
       await runWithDuration("REVEAL", async () => await this.client.reveal(this.previousPriceEpochData!));
       await this.waitForRevealEpochEnd();
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
+      await randomDelay(0, 2000);
       const result = await runWithDuration(
         "RESULTS",
         async () => await this.client.calculateResultsAndSign(previousEpochId)
       );
 
       await runWithDuration("FINALIZATION", async () => await this.awaitFinalizationOrTimeout(previousEpochId));
-
+      await randomDelay(0, 1000);
       await runWithDuration("PUBLISH", async () => await this.client.publishPrices(result, [0, 1]));
     }
     this.previousPriceEpochData = priceEpochData;

@@ -6,6 +6,11 @@ export async function sleepFor(ms: number) {
   });
 }
 
+export async function randomDelay(minDelayMs: number, maxDelayMs: number): Promise<void> {
+  const delayMs = Math.floor(Math.random() * (maxDelayMs - minDelayMs + 1) + minDelayMs);
+  await sleepFor(delayMs);
+}
+
 export async function runWithDuration<T>(label: string, fn: () => Promise<T>): Promise<T> {
   const start = process.hrtime();
   const res = await fn();
