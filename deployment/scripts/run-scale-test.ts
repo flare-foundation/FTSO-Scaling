@@ -33,8 +33,9 @@ async function main() {
 
   await fundAccounts(web3, accounts);
   console.log("Funded accounts.");
-  await runVoters(priceVoterCount, accounts);
   await runFinalizers(DEFAULT_FINALIZER_COUNT, accounts);
+
+  await runVoters(priceVoterCount, accounts);
 
   while (true) {
     await sleepFor(10_000);
