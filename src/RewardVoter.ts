@@ -104,7 +104,11 @@ export class RewardVoter {
 
   private async claimRewards(fd: FinalizeData, from: string) {
     this.logger.info(`[${fd.epochId}] Received reward finalize from ${from}`);
-    const rewardClaims = this.rewardClaimsForEpoch.get(fd.epochId)!;
+    const rewardClaims = this.rewardClaimsForEpoch.get(fd.epochId);
+    if (rewardClaims === undefined) {
+      this.logger.info(`[${fd.epochId}] Received reward finalize but no claims for epoch - ignoring.`);
+      return;
+    }
     const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
 
     const cwp = RewardLogic.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAccount.address);
