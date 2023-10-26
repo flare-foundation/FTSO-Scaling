@@ -63,50 +63,49 @@ export class RewardVoter {
 
     this.logger.info(`Starting from block ${startBlock} for reward epoch ${previousRewardEpoch}.`);
 
-    this.setUpCalculateRewards();
-    this.setUpClaimRewards();
-
+    this.indexer.on(Received.Finalize, async (from: string, finalizeData: FinalizeData) => {
+      await this.calculateRewards(finalizeData, from);
+    });
+    this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
+      return await this.claimRewards(fd, from);
+    });
     this.indexer.run(startBlock);
   }
 
-  private setUpCalculateRewards() {
-    this.indexer.on(Received.Finalize, async (from: string, finalizeData: FinalizeData) => {
-      this.logger.info(`[${finalizeData.epochId}] Received finalize from ${from}.`);
-      const finalizedEpoch = finalizeData.epochId;
-      const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(finalizedEpoch);
+  private async calculateRewards(finalizeData: FinalizeData, from: string) {
+    this.logger.info(`[${finalizeData.epochId}] Received finalize from ${from}.`);
+    const finalizedEpoch = finalizeData.epochId;
+    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(finalizedEpoch);
 
-      this.logger.info(`Block number before now: ${await getBlockNumberBefore(this.web3, Date.now())}`);
+    this.logger.info(`Block number before now: ${await getBlockNumberBefore(this.web3, Date.now())}`);
 
-      const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
-      if (rewardOffers.length > 0) {
-        this.logger.info(`[${finalizedEpoch}] We have offers for reward epoch ${rewardEpoch}, calculating rewards.`);
-        // We have offers, means we started processing for previous reward epoch and should have all
-        // required information for calculating rewards.
-        const priceEpochRewardClaims = await this.client.calculateRewards(finalizedEpoch, rewardOffers);
+    const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
+    if (rewardOffers.length > 0) {
+      this.logger.info(`[${finalizedEpoch}] We have offers for reward epoch ${rewardEpoch}, calculating rewards.`);
+      // We have offers, means we started processing for previous reward epoch and should have all
+      // required information for calculating rewards.
+      const priceEpochRewardClaims = await this.client.calculateRewards(finalizedEpoch, rewardOffers);
 
-        this.logger.info(`[${finalizedEpoch}] Calculated ${priceEpochRewardClaims.length} reward claims for epoch.`);
+      this.logger.info(`[${finalizedEpoch}] Calculated ${priceEpochRewardClaims.length} reward claims for epoch.`);
 
-        const existing = this.rewardClaimsForEpoch.get(rewardEpoch) ?? [];
-        const mergedClaims = RewardLogic.mergeClaims(finalizedEpoch, existing.concat(priceEpochRewardClaims));
-        this.rewardClaimsForEpoch.set(rewardEpoch, mergedClaims);
+      const existing = this.rewardClaimsForEpoch.get(rewardEpoch) ?? [];
+      const mergedClaims = RewardLogic.mergeClaims(finalizedEpoch, existing.concat(priceEpochRewardClaims));
+      this.rewardClaimsForEpoch.set(rewardEpoch, mergedClaims);
 
-        if (this.isLastPriceEpochInRewardEpoch(finalizedEpoch)) {
-          await this.signRewards(mergedClaims, rewardEpoch, finalizedEpoch);
-        }
+      if (this.isLastPriceEpochInRewardEpoch(finalizedEpoch)) {
+        await this.signRewards(mergedClaims, rewardEpoch, finalizedEpoch);
       }
-    });
+    }
   }
 
-  private setUpClaimRewards() {
-    this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
-      this.logger.info(`[${fd.epochId}] Received reward finalize from ${from}`);
-      const rewardClaims = this.rewardClaimsForEpoch.get(fd.epochId)!;
-      const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
+  private async claimRewards(fd: FinalizeData, from: string) {
+    this.logger.info(`[${fd.epochId}] Received reward finalize from ${from}`);
+    const rewardClaims = this.rewardClaimsForEpoch.get(fd.epochId)!;
+    const claimable = rewardClaims.filter(claim => !(claim instanceof Penalty));
 
-      const cwp = RewardLogic.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAccount.address);
-      this.logger.info(`[${fd.epochId}] Claiming ${cwp.length} rewards for epoch.`);
-      return await this.provider.claimRewards(cwp, this.voterAccount.address);
-    });
+    const cwp = RewardLogic.generateProofsForClaims(claimable, fd.merkleRoot, this.voterAccount.address);
+    this.logger.info(`[${fd.epochId}] Claiming ${cwp.length} rewards for epoch.`);
+    return await this.provider.claimRewards(cwp, this.voterAccount.address);
   }
 
   private async signRewards(cumulativeClaims: RewardClaim[], rewardEpoch: RewardEpochId, priceEpoch: PriceEpochId) {
