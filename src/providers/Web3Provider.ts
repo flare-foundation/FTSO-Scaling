@@ -302,7 +302,9 @@ export class Web3Provider implements IVotingProvider {
     const isTxFinalized = async () => (await this.getNonce(from)) > txNonce;
     await retryPredicate(isTxFinalized, 8, 1000);
 
-    return receiptOrError as TransactionReceipt;
+    const receipt = receiptOrError as TransactionReceipt;
+    getLogger("metrics").info(`[GAS] ${label}: ${receipt.gasUsed}`);
+    return receipt;
   }
 
   /**
