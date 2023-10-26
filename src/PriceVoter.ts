@@ -1,10 +1,11 @@
 import { FTSOClient } from "./FTSOClient";
 import { getLogger } from "./utils/logger";
 import { sleepFor } from "./utils/time";
-import { errorString } from "./utils/error";
+import { asError, errorString } from "./utils/error";
 import { BlockIndexer } from "./BlockIndexer";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { EpochData } from "./protocol/voting-types";
+import { TimeoutError, promiseWithTimeout } from "./utils/retry";
 
 export class PriceVoter {
   private readonly logger = getLogger(PriceVoter.name);
@@ -78,11 +79,24 @@ export class PriceVoter {
       await this.waitForRevealEpochEnd();
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
       const result = await this.client.calculateResultsAndSign(previousEpochId);
-      await this.awaitFinalization(previousEpochId);
+
+      await this.awaitFinalizationOrTimeout(previousEpochId);
 
       await this.client.publishPrices(result, [0, 1]);
     }
     this.previousPriceEpochData = priceEpochData;
+  }
+
+  private async awaitFinalizationOrTimeout(priceEpochId: number) {
+    try {
+      await promiseWithTimeout(this.awaitFinalization(priceEpochId), 30_000);
+    } catch (e) {
+      const error = asError(e);
+      if (e instanceof TimeoutError) {
+        this.logger.error(`[${priceEpochId}] Timed out waiting for finalization.`);
+        throw error;
+      }
+    }
   }
 
   private async awaitFinalization(priceEpochId: number) {
