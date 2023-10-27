@@ -12,14 +12,14 @@ async function main() {
   if (!myId) throw Error("Must provide an id.");
   if (myId <= 0) throw Error("Id must be greater than 0.");
 
-  setGlobalLogFile(`reward-manager-${myId}`);
+  setGlobalLogFile(`reward-voter-${myId}`);
 
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-  getLogger("reward-manager").info(
-    `Initializing reward-manager ${myId}, for voter ${voterId} connecting to ${parameters.rpcUrl}`
+  getLogger("reward-voter").info(
+    `Initializing reward-voter ${myId}, for voter ${voterId} connecting to ${parameters.rpcUrl}`
   );
 
   let privateKey: string;
@@ -46,6 +46,6 @@ function loadContracts(): ContractAddresses {
 
 main().catch(e => {
   console.error("Reward voter error, exiting", e);
-  getLogger("reward-manager").error(e);
+  getLogger("reward-voter").error(e);
   process.exit(1);
 });

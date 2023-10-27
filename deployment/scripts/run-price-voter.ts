@@ -14,8 +14,8 @@ import { BlockIndexer } from "../../src/BlockIndexer";
 
 async function main() {
   const myId = +process.argv[2];
-  if (!myId) throw Error("Must provide a data provider id.");
-  if (myId <= 0) throw Error("Data provider id must be greater than 0.");
+  if (!myId) throw Error("Must provide a price voter id.");
+  if (myId <= 0) throw Error("Price voter id must be greater than 0.");
   const useRandomFeed = process.argv[3] == "random";
 
   setGlobalLogFile(`price-voter-${myId}`);
@@ -24,7 +24,7 @@ async function main() {
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
   const contractAddresses = loadContracts();
-  getLogger("price-voter").info(`Initializing data provider ${myId}, connecting to ${parameters.rpcUrl}`);
+  getLogger("price-voter").info(`Initializing price voter ${myId}, connecting to ${parameters.rpcUrl}`);
 
   let privateKey: string;
   if (process.env.VOTER_PRIVATE_KEY != undefined) {
