@@ -78,15 +78,15 @@ export class PriceVoter {
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
       await runWithDuration("REVEAL", async () => await this.client.reveal(this.previousPriceEpochData!));
       await this.waitForRevealEpochEnd();
+
       this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
+      const result = await this.client.calculateResults(previousEpochId);
       await randomDelay(0, 2000);
-      const result = await runWithDuration(
-        "RESULTS",
-        async () => await this.client.calculateResultsAndSign(previousEpochId)
-      );
+      await runWithDuration("RESULTS", async () => await this.client.signResult(previousEpochId, result));
 
       await runWithDuration("FINALIZATION", async () => await this.awaitFinalizationOrTimeout(previousEpochId));
       await randomDelay(0, 1000);
+
       await runWithDuration("PUBLISH", async () => await this.client.publishPrices(result, [0, 1]));
     }
     this.previousPriceEpochData = priceEpochData;

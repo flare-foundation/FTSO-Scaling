@@ -89,8 +89,7 @@ export class FTSOClient {
     await this.provider.revealBitvote(data);
   }
 
-  async calculateResultsAndSign(priceEpochId: number): Promise<EpochResult> {
-    const result = await this.calculateResults(priceEpochId);
+  async signResult(priceEpochId: number, result: EpochResult): Promise<EpochResult> {
     const signature = await this.provider.signMessage(result.merkleRoot.value);
     await this.provider.signResult(priceEpochId, result.merkleRoot.value, {
       v: signature.v,
@@ -125,9 +124,15 @@ export class FTSOClient {
   async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
     const commits = this.index.getCommits(priceEpochId);
     const reveals = this.index.getReveals(priceEpochId);
-    const eligibleCommitters = [...commits.keys()]
+    const committers = [...commits.keys()];
+    const eligibleCommitters = committers
       .map(sender => sender.toLowerCase())
       .filter(voter => voterWeights.has(voter.toLowerCase())!);
+
+    const failedCommit = _.difference(eligibleCommitters, committers);
+    if (failedCommit.length > 0) {
+      this.logger.info(`Not seen commits from ${failedCommit.length} voters: ${failedCommit}`);
+    }
 
     const [revealed, committedFailedReveal] = _.partition(eligibleCommitters, committer => {
       const revealData = reveals.get(committer);
@@ -137,6 +142,11 @@ export class FTSOClient {
       const commitHash = commits.get(committer);
       return commitHash === hashForCommit(committer, revealData.random, revealData.merkleRoot, revealData.prices);
     });
+
+    if (committedFailedReveal.length > 0) {
+      this.logger.info(`Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`);
+    }
+
     const revealedRandoms = revealed.map(voter => {
       const rawRandom = reveals!.get(voter.toLowerCase())!.random;
       return Bytes32.fromHexString(rawRandom);
