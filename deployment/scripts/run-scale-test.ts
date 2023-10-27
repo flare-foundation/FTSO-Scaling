@@ -15,6 +15,7 @@ interface AccountDetails {
 
 const DEFAULT_VOTER_COUNT = 3;
 const DEFAULT_FINALIZER_COUNT = 2;
+const DEFAULT_BATCH_ID = 0;
 
 // gov pub key: 0xc783df8a850f42e7f7e57013759c285caa701eb6
 async function main() {
@@ -22,15 +23,19 @@ async function main() {
   if (!priceVoterCount) priceVoterCount = DEFAULT_VOTER_COUNT;
   let finalizerCount = +process.argv[3];
   if (!finalizerCount) finalizerCount = DEFAULT_FINALIZER_COUNT;
+  let batchId = +process.argv[4];
+  if (!batchId) batchId = DEFAULT_BATCH_ID;
 
   const parameters = loadFTSOParameters();
   const web3 = getWeb3(parameters.rpcUrl.toString());
 
-  const accounts: AccountDetails[] = JSON.parse(fs.readFileSync("coston2-100-accounts.json", "utf-8")).slice(
-    0,
-    priceVoterCount * 2 + DEFAULT_FINALIZER_COUNT
+  const totalAccounts = priceVoterCount * 2 + finalizerCount;
+  const accountOffset = batchId * totalAccounts;
+  const accounts: AccountDetails[] = JSON.parse(fs.readFileSync("coston2-250-accounts.json", "utf-8")).slice(
+    accountOffset,
+    accountOffset + totalAccounts
   );
-
+  console.log(`Loaded ${accounts.length} accounts.`);
   await fundAccounts(web3, accounts);
   console.log("Funded accounts.");
   await runFinalizers(DEFAULT_FINALIZER_COUNT, accounts);
