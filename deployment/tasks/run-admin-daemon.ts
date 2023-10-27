@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { sleepFor } from "../../src/utils/time";
 import { Feed, Offer } from "../../src/protocol/voting-types";
 import { Account } from "web3-core";
+import _ from "lodash";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { ZERO_ADDRESS, toBytes4, hexlifyBN } from "../../src/protocol/utils/voting-utils";
@@ -33,33 +34,37 @@ async function offerRewards(
   rewardValue: BN
 ) {
   logger.info(`Offering rewards for next reward epoch ${rewardEpochId}.`);
-
-  let totalAmount = toBN(0);
-  const offersSent: Offer[] = [];
-  for (let i = 0; i < symbols.length; i++) {
-    const amount = rewardValue.add(toBN(i));
-    const basicOffer = {
-      amount: amount,
-      currencyAddress: ZERO_ADDRESS,
-      offerSymbol: toBytes4(symbols[i].offerSymbol),
-      quoteSymbol: toBytes4(symbols[i].quoteSymbol),
-      leadProviders: leadProviders,
-      rewardBeltPPM: toBN(DEFAULT_REWARD_BELT_PPM),
-      flrValue: amount,
-      elasticBandWidthPPM: toBN(ELASTIC_BAND_WIDTH_PPM),
-      iqrSharePPM: toBN(IQR_SHARE),
-      pctSharePPM: toBN(PCT_SHARE),
-      remainderClaimer: ZERO_ADDRESS,
-    } as Offer;
-    logger.info(`Offering ${amount} for ${symbols[i].offerSymbol}/${symbols[i].quoteSymbol}`);
-    totalAmount = totalAmount.add(amount);
-    offersSent.push(basicOffer);
-  }
-  const receipt = await votingRewardManager.offerRewards(hexlifyBN(offersSent), {
-    from: governance,
-    value: totalAmount,
+  _.chunk(symbols, 500).forEach(async (chunk, i) => {
+    let totalAmount = toBN(0);
+    const offersSent: Offer[] = [];
+    for (i = 0; i < chunk.length; i++) {
+      const amount = rewardValue.add(toBN(i));
+      const basicOffer = {
+        amount: amount,
+        currencyAddress: ZERO_ADDRESS,
+        offerSymbol: toBytes4(chunk[i].offerSymbol),
+        quoteSymbol: toBytes4(chunk[i].quoteSymbol),
+        leadProviders: leadProviders,
+        rewardBeltPPM: toBN(DEFAULT_REWARD_BELT_PPM),
+        flrValue: amount,
+        elasticBandWidthPPM: toBN(ELASTIC_BAND_WIDTH_PPM),
+        iqrSharePPM: toBN(IQR_SHARE),
+        pctSharePPM: toBN(PCT_SHARE),
+        remainderClaimer: ZERO_ADDRESS,
+      } as Offer;
+      
+      totalAmount = totalAmount.add(amount);
+      offersSent.push(basicOffer);
+    }
+    const receipt = await votingRewardManager.offerRewards(hexlifyBN(offersSent), {
+      from: governance,
+      value: totalAmount,
+      gas: 6000000,
+    });
+    logger.info(
+      `${offersSent.length} offers sent for reward epoch ${rewardEpochId}, gas used: ${receipt.receipt.gasUsed}`
+    );
   });
-  logger.info(`Offers sent for reward epoch ${rewardEpochId}, gas used: ${receipt.receipt.gasUsed}`);
 }
 
 /**
