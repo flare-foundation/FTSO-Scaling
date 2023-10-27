@@ -82,7 +82,7 @@ export class RewardVoter {
 
     const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
     if (rewardOffers.length > 0) {
-      this.logger.info(`[${finalizedEpoch}] We have offers for reward epoch ${rewardEpoch}, calculating rewards.`);
+      this.logger.info(`[${finalizedEpoch}] We have ${rewardOffers.length} offers for reward epoch ${rewardEpoch}, calculating rewards.`);
       // We have offers, means we started processing for previous reward epoch and should have all
       // required information for calculating rewards.
       const claims = await runWithDuration("CALCULATE_REWARDS", async () => {

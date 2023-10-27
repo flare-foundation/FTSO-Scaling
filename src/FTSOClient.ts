@@ -264,7 +264,7 @@ export class FTSOClient {
   }
 
   async publishPrices(prices: EpochResult, symbolIndices: number[]) {
-    this.logger.info(`Publishing prices for price epoch ${prices.priceEpochId}.`);
+    this.logger.info(`Publishing ${prices.medianData.length} prices for price epoch ${prices.priceEpochId}.`);
     return await this.provider.publishPrices(prices, symbolIndices);
   }
 
