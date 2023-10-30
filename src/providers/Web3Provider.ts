@@ -357,7 +357,6 @@ export class Web3Provider implements IVotingProvider {
       await fnToEncode.call({ from: from.address });
       return undefined;
     } catch (e: unknown) {
-      this.logger.info(`[${label}] Transaction failed, raw error: ${e}`);
       return new RevertedTxError(`[${label}] Transaction reverted`, asError(e));
     }
   }
