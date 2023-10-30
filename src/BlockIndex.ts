@@ -3,7 +3,6 @@ import { EpochSettings } from "./protocol/utils/EpochSettings";
 import {
   Address,
   BlockData,
-  Feed,
   FinalizeData,
   PriceEpochId,
   RevealBitvoteData,
@@ -137,7 +136,6 @@ export class BlockIndex extends AsyncEventEmitter {
         `Received finalize for epoch ${finalizeData.epochId} from ${tx.from}, block ts ${blockTimestampSec}`
       );
       this.rewardFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
-      getLogger(BlockIndex.name).info(`Emitting reward finalize for ${finalizeData.epochId}`);
       await this.emit(Received.RewardFinalize, tx.from, finalizeData);
     }
   }
@@ -170,12 +168,10 @@ export class BlockIndex extends AsyncEventEmitter {
     this.priceEpochCommits.set(priceEpochId, commitsInEpoch);
     commitsInEpoch.set(from.toLowerCase(), hash);
     getLogger(BlockIndex.name).info(
-      `Received commit for epoch ${priceEpochId} from ${from}, block ts ${blockTimestampSec}`
+      `Received commit for epoch ${priceEpochId} from ${from}, block ts ${blockTimestampSec}, hash ${hash}`
     );
-    getLogger(BlockIndex.name).info(`Commit set: ${from.toLowerCase()}: ${hash}`);
   }
 
-  // function revealBitvote(bytes32 _random, bytes32 _merkleRoot, bytes calldata _bitVote, bytes calldata _prices)
   private extractReveal(tx: TxData, blockTimestampSec: number): void {
     const result = this.encodingUtils.extractRevealBitvoteData(tx);
     const from = tx.from.toLowerCase();
@@ -189,11 +185,9 @@ export class BlockIndex extends AsyncEventEmitter {
       const revealsInEpoch = this.priceEpochReveals.get(priceEpochId) || new Map<Address, RevealBitvoteData>();
       this.priceEpochReveals.set(priceEpochId, revealsInEpoch);
       revealsInEpoch.set(from.toLowerCase(), result);
-      getLogger(BlockIndex.name).info(`Reveal set for ${priceEpochId}`);
     }
   }
 
-  // function signResult(bytes32 _merkleRoot, Signature calldata signature)
   private async extractSignature(tx: TxData, blockTimestampSec: number): Promise<void> {
     const signatureData = this.encodingUtils.extractSignatureData(tx);
     const from = tx.from.toLowerCase();

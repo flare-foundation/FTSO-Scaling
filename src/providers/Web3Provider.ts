@@ -35,6 +35,7 @@ import { IVotingProvider } from "./IVotingProvider";
 import { getLogger } from "../utils/logger";
 import { retryPredicate, retryWithTimeout } from "../utils/retry";
 import { RevertedTxError, asError } from "../utils/error";
+import _ from "lodash";
 
 interface TypeChainContracts {
   readonly votingRewardManager: VotingRewardManager;
@@ -43,6 +44,13 @@ interface TypeChainContracts {
   readonly priceOracle: PriceOracle;
   readonly votingManager: VotingManager;
 }
+
+/**
+ * We limit the number of offers sent in a single transaction to avoid hitting the tx size limit of 32KB.
+ * This value may have to be adjusted if changing the {@link Offer} data structure.
+ * https://github.com/flare-foundation/go-flare/blob/cb5ff5b717b9f103e517b97739a2b9b3dbcf28f1/coreth/core/tx_pool.go#L66
+ */
+const OFFER_BATCH_SIZE = 80;
 
 export class Web3Provider implements IVotingProvider {
   private readonly logger = getLogger(Web3Provider.name);
@@ -58,7 +66,7 @@ export class Web3Provider implements IVotingProvider {
     readonly web3: Web3,
     private contracts: TypeChainContracts,
     private config: FTSOParameters,
-    privateKey: string,
+    privateKey: string
   ) {
     this.account = getAccount(this.web3, privateKey);
   }
@@ -102,19 +110,31 @@ export class Web3Provider implements IVotingProvider {
   }
 
   async offerRewards(offers: Offer[]): Promise<any> {
-    let totalAmount = toBN(0);
-    offers.forEach(offer => {
-      if (offer.currencyAddress === ZERO_ADDRESS) {
-        totalAmount = totalAmount.add(offer.amount);
-      }
-    });
-
-    const methodCall = this.contracts.votingRewardManager.methods.offerRewards(hexlifyBN(offers));
-    return await this.signAndFinalize(
-      "Offer rewards",
-      this.contracts.votingRewardManager.options.address,
-      methodCall,
-      totalAmount
+    let nonce = await this.getNonce(this.account);
+    const receiptPromises: Promise<TransactionReceipt>[] = [];
+    for (let chunk of _.chunk(offers, OFFER_BATCH_SIZE)) {
+      let totalAmount = toBN(0);
+      chunk.forEach(offer => {
+        if (offer.currencyAddress === ZERO_ADDRESS) {
+          totalAmount = totalAmount.add(offer.amount);
+        }
+      });
+      const methodCall = this.contracts.votingRewardManager.methods.offerRewards(hexlifyBN(chunk));
+      this.logger.info(`Offering rewards for ${chunk.length} offers.`);
+      receiptPromises.push(
+        this.signAndFinalize(
+          "Offer rewards",
+          this.contracts.votingRewardManager.options.address,
+          methodCall,
+          totalAmount,
+          this.account,
+          nonce++
+        )
+      );
+    }
+    const receipts = await Promise.all(receiptPromises);
+    this.logger.info(
+      `Offered ${offers.length} rewards, total gas used: ${receipts.reduce((acc, r) => acc + r.gasUsed, 0)}`
     );
   }
 
@@ -302,7 +322,9 @@ export class Web3Provider implements IVotingProvider {
     const isTxFinalized = async () => (await this.getNonce(from)) > txNonce;
     await retryPredicate(isTxFinalized, 8, 1000);
 
-    return receiptOrError as TransactionReceipt;
+    const receipt = receiptOrError as TransactionReceipt;
+    getLogger("metrics").info(`[GAS] ${label}: ${receipt.gasUsed}`);
+    return receipt;
   }
 
   /**
@@ -339,12 +361,7 @@ export class Web3Provider implements IVotingProvider {
     }
   }
 
-  static async create(
-    contractAddresses: ContractAddresses,
-    web3: Web3,
-    config: FTSOParameters,
-    privateKey: string,
-  ) {
+  static async create(contractAddresses: ContractAddresses, web3: Web3, config: FTSOParameters, privateKey: string) {
     const contracts = {
       votingRewardManager: await loadContract<VotingRewardManager>(
         web3,
@@ -373,7 +390,7 @@ export class Web3Provider implements IVotingProvider {
       web3,
       contracts,
       config,
-      privateKey,
+      privateKey
     );
     return provider;
   }

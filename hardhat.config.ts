@@ -12,7 +12,6 @@ import loadTestAccounts from "./hardhat.utils";
 import * as dotenv from "dotenv";
 import { loadFTSOParameters } from "./deployment/config/FTSOParameters";
 import { OUTPUT_FILE } from "./deployment/tasks/common";
-import { runAdminDaemon } from "./deployment/tasks/run-admin-daemon";
 
 dotenv.config();
 
@@ -23,13 +22,6 @@ task("deploy-contracts", `Deploys contracts and generates a file with addresses 
     const parameters = loadFTSOParameters();
     await deployContracts(hre, parameters);
   });
-
-task("run-admin-daemon", `Does admin tasks`) // prettier-ignore
-  .setAction(async (_args, hre, _runSuper) => {
-    const parameters = loadFTSOParameters();
-    await runAdminDaemon(hre, parameters);
-  });
-
 // Config
 
 const accounts = loadTestAccounts();

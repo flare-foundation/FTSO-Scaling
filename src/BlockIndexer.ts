@@ -37,7 +37,7 @@ export class BlockIndexer extends BlockIndex {
             return await this.provider.getBlock(this.lastProcessedBlockNumber + 1);
           },
           3,
-          2000
+          3000
         );
         await this.processBlock(block);
         this.lastProcessedBlockNumber++;

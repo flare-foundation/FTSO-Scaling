@@ -240,7 +240,7 @@ export async function signAndSend(
   firstClient.index.once(Received.Finalize, setFinalized);
 
   for (const client of ftsoClients) {
-    await client.calculateResultsAndSign(priceEpochId, true); // skip calculation, since we already did it
+    await client.signResult(priceEpochId, true); // skip calculation, since we already did it
   }
 
   for (const client of ftsoClients) {
