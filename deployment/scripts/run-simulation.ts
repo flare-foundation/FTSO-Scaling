@@ -51,7 +51,7 @@ async function main() {
       await sleepFor(1000);
     }
 
-    childProcesses.push(startAdminDaemon());
+    childProcesses.push(startRewardSender());
 
     while (true) {
       await sleepFor(10_000);
@@ -77,16 +77,16 @@ function startNetwork(): ChildProcess {
   return process;
 }
 
-function startAdminDaemon(): ChildProcess {
-  const process = spawn("yarn", ["hardhat", "run-admin-daemon", "--network", "local"]);
+function startRewardSender(): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-sender"]);
   process.stdout.on("data", function (data) {
-    console.log(`[Admin daemon]: ${data}`);
+    console.log(`[Reward sender]: ${data}`);
   });
   process.stderr.on("data", function (data) {
-    console.log(`[Admin daemon] ERROR: ${data}`);
+    console.log(`[Reward sender] ERROR: ${data}`);
   });
   process.on("close", function (code) {
-    throw new Error(`Admin daemon exited with code ${code}, aborting.`);
+    throw new Error(`Reward sender exited with code ${code}, aborting.`);
   });
   return process;
 }
@@ -122,7 +122,12 @@ function startFinalizer(id: number): ChildProcess {
 }
 
 function startRewardVoter(id: number): ChildProcess {
-  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-reward-voter.ts", (id - PRICE_VOTER_COUNT - FINALIZER_COUNT).toString(), id.toString()]);
+  const process = spawn("yarn", [
+    "ts-node",
+    "deployment/scripts/run-reward-voter.ts",
+    (id - PRICE_VOTER_COUNT - FINALIZER_COUNT).toString(),
+    id.toString(),
+  ]);
   process.stdout.on("data", function (data) {
     console.log(`[Reward voter ${id}]: ${data}`);
   });
