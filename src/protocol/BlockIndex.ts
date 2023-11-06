@@ -78,7 +78,7 @@ export class BlockIndex extends AsyncEventEmitter {
     }
   }
 
-  private async processTx(tx: TxData, blockTimestampSec: number): Promise<void> {
+  async processTx(tx: TxData, blockTimestampSec: number): Promise<void> {
     const prefix = tx.input?.slice(0, 10);
     if (tx.to?.toLowerCase() === this.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {
