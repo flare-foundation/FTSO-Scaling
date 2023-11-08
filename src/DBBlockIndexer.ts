@@ -12,7 +12,7 @@ import mysql, { RowDataPacket } from "mysql2/promise";
  * Simply using `WHERE timestamp > ? LIMIT 1000` doesn't work because we might get cut off in the middle of a transaction batch with the same timestamp,
  * and we wouldn't know where to continue from.
  */
-const query = "SELECT id, method, data, timestamp FROM ftso_transactions WHERE timestamp >= ? AND id > ? LIMIT 1000";
+const query = "SELECT id, method, data, timestamp FROM ftso_transactions WHERE timestamp >= ? AND id > ? ORDER BY id LIMIT 1000";
 // TODO: filter by to field for contract addresses.
 
 interface TxResult {
