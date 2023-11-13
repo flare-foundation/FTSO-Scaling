@@ -1,14 +1,6 @@
-import { ContractAddresses } from "../../deployment/tasks/common";
+import { ContractAddresses } from "./utils/ContractAddresses";
 import BN from "bn.js";
-import {
-  BareSignature,
-  BlockData,
-  RewardClaimWithProof,
-  EpochData,
-  EpochResult,
-  Offer,
-  Address,
-} from "../protocol/voting-types";
+import { BareSignature, BlockData, RewardClaimWithProof, EpochData, EpochResult, Offer, Address } from "./voting-types";
 import { Account } from "web3-core";
 
 /**

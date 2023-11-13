@@ -21,9 +21,9 @@ describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
       totalWeightSum = 891;
       numVoters = 99;
       for (let index = 1; index <= numVoters; index++) {
-        let voter = "voter" + index;
-        let price = toBN(index);
-        let weight = toBN(totalWeightSum / numVoters);
+        const voter = "voter" + index;
+        const price = toBN(index);
+        const weight = toBN(totalWeightSum / numVoters);
 
         voters.push(voter);
         prices.push(price);
@@ -50,9 +50,9 @@ describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
       totalWeightSum = 1000;
       numVoters = 100;
       for (let index = 1; index <= numVoters; index++) {
-        let voter = "voter" + index;
-        let price = toBN(index);
-        let weight = toBN(totalWeightSum / numVoters);
+        const voter = "voter" + index;
+        const price = toBN(index);
+        const weight = toBN(totalWeightSum / numVoters);
 
         voters.push(voter);
         prices.push(price);
@@ -79,9 +79,9 @@ describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
       totalWeightSum = 990;
       numVoters = 99;
       for (let index = 1; index <= numVoters; index++) {
-        let voter = "voter" + index;
-        let price = toBN(index);
-        let weight = toBN(totalWeightSum / numVoters);
+        const voter = "voter" + index;
+        const price = toBN(index);
+        const weight = toBN(totalWeightSum / numVoters);
 
         voters.push(voter);
         prices.push(price);
@@ -107,9 +107,9 @@ describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
       numVoters = 100;
       totalWeightSum = (100 * 101) / 2; // sum_{i=1}^{100} i
       for (let index = 1; index <= numVoters; index++) {
-        let voter = "voter" + index;
-        let price = toBN(numVoters - index + 1);
-        let weight = toBN(numVoters - index + 1);
+        const voter = "voter" + index;
+        const price = toBN(numVoters - index + 1);
+        const weight = toBN(numVoters - index + 1);
 
         voters.push(voter);
         prices.push(price);
@@ -120,11 +120,11 @@ describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
     it("should calculate the correct median", () => {
       medianCalculationSummary = calculateMedian(voters, prices, weights);
 
-      let expectedMedianPrice = 71; // since sum_{i=1}^71 i = 2556 > 2525 = totalWeightSum / 2
+      const expectedMedianPrice = 71; // since sum_{i=1}^71 i = 2556 > 2525 = totalWeightSum / 2
       expect(medianCalculationSummary.finalMedianPrice).to.equal(expectedMedianPrice);
-      let expectedquartile1Price = 50; // since sum_{i=1}^50 i = 1275 > 1262.5 = totalWeightSum / 4
+      const expectedquartile1Price = 50; // since sum_{i=1}^50 i = 1275 > 1262.5 = totalWeightSum / 4
       expect(medianCalculationSummary.quartile1Price).to.equal(expectedquartile1Price);
-      let expectedquartile3Price = 87; // since sum_{i=87}^100 i = 1309 > 1262.5 = totalWeightSum / 4
+      const expectedquartile3Price = 87; // since sum_{i=87}^100 i = 1309 > 1262.5 = totalWeightSum / 4
       expect(medianCalculationSummary.quartile3Price).to.equal(expectedquartile3Price);
     });
   });

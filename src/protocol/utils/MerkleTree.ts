@@ -54,7 +54,9 @@ export function singleHash(val: string) {
  * @returns `0x`-prefixed 32-byte hex string (hash)
  */
 export function commitHash(merkleRoot: string, randomNumber: string, address: string): string {
-  return web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes32", "bytes32", "address"], [merkleRoot, randomNumber, address]))!;
+  return web3.utils.soliditySha3(
+    web3.eth.abi.encodeParameters(["bytes32", "bytes32", "address"], [merkleRoot, randomNumber, address])
+  )!;
 }
 
 /**
@@ -115,7 +117,6 @@ export class MerkleTree {
    * Returns leaves in array of the length `hashCount` sorted as `0x`-prefixed 32-byte hex strings.
    */
   get sortedHashes() {
-    const n = this.hashCount;
     return this._tree.slice(this.hashCount - 1);
   }
 
@@ -133,7 +134,7 @@ export class MerkleTree {
    * @param values
    */
   build(values: string[]) {
-    const sorted = values.map((x) => toHex(x, 32));
+    const sorted = values.map(x => toHex(x, 32));
     sorted.sort();
 
     let hashes = [];
@@ -143,7 +144,7 @@ export class MerkleTree {
       }
     }
     if (this.initialHash) {
-      hashes = hashes.map((x) => singleHash(x));
+      hashes = hashes.map(x => singleHash(x));
     }
     const n = hashes.length;
     this._tree = [...new Array(Math.max(n - 1, 0)).fill(0), ...hashes];
@@ -174,11 +175,11 @@ export class MerkleTree {
     if (count == 0) return null;
     while (count > 1) {
       // Invariants: low < high, 2 <= count == high - low == [low .. high].length
-      let mid = low + Math.floor(count/2); // low < mid < high _strictly_
-      hash < this.sortedHashes[mid] ? high = mid : low = mid; // low < high still
+      const mid = low + Math.floor(count / 2); // low < mid < high _strictly_
+      hash < this.sortedHashes[mid] ? (high = mid) : (low = mid); // low < high still
       count = high - low; // preserves invariant
     }
-    let i = low; // Only element left: count == 1, since 0 != count <= 1
+    const i = low; // Only element left: count == 1, since 0 != count <= 1
     if (hash != this.sortedHashes[i]) return null;
     return i;
   }
@@ -190,7 +191,7 @@ export class MerkleTree {
    */
   getProof(hash: string | null): string[] | null {
     if (hash == null) return null;
-    let i = this.binarySearch(hash);
+    const i = this.binarySearch(hash);
     if (i == null) return null;
 
     const proof: string[] = [];

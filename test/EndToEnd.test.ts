@@ -4,7 +4,7 @@ import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { web3 } from "hardhat";
-import { FTSOClient } from "../src/FTSOClient";
+import { FTSOClient } from "../src/protocol/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig, createPriceFeedConfigs } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/protocol/voting-types";
@@ -26,7 +26,8 @@ import {
   moveToNextPriceEpochStart,
   moveToNextRewardEpochStart,
 } from "../test-utils/utils/voting-test-utils";
-import { ContractAddresses, loadAccounts } from "../deployment/tasks/common";
+import { loadAccounts } from "../deployment/tasks/common";
+import { ContractAddresses } from "../src/protocol/utils/ContractAddresses";
 import {
   REWARD_VALUE,
   calculateVoteResults,
@@ -171,7 +172,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   });
 
   it(`should mint dummy ERC20 currencies`, async () => {
-    for (let coin of [dummyCoin1, dummyCoin2]) {
+    for (const coin of [dummyCoin1, dummyCoin2]) {
       const totalSupply = await coin.totalSupply();
       const accountBalance = await coin.balanceOf(governance);
       expect(totalSupply).to.equal(TOTAL_SUPPLY);
@@ -256,7 +257,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let priceEpochId = initialPriceEpoch + 1;
 
     for (let rewardEpoch = FIRST_REWARD_EPOCH; rewardEpoch <= TOTAL_REWARD_EPOCHS; rewardEpoch++) {
-      let currentRewardEpoch = await votingManager.getCurrentRewardEpochId();
+      const currentRewardEpoch = await votingManager.getCurrentRewardEpochId();
 
       await registerVoters(voterRegistry, currentRewardEpoch.addn(1), accounts);
 

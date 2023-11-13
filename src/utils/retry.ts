@@ -1,5 +1,5 @@
 import { sleepFor } from "./time";
-import { asError, errorString } from "./error";
+import { asError, errorString } from "../protocol/utils/error";
 import { getLogger } from "./logger";
 
 const DEFAULT_MAX_RETRIES = 3;

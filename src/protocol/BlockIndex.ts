@@ -1,5 +1,5 @@
-import { ContractAddresses } from "../deployment/tasks/common";
-import { EpochSettings } from "./protocol/utils/EpochSettings";
+import { ContractAddresses } from "./utils/ContractAddresses";
+import { EpochSettings } from "./utils/EpochSettings";
 import {
   Address,
   BlockData,
@@ -10,10 +10,9 @@ import {
   RewardOffered,
   SignatureData,
   TxData,
-} from "./protocol/voting-types";
+} from "./voting-types";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
-import EncodingUtils from "./protocol/utils/EncodingUtils";
-import { getLogger } from "./utils/logger";
+import EncodingUtils from "./utils/EncodingUtils";
 
 declare type CommitHash = string;
 declare type Timestamp = number;
@@ -34,7 +33,7 @@ export class BlockIndex extends AsyncEventEmitter {
   private readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
   private readonly priceEpochSignatures = new Map<PriceEpochId, Map<Address, [SignatureData, Timestamp]>>();
   private readonly priceEpochFinalizes = new Map<PriceEpochId, [FinalizeData, Timestamp]>();
-  
+
   private readonly rewardSignatures = new Map<RewardEpochId, Map<Address, [SignatureData, Timestamp]>>();
   private readonly rewardFinalizes = new Map<RewardEpochId, [FinalizeData, Timestamp]>();
   private readonly rewardEpochOffers = new Map<RewardEpochId, RewardOffered[]>();
@@ -114,9 +113,6 @@ export class BlockIndex extends AsyncEventEmitter {
           )}, received ${JSON.stringify(finalizeData)}`
         );
       }
-      getLogger(BlockIndex.name).info(
-        `Received finalize for epoch ${finalizeData.epochId} from ${tx.from}, block ts ${blockTimestampSec}`
-      );
       this.priceEpochFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
       await this.emit(Received.Finalize, tx.from, finalizeData);
     }
@@ -132,9 +128,6 @@ export class BlockIndex extends AsyncEventEmitter {
           )}, received ${finalizeData}`
         );
       }
-      getLogger(BlockIndex.name).info(
-        `Received finalize for epoch ${finalizeData.epochId} from ${tx.from}, block ts ${blockTimestampSec}`
-      );
       this.rewardFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
       await this.emit(Received.RewardFinalize, tx.from, finalizeData);
     }
@@ -167,19 +160,12 @@ export class BlockIndex extends AsyncEventEmitter {
     const commitsInEpoch = this.priceEpochCommits.get(priceEpochId) || new Map<Address, CommitHash>();
     this.priceEpochCommits.set(priceEpochId, commitsInEpoch);
     commitsInEpoch.set(from.toLowerCase(), hash);
-    getLogger(BlockIndex.name).info(
-      `Received commit for epoch ${priceEpochId} from ${from}, block ts ${blockTimestampSec}, hash ${hash}`
-    );
   }
 
   private extractReveal(tx: TxData, blockTimestampSec: number): void {
     const result = this.encodingUtils.extractRevealBitvoteData(tx);
     const from = tx.from.toLowerCase();
     const priceEpochId = this.epochs.revealPriceEpochIdForTime(blockTimestampSec);
-
-    getLogger(BlockIndex.name).info(
-      `Received reveal for epoch ${priceEpochId} from ${from}, block ts ${blockTimestampSec}`
-    );
 
     if (priceEpochId !== undefined) {
       const revealsInEpoch = this.priceEpochReveals.get(priceEpochId) || new Map<Address, RevealBitvoteData>();

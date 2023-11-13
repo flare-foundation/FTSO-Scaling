@@ -1,18 +1,18 @@
 import { getLogger } from "./utils/logger";
-import { Received } from "./BlockIndex";
+import { Received } from "./protocol/BlockIndex";
 import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "./protocol/voting-types";
 import { BlockIndexer } from "./BlockIndexer";
 import { getAccount, getBlockNumberBefore } from "./utils/web3";
 import Web3 from "web3";
 import { hashRewardClaim } from "./protocol/utils/voting-utils";
 
-import { asError } from "./utils/error";
+import { asError } from "./protocol/utils/error";
 import { Account } from "web3-core";
 import { MerkleTree } from "./protocol/utils/MerkleTree";
 import { Penalty, RewardLogic } from "./protocol/RewardLogic";
-import { IVotingProvider } from "./providers/IVotingProvider";
+import { IVotingProvider } from "./protocol/IVotingProvider";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
-import { FTSOClient } from "./FTSOClient";
+import { FTSOClient } from "./protocol/FTSOClient";
 import { runWithDuration } from "./utils/time";
 
 export class RewardVoter {
@@ -26,7 +26,7 @@ export class RewardVoter {
   constructor(private readonly provider: IVotingProvider, private voterKey: string, private web3: Web3) {
     this.epochs = EpochSettings.fromProvider(provider);
     this.indexer = new BlockIndexer(provider);
-    this.client = new FTSOClient(this.provider, this.indexer, this.epochs);
+    this.client = new FTSOClient(this.provider, this.indexer, this.epochs, [], getLogger(FTSOClient.name));
     this.voterAccount = getAccount(this.web3, this.voterKey);
   }
   private readonly rewardClaimsForEpoch = new Map<RewardEpochId, RewardClaim[]>();
@@ -70,7 +70,7 @@ export class RewardVoter {
     this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
       await runWithDuration("CLAIM_REWARDS", async () => await this.claimRewards(fd, from));
     });
-    this.indexer.run(startBlock);
+    await this.indexer.run(startBlock);
   }
 
   private async calculateRewards(finalizeData: FinalizeData, from: string) {
@@ -82,7 +82,9 @@ export class RewardVoter {
 
     const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
     if (rewardOffers.length > 0) {
-      this.logger.info(`[${finalizedEpoch}] We have ${rewardOffers.length} offers for reward epoch ${rewardEpoch}, calculating rewards.`);
+      this.logger.info(
+        `[${finalizedEpoch}] We have ${rewardOffers.length} offers for reward epoch ${rewardEpoch}, calculating rewards.`
+      );
       // We have offers, means we started processing for previous reward epoch and should have all
       // required information for calculating rewards.
       const claims = await runWithDuration("CALCULATE_REWARDS", async () => {

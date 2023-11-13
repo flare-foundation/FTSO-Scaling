@@ -5,12 +5,13 @@ import BN from "bn.js";
 
 import { readFileSync } from "fs";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { ContractAddresses, OUTPUT_FILE } from "../tasks/common";
+import { OUTPUT_FILE } from "../tasks/common";
+import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { getLogger } from "../../src/utils/logger";
 import { ZERO_ADDRESS, toBN, toBytes4 } from "../../src/protocol/utils/voting-utils";
 import _ from "lodash";
 import { Feed, Offer } from "../../src/protocol/voting-types";
-import { errorString } from "../../src/utils/error";
+import { errorString } from "../../src/protocol/utils/error";
 
 const REWARD_VALUE = 10_000;
 const IQR_SHARE = 700_000;
@@ -28,9 +29,13 @@ async function main() {
   if (!deployerKey) throw Error("No deployer private key found in env.");
   web3.eth.accounts.wallet.add(deployerKey);
   const deployerAddress = web3.eth.accounts.privateKeyToAccount(deployerKey!).address;
-  logger.info(`Connected to ${parameters.rpcUrl}, deployer ${deployerAddress}, balance: ${+(await web3.eth.getBalance(deployerAddress))}`);
+  logger.info(
+    `Connected to ${parameters.rpcUrl}, deployer ${deployerAddress}, balance: ${+(await web3.eth.getBalance(
+      deployerAddress
+    ))}`
+  );
 
-  const contractAddresses = loadContracts();  
+  const contractAddresses = loadContracts();
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, deployerKey);
 
   const timeout = (provider.epochDurationSec * 1000) / 3; // Run 3 times per price epoch

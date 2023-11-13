@@ -52,7 +52,7 @@ const config: HardhatUserConfig = {
 
   mocha: {
     // Longer timeout for E2E tests which simulate multiple FTSO reward epochs.
-    timeout: 100000000, 
+    timeout: 100000000,
   },
 
   defaultNetwork: "hardhat",

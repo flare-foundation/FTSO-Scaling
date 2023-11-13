@@ -1,4 +1,4 @@
-import AsyncEventEmitter from "../../src/utils/AsyncEventEmitter";
+import AsyncEventEmitter from "../../src/protocol/utils/AsyncEventEmitter";
 import { sleepFor } from "../../src/utils/time";
 import { getTestFile } from "../../test-utils/utils/constants";
 

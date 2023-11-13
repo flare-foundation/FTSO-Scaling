@@ -18,7 +18,7 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   let voting: VotingInstance;
   let voterRegistry: VoterRegistryInstance;
   let votingManager: VotingManagerInstance;
-  let governance = accounts[0];
+  const governance = accounts[0];
   let firstRewardedPriceEpoch: BN;
   let firstEpochStartSec: BN;
   let epochDurationSec: BN;
@@ -57,8 +57,8 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   });
 
   it("Should add and remove voter for specific reward epoch", async () => {
-    let weight = toBN(1000);
-    let rewardEpochId = 1;
+    const weight = toBN(1000);
+    const rewardEpochId = 1;
     await voterRegistry.registerAsAVoter(rewardEpochId, weight.mul(toBN(2)), { from: accounts[1] });
     await voterRegistry.registerAsAVoter(rewardEpochId, weight, { from: accounts[2] });
 
@@ -70,8 +70,8 @@ contract(`Voting contracts setup general tests; ${getTestFile(__filename)}`, asy
   });
 
   it("Should return correct threshold for given reward epoch", async () => {
-    let weight = toBN(1000);
-    let rewardEpochId = 1;
+    const weight = toBN(1000);
+    const rewardEpochId = 1;
     expect(await voterRegistry.thresholdForRewardEpoch(rewardEpochId)).to.be.bignumber.eq(
       weight.mul(toBN(3)).mul(toBN(THRESHOLD)).div(toBN(10000))
     );
