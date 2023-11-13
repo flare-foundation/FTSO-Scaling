@@ -11,7 +11,6 @@ import {
 import { ZERO_ADDRESS, feedId, hashRewardClaim, toBN } from "./utils/voting-utils";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { getLogger } from "../utils/logger";
 import _ from "lodash";
 import { EpochSettings } from "./utils/EpochSettings";
 import { MerkleTree } from "./utils/MerkleTree";
@@ -40,8 +39,6 @@ export class Penalty implements RewardClaim {
  * Collection of utility methods used for reward claim calculation.
  */
 export namespace RewardLogic {
-  const logger = getLogger("RewardLogic");
-
   /**
    * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
    * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
@@ -229,7 +226,6 @@ export namespace RewardLogic {
       for (const offer of priceEpochOffers) {
         const penaltyAmount = offer.amount.mul(voterWeight).div(totalWeight).mul(MISSED_REVEAL_PENALIZATION);
         const penalty = new Penalty(penaltyAmount, offer.currencyAddress, voter, priceEpochId);
-        getLogger("RewardClaims").info(`Created penalty for missed reveal: ${JSON.stringify(penalty)}`);
         penaltyClaims.push(penalty);
       }
     }
@@ -594,7 +590,6 @@ export namespace RewardLogic {
    */
   function claimsForSigners(signingOffers: RewardOffered[], signers: Address[], priceEpochId: number): RewardClaim[] {
     if (signers.length == 0) {
-      logger.info(`No signers to be rewarded, generating back claims.`);
       return generateBackClaims(signingOffers, priceEpochId);
     }
     const signingClaims = [];
@@ -619,7 +614,6 @@ export namespace RewardLogic {
   }
 
   function generateBackClaims(signingOffers: RewardOffered[], priceEpochId: number): RewardClaim[] {
-    console.log("Generating back claim of amount: ", signingOffers[0].amount.toString());
     const backClaims: RewardClaim[] = [];
     for (const offer of signingOffers) {
       const backClaim: RewardClaim = {

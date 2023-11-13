@@ -1,7 +1,8 @@
 import { readFileSync } from "fs";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { loadFTSOParameters } from "../config/FTSOParameters";
-import { ContractAddresses, OUTPUT_FILE, loadAccounts } from "../tasks/common";
+import { OUTPUT_FILE, loadAccounts } from "../tasks/common";
+import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
 import { Finalizer } from "../../src/Finalizer";

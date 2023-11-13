@@ -1,18 +1,18 @@
 import { getLogger } from "./utils/logger";
-import { Received } from "./BlockIndex";
+import { Received } from "./protocol/BlockIndex";
 import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "./protocol/voting-types";
 import { BlockIndexer } from "./BlockIndexer";
 import { getAccount, getBlockNumberBefore } from "./utils/web3";
 import Web3 from "web3";
 import { hashRewardClaim } from "./protocol/utils/voting-utils";
 
-import { asError } from "./utils/error";
+import { asError } from "./protocol/utils/error";
 import { Account } from "web3-core";
 import { MerkleTree } from "./protocol/utils/MerkleTree";
 import { Penalty, RewardLogic } from "./protocol/RewardLogic";
-import { IVotingProvider } from "./providers/IVotingProvider";
+import { IVotingProvider } from "./protocol/IVotingProvider";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
-import { FTSOClient } from "./FTSOClient";
+import { FTSOClient } from "./protocol/FTSOClient";
 import { runWithDuration } from "./utils/time";
 
 export class RewardVoter {
@@ -26,7 +26,7 @@ export class RewardVoter {
   constructor(private readonly provider: IVotingProvider, private voterKey: string, private web3: Web3) {
     this.epochs = EpochSettings.fromProvider(provider);
     this.indexer = new BlockIndexer(provider);
-    this.client = new FTSOClient(this.provider, this.indexer, this.epochs);
+    this.client = new FTSOClient(this.provider, this.indexer, this.epochs, [], getLogger(FTSOClient.name));
     this.voterAccount = getAccount(this.web3, this.voterKey);
   }
   private readonly rewardClaimsForEpoch = new Map<RewardEpochId, RewardClaim[]>();

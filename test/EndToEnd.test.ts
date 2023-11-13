@@ -4,7 +4,7 @@ import BN from "bn.js";
 import chai, { expect } from "chai";
 import chaiBN from "chai-bn";
 import { web3 } from "hardhat";
-import { FTSOClient } from "../src/FTSOClient";
+import { FTSOClient } from "../src/protocol/FTSOClient";
 import { RandomPriceFeed, RandomPriceFeedConfig, createPriceFeedConfigs } from "../test-utils/utils/RandomPriceFeed";
 import { TruffleProvider, TruffleProviderOptions } from "../src/providers/TruffleProvider";
 import { Feed } from "../src/protocol/voting-types";
@@ -26,7 +26,8 @@ import {
   moveToNextPriceEpochStart,
   moveToNextRewardEpochStart,
 } from "../test-utils/utils/voting-test-utils";
-import { ContractAddresses, loadAccounts } from "../deployment/tasks/common";
+import { loadAccounts } from "../deployment/tasks/common";
+import { ContractAddresses } from "../src/protocol/utils/ContractAddresses";
 import {
   REWARD_VALUE,
   calculateVoteResults,

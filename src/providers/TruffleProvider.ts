@@ -1,5 +1,5 @@
 import { Account } from "web3-core";
-import { ContractAddresses } from "../../deployment/tasks/common";
+import { ContractAddresses } from "../protocol/utils/ContractAddresses";
 import {
   PriceOracleInstance,
   VoterRegistryInstance,
@@ -18,7 +18,7 @@ import {
 } from "../protocol/voting-types";
 import { ZERO_ADDRESS, hexlifyBN, toBN } from "../protocol/utils/voting-utils";
 import { getAccount, getFilteredBlock, recoverSigner, signMessage } from "../utils/web3";
-import { IVotingProvider } from "./IVotingProvider";
+import { IVotingProvider } from "../protocol/IVotingProvider";
 
 export interface TruffleProviderOptions {
   readonly privateKey: string;

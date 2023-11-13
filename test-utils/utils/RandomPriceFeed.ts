@@ -1,5 +1,5 @@
 import { Feed } from "../../src/protocol/voting-types";
-import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
+import { IPriceFeed } from "../../src/protocol/IPriceFeed";
 
 export interface RandomPriceFeedConfig {
   period: number;

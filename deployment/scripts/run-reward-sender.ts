@@ -5,12 +5,13 @@ import BN from "bn.js";
 
 import { readFileSync } from "fs";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { ContractAddresses, OUTPUT_FILE } from "../tasks/common";
+import { OUTPUT_FILE } from "../tasks/common";
+import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { getLogger } from "../../src/utils/logger";
 import { ZERO_ADDRESS, toBN, toBytes4 } from "../../src/protocol/utils/voting-utils";
 import _ from "lodash";
 import { Feed, Offer } from "../../src/protocol/voting-types";
-import { errorString } from "../../src/utils/error";
+import { errorString } from "../../src/protocol/utils/error";
 
 const REWARD_VALUE = 10_000;
 const IQR_SHARE = 700_000;

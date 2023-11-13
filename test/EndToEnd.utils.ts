@@ -1,5 +1,5 @@
 import { time, expectEvent } from "@openzeppelin/test-helpers";
-import { FTSOClient } from "../src/FTSOClient";
+import { FTSOClient } from "../src/protocol/FTSOClient";
 import { Feed, Offer } from "../src/protocol/voting-types";
 import { unprefixedSymbolBytes, toBN, ZERO_ADDRESS, toBytes4, hexlifyBN, feedId } from "../src/protocol/utils/voting-utils";
 import { DummyERC20 } from "../typechain";
@@ -10,7 +10,7 @@ import {
   VotingRewardManagerInstance,
   VotingManagerInstance,
 } from "../typechain-truffle";
-import { Received } from "../src/BlockIndex";
+import { Received } from "../src/protocol/BlockIndex";
 import BN from "bn.js";
 
 const DummyERC20 = artifacts.require("DummyERC20");

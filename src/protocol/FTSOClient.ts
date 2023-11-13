@@ -1,10 +1,10 @@
 import BN from "bn.js";
 import _ from "lodash";
 
-import { EpochSettings } from "./protocol/utils/EpochSettings";
-import { calculateEpochResult, calculateResultsForFeed } from "./protocol/price-calculation";
-import { IPriceFeed } from "./price-feeds/IPriceFeed";
-import { IVotingProvider } from "./providers/IVotingProvider";
+import { EpochSettings } from "./utils/EpochSettings";
+import { calculateEpochResult, calculateResultsForFeed } from "./price-calculation";
+import { IPriceFeed } from "./IPriceFeed";
+import { IVotingProvider } from "./IVotingProvider";
 import {
   EpochData,
   EpochResult,
@@ -15,7 +15,7 @@ import {
   Feed,
   RewardClaim,
   Address,
-} from "./protocol/voting-types";
+} from "./voting-types";
 import {
   ZERO_BYTES32,
   feedId,
@@ -24,12 +24,12 @@ import {
   toBN,
   parsePrices,
   combineRandom,
-} from "./protocol/utils/voting-utils";
-import { getLogger } from "./utils/logger";
-import { Bytes32 } from "./protocol/utils/sol-types";
+} from "./utils/voting-utils";
+import { Bytes32 } from "./utils/sol-types";
 import { asError } from "./utils/error";
-import { RewardLogic } from "./protocol/RewardLogic";
+import { RewardLogic } from "./RewardLogic";
 import { BlockIndex } from "./BlockIndex";
+import { ILogger } from "./utils/ILogger";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const NON_EXISTENT_PRICE = 0;
@@ -39,7 +39,6 @@ const NON_EXISTENT_PRICE = 0;
  * It supports pluggable price feeds and voting providers (Truffle for testing, Web3 for production).
  */
 export class FTSOClient {
-  private readonly logger = getLogger(FTSOClient.name);
   private readonly priceFeedsById = new Map<string, IPriceFeed>();
 
   get address() {
@@ -50,7 +49,8 @@ export class FTSOClient {
     private readonly provider: IVotingProvider,
     private readonly index: BlockIndex,
     private readonly epochs: EpochSettings,
-    priceFeeds: IPriceFeed[] = []
+    priceFeeds: IPriceFeed[] = [],
+    private readonly logger: ILogger
   ) {
     this.registerPriceFeeds(priceFeeds);
   }

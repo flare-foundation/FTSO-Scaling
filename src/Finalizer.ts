@@ -1,12 +1,12 @@
 import BN from "bn.js";
 import { getLogger } from "./utils/logger";
-import { errorString } from "./utils/error";
-import { BlockIndex, Received } from "./BlockIndex";
+import { errorString } from "./protocol/utils/error";
+import { BlockIndex, Received } from "./protocol/BlockIndex";
 import { FinalizeData, PriceEpochId, RewardEpochId, SignatureData } from "./protocol/voting-types";
 import { toBN } from "./protocol/utils/voting-utils";
 import _ from "lodash";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
-import { IVotingProvider } from "./providers/IVotingProvider";
+import { IVotingProvider } from "./protocol/IVotingProvider";
 import { runWithDuration } from "./utils/time";
 
 export class Finalizer {

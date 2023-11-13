@@ -1,9 +1,10 @@
 import { readFileSync } from "fs";
-import { FTSOClient } from "../../src/FTSOClient";
+import { FTSOClient } from "../../src/protocol/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
 import { FTSOParameters, loadFTSOParameters } from "../config/FTSOParameters";
-import { ContractAddresses, OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
-import { IPriceFeed } from "../../src/price-feeds/IPriceFeed";
+import { OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
+import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
+import { IPriceFeed } from "../../src/protocol/IPriceFeed";
 import { Feed } from "../../src/protocol/voting-types";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
@@ -40,7 +41,7 @@ async function main() {
   const indexer = new BlockIndexer(provider);
   indexer.run();
 
-  const client = new FTSOClient(provider, indexer, epochSettings, feeds);
+  const client = new FTSOClient(provider, indexer, epochSettings, feeds, getLogger(FTSOClient.name));
   const priceVoter = new PriceVoter(client, indexer, epochSettings);
   await priceVoter.run();
 }

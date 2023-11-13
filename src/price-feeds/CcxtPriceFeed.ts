@@ -1,5 +1,5 @@
 import { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
-import { IPriceFeed } from "./IPriceFeed";
+import { IPriceFeed } from "../protocol/IPriceFeed";
 import { Feed } from "../protocol/voting-types";
 import { getLogger } from "../utils/logger";
 

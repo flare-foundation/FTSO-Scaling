@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { Account, TransactionConfig, TransactionReceipt } from "web3-core";
-import { ContractAddresses } from "../../deployment/tasks/common";
+import { ContractAddresses } from "../protocol/utils/ContractAddresses";
 
 import Web3 from "web3";
 import { FTSOParameters } from "../../deployment/config/FTSOParameters";
@@ -31,10 +31,10 @@ import {
   recoverSigner,
   signMessage,
 } from "../utils/web3";
-import { IVotingProvider } from "./IVotingProvider";
+import { IVotingProvider } from "../protocol/IVotingProvider";
 import { getLogger } from "../utils/logger";
 import { retryPredicate, retryWithTimeout } from "../utils/retry";
-import { RevertedTxError, asError } from "../utils/error";
+import { RevertedTxError, asError } from "../protocol/utils/error";
 import _ from "lodash";
 
 interface TypeChainContracts {

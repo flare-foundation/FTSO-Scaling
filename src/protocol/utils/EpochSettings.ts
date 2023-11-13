@@ -1,4 +1,4 @@
-import { IVotingProvider } from "../../providers/IVotingProvider";
+import { IVotingProvider } from "../IVotingProvider";
 
 export class EpochSettings {
   constructor(

@@ -6,14 +6,6 @@ import Web3 from "web3";
 import ccxt, { Exchange } from "ccxt";
 import { CcxtPriceFeed } from "../../src/price-feeds/CcxtPriceFeed";
 
-export interface ContractAddresses {
-  votingManager: string;
-  voterRegistry: string;
-  voting: string;
-  votingRewardManager: string;
-  priceOracle: string;
-}
-
 export const OUTPUT_FILE = "./deployed-contracts.json";
 export const TEST_ACCOUNT_FILE = "./deployment/config/test-1020-accounts.json";
 const DEFAULT_EXCHANGE = "binance";

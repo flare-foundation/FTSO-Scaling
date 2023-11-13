@@ -1,7 +1,7 @@
-import { FTSOClient } from "./FTSOClient";
+import { FTSOClient } from "./protocol/FTSOClient";
 import { getLogger } from "./utils/logger";
 import { randomDelay, runWithDuration, sleepFor } from "./utils/time";
-import { asError, errorString } from "./utils/error";
+import { asError, errorString } from "./protocol/utils/error";
 import { BlockIndexer } from "./BlockIndexer";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { EpochData } from "./protocol/voting-types";
