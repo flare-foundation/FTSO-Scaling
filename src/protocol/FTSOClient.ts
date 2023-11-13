@@ -184,7 +184,7 @@ export class FTSOClient {
       const wasFinalized = (await this.provider.getMerkleRoot(priceEpochId - 1)) !== ZERO_BYTES32;
       if (wasFinalized) {
         // TODO: Add tests for this scenario
-        throw Error(`Previous epoch ${priceEpochId - 1} was finalized, but we've not observed the finalization.\ 
+        throw Error(`Previous epoch ${priceEpochId - 1} was finalized, but we've not observed the finalization.\n 
                      Aborting since we won't be able to compute cumulative reward claims correctly.`);
       }
     }

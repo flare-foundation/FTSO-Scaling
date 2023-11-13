@@ -117,7 +117,6 @@ export class MerkleTree {
    * Returns leaves in array of the length `hashCount` sorted as `0x`-prefixed 32-byte hex strings.
    */
   get sortedHashes() {
-    const n = this.hashCount;
     return this._tree.slice(this.hashCount - 1);
   }
 

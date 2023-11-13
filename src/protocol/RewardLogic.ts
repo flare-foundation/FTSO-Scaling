@@ -108,7 +108,7 @@ export namespace RewardLogic {
     voterWeights: Map<Address, BN>,
     epochs: EpochSettings
   ): RewardClaim[] {
-    const priceEpochOffers = rewardEpochOffers?.map(offer => rewardOfferForPriceEpoch(priceEpochId, offer, epochs))!;
+    const priceEpochOffers = rewardEpochOffers.map(offer => rewardOfferForPriceEpoch(priceEpochId, offer, epochs));
 
     const signingOffers: RewardOffered[] = [];
     const finalizationOffers: RewardOffered[] = [];

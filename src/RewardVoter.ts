@@ -70,7 +70,7 @@ export class RewardVoter {
     this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
       await runWithDuration("CLAIM_REWARDS", async () => await this.claimRewards(fd, from));
     });
-    this.indexer.run(startBlock);
+    await this.indexer.run(startBlock);
   }
 
   private async calculateRewards(finalizeData: FinalizeData, from: string) {

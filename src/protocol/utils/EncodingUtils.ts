@@ -19,19 +19,16 @@ export default class EncodingUtils {
     const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
 
     this.abiItems.set("commit", votingABI.find((x: AbiItem) => x.name === "commit")!);
-    this.abiItems.set("revealBitvote", votingABI.find((x: any) => x.name === "revealBitvote")!);
-    this.abiItems.set("signResult", votingABI.find((x: any) => x.name === "signResult")!);
-    this.abiItems.set("signRewards", votingABI.find((x: any) => x.name === "signRewards")!);
-    this.abiItems.set("finalize", votingABI.find((x: any) => x.name === "finalize")!);
-    this.abiItems.set("finalizeRewards", votingABI.find((x: any) => x.name === "finalizeRewards")!);
-    this.abiItems.set("MerkleRootConfirmed", votingABI.find((x: any) => x.name === "MerkleRootConfirmed")!);
-    this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find((x: any) => x.name === "RewardMerkleRootConfirmed")!);
-    this.abiItems.set("offerRewards", rewardsABI.find((x: any) => x.name === "offerRewards")!);
-    this.abiItems.set("RewardOffered", rewardsABI.find((x: any) => x.name === "RewardOffered")!);
-    this.abiInputs.set(
-      "rewardClaimDefinition",
-      rewardsABI.find((x: any) => x.name === "rewardClaimDefinition")!.inputs![0]
-    );
+    this.abiItems.set("revealBitvote", votingABI.find(x => x.name === "revealBitvote")!);
+    this.abiItems.set("signResult", votingABI.find(x => x.name === "signResult")!);
+    this.abiItems.set("signRewards", votingABI.find(x => x.name === "signRewards")!);
+    this.abiItems.set("finalize", votingABI.find(x => x.name === "finalize")!);
+    this.abiItems.set("finalizeRewards", votingABI.find(x => x.name === "finalizeRewards")!);
+    this.abiItems.set("MerkleRootConfirmed", votingABI.find(x => x.name === "MerkleRootConfirmed")!);
+    this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find(x => x.name === "RewardMerkleRootConfirmed")!);
+    this.abiItems.set("offerRewards", rewardsABI.find(x => x.name === "offerRewards")!);
+    this.abiItems.set("RewardOffered", rewardsABI.find(x => x.name === "RewardOffered")!);
+    this.abiInputs.set("rewardClaimDefinition", rewardsABI.find(x => x.name === "rewardClaimDefinition")!.inputs![0]);
     this.functionSignatures.set("commit", coder.encodeFunctionSignature(this.abiItems.get("commit")!));
     this.functionSignatures.set("revealBitvote", coder.encodeFunctionSignature(this.abiItems.get("revealBitvote")!));
     this.functionSignatures.set("signResult", coder.encodeFunctionSignature(this.abiItems.get("signResult")!));
