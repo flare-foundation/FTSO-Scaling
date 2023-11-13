@@ -179,7 +179,7 @@ function parseIntOrThrow(input: string, base: number): number {
  * the Offer interface.
  */
 function convertRewardOfferedEvent(offer: any): RewardOffered {
-  let newOffer = removeIndexFields(offer);
+  const newOffer = removeIndexFields(offer);
   delete newOffer.__length__;
   newOffer.leadProviders = [...offer.leadProviders];
   const result: RewardOffered = {

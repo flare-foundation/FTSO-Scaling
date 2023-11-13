@@ -6,7 +6,7 @@ import Prando from "prando";
 
 const VotingManager = artifacts.require("VotingManager");
 
-contract(`EpochSettings; ${getTestFile(__filename)}`, async (accounts) => {
+contract(`EpochSettings; ${getTestFile(__filename)}`, async accounts => {
   const governance = accounts[0];
   const REWARD_EPOCH_DURATION = 10;
 

@@ -11,7 +11,7 @@ export function getWeb3(rpcLink: string, logger?: any): Web3 {
   if (rpcLink.startsWith("http")) {
     web3.setProvider(new Web3.providers.HttpProvider(rpcLink));
   } else if (rpcLink.startsWith("ws")) {
-    let provider = new Web3.providers.WebsocketProvider(rpcLink, {
+    const provider = new Web3.providers.WebsocketProvider(rpcLink, {
       // @ts-ignore
       clientConfig: {
         keepalive: true,

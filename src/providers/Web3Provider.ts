@@ -112,7 +112,7 @@ export class Web3Provider implements IVotingProvider {
   async offerRewards(offers: Offer[]): Promise<any> {
     let nonce = await this.getNonce(this.account);
     const receiptPromises: Promise<TransactionReceipt>[] = [];
-    for (let chunk of _.chunk(offers, OFFER_BATCH_SIZE)) {
+    for (const chunk of _.chunk(offers, OFFER_BATCH_SIZE)) {
       let totalAmount = toBN(0);
       chunk.forEach(offer => {
         if (offer.currencyAddress === ZERO_ADDRESS) {

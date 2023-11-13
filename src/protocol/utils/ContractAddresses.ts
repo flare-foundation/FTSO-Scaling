@@ -1,4 +1,3 @@
-
 export interface ContractAddresses {
   votingManager: string;
   voterRegistry: string;

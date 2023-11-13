@@ -172,7 +172,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
   });
 
   it(`should mint dummy ERC20 currencies`, async () => {
-    for (let coin of [dummyCoin1, dummyCoin2]) {
+    for (const coin of [dummyCoin1, dummyCoin2]) {
       const totalSupply = await coin.totalSupply();
       const accountBalance = await coin.balanceOf(governance);
       expect(totalSupply).to.equal(TOTAL_SUPPLY);
@@ -257,7 +257,7 @@ describe(`End to end; ${getTestFile(__filename)}`, async () => {
     let priceEpochId = initialPriceEpoch + 1;
 
     for (let rewardEpoch = FIRST_REWARD_EPOCH; rewardEpoch <= TOTAL_REWARD_EPOCHS; rewardEpoch++) {
-      let currentRewardEpoch = await votingManager.getCurrentRewardEpochId();
+      const currentRewardEpoch = await votingManager.getCurrentRewardEpochId();
 
       await registerVoters(voterRegistry, currentRewardEpoch.addn(1), accounts);
 

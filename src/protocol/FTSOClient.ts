@@ -282,7 +282,7 @@ export class FTSOClient {
     const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
     voters.forEach(voter => {
       const revealData = this.index.getReveals(priceEpochId)!.get(voter.toLowerCase())!;
-      let voterPrices = parsePrices(revealData.prices, numberOfFeeds);
+      const voterPrices = parsePrices(revealData.prices, numberOfFeeds);
       voterPrices.forEach((price, i) => feedPrices[i].push(price));
     });
 

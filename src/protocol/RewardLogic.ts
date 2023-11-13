@@ -243,18 +243,18 @@ export namespace RewardLogic {
   ): RewardClaim[] {
     // randomization for border cases
     // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
-    let voterRecords: VoterRewarding[] = [];
+    const voterRecords: VoterRewarding[] = [];
     // establish boundaries
-    let lowIQR = calculationResult.data.quartile1Price;
-    let highIQR = calculationResult.data.quartile3Price;
+    const lowIQR = calculationResult.data.quartile1Price;
+    const highIQR = calculationResult.data.quartile3Price;
 
     // Elastic band limits
-    let medianPrice = calculationResult.data.finalMedianPrice;
-    let elasticBandDiff = toBN(medianPrice).mul(toBN(offer.elasticBandWidthPPM)).div(toBN(1000000));
+    const medianPrice = calculationResult.data.finalMedianPrice;
+    const elasticBandDiff = toBN(medianPrice).mul(toBN(offer.elasticBandWidthPPM)).div(toBN(1000000));
 
     // NOTE: this can be negative
-    let lowPCT = medianPrice - elasticBandDiff.toNumber();
-    let highPCT = medianPrice + elasticBandDiff.toNumber();
+    const lowPCT = medianPrice - elasticBandDiff.toNumber();
+    const highPCT = medianPrice + elasticBandDiff.toNumber();
 
     if (offer.priceEpochId !== priceEpoch) {
       throw new Error("Offer price epoch does not match the current price epoch");
@@ -263,28 +263,29 @@ export namespace RewardLogic {
     // trusted provider lead
     let lowEligible = 0;
     let highEligible = 0;
-    let pricesOfLeadProvidersThatVoted = [];
+    const pricesOfLeadProvidersThatVoted = [];
     if (offer.leadProviders.length > 0) {
-      let leadProvidersSet = new Set<string>(offer.leadProviders.map(x => x.toLowerCase()));
+      const leadProvidersSet = new Set<string>(offer.leadProviders.map(x => x.toLowerCase()));
       for (let i = 0; i < calculationResult.voters!.length; i++) {
-        let voterAddress = calculationResult.voters![i];
-        let price = calculationResult.prices![i];
+        const voterAddress = calculationResult.voters![i];
+        const price = calculationResult.prices![i];
         if (leadProvidersSet.has(voterAddress.toLowerCase())) {
           pricesOfLeadProvidersThatVoted.push(price);
         }
       }
       if (pricesOfLeadProvidersThatVoted.length > 0) {
         pricesOfLeadProvidersThatVoted.sort();
-        let trustedMedianPrice = pricesOfLeadProvidersThatVoted[Math.floor(pricesOfLeadProvidersThatVoted.length / 2)];
-        let eligibleRange = toBN(trustedMedianPrice).mul(toBN(offer.rewardBeltPPM)).div(toBN(1000000)).toNumber();
+        const trustedMedianPrice =
+          pricesOfLeadProvidersThatVoted[Math.floor(pricesOfLeadProvidersThatVoted.length / 2)];
+        const eligibleRange = toBN(trustedMedianPrice).mul(toBN(offer.rewardBeltPPM)).div(toBN(1000000)).toNumber();
         lowEligible = Math.max(trustedMedianPrice - eligibleRange, 0);
         highEligible = trustedMedianPrice + eligibleRange;
       }
     }
     // assemble voter records
     for (let i = 0; i < calculationResult.voters!.length; i++) {
-      let voterAddress = calculationResult.voters![i];
-      let price = calculationResult.prices![i];
+      const voterAddress = calculationResult.voters![i];
+      const price = calculationResult.prices![i];
       voterRecords.push({
         voterAddress,
         weight: calculationResult.weights![i],
@@ -309,7 +310,7 @@ export namespace RewardLogic {
     // calculate iqr and pct sums
     let iqrSum: BN = toBN(0);
     let pctSum: BN = toBN(0);
-    for (let voterRecord of voterRecords) {
+    for (const voterRecord of voterRecords) {
       if (!voterRecord.eligible) {
         continue;
       }
@@ -323,7 +324,7 @@ export namespace RewardLogic {
 
     // calculate total rewarded weight
     let totalRewardedWeight = toBN(0);
-    for (let voterRecord of voterRecords) {
+    for (const voterRecord of voterRecords) {
       if (!voterRecord.eligible) {
         voterRecord.weight = toBN(0);
         continue;
@@ -357,17 +358,17 @@ export namespace RewardLogic {
       return [backClaim];
     }
 
-    let rewardClaims: RewardClaim[] = [];
+    const rewardClaims: RewardClaim[] = [];
     let totalReward = toBN(0);
     let availableReward = offer.amount;
     let availableWeight = totalRewardedWeight;
 
-    for (let voterRecord of voterRecords) {
+    for (const voterRecord of voterRecords) {
       // double declining balance
       if (voterRecord.weight.eq(toBN(0))) {
         continue;
       }
-      let reward = voterRecord.weight.mul(availableReward).div(availableWeight);
+      const reward = voterRecord.weight.mul(availableReward).div(availableWeight);
       availableReward = availableReward.sub(reward);
       availableWeight = availableWeight.sub(voterRecord.weight);
 
@@ -440,7 +441,7 @@ export namespace RewardLogic {
           if (remPenalty) {
             burntAmount = burntAmount.sub(remPenalty.amount);
           }
-          let burnClaim: RewardClaim = {
+          const burnClaim: RewardClaim = {
             ...mergedPenalty,
             isFixedClaim: true,
             amount: burntAmount,
@@ -536,9 +537,9 @@ export namespace RewardLogic {
    * Produces a map from currencyAddress to total reward amount for all claims
    */
   function claimRewardsMap(claims: RewardClaim[]) {
-    let currencyAddressToTotalReward = new Map<string, BN>();
-    for (let claim of claims) {
-      let amount = currencyAddressToTotalReward.get(claim.currencyAddress) || toBN(0);
+    const currencyAddressToTotalReward = new Map<string, BN>();
+    for (const claim of claims) {
+      const amount = currencyAddressToTotalReward.get(claim.currencyAddress) || toBN(0);
       currencyAddressToTotalReward.set(claim.currencyAddress, amount.add(claim.amount));
     }
     return currencyAddressToTotalReward;
@@ -548,19 +549,19 @@ export namespace RewardLogic {
    * Asserts that the sum of all offers is equal to the sum of all claims, for each currencyAddress
    */
   function assertOffersVsClaimsStats(offers: RewardOffered[], claims: RewardClaim[]) {
-    let offersRewards = new Map<string, BN>();
+    const offersRewards = new Map<string, BN>();
 
-    for (let offer of offers) {
-      let amount = offersRewards.get(offer.currencyAddress) || toBN(0);
+    for (const offer of offers) {
+      const amount = offersRewards.get(offer.currencyAddress) || toBN(0);
       offersRewards.set(offer.currencyAddress, amount.add(offer.amount));
     }
-    let claimsRewards = claimRewardsMap(claims);
+    const claimsRewards = claimRewardsMap(claims);
     if (offersRewards.size !== claimsRewards.size) {
       throw new Error("offersMap.size !== claimsMap.size");
     }
-    for (let currencyAddress of offersRewards.keys()) {
-      let offerAmount = offersRewards.get(currencyAddress)!;
-      let claimAmount = claimsRewards.get(currencyAddress)!;
+    for (const currencyAddress of offersRewards.keys()) {
+      const offerAmount = offersRewards.get(currencyAddress)!;
+      const claimAmount = claimsRewards.get(currencyAddress)!;
       if (!offerAmount.eq(claimAmount)) {
         throw new Error(`offerAmount ${offerAmount} != claimAmount ${claimAmount} for ${currencyAddress}`);
       }

@@ -1,11 +1,5 @@
 import BN from "bn.js";
-import {
-  Address,
-  EpochResult,
-  Feed,
-  MedianCalculationResult,
-  MedianCalculationSummary,
-} from "./voting-types";
+import { Address, EpochResult, Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
 import { hashBytes, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
 import Web3 from "web3";
 import { MerkleTree } from "./utils/MerkleTree";
@@ -30,7 +24,7 @@ interface VoteData {
  * All arrays must have the same length.
  */
 function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
-  let result: VoteData[] = [];
+  const result: VoteData[] = [];
   if (voters.length !== prices.length || voters.length !== weights.length) {
     throw new Error("voters, prices and weights must have the same length");
   }
@@ -114,7 +108,7 @@ export function calculateResultsForFeed(voters: string[], prices: BN[], weights:
  * Given a list of voters, prices and weights, it calculates the median and other statistics.
  */
 export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]): MedianCalculationSummary {
-  let voteData = repack(voters, prices, weights);
+  const voteData = repack(voters, prices, weights);
   // Sort by price
   voteData.sort((a, b) => {
     if (a.price.lt(b.price)) {
@@ -126,11 +120,11 @@ export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]):
   });
   let totalWeight = toBN(0);
   weights.forEach(w => (totalWeight = totalWeight.add(w)));
-  let medianWeight = totalWeight.div(toBN(2)).add(totalWeight.mod(toBN(2)));
+  const medianWeight = totalWeight.div(toBN(2)).add(totalWeight.mod(toBN(2)));
   let currentWeightSum = toBN(0);
 
   let medianPrice: BN | undefined;
-  let quartileWeight = totalWeight.div(toBN(4));
+  const quartileWeight = totalWeight.div(toBN(4));
   let quartile1Price: BN | undefined;
   let quartile3Price: BN | undefined;
 
@@ -143,7 +137,7 @@ export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]):
     }
     if (medianPrice === undefined && currentWeightSum.gte(medianWeight)) {
       if (currentWeightSum.eq(medianWeight) && totalWeight.isEven()) {
-        let next = voteData[index + 1];
+        const next = voteData[index + 1];
         // average of two middle prices in even case
         medianPrice = vote.price.add(next.price).div(toBN(2));
       } else {

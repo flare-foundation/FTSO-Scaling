@@ -17,8 +17,8 @@ export class EpochSettings {
   }
 
   revealPriceEpochIdForTime(timestampSec: number): number | undefined {
-    let priceEpochId = this.priceEpochIdForTime(timestampSec);
-    let revealDeadlineSec =
+    const priceEpochId = this.priceEpochIdForTime(timestampSec);
+    const revealDeadlineSec =
       this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec + this.revealDurationSec;
     if (timestampSec > revealDeadlineSec) {
       return undefined;
