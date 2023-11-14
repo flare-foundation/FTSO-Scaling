@@ -41,31 +41,16 @@ You can install the VSCode extension and use the shortcut `Alt/Option` + `Shift`
 
 ## Running a data provider cluster locally 
 
-The following steps describe how to get a group of data providers running locally (on Hardhat network) and participating in FTSO voting rounds.
+To start a simulation on the local Hardhat network, run:
+```
+yarn ts-node deployment/scripts/run-simulation.ts
+```
 
-1. Create `.env` in the project directory:
-    ```
-    DEPLOYER_PRIVATE_KEY=""
-    CHAIN_CONFIG="local"
-    ```
-    Set `DEPLOYER_PRIVATE_KEY` to the first private key under `deployment/config/test-1020-accounts.json`. 
-    By current convention, the first test account is used for governance/deployment.
+This will start a Hardhat node (network), compile and deploy smart contracts, and run several process participating in the FTSOv2 protocol:
 
-2. Open a new terminal window. Start a Hardhat node. This will run the Hardhat network:
-    ```
-    yarn hardhat node > /tmp/hardhat_node.log
-    ```
+- **Reward sender**: generates and submits reward offers for feeds on every reward epoch.
+- **Price voter** (x3): submits price data and participates in the price epoch voting protocol.
+- **Reward voter** (x3): tracks transaction history and computes rewards for each price voter. Votes on the reward Merkle tree for each reward epoch. Currently it also claims rewards.
+- **Finalizer** (x2): listens for signatures for both price and reward epochs, and attempts to submit finalization transactions once enough signature weight is observed.
 
-3. Open a new terminal window. Deploy contracts:
-    ```
-    yarn c && yarn hardhat deploy-contracts --network local
-    ```    
-4. Run "admin-daemon". This is a placeholder process that runs non-voter tasks such as offering rewards.
-    ```
-    yarn hardhat run-admin-daemon --network local 
-    ```
-5. Open a new terminal window. Run a data provider:
-    ```
-    yarn ts-node deployment/scripts/run-data-provider.ts 1
-    ```
-6. Repeat step (5), changing `1` to a different id to run more providers (makes sense to have at least 3 in total).
+Logs for each process can be found in the `logs` directory.
