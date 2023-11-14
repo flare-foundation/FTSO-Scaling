@@ -1,11 +1,11 @@
-import { BlockIndex } from "./BlockIndex";
+
+import { BlockIndex } from "./protocol/BlockIndex";
+import { IVotingProvider } from "./protocol/IVotingProvider";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
-import { IVotingProvider } from "./providers/IVotingProvider";
-import { sleepFor } from "./utils/time";
-import { asError, errorString } from "./utils/error";
+import { errorString, asError } from "./protocol/utils/error";
 import { getLogger } from "./utils/logger";
-import { retry } from "./utils/retry";
 import mysql, { RowDataPacket } from "mysql2/promise";
+import { sleepFor } from "./utils/time";
 
 /**
  * Since transaction timestamps are not unique, we also track the last seen id to avoid missing or processing transactions twice.
