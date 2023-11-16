@@ -68,7 +68,7 @@ export default class EncodingUtils {
 
   extractOffers(tx: TxData): RewardOffered[] {
     const result = tx
-      .receipt!.logs.filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
+      .logs!.filter((x: any) => x.topics[0] === this.eventSignature("RewardOffered"))
       .map((event: any) => {
         const offer = coder.decodeLog(this.abiItems.get("RewardOffered")!.inputs!, event.data, event.topics);
         return convertRewardOfferedEvent(offer as any as RewardOffered);
@@ -104,7 +104,7 @@ export default class EncodingUtils {
 
   extractFinalize(tx: TxData): FinalizeData {
     const resultTmp = this.decodeFunctionCall(tx, "finalize");
-    const confirmation = tx.receipt!.logs.find((x: any) => x.topics[0] === this.eventSignature("MerkleRootConfirmed"));
+    const confirmation = tx.logs?.find((x: any) => x.topics[0] === this.eventSignature("MerkleRootConfirmed"));
     return {
       confirmed: confirmation !== undefined,
       from: tx.from.toLowerCase(),
@@ -134,9 +134,7 @@ export default class EncodingUtils {
 
   extractRewardFinalize(tx: TxData): FinalizeData {
     const resultTmp = this.decodeFunctionCall(tx, "finalizeRewards");
-    const confirmation = tx.receipt!.logs.find(
-      (x: any) => x.topics[0] === this.eventSignature("RewardMerkleRootConfirmed")
-    );
+    const confirmation = tx.logs?.find((x: any) => x.topics[0] === this.eventSignature("RewardMerkleRootConfirmed"));
     return {
       confirmed: confirmation !== undefined,
       from: tx.from.toLowerCase(),
