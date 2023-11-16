@@ -38,7 +38,7 @@ export class BlockIndex extends AsyncEventEmitter {
   private readonly rewardFinalizes = new Map<RewardEpochId, [FinalizeData, Timestamp]>();
   private readonly rewardEpochOffers = new Map<RewardEpochId, RewardOffered[]>();
 
-  private readonly encodingUtils = EncodingUtils.instance;
+  protected readonly encodingUtils = EncodingUtils.instance;
 
   constructor(protected readonly epochs: EpochSettings, protected readonly contractAddresses: ContractAddresses) {
     super();
@@ -78,7 +78,7 @@ export class BlockIndex extends AsyncEventEmitter {
     }
   }
 
-  private async processTx(tx: TxData, blockTimestampSec: number): Promise<void> {
+  async processTx(tx: TxData, blockTimestampSec: number, debug: boolean = false): Promise<void> {
     const prefix = tx.input?.slice(0, 10);
     if (tx.to?.toLowerCase() === this.contractAddresses.voting.toLowerCase()) {
       if (prefix && prefix.length === 10) {

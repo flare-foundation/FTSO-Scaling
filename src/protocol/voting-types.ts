@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { TransactionReceipt } from "web3-core";
+import { Log } from "web3-core";
 import { Bytes32 } from "./utils/sol-types";
 
 export type Address = string;
@@ -81,8 +81,7 @@ export interface TxData {
   readonly from: string;
   /** Will be `null` for contract creation transactions. */
   readonly to: string | null;
-  readonly value: string;
-  readonly receipt?: TransactionReceipt;
+  readonly logs?: Log[];
 }
 
 export interface BlockData {

@@ -2,17 +2,17 @@ import { FTSOClient } from "./protocol/FTSOClient";
 import { getLogger } from "./utils/logger";
 import { randomDelay, runWithDuration, sleepFor } from "./utils/time";
 import { asError, errorString } from "./protocol/utils/error";
-import { BlockIndexer } from "./BlockIndexer";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { EpochData } from "./protocol/voting-types";
 import { TimeoutError, promiseWithTimeout } from "./utils/retry";
+import { BlockIndex } from "./protocol/BlockIndex";
 
 export class PriceVoter {
   private readonly logger = getLogger(PriceVoter.name);
 
   constructor(
     private readonly client: FTSOClient,
-    private readonly index: BlockIndexer,
+    private readonly index: BlockIndex,
     private readonly epochs: EpochSettings
   ) {}
 

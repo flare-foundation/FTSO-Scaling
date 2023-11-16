@@ -133,8 +133,7 @@ export async function getFilteredBlock(
         input: tx.input,
         from: tx.from,
         to: tx.to,
-        value: tx.value,
-        receipt: receipts[i],
+        logs: receipts[i]?.logs,
       };
       return txData;
     }),
