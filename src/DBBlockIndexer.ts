@@ -8,14 +8,14 @@ import { sleepFor } from "./utils/time";
 import { TxData } from "./protocol/voting-types";
 import { Log } from "web3-core";
 
-/**
- * Since transaction timestamps are not unique, we also track the last seen id to avoid missing or processing transactions twice.
- * Simply using `WHERE timestamp > ? LIMIT 1000` doesn't work because we might get cut off in the middle of a transaction batch with the same timestamp,
- * and we wouldn't know where to continue from.
- */
-const query =
-  "SELECT id, hash, func_sig, data, timestamp, ftso_transactions.from, ftso_transactions.to FROM ftso_transactions WHERE timestamp >= ? AND id > ? ORDER BY id LIMIT 1000";
+const QUERY_GET_TRANSACTIONS =
+  "SELECT " +
+  "id, hash, func_sig, data, timestamp, ftso_transactions.from, ftso_transactions.to " +
+  "FROM ftso_transactions " +
+  "WHERE timestamp <= ? AND id > ? ORDER BY id LIMIT 1000";
+
 const QUERY_GET_LOG = "SELECT log FROM ftso_logs WHERE tx_hash = ?";
+const QUERY_MAX_TIMESTAMP = "SELECT MAX(timestamp) FROM ftso_transactions";
 
 export class DBBlockIndexer extends BlockIndex {
   private readonly logger = getLogger(DBBlockIndexer.name);
@@ -63,24 +63,36 @@ export class DBBlockIndexer extends BlockIndex {
     }
 
     while (true) {
-      const txBatch = await this.pollTransactions();
-      for (const tx of txBatch) {
-        try {
-          await this.processTx(tx[0], tx[1], true);
-        } catch (e) {
-          this.logger.error(`Error processing transaction ${tx[0].hash}: ${errorString(e)}`);
-        }
-      }
+      const maxTimestamp = await this.getLatestBlockTimestamp();
+      if (maxTimestamp > this.lastProcessedTimestamp) {
+        let txBatch: [TxData, number][] = [];
+        do {
+          txBatch = await this.pollTransactions(maxTimestamp);
+          for (const tx of txBatch) {
+            try {
+              await this.processTx(tx[0], tx[1], true);
+            } catch (e) {
+              this.logger.error(`Error processing transaction ${tx[0].hash}: ${errorString(e)}`);
+            }
+          }
+        } while (txBatch.length > 0);
 
-      if (txBatch.length === 0) {
+        this.blockProcessed(maxTimestamp);
+        this.lastProcessedTimestamp = maxTimestamp;
+      } else {
         await sleepFor(1000);
       }
     }
   }
 
-  async pollTransactions(): Promise<[TxData, number][]> {
+  private async getLatestBlockTimestamp(): Promise<number> {
+    const [res] = await this.pool.query<RowDataPacket[]>(QUERY_MAX_TIMESTAMP);
+    return res[0]["timestamp"];
+  }
+
+  async pollTransactions(maxTimestamp: number): Promise<[TxData, number][]> {
     try {
-      const [rows] = await this.pool.query<RowDataPacket[]>(query, [this.lastProcessedTimestamp, this.lastSeenId]);
+      const [rows] = await this.pool.query<RowDataPacket[]>(QUERY_GET_TRANSACTIONS, [maxTimestamp, this.lastSeenId]);
       const txns = new Array<[TxData, number]>();
       for (const row of rows) {
         let logs: Log[] | undefined;
@@ -96,7 +108,6 @@ export class DBBlockIndexer extends BlockIndex {
           logs: logs,
         };
         this.lastSeenId = row["id"];
-        this.lastProcessedTimestamp = row["timestamp"];
 
         txns.push([txData, row["timestamp"]]);
       }

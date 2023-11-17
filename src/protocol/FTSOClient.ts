@@ -30,6 +30,7 @@ import { asError } from "./utils/error";
 import { RewardLogic } from "./RewardLogic";
 import { BlockIndex } from "./BlockIndex";
 import { ILogger } from "./utils/ILogger";
+import { SubProtocol } from "../TopLevelRunner";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const NON_EXISTENT_PRICE = 0;
@@ -38,7 +39,7 @@ const NON_EXISTENT_PRICE = 0;
  * A generic class for FTSO client implementation.
  * It supports pluggable price feeds and voting providers (Truffle for testing, Web3 for production).
  */
-export class FTSOClient {
+export class FTSOClient implements SubProtocol {
   private readonly priceFeedsById = new Map<string, IPriceFeed>();
 
   get address() {
@@ -55,6 +56,29 @@ export class FTSOClient {
     this.registerPriceFeeds(priceFeeds);
   }
 
+  // SubProtocol implementation
+  readonly protocolId: number = 100;
+
+  private lastEpochData: EpochData | undefined;
+
+  getCommit(epochId: number): Promise<string> {
+    const data = this.getPricesForEpoch(epochId);
+    const hash = hashForCommit(this.address, data.random.value, data.merkleRoot, data.pricesHex);
+    this.lastEpochData = data;
+    return Promise.resolve(hash);
+  }
+
+  getReveal(epochId: number): Promise<EpochData | undefined> {
+    return Promise.resolve(this.lastEpochData);
+  }
+
+  async getResultAfterDeadline(epochId: number, deadlineSec: number): Promise<string> {
+    await this.index.awaitLaterBlock(deadlineSec);
+    const result = await this.calculateResults(epochId);
+    return result.merkleRoot.value;
+  }
+  // End SubProtocol implementation
+
   private registerPriceFeeds(priceFeeds: IPriceFeed[]) {
     for (const priceFeed of priceFeeds) {
       this.priceFeedsById.set(feedId(priceFeed.getFeedInfo()), priceFeed);
@@ -63,7 +87,7 @@ export class FTSOClient {
 
   /**
    * Placeholder for registering as a voter with a default constant weight.
-   * To be replaced with a proper mechanisnm.
+   * To be replaced with a proper mechanism.
    */
   async registerAsVoter(rewardEpochId: number): Promise<void> {
     this.logger.info(`Registering as a voter for reward epoch ${rewardEpochId}`);
@@ -89,17 +113,16 @@ export class FTSOClient {
     await this.provider.revealBitvote(data);
   }
 
-  async signResult(priceEpochId: number, result: EpochResult): Promise<EpochResult> {
-    const signature = await this.provider.signMessage(result.merkleRoot.value);
-    await this.provider.signResult(priceEpochId, result.merkleRoot.value, {
+  async signResult(priceEpochId: number, result: string): Promise<void> {
+    const signature = await this.provider.signMessage(result);
+    await this.provider.signResult(priceEpochId, result, {
       v: signature.v,
       r: signature.r,
       s: signature.s,
     });
-    return result;
   }
 
-  async calculateResults(priceEpochId: number) {
+  async calculateResults(priceEpochId: number): Promise<EpochResult> {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
     const voterWeights = await this.provider.getVoterWeightsForRewardEpoch(rewardEpoch);
 

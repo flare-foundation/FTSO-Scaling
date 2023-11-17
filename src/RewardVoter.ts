@@ -1,5 +1,5 @@
 import { getLogger } from "./utils/logger";
-import { Received } from "./protocol/BlockIndex";
+import { Event } from "./protocol/BlockIndex";
 import { Address, FinalizeData, PriceEpochId, RewardClaim, RewardEpochId } from "./protocol/voting-types";
 import { BlockIndexer } from "./BlockIndexer";
 import { getAccount, getBlockNumberBefore } from "./utils/web3";
@@ -64,10 +64,10 @@ export class RewardVoter {
 
     this.logger.info(`Starting from block ${startBlock} for reward epoch ${previousRewardEpoch}.`);
 
-    this.indexer.on(Received.Finalize, async (from: string, finalizeData: FinalizeData) => {
+    this.indexer.on(Event.Finalize, async (from: string, finalizeData: FinalizeData) => {
       await this.calculateRewards(finalizeData, from);
     });
-    this.indexer.on(Received.RewardFinalize, async (from: Address, fd: FinalizeData) => {
+    this.indexer.on(Event.RewardFinalize, async (from: Address, fd: FinalizeData) => {
       await runWithDuration("CLAIM_REWARDS", async () => await this.claimRewards(fd, from));
     });
     await this.indexer.run(startBlock);

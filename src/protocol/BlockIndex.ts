@@ -13,11 +13,13 @@ import {
 } from "./voting-types";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./utils/EncodingUtils";
+import { promiseWithTimeout } from "../utils/retry";
+import { getLogger } from "../utils/logger";
 
 declare type CommitHash = string;
 declare type Timestamp = number;
 
-export enum Received {
+export enum Event {
   Commit = "commit",
   Reveal = "reveal",
   Signature = "signature",
@@ -25,6 +27,7 @@ export enum Received {
   Offers = "offers",
   RewardSignature = "rewardSignature",
   RewardFinalize = "rewardFinalize",
+  BlockTimestamp = "blockTimestamp",
 }
 
 /** Processes transaction blocks and emits events based on the type of extracted data. */
@@ -103,6 +106,40 @@ export class BlockIndex extends AsyncEventEmitter {
     }
   }
 
+  private _lastBlockTimestampSec: number = 0;
+
+  blockProcessed(timestampSec: number) {
+    this._lastBlockTimestampSec = timestampSec;
+    this.emit(Event.BlockTimestamp, timestampSec);
+  }
+
+  /**
+   * Waits for a block with timestamp greater than {@link blockTimestampSec} to be processed.
+   */
+  async awaitLaterBlock(blockTimestampSec: number): Promise<void> {
+    if (this._lastBlockTimestampSec > blockTimestampSec) return;
+    getLogger("Index").info(`Waiting for block later than ${blockTimestampSec} to be processed.`);
+
+    var resolvePromise: () => void;
+    const promise = new Promise<void>(function (resolve, _) {
+      resolvePromise = resolve;
+    });
+    const listener = (timestampSec: number) => {
+      if (timestampSec > blockTimestampSec) {
+        getLogger("Index").info(`Got timestamp ${timestampSec} larger than deadline ${blockTimestampSec}.`);
+        resolvePromise();
+      }
+    };
+    this.on(Event.BlockTimestamp, listener);
+    try {
+      await promiseWithTimeout(promise, (blockTimestampSec - Date.now() / 1000 + 15) * 1000); // Time out 15 seconds after deadline
+    } catch (e) {
+      throw new Error(`Timeout waiting for block later than ${blockTimestampSec} to be processed.`);
+    } finally {
+      this.removeListener(Event.BlockTimestamp, listener);
+    }
+  }
+
   private async extractFinalize(tx: TxData, blockTimestampSec: number) {
     const finalizeData = this.encodingUtils.extractFinalize(tx);
     if (finalizeData.confirmed) {
@@ -114,7 +151,7 @@ export class BlockIndex extends AsyncEventEmitter {
         );
       }
       this.priceEpochFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
-      await this.emit(Received.Finalize, tx.from, finalizeData);
+      await this.emit(Event.Finalize, tx.from, finalizeData);
     }
   }
 
@@ -129,7 +166,7 @@ export class BlockIndex extends AsyncEventEmitter {
         );
       }
       this.rewardFinalizes.set(finalizeData.epochId, [finalizeData, blockTimestampSec]);
-      await this.emit(Received.RewardFinalize, tx.from, finalizeData);
+      await this.emit(Event.RewardFinalize, tx.from, finalizeData);
     }
   }
 
@@ -149,7 +186,7 @@ export class BlockIndex extends AsyncEventEmitter {
     for (const offer of offers) {
       offersInEpoch.push(offer);
     }
-    await this.emit(Received.Offers, priceEpochId, offers);
+    await this.emit(Event.Offers, priceEpochId, offers);
   }
 
   // commit(bytes32 _commitHash)
@@ -183,7 +220,7 @@ export class BlockIndex extends AsyncEventEmitter {
     this.priceEpochSignatures.set(signatureData.epochId, signaturesInEpoch);
     signaturesInEpoch.set(from.toLowerCase(), [signatureData, blockTimestampSec]);
 
-    await this.emit(Received.Signature, signatureData);
+    await this.emit(Event.Signature, signatureData);
   }
 
   private async extractRewardSignature(tx: TxData, blockTimestampSec: number): Promise<void> {
@@ -195,6 +232,6 @@ export class BlockIndex extends AsyncEventEmitter {
     this.rewardSignatures.set(signatureData.epochId, signaturesInEpoch);
     signaturesInEpoch.set(from.toLowerCase(), [signatureData, blockTimestampSec]);
 
-    await this.emit(Received.RewardSignature, signatureData);
+    await this.emit(Event.RewardSignature, signatureData);
   }
 }

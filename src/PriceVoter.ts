@@ -80,12 +80,12 @@ export class PriceVoter {
       const previousEpochId = currentEpochId - 1;
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
       await runWithDuration("REVEAL", async () => await this.client.reveal(this.previousPriceEpochData!));
-      await this.waitForRevealEpochEnd();
 
-      this.logger.info(`[${currentEpochId}] Calculating results for previous epoch ${previousEpochId} and signing.`);
-      const result = await this.client.calculateResults(previousEpochId);
+      const revealEnd =  epochDeadlineSec - (this.epochs.revealDurationSec);
+      const epochMerkleRoot = await this.client.getResultAfterDeadline(previousEpochId, revealEnd);
+      this.logger.info(`[${currentEpochId}] Reveal deadline ended, calculating results for previous epoch ${previousEpochId} and signing: ${epochMerkleRoot}`);
       await randomDelay(0, 2000);
-      await runWithDuration("RESULTS", async () => await this.client.signResult(previousEpochId, result));
+      await runWithDuration("RESULTS", async () => await this.client.signResult(previousEpochId, epochMerkleRoot));
 
       await runWithDuration("FINALIZATION", async () => await this.awaitFinalizationOrTimeout(previousEpochId));
       if (this.currentTimeSec() > epochDeadlineSec) {
@@ -94,7 +94,7 @@ export class PriceVoter {
         );
       }
       await randomDelay(0, 1000);
-      await runWithDuration("PUBLISH", async () => await this.client.publishPrices(result, [0, 1]));
+      // await runWithDuration("PUBLISH", async () => await this.client.publishPrices(result, [0, 1]));
     }
     this.previousPriceEpochData = priceEpochData;
   }

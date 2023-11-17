@@ -40,6 +40,7 @@ export class BlockIndexer extends BlockIndex {
           3000
         );
         await this.processBlock(block);
+        this.blockProcessed(block.timestamp);
         this.lastProcessedBlockNumber++;
       }
     } catch (e: unknown) {

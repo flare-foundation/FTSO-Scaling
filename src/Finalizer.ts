@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import { getLogger } from "./utils/logger";
 import { errorString } from "./protocol/utils/error";
-import { BlockIndex, Received } from "./protocol/BlockIndex";
+import { BlockIndex, Event } from "./protocol/BlockIndex";
 import { FinalizeData, PriceEpochId, RewardEpochId, SignatureData } from "./protocol/voting-types";
 import { toBN } from "./protocol/utils/voting-utils";
 import _ from "lodash";
@@ -30,12 +30,12 @@ export class Finalizer {
   }
 
   private listenAndFinalizeRewardEpoch() {
-    this.index.on(Received.RewardFinalize, (fd: FinalizeData) => {
+    this.index.on(Event.RewardFinalize, (fd: FinalizeData) => {
       this.finalizedRewardEpoch = Math.max(this.finalizedRewardEpoch, fd.epochId);
       this.rewardSignaturesByEpoch.delete(fd.epochId);
     });
 
-    this.index.on(Received.RewardSignature, async (signature: SignatureData) => {
+    this.index.on(Event.RewardSignature, async (signature: SignatureData) => {
       this.logger.info(`Received reward signature for epoch ${signature.epochId}.`);
       if (signature.epochId <= this.finalizedRewardEpoch) return;
 
@@ -64,12 +64,12 @@ export class Finalizer {
   }
 
   private listenAndFinalizePriceEpoch() {
-    this.index.on(Received.Finalize, (fd: FinalizeData) => {
+    this.index.on(Event.Finalize, (fd: FinalizeData) => {
       this.finalizedEpoch = Math.max(this.finalizedEpoch, fd.epochId);
       this.priceSignaturesByEpoch.delete(fd.epochId);
     });
 
-    this.index.on(Received.Signature, async (signature: SignatureData) => {
+    this.index.on(Event.Signature, async (signature: SignatureData) => {
       this.logger.info(`Received signature for epoch ${signature.epochId}.`);
       if (signature.epochId <= this.finalizedEpoch) return;
 

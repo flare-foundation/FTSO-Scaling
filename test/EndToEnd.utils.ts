@@ -17,7 +17,7 @@ import {
   VotingRewardManagerInstance,
   VotingManagerInstance,
 } from "../typechain-truffle";
-import { Received } from "../src/protocol/BlockIndex";
+import { Event } from "../src/protocol/BlockIndex";
 import BN from "bn.js";
 
 const DummyERC20 = artifacts.require("DummyERC20");
@@ -244,7 +244,7 @@ export async function signAndSend(
   const setFinalized = () => {
     finalized = true;
   };
-  firstClient.index.once(Received.Finalize, setFinalized);
+  firstClient.index.once(Event.Finalize, setFinalized);
 
   for (const client of ftsoClients) {
     await client.signResult(priceEpochId, true); // skip calculation, since we already did it
