@@ -34,6 +34,9 @@ async function main() {
 
     deployContracts(envConfig);
 
+    childProcesses.push(startIndexer(100));
+    await sleepFor(1000);
+
     let id = 1; // 0 is reserved for governance account
     for (let i = 0; i < PRICE_VOTER_COUNT; i++) {
       childProcesses.push(startPriceVoter(id++));
@@ -87,6 +90,21 @@ function startRewardSender(): ChildProcess {
   });
   process.on("close", function (code) {
     throw new Error(`Reward sender exited with code ${code}, aborting.`);
+  });
+  return process;
+}
+
+function startIndexer(id: number): ChildProcess {
+  const process = spawn("yarn", ["ts-node", "deployment/scripts/run-indexer.ts", id.toString()]);
+  process.stdout.on("data", function (data) {
+    console.log(`[Indexer ${id}]: ${data}`);
+  });
+  process.stderr.on("data", function (data) {
+    console.log(`[Indexer ${id}] ERROR: ${data}`);
+  });
+  process.on("close", function (code) {
+    console.log("closing code: " + code);
+    throw Error(`Indexer ${id} exited with code ${code}`);
   });
   return process;
 }

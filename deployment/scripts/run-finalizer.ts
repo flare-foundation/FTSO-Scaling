@@ -31,7 +31,7 @@ async function main() {
   }
 
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
-  const indexer = new BlockIndexer(provider);
+  const indexer = new BlockIndexer(myId, provider);
   const epochSettings = EpochSettings.fromProvider(provider);
   const finalizer = new Finalizer(provider, indexer, epochSettings);
   await finalizer.run();

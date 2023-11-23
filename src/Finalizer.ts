@@ -8,13 +8,14 @@ import _ from "lodash";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { IVotingProvider } from "./protocol/IVotingProvider";
 import { runWithDuration } from "./utils/time";
+import { IndexerClient } from "./protocol/IndexerClient";
 
 export class Finalizer {
   private readonly logger = getLogger(Finalizer.name);
 
   constructor(
     private readonly provider: IVotingProvider,
-    private readonly index: BlockIndex,
+    private readonly index: IndexerClient,
     private readonly epochs: EpochSettings
   ) {}
 

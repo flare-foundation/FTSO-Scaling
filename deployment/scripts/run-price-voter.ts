@@ -38,7 +38,7 @@ async function main() {
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
   const epochSettings = EpochSettings.fromProvider(provider);
   const feeds = await getFeeds(useRandomFeed, parameters);
-  const indexer = new BlockIndexer(provider);
+  const indexer = new BlockIndexer(myId, provider);
   indexer.run();
 
   const client = new FTSOClient(provider, indexer, epochSettings, feeds, getLogger(FTSOClient.name));

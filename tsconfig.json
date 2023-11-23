@@ -9,6 +9,8 @@
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"]
   },

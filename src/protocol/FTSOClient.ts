@@ -31,6 +31,7 @@ import { RewardLogic } from "./RewardLogic";
 import { BlockIndex } from "./BlockIndex";
 import { ILogger } from "./utils/ILogger";
 import { SubProtocol } from "../TopLevelRunner";
+import { IndexerClient } from "./IndexerClient";
 
 const DEFAULT_VOTER_WEIGHT = 1000;
 const NON_EXISTENT_PRICE = 0;
@@ -48,7 +49,7 @@ export class FTSOClient implements SubProtocol {
 
   constructor(
     private readonly provider: IVotingProvider,
-    private readonly index: BlockIndex,
+    private readonly index: IndexerClient,
     private readonly epochs: EpochSettings,
     priceFeeds: IPriceFeed[] = [],
     private readonly logger: ILogger
@@ -144,9 +145,10 @@ export class FTSOClient implements SubProtocol {
     return calculateEpochResult(results, random, priceEpochId);
   }
 
-  async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
-    const commits = this.index.getCommits(priceEpochId);
-    const reveals = this.index.getReveals(priceEpochId);
+async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
+    const commits = await this.index.getCommits(priceEpochId);
+    const reveals = await this.index.getReveals(priceEpochId);
+    // this.logger.info(`Calculating reveals for price epoch ${priceEpochId}: ${[reveals.keys().]} keys for reveals, }`);
     const committers = [...commits.keys()];
     const eligibleCommitters = committers
       .map(sender => sender.toLowerCase())
@@ -178,6 +180,7 @@ export class FTSOClient implements SubProtocol {
       revealers: revealed,
       committedFailedReveal,
       revealedRandoms,
+      reveals,
     };
     return result;
   }
@@ -304,7 +307,7 @@ export class FTSOClient implements SubProtocol {
 
     const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
     voters.forEach(voter => {
-      const revealData = this.index.getReveals(priceEpochId)!.get(voter.toLowerCase())!;
+      const revealData = revealResult.reveals.get(voter.toLowerCase())!;
       const voterPrices = parsePrices(revealData.prices, numberOfFeeds);
       voterPrices.forEach((price, i) => feedPrices[i].push(price));
     });

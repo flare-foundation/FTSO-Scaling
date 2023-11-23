@@ -17,7 +17,7 @@ export interface IVotingProvider {
   get signingDurationSec(): number;
 
   get senderAddressLowercase(): string;
-
+  
   thresholdForRewardEpoch(rewardEpochId: number): Promise<BN>;
 
   ////////////// Contract calls //////////////

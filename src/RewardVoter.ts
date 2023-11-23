@@ -25,7 +25,7 @@ export class RewardVoter {
 
   constructor(private readonly provider: IVotingProvider, private voterKey: string, private web3: Web3) {
     this.epochs = EpochSettings.fromProvider(provider);
-    this.indexer = new BlockIndexer(provider);
+    this.indexer = new BlockIndexer(1, provider);
     this.client = new FTSOClient(this.provider, this.indexer, this.epochs, [], getLogger(FTSOClient.name));
     this.voterAccount = getAccount(this.web3, this.voterKey);
   }

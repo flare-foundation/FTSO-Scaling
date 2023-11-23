@@ -139,4 +139,5 @@ export interface RevealResult {
   readonly revealers: Address[];
   readonly committedFailedReveal: Address[];
   readonly revealedRandoms: Bytes32[];
+  readonly reveals: Map<Address, RevealBitvoteData>;
 }

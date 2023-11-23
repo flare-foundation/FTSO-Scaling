@@ -6,13 +6,14 @@ import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { EpochData } from "./protocol/voting-types";
 import { TimeoutError, promiseWithTimeout } from "./utils/retry";
 import { BlockIndex } from "./protocol/BlockIndex";
+import { IndexerClient } from "./protocol/IndexerClient";
 
 export class PriceVoter {
   private readonly logger = getLogger(PriceVoter.name);
 
   constructor(
     private readonly client: FTSOClient,
-    private readonly index: BlockIndex,
+    private readonly index: IndexerClient,
     private readonly epochs: EpochSettings
   ) {}
 
@@ -70,7 +71,7 @@ export class PriceVoter {
   }
 
   private async runVotingProcotol(currentEpochId: number, epochDeadlineSec: number) {
-    await randomDelay(0, 2000); // Random delay to avoid transaction contention.
+    await randomDelay(500, 2000); // Random delay to avoid transaction contention.
     const priceEpochData = this.client.getPricesForEpoch(currentEpochId);
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
     await runWithDuration("COMMIT", async () => await this.client.commit(priceEpochData));
@@ -81,9 +82,15 @@ export class PriceVoter {
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
       await runWithDuration("REVEAL", async () => await this.client.reveal(this.previousPriceEpochData!));
 
-      const revealEnd =  epochDeadlineSec - (this.epochs.revealDurationSec);
-      const epochMerkleRoot = await this.client.getResultAfterDeadline(previousEpochId, revealEnd);
-      this.logger.info(`[${currentEpochId}] Reveal deadline ended, calculating results for previous epoch ${previousEpochId} and signing: ${epochMerkleRoot}`);
+      while ((await this.index.getMaxTimestamp()) < epochDeadlineSec) {
+        await sleepFor(1000);
+      }
+
+      const epochMerkleRoot = (await this.client.calculateResults(previousEpochId)).merkleRoot.toString();
+
+      this.logger.info(
+        `[${currentEpochId}] Reveal deadline ended, calculating results for previous epoch ${previousEpochId} and signing: ${epochMerkleRoot}`
+      );
       await randomDelay(0, 2000);
       await runWithDuration("RESULTS", async () => await this.client.signResult(previousEpochId, epochMerkleRoot));
 

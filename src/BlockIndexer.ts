@@ -1,20 +1,21 @@
-import { BlockIndex } from "./protocol/BlockIndex";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { IVotingProvider } from "./protocol/IVotingProvider";
 import { sleepFor } from "./utils/time";
 import { errorString } from "./protocol/utils/error";
 import { getLogger } from "./utils/logger";
 import { retry } from "./utils/retry";
+import { IndexerClient } from "./protocol/IndexerClient";
 
-export class BlockIndexer extends BlockIndex {
+export class BlockIndexer extends IndexerClient {
   private logger = getLogger(BlockIndexer.name);
   private lastProcessedBlockNumber = 0;
 
-  constructor(private readonly provider: IVotingProvider) {
-    super(EpochSettings.fromProvider(provider), provider.contractAddresses);
+  constructor(private readonly myId: number, private readonly provider: IVotingProvider) {
+    super(myId, EpochSettings.fromProvider(provider), provider.contractAddresses);
   }
 
   async run(startBlock: number | undefined = undefined) {
+    this.initialize();
     if (startBlock) {
       this.lastProcessedBlockNumber = startBlock - 1;
     } else {
@@ -28,7 +29,6 @@ export class BlockIndexer extends BlockIndex {
   }
 
   async processNewBlocks() {
-    // this.logger.info(`Processing new blocks from ${this.lastProcessedBlockNumber + 1}.`);
     try {
       const currentBlockNumber = await this.provider.getBlockNumber();
       while (this.lastProcessedBlockNumber < currentBlockNumber) {

@@ -9,7 +9,7 @@ export class EpochSettings {
   ) {}
 
   get revealDurationSec(): number {
-    return this.epochDurationSec / 2;
+    return Math.floor(this.epochDurationSec / 2);
   }
 
   priceEpochIdForTime(timestampSec: number): number {
@@ -54,6 +54,10 @@ export class EpochSettings {
 
   priceEpochStartTimeSec(priceEpochId: number): number {
     return this.firstPriceEpochStartSec + priceEpochId * this.epochDurationSec;
+  }
+
+  revealDeadlineSec(priceEpochId: number): number {
+    return this.priceEpochStartTimeSec(priceEpochId) + this.revealDurationSec;
   }
 
   static fromProvider(provider: IVotingProvider): EpochSettings {
