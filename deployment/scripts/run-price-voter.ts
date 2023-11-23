@@ -50,10 +50,11 @@ async function getFeeds(useRandomFeed: boolean, parameters: FTSOParameters) {
   let feeds: IPriceFeed[];
   if (useRandomFeed) {
     // Uses a fake randomised price feed.
-    feeds = createPriceFeedConfigs(parameters.symbols).map(config => new RandomPriceFeed(config));
+    const symbols = parameters.feeds.map(x => x.symbol);
+    feeds = createPriceFeedConfigs(symbols).map(config => new RandomPriceFeed(config));
   } else {
     // Uses a real price feed, with additional random noise.
-    feeds = randomizeFeeds(await getPriceFeeds(parameters.symbols));
+    feeds = randomizeFeeds(await getPriceFeeds(parameters.feeds));
   }
   return feeds;
 }

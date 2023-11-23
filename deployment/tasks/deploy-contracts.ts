@@ -40,7 +40,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const voting = await artifacts.require("Voting").new(voterRegistry.address, votingManager.address);
 
   const priceOracle = await deployPriceOracle(artifacts, governance, voting);
-  const erc20PriceOracle = await deployERC20PriceOracle(artifacts, governance, parameters.symbols, priceOracle);
+  const erc20PriceOracle = await deployERC20PriceOracle(artifacts, governance, parameters.feeds.map(x => x.symbol), priceOracle);
 
   const votingRewardManager = await deployVotingRewardManager(
     artifacts,

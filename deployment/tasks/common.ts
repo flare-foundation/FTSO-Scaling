@@ -1,19 +1,22 @@
-import { Feed } from "../../src/protocol/voting-types";
 import { readFileSync } from "fs";
 import { Account } from "web3-core";
+import { IPriceFeed, priceFeedImplRegistry } from "../../src/protocol/IPriceFeed";
+import "../../src/price-feeds/CcxtPriceFeed";
 
 import Web3 from "web3";
-import ccxt, { Exchange } from "ccxt";
-import { CcxtPriceFeed } from "../../src/price-feeds/CcxtPriceFeed";
+import { FeedConfig } from "../config/FTSOParameters";
 
 export const OUTPUT_FILE = "./deployed-contracts.json";
 export const TEST_ACCOUNT_FILE = "./deployment/config/test-1020-accounts.json";
-const DEFAULT_EXCHANGE = "binance";
 
-export async function getPriceFeeds(symbols: Feed[], exchange: string = DEFAULT_EXCHANGE) {
-  const client: Exchange = new (ccxt as any)[exchange]();
-  await client.loadMarkets();
-  return Promise.all(symbols.map(async symbol => await CcxtPriceFeed.create(symbol, client)));
+export async function getPriceFeeds(feedConfigs: FeedConfig[]) {
+  return Promise.all(
+    feedConfigs.map(async config => {
+      const factory = priceFeedImplRegistry.get(config.providerImpl)!;
+      const provider: IPriceFeed = await factory.call(factory, config);
+      return provider;
+    })
+  );
 }
 
 export function loadAccounts(web3: Web3): Account[] {
