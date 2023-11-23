@@ -6,12 +6,17 @@ import BN from "bn.js";
 import { toBN } from "../../src/protocol/utils/voting-utils";
 dotenv.config();
 
+export interface FeedConfig {
+  readonly providerImpl: string;
+  readonly symbol: Feed;
+}
+
 export interface FTSOParameters {
   governancePrivateKey: string;
   rpcUrl: URL;
   gasLimit: BN;
   gasPriceMultiplier: number;
-  symbols: Feed[];
+  feeds: FeedConfig[];
 }
 
 function loadParameters(filename: string): FTSOParameters {

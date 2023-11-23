@@ -47,7 +47,7 @@ async function main() {
       if (currentRewardEpoch > lastEpoch) {
         await offerRewards(
           currentRewardEpoch + 1, // Offering for next epoch
-          parameters.symbols,
+          parameters.feeds.map(x => x.symbol),
           provider,
           deployerAddress,
           [],

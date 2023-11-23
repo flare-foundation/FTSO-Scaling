@@ -1,7 +1,8 @@
-import { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
-import { IPriceFeed } from "../protocol/IPriceFeed";
+import ccxt, { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
+import { IPriceFeed, PriceFeedImplFactory } from "../protocol/IPriceFeed";
 import { Feed } from "../protocol/voting-types";
 import { getLogger } from "../utils/logger";
+import { FeedConfig } from "../../deployment/config/FTSOParameters";
 
 const UPDATE_INTERVAL_MS = 1_000;
 /**
@@ -10,6 +11,9 @@ const UPDATE_INTERVAL_MS = 1_000;
  */
 const TRADE_HISTORY_WINDOW_MS = 60_000;
 const USDT_TO_USD = 1; // TODO: Get live value
+
+// TODO: Make configurable
+const DEFAULT_EXCHANGE = "binance";
 
 /**
  * Price feed that uses CCXT to fetch prices from a single exchange.
@@ -68,9 +72,13 @@ export class CcxtPriceFeed implements IPriceFeed {
     return this.feed;
   }
 
-  static async create(feed: Feed, client: Exchange): Promise<CcxtPriceFeed> {
-    const priceFeed = new CcxtPriceFeed(feed, client);
+  @PriceFeedImplFactory
+  static async create(config: FeedConfig): Promise<CcxtPriceFeed> {
+    const client: Exchange = new (ccxt as any)[DEFAULT_EXCHANGE]();
+    await client.loadMarkets();
+    const priceFeed = new CcxtPriceFeed(config.symbol, client);
     await priceFeed.scheduleFetchTrades();
+    priceFeed.logger.info(`Created price feed for symbol ${config.symbol.offerSymbol}/${config.symbol.quoteSymbol}`);
     return priceFeed;
   }
 }
