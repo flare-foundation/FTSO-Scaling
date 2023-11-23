@@ -16,7 +16,7 @@ import EncodingUtils from "./utils/EncodingUtils";
 import { promiseWithTimeout } from "../utils/retry";
 import { getLogger } from "../utils/logger";
 import { asError } from "./utils/error";
-import { FtsoTransaction, State } from "./Entity";
+import { FtsoLog, FtsoTransaction, State } from "./Entity";
 import { Between, DataSource } from "typeorm";
 import { getDataSource } from "../DataSource";
 
@@ -35,8 +35,8 @@ export enum Event {
 }
 
 class DBCache {
-  // readonly priceEpochCommits = new Map<PriceEpochId, Map<Address, CommitHash>>();
-  // readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
+  readonly priceEpochCommits = new Map<PriceEpochId, Map<Address, CommitHash>>();
+  readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
   readonly priceEpochSignatures = new Map<PriceEpochId, Map<Address, [SignatureData, Timestamp]>>();
   readonly priceEpochFinalizes = new Map<PriceEpochId, [FinalizeData, Timestamp]>();
   readonly rewardSignatures = new Map<RewardEpochId, Map<Address, [SignatureData, Timestamp]>>();
@@ -69,6 +69,9 @@ export class IndexerClient extends AsyncEventEmitter {
   }
 
   async getCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
+    const cached = this.cache.priceEpochCommits.get(priceEpochId);
+    if (cached) return cached;
+
     const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
     const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
 
@@ -95,6 +98,9 @@ export class IndexerClient extends AsyncEventEmitter {
   }
 
   async getReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealBitvoteData>> {
+    const cached = this.cache.priceEpochReveals.get(priceEpochId);
+    if (cached) return cached;
+
     const start = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
     const revealDeadline = this.epochs.revealDeadlineSec(priceEpochId + 1);
 
@@ -126,24 +132,120 @@ export class IndexerClient extends AsyncEventEmitter {
     return epochReveals;
   }
 
-  getSignatures(priceEpochId: PriceEpochId): Map<Address, [SignatureData, Timestamp]> {
-    return this.cache.priceEpochSignatures.get(priceEpochId) ?? new Map();
+  async getSignatures(priceEpochId: PriceEpochId): Promise<Map<Address, [SignatureData, Timestamp]>> {
+    const cached = this.cache.priceEpochSignatures.get(priceEpochId);
+    if (cached) return cached;
+
+    const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
+    const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
+
+    const txns: FtsoTransaction[] = await this.dataSource.getRepository(FtsoTransaction).find({
+      where: {
+        func_sig: this.encodingUtils.functionSignature("signResult").slice(2),
+        timestamp: Between(start, nextStart - 1),
+      },
+    });
+
+    const signatures = new Map<Address, [SignatureData, Timestamp]>();
+    for (const tx of txns) {
+      const sig = this.encodingUtils.extractSignatureData(tx.toTxData());
+      getLogger("IndexerClient").info(`Got signature ${tx.from} - ${sig.merkleRoot}`);
+      signatures.set("0x" + tx.from.toLowerCase(), [sig, tx.timestamp]);
+    }
+
+    this.cache.priceEpochSignatures.set(priceEpochId, signatures);
+    return signatures;
   }
 
-  getFinalize(priceEpochId: PriceEpochId): [FinalizeData, Timestamp] | undefined {
-    return this.cache.priceEpochFinalizes.get(priceEpochId);
+  async getFinalize(priceEpochId: PriceEpochId): Promise<[FinalizeData, Timestamp]> {
+    const cached = this.cache.priceEpochFinalizes.get(priceEpochId);
+    if (cached) return cached;
+
+    const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
+    const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
+
+    const tx = await this.dataSource.getRepository(FtsoTransaction).findOne({
+      where: {
+        func_sig: this.encodingUtils.functionSignature("finalize").slice(2),
+        timestamp: Between(start, nextStart - 1),
+        status: true,
+      },
+    });
+
+    if (tx === null) {
+      throw new Error(`No finalize transaction found for epoch ${priceEpochId}`);
+    }
+
+    const f = this.encodingUtils.extractFinalize(tx.toTxData());
+    getLogger("IndexerClient").info(`Got finalize ${tx.from} - ${f.epochId}`);
+    this.cache.priceEpochFinalizes.set(priceEpochId, [f, tx.timestamp]);
+    return [f, tx.timestamp];
   }
 
-  getRewardSignatures(rewardEpochId: RewardEpochId): Map<Address, [SignatureData, Timestamp]> {
-    return this.cache.rewardSignatures.get(rewardEpochId) ?? new Map();
-  }
+  // async getRewardSignatures(rewardEpochId: RewardEpochId): Promise<Map<Address, [SignatureData, Timestamp]>> {
+  //   const cached = this.cache.rewardSignatures.get(rewardEpochId);
+  //   if (cached) return cached;
 
-  getRewardFinalize(rewardEpochId: RewardEpochId): [FinalizeData, Timestamp] | undefined {
-    return this.cache.rewardFinalizes.get(rewardEpochId);
-  }
+  //   const start = this.epochs.priceEpochStartTimeSec(this.epochs.firstPriceEpochForRewardEpoch(rewardEpochId));
+  //   const nextStart = this.epochs.priceEpochStartTimeSec(this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId) + 1);
 
-  getRewardOffers(rewardEpochId: RewardEpochId): RewardOffered[] {
-    return this.cache.rewardEpochOffers.get(rewardEpochId) ?? [];
+  //   const txns: FtsoTransaction[] = await this.dataSource.getRepository(FtsoTransaction).find({
+  //     where: {
+  //       func_sig: this.encodingUtils.functionSignature("signRewards").slice(2),
+  //       timestamp: Between(start, nextStart - 1),
+  //     },
+  //   });
+
+  //   const signatures = new Map<Address, [SignatureData, Timestamp]>();
+  //   for (const tx of txns) {
+  //     const sig = this.encodingUtils.extractSignatureData(tx.toTxData());
+  //     getLogger("IndexerClient").info(`Got reward signature ${tx.from} - ${sig.merkleRoot}`);
+  //     signatures.set("0x" + tx.from.toLowerCase(), [sig, tx.timestamp]);
+  //   }
+
+  //   this.cache.rewardSignatures.set(rewardEpochId, signatures);
+  //   return signatures;
+  // }
+
+  // getRewardFinalize(rewardEpochId: RewardEpochId): [FinalizeData, Timestamp] | undefined {
+  //   return this.cache.rewardFinalizes.get(rewardEpochId);
+  // }
+
+  async getRewardOffers(rewardEpochId: RewardEpochId): Promise<RewardOffered[]> {
+    const cached = this.cache.rewardEpochOffers.get(rewardEpochId);
+    if (cached) return cached;
+
+    const start = this.epochs.priceEpochStartTimeSec(this.epochs.firstPriceEpochForRewardEpoch(rewardEpochId - 1));
+    const nextStart = this.epochs.priceEpochStartTimeSec(
+      this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId - 1) + 1
+    );
+
+    const txns = await this.dataSource.getRepository(FtsoTransaction).find({
+      where: {
+        func_sig: this.encodingUtils.functionSignature("offerRewards").slice(2),
+        timestamp: Between(start, nextStart - 1),
+        status: true,
+      },
+    });
+
+    const rewardOffers: RewardOffered[] = [];
+    for (const tx of txns) {
+      const logs = await this.dataSource.getRepository(FtsoLog).findOne({
+        where: {
+          tx_hash: tx.hash,
+        },
+      });
+      const offers = this.encodingUtils.extractOffers({
+        ...tx.toTxData(),
+        logs: JSON.parse(logs!.log),
+      } as TxData);
+      getLogger("IndexerClient").info(`Got reward offers ${tx.from} - ${offers.length}`);
+      rewardOffers.push(...offers);
+    }
+
+    this.cache.rewardEpochOffers.set(rewardEpochId, rewardOffers);
+
+    return rewardOffers;
   }
 
   async processBlock(block: BlockData) {

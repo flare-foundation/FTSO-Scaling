@@ -80,7 +80,7 @@ export class RewardVoter {
 
     this.logger.info(`Block number before now: ${await getBlockNumberBefore(this.web3, Date.now())}`);
 
-    const rewardOffers = this.indexer.getRewardOffers(rewardEpoch)!;
+    const rewardOffers = await this.indexer.getRewardOffers(rewardEpoch)!;
     if (rewardOffers.length > 0) {
       this.logger.info(
         `[${finalizedEpoch}] We have ${rewardOffers.length} offers for reward epoch ${rewardEpoch}, calculating rewards.`

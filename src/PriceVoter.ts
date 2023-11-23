@@ -5,7 +5,6 @@ import { asError, errorString } from "./protocol/utils/error";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { EpochData } from "./protocol/voting-types";
 import { TimeoutError, promiseWithTimeout } from "./utils/retry";
-import { BlockIndex } from "./protocol/BlockIndex";
 import { IndexerClient } from "./protocol/IndexerClient";
 
 export class PriceVoter {
@@ -72,7 +71,7 @@ export class PriceVoter {
 
   private async runVotingProcotol(currentEpochId: number, epochDeadlineSec: number) {
     await randomDelay(500, 2000); // Random delay to avoid transaction contention.
-    const priceEpochData = this.client.getPricesForEpoch(currentEpochId);
+    const priceEpochData = await this.client.getPricesForEpoch(currentEpochId);
     this.logger.info(`[${currentEpochId}] Committing data for current epoch.`);
     await runWithDuration("COMMIT", async () => await this.client.commit(priceEpochData));
 
@@ -129,7 +128,7 @@ export class PriceVoter {
   private async maybeRegisterForRewardEpoch(nextRewardEpochId: number) {
     if (
       this.isRegisteredForRewardEpoch(nextRewardEpochId) ||
-      this.index.getRewardOffers(nextRewardEpochId).length === 0
+      (await this.index.getRewardOffers(nextRewardEpochId)).length === 0
     ) {
       return;
     }

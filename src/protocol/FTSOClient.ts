@@ -62,14 +62,14 @@ export class FTSOClient implements SubProtocol {
 
   private lastEpochData: EpochData | undefined;
 
-  getCommit(epochId: number): Promise<string> {
-    const data = this.getPricesForEpoch(epochId);
+  async getCommit(epochId: number): Promise<string> {
+    const data = await this.getPricesForEpoch(epochId);
     const hash = hashForCommit(this.address, data.random.value, data.merkleRoot, data.pricesHex);
     this.lastEpochData = data;
     return Promise.resolve(hash);
   }
 
-  getReveal(epochId: number): Promise<EpochData | undefined> {
+  async getReveal(epochId: number): Promise<EpochData | undefined> {
     return Promise.resolve(this.lastEpochData);
   }
 
@@ -201,7 +201,7 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
     );
     const committedFailedReveal = revealResult.committedFailedReveal;
 
-    const finalizationData = this.index.getFinalize(priceEpochId - 1);
+    const finalizationData = await this.index.getFinalize(priceEpochId - 1);
     let rewardedSigners: string[] = [];
 
     if (finalizationData !== undefined) {
@@ -252,7 +252,7 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
       return [];
     }
 
-    const epochSignatures = this.index.getSignatures(priceEpochId - 1);
+    const epochSignatures = await this.index.getSignatures(priceEpochId - 1);
     for (const [signature, signatureTime] of epochSignatures.values()) {
       if (signatureTime > finalizationTime) continue; // Only reward signatures with block timestamp no greater than that of finalization
       const signer = await this.provider.recoverSigner(data.merkleRoot, signature);
@@ -265,17 +265,17 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
     return Array.from(rewardedSigners);
   }
 
-  orderedPriceFeeds(priceEpochId: number): (IPriceFeed | undefined)[] {
+ async  orderedPriceFeeds(priceEpochId: number): Promise<(IPriceFeed | undefined)[]> {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    return RewardLogic.feedSequenceByOfferValue(this.index.getRewardOffers(rewardEpoch)).map(feed =>
+    return RewardLogic.feedSequenceByOfferValue(await this.index.getRewardOffers(rewardEpoch)).map(feed =>
       this.priceFeedsById.get(feedId(feed))
     );
   }
 
-  getPricesForEpoch(priceEpochId: number): EpochData {
+  async getPricesForEpoch(priceEpochId: number): Promise<EpochData> {
     if (this.priceFeedsById.size === 0) throw new Error("No price feeds registered.");
 
-    const prices = this.orderedPriceFeeds(priceEpochId).map(priceFeed =>
+    const prices = (await this.orderedPriceFeeds(priceEpochId)).map(priceFeed =>
       priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE
     );
     const data: EpochData = {
@@ -300,7 +300,7 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
     voterWeights: Map<Address, BN>
   ): Promise<MedianCalculationResult[]> {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const orderedPriceFeeds: Feed[] = RewardLogic.feedSequenceByOfferValue(this.index.getRewardOffers(rewardEpoch));
+    const orderedPriceFeeds: Feed[] = RewardLogic.feedSequenceByOfferValue(await this.index.getRewardOffers(rewardEpoch));
     const numberOfFeeds = orderedPriceFeeds.length;
     const voters = revealResult.revealers;
     const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);

@@ -12,6 +12,7 @@ import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/
 import { PriceVoter } from "../../src/PriceVoter";
 import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import { BlockIndexer } from "../../src/BlockIndexer";
+import { IndexerClient } from "../../src/protocol/IndexerClient";
 
 async function main() {
   const myId = +process.argv[2];
@@ -38,11 +39,11 @@ async function main() {
   const provider = await Web3Provider.create(contractAddresses, web3, parameters, privateKey);
   const epochSettings = EpochSettings.fromProvider(provider);
   const feeds = await getFeeds(useRandomFeed, parameters);
-  const indexer = new BlockIndexer(myId, provider);
-  indexer.run();
+  const indexerClient = new IndexerClient(myId, epochSettings, contractAddresses);
+  await indexerClient.initialize();
 
-  const client = new FTSOClient(provider, indexer, epochSettings, feeds, getLogger(FTSOClient.name));
-  const priceVoter = new PriceVoter(client, indexer, epochSettings);
+  const client = new FTSOClient(provider, indexerClient, epochSettings, feeds, getLogger(FTSOClient.name));
+  const priceVoter = new PriceVoter(client, indexerClient, epochSettings);
   await priceVoter.run();
 }
 

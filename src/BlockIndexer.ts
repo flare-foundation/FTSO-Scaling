@@ -15,7 +15,7 @@ export class BlockIndexer extends IndexerClient {
   }
 
   async run(startBlock: number | undefined = undefined) {
-    this.initialize();
+    await this.initialize();
     if (startBlock) {
       this.lastProcessedBlockNumber = startBlock - 1;
     } else {
