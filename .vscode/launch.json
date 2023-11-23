@@ -20,14 +20,13 @@
       "type": "node",
       "console": "integratedTerminal",
       "request": "launch",
-      "name": "Run price voter 1",
+      "name": "Run price voter",
       "runtimeExecutable": "yarn",
       "outFiles": ["${workspaceFolder}/**/*.js"],
       "env": {
         "NODE_ENV": "development"
       },
-      "runtimeArgs": ["hardhat", "run-price-voter", "1", "--network", "scdev"]
-    }
-
+      "runtimeArgs": ["ts-node", "deployment/scripts/run-price-voter.ts", "25", "random"]
+    },
   ]
 }
