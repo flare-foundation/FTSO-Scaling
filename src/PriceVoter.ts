@@ -81,7 +81,8 @@ export class PriceVoter {
       this.logger.info(`[${currentEpochId}] Revealing data for previous epoch: ${previousEpochId}.`);
       await runWithDuration("REVEAL", async () => await this.client.reveal(this.previousPriceEpochData!));
 
-      while ((await this.index.getMaxTimestamp()) < epochDeadlineSec) {
+      const revealDeadine = this.epochs.revealDeadlineSec(currentEpochId);
+      while ((await this.index.getMaxTimestamp()) < revealDeadine) {
         await sleepFor(1000);
       }
 
@@ -90,7 +91,7 @@ export class PriceVoter {
       this.logger.info(
         `[${currentEpochId}] Reveal deadline ended, calculating results for previous epoch ${previousEpochId} and signing: ${epochMerkleRoot}`
       );
-      await randomDelay(0, 2000);
+      await randomDelay(1000, 2000);
       await runWithDuration("RESULTS", async () => await this.client.signResult(previousEpochId, epochMerkleRoot));
 
       await runWithDuration("FINALIZATION", async () => await this.awaitFinalizationOrTimeout(previousEpochId));
@@ -99,7 +100,7 @@ export class PriceVoter {
           `Finalization happened outside price epoch window: ${this.currentTimeSec()} > ${epochDeadlineSec}`
         );
       }
-      await randomDelay(0, 1000);
+      await randomDelay(1000, 2000);
       // await runWithDuration("PUBLISH", async () => await this.client.publishPrices(result, [0, 1]));
     }
     this.previousPriceEpochData = priceEpochData;
@@ -118,7 +119,8 @@ export class PriceVoter {
   }
 
   private async awaitFinalization(priceEpochId: number) {
-    while (!this.index.getFinalize(priceEpochId)) {
+    this.logger.info(`Awaiting finalization for ${priceEpochId}`);
+    while ((await this.index.queryFinalize(priceEpochId + 1)) === undefined) {
       this.logger.info(`Epoch ${priceEpochId} not finalized, keep processing new blocks`);
       await sleepFor(500);
     }

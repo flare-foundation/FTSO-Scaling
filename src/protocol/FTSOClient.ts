@@ -107,6 +107,7 @@ export class FTSOClient implements SubProtocol {
 
   async commit(data: EpochData) {
     const hash = hashForCommit(this.address, data.random.value, data.merkleRoot, data.pricesHex);
+    this.logger.info(`Committing to price epoch ${data.epochId} with hash ${hash}`);
     await this.provider.commit(hash);
   }
 
@@ -146,8 +147,8 @@ export class FTSOClient implements SubProtocol {
   }
 
 async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
-    const commits = await this.index.getCommits(priceEpochId);
-    const reveals = await this.index.getReveals(priceEpochId);
+    const commits = await this.index.queryCommits(priceEpochId);
+    const reveals = await this.index.queryReveals(priceEpochId);
     // this.logger.info(`Calculating reveals for price epoch ${priceEpochId}: ${[reveals.keys().]} keys for reveals, }`);
     const committers = [...commits.keys()];
     const eligibleCommitters = committers
@@ -201,7 +202,7 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
     );
     const committedFailedReveal = revealResult.committedFailedReveal;
 
-    const finalizationData = await this.index.getFinalize(priceEpochId - 1);
+    const finalizationData = await this.index.queryFinalize(priceEpochId - 1);
     let rewardedSigners: string[] = [];
 
     if (finalizationData !== undefined) {
@@ -252,7 +253,7 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
       return [];
     }
 
-    const epochSignatures = await this.index.getSignatures(priceEpochId - 1);
+    const epochSignatures = await this.index.querySignatures(priceEpochId - 1);
     for (const [signature, signatureTime] of epochSignatures.values()) {
       if (signatureTime > finalizationTime) continue; // Only reward signatures with block timestamp no greater than that of finalization
       const signer = await this.provider.recoverSigner(data.merkleRoot, signature);

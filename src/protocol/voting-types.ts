@@ -81,6 +81,7 @@ export interface TxData {
   readonly from: string;
   /** Will be `null` for contract creation transactions. */
   readonly to: string | null;
+  readonly status: boolean;
   readonly logs?: Log[];
 }
 

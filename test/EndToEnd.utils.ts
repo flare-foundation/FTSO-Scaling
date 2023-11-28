@@ -167,7 +167,7 @@ export async function commit(priceEpochId: number, ftsoClients: FTSOClient[], vo
   }
   for (const client of ftsoClients) {
     await client.processNewBlocks();
-    expect(client.index.getCommits(currentEpoch)?.size).to.be.equal(ftsoClients.length);
+    expect(client.index.queryCommits(currentEpoch)?.size).to.be.equal(ftsoClients.length);
   }
 }
 
@@ -180,7 +180,7 @@ export async function reveal(priceEpochId: number, ftsoClients: FTSOClient[], vo
   }
   for (const client of ftsoClients) {
     await client.processNewBlocks();
-    expect(client.index.getReveals(revealEpoch)?.size).to.be.equal(ftsoClients.length);
+    expect(client.index.queryReveals(revealEpoch)?.size).to.be.equal(ftsoClients.length);
   }
 }
 
@@ -254,7 +254,7 @@ export async function signAndSend(
     await client.tryFinalizeOnceSignaturesReceived(priceEpochId);
   }
 
-  const signaturesTmp = [...firstClient.index.getSignatures(priceEpochId)!.values()].map(([s, _]) => s);
+  const signaturesTmp = [...firstClient.index.querySignatures(priceEpochId)!.values()].map(([s, _]) => s);
   const merkleRoots = [...new Set(signaturesTmp.map(sig => sig.merkleRoot)).values()];
   expect(merkleRoots.length).to.be.equal(1);
   expect(finalized).to.be.true;

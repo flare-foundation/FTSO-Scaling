@@ -75,7 +75,7 @@ export class MockDBIndexer {
       ftx.func_sig = tx.input.slice(2, 10);
       ftx.data = tx.input.slice(2);
       ftx.block_id = tx.blockNumber;
-      ftx.status = true;
+      ftx.status = tx.status;
       ftx.from = tx.from.slice(2);
       ftx.to = tx.to?.slice(2) ?? "";
       ftx.timestamp = timestamp;

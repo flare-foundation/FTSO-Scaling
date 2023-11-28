@@ -68,7 +68,7 @@ export class IndexerClient extends AsyncEventEmitter {
     return state!.index;
   }
 
-  async getCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
+  async queryCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
     const cached = this.cache.priceEpochCommits.get(priceEpochId);
     if (cached) return cached;
 
@@ -97,7 +97,7 @@ export class IndexerClient extends AsyncEventEmitter {
     return epochCommits;
   }
 
-  async getReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealBitvoteData>> {
+  async queryReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealBitvoteData>> {
     const cached = this.cache.priceEpochReveals.get(priceEpochId);
     if (cached) return cached;
 
@@ -132,12 +132,19 @@ export class IndexerClient extends AsyncEventEmitter {
     return epochReveals;
   }
 
-  async getSignatures(priceEpochId: PriceEpochId): Promise<Map<Address, [SignatureData, Timestamp]>> {
+  async querySignatures(priceEpochId: PriceEpochId): Promise<Map<Address, [SignatureData, Timestamp]>> {
     const cached = this.cache.priceEpochSignatures.get(priceEpochId);
-    if (cached) return cached;
+    if (cached) {
+      getLogger("IndexerClient").info(`Got cached signatures for epoch ${priceEpochId}`);
+      return cached;
+    }
 
     const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
     const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
+
+    getLogger("IndexerClient").info(
+      `Querying signatures for epoch ${priceEpochId}, time interval: ${start} - ${nextStart}`
+    );
 
     const txns: FtsoTransaction[] = await this.dataSource.getRepository(FtsoTransaction).find({
       where: {
@@ -153,12 +160,17 @@ export class IndexerClient extends AsyncEventEmitter {
       signatures.set("0x" + tx.from.toLowerCase(), [sig, tx.timestamp]);
     }
 
-    this.cache.priceEpochSignatures.set(priceEpochId, signatures);
+    if ((await this.getMaxTimestamp()) > nextStart) {
+
+      this.cache.priceEpochSignatures.set(priceEpochId, signatures);
+    }
+
     return signatures;
   }
 
-  async getFinalize(priceEpochId: PriceEpochId): Promise<[FinalizeData, Timestamp]> {
-    const cached = this.cache.priceEpochFinalizes.get(priceEpochId);
+  async queryFinalize(priceEpochId: PriceEpochId): Promise<[FinalizeData, Timestamp] | undefined> {
+    const finalizeEpoch = priceEpochId - 1;
+    const cached = this.cache.priceEpochFinalizes.get(finalizeEpoch);
     if (cached) return cached;
 
     const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
@@ -173,12 +185,12 @@ export class IndexerClient extends AsyncEventEmitter {
     });
 
     if (tx === null) {
-      throw new Error(`No finalize transaction found for epoch ${priceEpochId}`);
+      return undefined;
     }
 
     const f = this.encodingUtils.extractFinalize(tx.toTxData());
     getLogger("IndexerClient").info(`Got finalize ${tx.from} - ${f.epochId}`);
-    this.cache.priceEpochFinalizes.set(priceEpochId, [f, tx.timestamp]);
+    this.cache.priceEpochFinalizes.set(finalizeEpoch, [f, tx.timestamp]);
     return [f, tx.timestamp];
   }
 

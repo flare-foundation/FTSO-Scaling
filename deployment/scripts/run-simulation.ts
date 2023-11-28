@@ -5,10 +5,13 @@ import { retry } from "../../src/utils/retry";
 import { sleepFor } from "../../src/utils/time";
 import { promisify } from "util";
 import Web3 from "web3";
+import fs from "fs";
 
 const PRICE_VOTER_COUNT = 3;
 const FINALIZER_COUNT = 2;
 const RPC = "http://127.0.0.1:8545";
+
+const indexerDbPath = "./db/indexer.db";
 
 /**
  * This script is used to run a local simulation of the FTSO on the local hardhat network.
@@ -42,12 +45,12 @@ async function main() {
       childProcesses.push(startPriceVoter(id++));
       await sleepFor(1000);
     }
-    setTimeout(() => {
-      for (let i = 0; i < PRICE_VOTER_COUNT; i++) {
-        childProcesses.push(startRewardVoter(id++));
-        sleepFor(1000);
-      }
-    }, 30_000);
+    // setTimeout(() => {
+    //   for (let i = 0; i < PRICE_VOTER_COUNT; i++) {
+    //     childProcesses.push(startRewardVoter(id++));
+    //     sleepFor(1000);
+    //   }
+    // }, 30_000);
 
     for (let i = 0; i < FINALIZER_COUNT; i++) {
       childProcesses.push(startFinalizer(id++));
@@ -95,6 +98,8 @@ function startRewardSender(): ChildProcess {
 }
 
 function startIndexer(id: number): ChildProcess {
+  if (fs.existsSync(indexerDbPath)) fs.unlinkSync(indexerDbPath);
+
   const process = spawn("yarn", ["ts-node", "deployment/scripts/run-indexer.ts", id.toString()]);
   process.stdout.on("data", function (data) {
     console.log(`[Indexer ${id}]: ${data}`);
@@ -160,7 +165,7 @@ function startRewardVoter(id: number): ChildProcess {
 }
 
 /** Configures Hardhat to automatically mine blocks in the specified interval. */
-export async function setIntervalMining(web3: Web3, interval: number = 1000) {
+export async function setIntervalMining(web3: Web3, interval: number = 500) {
   await promisify((web3.currentProvider as any).send.bind(web3.currentProvider))({
     jsonrpc: "2.0",
     method: "evm_setAutomine",

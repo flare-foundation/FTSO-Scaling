@@ -44,6 +44,7 @@ export class FtsoTransaction extends BaseEntity {
       from: "0x" + this.from,
       to: "0x" + this.to,
       blockNumber: this.block_id,
+      status: this.status,
     };
     return txData;
   }
