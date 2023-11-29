@@ -1,0 +1,23 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+logs
+deployed-contracts.json
+
+# Hardhat files
+cache
+artifacts
+
+# Typescript 
+dist
+typechain
+typechain-truffle
+typechain-web3
+
+# misc
+nul
+.DS_Store
+.nyc_output

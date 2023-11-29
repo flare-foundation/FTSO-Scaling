@@ -1,135 +1,83 @@
 {
-  "name": "hardhat-project",
-  "scripts": {
-    "compile": "yarn hardhat compile && yarn typechain-ethers-v6 && yarn typechain-truffle-v5 && yarn typechain-web3-v1",
-    "c": "yarn compile",
-    "typechain-ethers-v6": "yarn typechain --target=ethers-v6 --out-dir typechain \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
-    "typechain-truffle-v5": "yarn typechain --target=truffle-v5 --out-dir typechain-truffle \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
-    "typechain-web3-v1": "yarn typechain --target=web3-v1 --out-dir typechain-web3 \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
-    "test": "yarn hardhat test",
-    "test-coverage": "nyc yarn hardhat coverage",
-    "eslint": "eslint . --ext .ts"
-  },
-  "engines": {
-    "node": ">=18 <=20"
-  },
-  "engineStrict": true,
+  "name": "nest-typescript-starter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Nest TypeScript starter repository",
   "license": "MIT",
-  "devDependencies": {
-    "@gnosis.pm/mock-contract": "^4.0.0",
-    "@istanbuljs/nyc-config-typescript": "^1.0.2",
-    "@nomicfoundation/hardhat-chai-matchers": "^2.0.1",
-    "@nomicfoundation/hardhat-ethers": "^3.0.0",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
-    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
-    "@nomicfoundation/hardhat-verify": "^1.0.0",
-    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
-    "@nomiclabs/hardhat-truffle5": "^2.0.7",
-    "@nomiclabs/hardhat-web3": "^2.0.0",
-    "@openzeppelin/test-helpers": "^0.5.16",
-    "@typechain/ethers-v6": "^0.4.0",
-    "@typechain/hardhat": "8.0.0",
-    "@typechain/truffle-v5": "^8.0.0",
-    "@typechain/web3-v1": "^6",
-    "@types/chai": "^4.3.5",
-    "@types/lodash": "^4.14.199",
-    "@types/mocha": "^10.0.1",
-    "@types/node": "^20.3.1",
-    "@typescript-eslint/eslint-plugin": "^6.7.0",
-    "@typescript-eslint/parser": "^6.7.0",
-    "chai": "^4.3.7",
-    "eslint": "^8.49.0",
-    "eslint-plugin-prettier": "^4.2.1",
-    "hardhat": "^2.15.0",
-    "hardhat-gas-reporter": "^1.0.8",
-    "nyc": "^15.1.0",
-    "prando": "^6.0.1",
-    "solidity-coverage": "^0.8.1",
-    "ts-node": "^10.9.1",
-    "typechain": "^8.3.0",
-    "typescript": "^5.2.2"
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"libs/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@ethersproject/abi": "^5.7.0",
-    "@openzeppelin/contracts": "^4.9.1",
-    "@types/mysql": "^2.15.23",
-    "ccxt": "^4.0.64",
-    "dotenv": "^16.1.4",
-    "ethereumjs-wallet": "^1.0.2",
-    "ethers": "^6.6.0",
-    "lodash": "^4.17.21",
-    "mysql2": "^3.6.2",
-    "sqlite3": "^5.1.6",
-    "typeorm": "^0.3.17",
-    "web3": "^1",
-    "winston": "^3.10.0"
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^3.1.1",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/swagger": "^7.1.16",
+    "@nestjs/typeorm": "^10.0.1",
+    "helmet": "^7.1.0",
+    "mysql2": "^3.6.5",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.17"
   },
-  "nyc": {
-    "extends": "@istanbuljs/nyc-config-typescript",
-    "check-coverage": false,
-    "all": true,
-    "include": [
-      "src/**/!(*.test.*).[tj]s?(x)"
-    ],
-    "exclude": [
-      "src/price-feeds/**/*",
-      "src/providers/Web3Provider.ts"
-    ],
-    "reporter": [
-      "html",
-      "text-summary"
-    ],
-    "report-dir": "coverage/ts",
-    "statements": 80,
-    "lines": 80
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.1",
+    "@nestjs/schematics": "^10.0.1",
+    "@nestjs/testing": "^10.0.0",
+    "@swc/cli": "^0.1.62",
+    "@swc/core": "^1.3.64",
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.2",
+    "@types/node": "^20.3.1",
+    "@types/supertest": "^2.0.12",
+    "@typescript-eslint/eslint-plugin": "^5.59.11",
+    "@typescript-eslint/parser": "^5.59.11",
+    "eslint": "^8.42.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "jest": "^29.5.0",
+    "prettier": "^2.8.8",
+    "source-map-support": "^0.5.21",
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.1.0",
+    "ts-loader": "^9.4.3",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.1.3"
   },
-  "prettier": {
-    "printWidth": 120,
-    "semi": true,
-    "singleQuote": false,
-    "trailingComma": "es5",
-    "tabWidth": 2,
-    "arrowParens": "avoid"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "browser": true,
-      "es2017": true
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
     },
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended"
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
     ],
-    "overrides": [],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module",
-      "project": "./tsconfig.json"
-    },
-    "plugins": [
-      "@typescript-eslint",
-      "prettier"
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/src/",
+      "<rootDir>/libs/"
     ],
-    "rules": {
-      "prettier/prettier": "error",
-      "linebreak-style": [
-        "error",
-        "unix"
-      ],
-      "guard-for-in": "warn",
-      "@typescript-eslint/await-thenable": "warn",
-      "@typescript-eslint/no-floating-promises": [
-        "error",
-        {
-          "ignoreVoid": true
-        }
-      ],
-      "no-fallthrough": "error",
-      "@typescript-eslint/prefer-namespace-keyword": "off",
-      "@typescript-eslint/no-namespace": "off",
-      "@typescript-eslint/no-inferrable-types": "off"
+    "moduleNameMapper": {
+      "^@app/ftso-protocol(|/.*)$": "<rootDir>/libs/ftso-protocol/src/$1"
     }
   }
 }

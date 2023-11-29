@@ -5,7 +5,7 @@ import "../../governance/implementation/Governed.sol";
 
 contract VotingManager is Governed {
     uint256 public constant BUFFER_TIMESTAMP_OFFSET = 1636070400 seconds;
-    uint256 public constant BUFFER_WINDOW = 90 seconds;
+    uint256 public constant BUFFER_WINDOW = 45 seconds;
     uint256 public constant TOTAL_STORED_PROOFS = (5 weeks) / BUFFER_WINDOW;
 
     uint256 public firstRewardedPriceEpoch;

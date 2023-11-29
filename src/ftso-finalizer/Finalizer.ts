@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { getLogger } from "./utils/logger";
+import { getLogger } from "../../old/src/utils/logger";
 import { errorString } from "./protocol/utils/error";
 import { Event } from "./protocol/BlockIndex";
 import { FinalizeData, PriceEpochId, RewardEpochId, SignatureData } from "./protocol/voting-types";
@@ -7,8 +7,8 @@ import { toBN } from "./protocol/utils/voting-utils";
 import _ from "lodash";
 import { EpochSettings } from "./protocol/utils/EpochSettings";
 import { IVotingProvider } from "./protocol/IVotingProvider";
-import { runWithDuration, sleepFor } from "./utils/time";
-import { BlockIndexer } from "./BlockIndexer";
+import { runWithDuration, sleepFor } from "../../old/src/utils/time";
+import { BlockIndexer } from "../../old/src/BlockIndexer";
 
 export class Finalizer {
   private readonly logger = getLogger(Finalizer.name);

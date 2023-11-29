@@ -5,14 +5,23 @@ import {
   Feed,
   MedianCalculationResult,
   MedianCalculationSummary,
+  RevealBitvoteData,
   RevealResult,
   RewardOffered,
 } from "./voting-types";
-import { feedId, hashBytes, parsePrices, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
+import {
+  combineRandom,
+  feedId,
+  hashBytes,
+  hashForCommit,
+  parsePrices,
+  toBN,
+  unprefixedSymbolBytes,
+} from "./utils/voting-utils";
 import Web3 from "web3";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
-import { RewardLogic } from "./RewardLogic";
+import { RewardLogic } from "./reward-calculation";
 
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
@@ -45,6 +54,91 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
       initialIndex: i,
     });
   }
+  return result;
+}
+
+export async function calculateResults(
+  priceEpochId: number,
+  commits: Map<string, string>,
+  reveals: Map<string, RevealBitvoteData>,
+  rewardOffers: RewardOffered[],
+  voterWeights: Map<Address, BN>
+): Promise<EpochResult> {
+  const revealResult = await calculateRevealers(
+    commits,
+    reveals,
+    voterWeights
+  )!;
+  if (revealResult.revealers.length === 0) {
+    throw new Error(`No reveals for price epoch: ${priceEpochId}.`);
+  }
+
+  const results: MedianCalculationResult[] = await calculateFeedMedians(
+    revealResult,
+    voterWeights,
+    rewardOffers
+  );
+
+  const random: [Bytes32, number] = [
+    combineRandom(revealResult.revealedRandoms),
+    revealResult.committedFailedReveal.length,
+  ];
+  return calculateEpochResult(results, random, priceEpochId);
+}
+
+export async function calculateRevealers(
+  commits: Map<string, string>,
+  reveals: Map<string, RevealBitvoteData>,
+  voterWeights: Map<Address, BN>
+): Promise<RevealResult> {
+  const committers = [...commits.keys()];
+  const eligibleCommitters = committers
+    .map((sender) => sender.toLowerCase())
+    .filter((voter) => voterWeights.has(voter.toLowerCase())!);
+
+  const failedCommit = _.difference(eligibleCommitters, committers);
+  if (failedCommit.length > 0) {
+    this.logger.info(
+      `Not seen commits from ${failedCommit.length} voters: ${failedCommit}`
+    );
+  }
+
+  const [revealed, committedFailedReveal] = _.partition(
+    eligibleCommitters,
+    (committer) => {
+      const revealData = reveals.get(committer);
+      if (!revealData) {
+        return false;
+      }
+      const commitHash = commits.get(committer);
+      return (
+        commitHash ===
+        hashForCommit(
+          committer,
+          revealData.random,
+          revealData.merkleRoot,
+          revealData.prices
+        )
+      );
+    }
+  );
+
+  if (committedFailedReveal.length > 0) {
+    this.logger.info(
+      `Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`
+    );
+  }
+
+  const revealedRandoms = revealed.map((voter) => {
+    const rawRandom = reveals!.get(voter.toLowerCase())!.random;
+    return Bytes32.fromHexString(rawRandom);
+  });
+  const result: RevealResult = {
+    revealers: revealed,
+    committedFailedReveal,
+    revealedRandoms,
+    reveals,
+  };
   return result;
 }
 
@@ -103,22 +197,33 @@ export function calculateEpochResult(
   epochRandom: [Bytes32, number],
   priceEpochId: number
 ): EpochResult {
-  const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
+  const encodedPriceEpochId = Web3.utils.padLeft(
+    priceEpochId.toString(16),
+    EPOCH_BYTES * 2
+  );
   const encodedIndividualPrices: string[] = [];
 
   let encodedBulkPrices = "";
   let encodedBulkSymbols = "";
-  medianResults.forEach(data => {
-    const encodedPrice = Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
+  medianResults.forEach((data) => {
+    const encodedPrice = Web3.utils.padLeft(
+      data.data.finalMedianPrice.toString(16),
+      PRICE_BYTES * 2
+    );
     const encodedSymbol = unprefixedSymbolBytes(data.feed);
     encodedBulkPrices += encodedPrice;
     encodedBulkSymbols += encodedSymbol;
-    encodedIndividualPrices.push("0x" + encodedPriceEpochId + encodedSymbol + encodedPrice);
+    encodedIndividualPrices.push(
+      "0x" + encodedPriceEpochId + encodedSymbol + encodedPrice
+    );
   });
 
-  const encodedBulkPricesWithSymbols = "0x" + encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
+  const encodedBulkPricesWithSymbols =
+    "0x" + encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
   const bulkHash = hashBytes(encodedBulkPricesWithSymbols);
-  const individualPriceHashes = encodedIndividualPrices.map(tuple => hashBytes(tuple));
+  const individualPriceHashes = encodedIndividualPrices.map((tuple) =>
+    hashBytes(tuple)
+  );
 
   const [random, quality] = epochRandom;
   const encodedRandom =
@@ -128,8 +233,14 @@ export function calculateEpochResult(
     random.value.slice(2);
   const randomHash = hashBytes(encodedRandom);
 
-  const merkleTree = new MerkleTree([bulkHash, ...individualPriceHashes, randomHash]);
-  const bulkProof: Bytes32[] = merkleTree.getProof(bulkHash)!.map(p => Bytes32.fromHexString(p));
+  const merkleTree = new MerkleTree([
+    bulkHash,
+    ...individualPriceHashes,
+    randomHash,
+  ]);
+  const bulkProof: Bytes32[] = merkleTree
+    .getProof(bulkHash)!
+    .map((p) => Bytes32.fromHexString(p));
 
   const epochResult: EpochResult = {
     priceEpochId: priceEpochId,
@@ -154,24 +265,31 @@ export async function calculateFeedMedians(
   const orderedPriceFeeds: Feed[] = rewardEpochFeedSequence(rewardOffers);
   const numberOfFeeds = orderedPriceFeeds.length;
   const voters = revealResult.revealers;
-  const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
+  const weights = voters.map((voter) => voterWeights.get(voter.toLowerCase())!);
 
   const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
-  voters.forEach(voter => {
+  voters.forEach((voter) => {
     const revealData = revealResult.reveals.get(voter.toLowerCase())!;
     const voterPrices = parsePrices(revealData.prices, numberOfFeeds);
     voterPrices.forEach((price, i) => feedPrices[i].push(price));
   });
 
-  return orderedPriceFeeds.map((feed, i) => calculateResultsForFeed(voters, feedPrices[i], weights, feed));
+  return orderedPriceFeeds.map((feed, i) =>
+    calculateResultsForFeed(voters, feedPrices[i], weights, feed)
+  );
 }
 
-export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {
+export function calculateResultsForFeed(
+  voters: string[],
+  prices: BN[],
+  weights: BN[],
+  feed: Feed
+) {
   const medianSummary = calculateMedian(voters, prices, weights);
   const result: MedianCalculationResult = {
     feed: feed,
     voters: voters,
-    prices: prices.map(price => price.toNumber()),
+    prices: prices.map((price) => price.toNumber()),
     data: medianSummary,
     weights: weights,
   };
@@ -181,7 +299,11 @@ export function calculateResultsForFeed(voters: string[], prices: BN[], weights:
 /**
  * Given a list of voters, prices and weights, it calculates the median and other statistics.
  */
-export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]): MedianCalculationSummary {
+export function calculateMedian(
+  voters: Address[],
+  prices: BN[],
+  weights: BN[]
+): MedianCalculationSummary {
   const voteData = repack(voters, prices, weights);
   // Sort by price
   voteData.sort((a, b) => {
@@ -193,7 +315,7 @@ export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]):
     return 0;
   });
   let totalWeight = toBN(0);
-  weights.forEach(w => (totalWeight = totalWeight.add(w)));
+  weights.forEach((w) => (totalWeight = totalWeight.add(w)));
   const medianWeight = totalWeight.div(toBN(2)).add(totalWeight.mod(toBN(2)));
   let currentWeightSum = toBN(0);
 
