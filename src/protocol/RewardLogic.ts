@@ -39,51 +39,7 @@ export class Penalty implements RewardClaim {
  * Collection of utility methods used for reward claim calculation.
  */
 export namespace RewardLogic {
-  /**
-   * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
-   * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
-   * In case of equal values the feedId is used to sort in increasing order.
-   * The sequence defines positions of the feeds in the price vectors for the reward epoch.
-   */
-  export function feedSequenceByOfferValue(rewardOffers: RewardOffered[]): Feed[] {
-    const feedValues = new Map<string, FeedValue>();
-    for (const offer of rewardOffers) {
-      let feedValue = feedValues.get(feedId(offer));
-      if (feedValue === undefined) {
-        feedValue = {
-          feedId: feedId(offer),
-          offerSymbol: offer.offerSymbol,
-          quoteSymbol: offer.quoteSymbol,
-          flrValue: toBN(0),
-        };
-        feedValues.set(feedValue.feedId, feedValue);
-      }
-      feedValue.flrValue = feedValue.flrValue.add(offer.flrValue);
-    }
-
-    const feedSequence = Array.from(feedValues.values());
-    feedSequence.sort((a: FeedValue, b: FeedValue) => {
-      // sort decreasing by value and on same value increasing by feedId
-      if (a.flrValue.lt(b.flrValue)) {
-        return 1;
-      } else if (a.flrValue.gt(b.flrValue)) {
-        return -1;
-      }
-      if (feedId(a) < feedId(b)) {
-        return -1;
-      } else if (feedId(a) > feedId(b)) {
-        return 1;
-      }
-      return 0;
-    });
-    return feedSequence;
-
-    interface FeedValue extends Feed {
-      feedId: string;
-      flrValue: BN;
-    }
-  }
-
+  
   /**
    * Calculates the claims for the given price epoch.
    *

@@ -2,8 +2,13 @@ import BN from "bn.js";
 import _ from "lodash";
 
 import { EpochSettings } from "./utils/EpochSettings";
-import { calculateEpochResult, calculateResultsForFeed } from "./price-calculation";
-import { IPriceFeed } from "./IPriceFeed";
+import {
+  calculateEpochResult,
+  calculateFeedMedians,
+  calculateResultsForFeed,
+  rewardEpochFeedSequence,
+} from "./price-calculation";
+import { IPriceProvider } from "./IPriceFeed";
 import { IVotingProvider } from "./IVotingProvider";
 import {
   EpochData,
@@ -41,7 +46,7 @@ const NON_EXISTENT_PRICE = 0;
  * It supports pluggable price feeds and voting providers (Truffle for testing, Web3 for production).
  */
 export class FTSOClient implements SubProtocol {
-  private readonly priceFeedsById = new Map<string, IPriceFeed>();
+  private readonly priceProvidersByFeed = new Map<string, IPriceProvider>();
 
   get address() {
     return this.provider.senderAddressLowercase;
@@ -51,10 +56,10 @@ export class FTSOClient implements SubProtocol {
     private readonly provider: IVotingProvider,
     private readonly index: IndexerClient,
     private readonly epochs: EpochSettings,
-    priceFeeds: IPriceFeed[] = [],
+    priceProviders: IPriceProvider[] = [],
     private readonly logger: ILogger
   ) {
-    this.registerPriceFeeds(priceFeeds);
+    this.registerPriceProviders(priceProviders);
   }
 
   // SubProtocol implementation
@@ -80,9 +85,9 @@ export class FTSOClient implements SubProtocol {
   }
   // End SubProtocol implementation
 
-  private registerPriceFeeds(priceFeeds: IPriceFeed[]) {
-    for (const priceFeed of priceFeeds) {
-      this.priceFeedsById.set(feedId(priceFeed.getFeedInfo()), priceFeed);
+  private registerPriceProviders(priceProviders: IPriceProvider[]) {
+    for (const priceProvier of priceProviders) {
+      this.priceProvidersByFeed.set(feedId(priceProvier.getFeedInfo()), priceProvier);
     }
   }
 
@@ -133,10 +138,10 @@ export class FTSOClient implements SubProtocol {
       throw new Error(`No reveals for price epoch: ${priceEpochId}.`);
     }
 
-    const results: MedianCalculationResult[] = await this.calculateFeedMedians(
-      priceEpochId,
+    const results: MedianCalculationResult[] = await calculateFeedMedians(
       revealResult,
-      voterWeights
+      voterWeights,
+      await this.index.getRewardOffers(rewardEpoch)
     );
 
     const random: [Bytes32, number] = [
@@ -146,7 +151,7 @@ export class FTSOClient implements SubProtocol {
     return calculateEpochResult(results, random, priceEpochId);
   }
 
-async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
+  async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): Promise<RevealResult> {
     const commits = await this.index.queryCommits(priceEpochId);
     const reveals = await this.index.queryReveals(priceEpochId);
     // this.logger.info(`Calculating reveals for price epoch ${priceEpochId}: ${[reveals.keys().]} keys for reveals, }`);
@@ -195,10 +200,10 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
       throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
     }
 
-    const medianResults: MedianCalculationResult[] = await this.calculateFeedMedians(
-      priceEpochId,
+    const medianResults: MedianCalculationResult[] = await calculateFeedMedians(
       revealResult,
-      voterWeights
+      voterWeights,
+      rewardOffers
     );
     const committedFailedReveal = revealResult.committedFailedReveal;
 
@@ -266,17 +271,17 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
     return Array.from(rewardedSigners);
   }
 
- async  orderedPriceFeeds(priceEpochId: number): Promise<(IPriceFeed | undefined)[]> {
+  async getPriceProviders(priceEpochId: number): Promise<(IPriceProvider | undefined)[]> {
     const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    return RewardLogic.feedSequenceByOfferValue(await this.index.getRewardOffers(rewardEpoch)).map(feed =>
-      this.priceFeedsById.get(feedId(feed))
+    return rewardEpochFeedSequence(await this.index.getRewardOffers(rewardEpoch)).map(feed =>
+      this.priceProvidersByFeed.get(feedId(feed))
     );
   }
 
   async getPricesForEpoch(priceEpochId: number): Promise<EpochData> {
-    if (this.priceFeedsById.size === 0) throw new Error("No price feeds registered.");
+    if (this.priceProvidersByFeed.size === 0) throw new Error("No price feeds registered.");
 
-    const prices = (await this.orderedPriceFeeds(priceEpochId)).map(priceFeed =>
+    const prices = (await this.getPriceProviders(priceEpochId)).map(priceFeed =>
       priceFeed ? priceFeed.getPriceForEpoch(priceEpochId) : NON_EXISTENT_PRICE
     );
     const data: EpochData = {
@@ -293,26 +298,5 @@ async calculateRevealers(priceEpochId: number, voterWeights: Map<Address, BN>): 
   async publishPrices(prices: EpochResult, symbolIndices: number[]) {
     this.logger.info(`Publishing ${prices.medianData.length} prices for price epoch ${prices.priceEpochId}.`);
     return await this.provider.publishPrices(prices, symbolIndices);
-  }
-
-  private async calculateFeedMedians(
-    priceEpochId: number,
-    revealResult: RevealResult,
-    voterWeights: Map<Address, BN>
-  ): Promise<MedianCalculationResult[]> {
-    const rewardEpoch = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
-    const orderedPriceFeeds: Feed[] = RewardLogic.feedSequenceByOfferValue(await this.index.getRewardOffers(rewardEpoch));
-    const numberOfFeeds = orderedPriceFeeds.length;
-    const voters = revealResult.revealers;
-    const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
-
-    const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
-    voters.forEach(voter => {
-      const revealData = revealResult.reveals.get(voter.toLowerCase())!;
-      const voterPrices = parsePrices(revealData.prices, numberOfFeeds);
-      voterPrices.forEach((price, i) => feedPrices[i].push(price));
-    });
-
-    return orderedPriceFeeds.map((feed, i) => calculateResultsForFeed(voters, feedPrices[i], weights, feed));
   }
 }

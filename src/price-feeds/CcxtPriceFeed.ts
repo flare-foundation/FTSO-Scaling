@@ -1,5 +1,5 @@
 import ccxt, { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
-import { IPriceFeed, PriceFeedImplFactory } from "../protocol/IPriceFeed";
+import { IPriceProvider, PriceProviderImplFactory } from "../protocol/IPriceFeed";
 import { Feed } from "../protocol/voting-types";
 import { getLogger } from "../utils/logger";
 import { FeedConfig } from "../../deployment/config/FTSOParameters";
@@ -19,7 +19,7 @@ const DEFAULT_EXCHANGE = "binance";
  * Price feed that uses CCXT to fetch prices from a single exchange.
  * Uses periodic polling to retrieve latest trades.
  */
-export class CcxtPriceFeed implements IPriceFeed {
+export class CcxtPriceFeed implements IPriceProvider {
   private readonly logger = getLogger(CcxtPriceFeed.name);
   private readonly marketId: string;
   private lastPriceUSD: number = 0; // TODO: Avoid returning initial value 0
@@ -72,7 +72,7 @@ export class CcxtPriceFeed implements IPriceFeed {
     return this.feed;
   }
 
-  @PriceFeedImplFactory
+  @PriceProviderImplFactory
   static async create(config: FeedConfig): Promise<CcxtPriceFeed> {
     const client: Exchange = new (ccxt as any)[DEFAULT_EXCHANGE]();
     await client.loadMarkets();

@@ -1,9 +1,18 @@
 import BN from "bn.js";
-import { Address, EpochResult, Feed, MedianCalculationResult, MedianCalculationSummary } from "./voting-types";
-import { hashBytes, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
+import {
+  Address,
+  EpochResult,
+  Feed,
+  MedianCalculationResult,
+  MedianCalculationSummary,
+  RevealResult,
+  RewardOffered,
+} from "./voting-types";
+import { feedId, hashBytes, parsePrices, toBN, unprefixedSymbolBytes } from "./utils/voting-utils";
 import Web3 from "web3";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
+import { RewardLogic } from "./RewardLogic";
 
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
@@ -37,6 +46,51 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
     });
   }
   return result;
+}
+
+/**
+ * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
+ * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
+ * In case of equal values the feedId is used to sort in increasing order.
+ * The sequence defines positions of the feeds in the price vectors for the reward epoch.
+ */
+export function rewardEpochFeedSequence(rewardOffers: RewardOffered[]): Feed[] {
+  const feedValues = new Map<string, FeedValue>();
+  for (const offer of rewardOffers) {
+    let feedValue = feedValues.get(feedId(offer));
+    if (feedValue === undefined) {
+      feedValue = {
+        feedId: feedId(offer),
+        offerSymbol: offer.offerSymbol,
+        quoteSymbol: offer.quoteSymbol,
+        flrValue: toBN(0),
+      };
+      feedValues.set(feedValue.feedId, feedValue);
+    }
+    feedValue.flrValue = feedValue.flrValue.add(offer.flrValue);
+  }
+
+  const feedSequence = Array.from(feedValues.values());
+  feedSequence.sort((a: FeedValue, b: FeedValue) => {
+    // sort decreasing by value and on same value increasing by feedId
+    if (a.flrValue.lt(b.flrValue)) {
+      return 1;
+    } else if (a.flrValue.gt(b.flrValue)) {
+      return -1;
+    }
+    if (feedId(a) < feedId(b)) {
+      return -1;
+    } else if (feedId(a) > feedId(b)) {
+      return 1;
+    }
+    return 0;
+  });
+  return feedSequence;
+
+  interface FeedValue extends Feed {
+    feedId: string;
+    flrValue: BN;
+  }
 }
 
 /**
@@ -90,6 +144,26 @@ export function calculateEpochResult(
     merkleRoot: Bytes32.fromHexString(merkleTree.root!),
   };
   return epochResult;
+}
+
+export async function calculateFeedMedians(
+  revealResult: RevealResult,
+  voterWeights: Map<Address, BN>,
+  rewardOffers: RewardOffered[]
+): Promise<MedianCalculationResult[]> {
+  const orderedPriceFeeds: Feed[] = rewardEpochFeedSequence(rewardOffers);
+  const numberOfFeeds = orderedPriceFeeds.length;
+  const voters = revealResult.revealers;
+  const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
+
+  const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
+  voters.forEach(voter => {
+    const revealData = revealResult.reveals.get(voter.toLowerCase())!;
+    const voterPrices = parsePrices(revealData.prices, numberOfFeeds);
+    voterPrices.forEach((price, i) => feedPrices[i].push(price));
+  });
+
+  return orderedPriceFeeds.map((feed, i) => calculateResultsForFeed(voters, feedPrices[i], weights, feed));
 }
 
 export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {

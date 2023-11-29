@@ -147,7 +147,7 @@ export async function preparePrices(
   // initialPriceEpoch = currentPriceEpoch;
   for (const client of ftsoClients) {
     client.getPricesForEpoch(currentPriceEpoch);
-    const numberOfFeeds = client.orderedPriceFeeds(priceEpochId).length;
+    const numberOfFeeds = client.getPriceProviders(priceEpochId).length;
     const epochData = client.priceEpochData.get(currentPriceEpoch);
     expect(epochData).to.not.be.undefined;
     expect(epochData?.epochId).to.be.equal(currentPriceEpoch);
@@ -208,9 +208,9 @@ export async function calculateVoteResults(
     expect(data.random.equals(clientRandom)).to.be.false;
   }
 
-  const feedNumbers = new Set<number>(ftsoClients.map(client => client.orderedPriceFeeds(priceEpochId).length));
+  const feedNumbers = new Set<number>(ftsoClients.map(client => client.getPriceProviders(priceEpochId).length));
   expect(feedNumbers.size).to.be.equal(1);
-  const numberOfFeeds = ftsoClients[0].orderedPriceFeeds(priceEpochId).length;
+  const numberOfFeeds = ftsoClients[0].getPriceProviders(priceEpochId).length;
   for (let i = 0; i < ftsoClients.length - 1; i++) {
     for (let j = 0; j < numberOfFeeds; j++) {
       expect(finalMedianPrice[i][j]).to.be.equal(finalMedianPrice[i + 1][j]);

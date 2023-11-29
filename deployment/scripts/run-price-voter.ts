@@ -4,7 +4,7 @@ import { Web3Provider } from "../../src/providers/Web3Provider";
 import { FTSOParameters, loadFTSOParameters } from "../config/FTSOParameters";
 import { OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
-import { IPriceFeed } from "../../src/protocol/IPriceFeed";
+import { IPriceProvider } from "../../src/protocol/IPriceFeed";
 import { Feed } from "../../src/protocol/voting-types";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
@@ -48,7 +48,7 @@ async function main() {
 }
 
 async function getFeeds(useRandomFeed: boolean, parameters: FTSOParameters) {
-  let feeds: IPriceFeed[];
+  let feeds: IPriceProvider[];
   if (useRandomFeed) {
     // Uses a fake randomised price feed.
     const symbols = parameters.feeds.map(x => x.symbol);
@@ -66,9 +66,9 @@ function loadContracts(): ContractAddresses {
   return parsed;
 }
 
-function randomizeFeeds(feeds: IPriceFeed[]): IPriceFeed[] {
+function randomizeFeeds(feeds: IPriceProvider[]): IPriceProvider[] {
   return feeds.map(feed => {
-    return new (class implements IPriceFeed {
+    return new (class implements IPriceProvider {
       getPriceForEpoch(priceEpochId: number): number {
         const originalPrice = feed.getPriceForEpoch(priceEpochId);
         return addNoise(originalPrice);
