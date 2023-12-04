@@ -3,22 +3,26 @@
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
+    "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
+    "target": "ES2022",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "paths": {
-      "@app/ftso-protocol": [
-        "libs/ftso-protocol/src"
+      "@app/ftso-core": [
+        "libs/ftso-core/src"
       ],
-      "@app/ftso-protocol/*": [
-        "libs/ftso-protocol/src/*"
+      "@app/ftso-core/*": [
+        "libs/ftso-core/src/*"
       ]
     }
-  }
+  },
+  "exclude": [
+    "old"
+  ]
 }

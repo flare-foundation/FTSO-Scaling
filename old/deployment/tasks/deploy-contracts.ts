@@ -1,7 +1,7 @@
 import { Feed } from "../../src/protocol/voting-types";
 import { unprefixedSymbolBytes } from "../../src/protocol/utils/voting-utils";
 import { Account } from "web3-core";
-import { FTSOParameters } from "../config/FTSOParameters";
+import { FTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
 import {
   ERC20PriceOracleInstance,
   PriceOracleInstance,

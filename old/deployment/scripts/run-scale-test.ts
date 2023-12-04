@@ -1,7 +1,7 @@
 import { toBN } from "web3-utils";
 
 import { getWeb3 } from "../../src/utils/web3";
-import { loadFTSOParameters } from "../config/FTSOParameters";
+import { loadFTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
 import { sleepFor } from "../../src/utils/time";
 
 import fs from "fs";

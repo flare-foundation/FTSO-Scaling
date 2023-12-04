@@ -1,1 +1,6 @@
 node_modules
+.env
+artifacts
+dist
+
+.DS_Store

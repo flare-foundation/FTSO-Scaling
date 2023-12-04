@@ -4,7 +4,7 @@ import { IPriceProvider, priceProviderImplRegistry } from "../../src/protocol/IP
 import "../../src/price-feeds/CcxtPriceFeed";
 
 import Web3 from "web3";
-import { FeedConfig } from "../config/FTSOParameters";
+import { FeedConfig } from "../../../apps/ftso-calculator/src/FTSOParameters";
 
 export const OUTPUT_FILE = "./deployed-contracts.json";
 export const TEST_ACCOUNT_FILE = "./deployment/config/test-1020-accounts.json";

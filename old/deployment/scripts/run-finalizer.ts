@@ -1,11 +1,11 @@
 import { readFileSync } from "fs";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { loadFTSOParameters } from "../config/FTSOParameters";
+import { loadFTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
 import { OUTPUT_FILE, loadAccounts } from "../tasks/common";
 import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
-import { Finalizer } from "../../../src/ftso-finalizer/Finalizer";
+import { Finalizer } from "../../../apps/ftso-finalizer/src/Finalizer";
 import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import { BlockIndexer } from "../../src/BlockIndexer";
 

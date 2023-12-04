@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { FTSOClient } from "../../src/protocol/FTSOClient";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { FTSOParameters, loadFTSOParameters } from "../config/FTSOParameters";
+import { FTSOParameters, loadFTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
 import { OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
 import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { IPriceProvider } from "../../src/protocol/IPriceFeed";
