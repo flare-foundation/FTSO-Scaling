@@ -10,7 +10,7 @@ import { deployContracts } from "./deployment/tasks/deploy-contracts";
 import loadTestAccounts from "./hardhat.utils";
 
 import * as dotenv from "dotenv";
-import { loadFTSOParameters } from "../apps/ftso-calculator/src/FTSOParameters";
+import { loadFTSOParameters } from "../apps/ftso-calculator/src/config/FTSOParameters";
 import { OUTPUT_FILE } from "./deployment/tasks/common";
 
 dotenv.config();

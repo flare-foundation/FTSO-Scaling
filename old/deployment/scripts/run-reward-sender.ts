@@ -1,5 +1,5 @@
 import { getWeb3 } from "../../src/utils/web3";
-import { loadFTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
+import { loadFTSOParameters } from "../../../apps/ftso-calculator/src/config/FTSOParameters";
 import { sleepFor } from "../../src/utils/time";
 import BN from "bn.js";
 

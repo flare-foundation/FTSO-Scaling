@@ -1,8 +1,9 @@
 import { Feed } from "./voting-types";
 
 export interface IPriceProvider {
-  getPriceForEpoch(priceEpochId: number): number;
-  getFeedInfo(): Feed;
+  readonly feed: Feed;
+
+  getCurrentPrice(): number;
 }
 
 export const priceProviderImplRegistry: Map<string, Function> = new Map();
@@ -12,5 +13,6 @@ export function PriceProviderImplFactory(
   _propertyKey: string | symbol,
   descriptor: TypedPropertyDescriptor<any>
 ) {
+  console.log("Setting factory");
   priceProviderImplRegistry.set(target.name, descriptor.value);
 }

@@ -1,18 +1,18 @@
 import { readFileSync } from "fs";
-import { FTSOClient } from "../../src/protocol/FTSOClient";
-import { Web3Provider } from "../../src/providers/Web3Provider";
-import { FTSOParameters, loadFTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
-import { OUTPUT_FILE, getPriceFeeds, loadAccounts } from "../tasks/common";
-import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
-import { IPriceProvider } from "../../src/protocol/IPriceFeed";
-import { Feed } from "../../src/protocol/voting-types";
-import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
-import { getWeb3 } from "../../src/utils/web3";
-import { RandomPriceFeed, createPriceFeedConfigs } from "../../test-utils/utils/RandomPriceFeed";
+import { loadFTSOParameters, FTSOParameters } from "../../../apps/ftso-calculator/src/config/FTSOParameters";
+import { setGlobalLogFile, getLogger } from "../../../apps/ftso-calculator/src/utils/logger";
+import { getWeb3 } from "../../../apps/ftso-calculator/src/utils/web3";
+import { IPriceProvider } from "../../../libs/ftso-core/src/IPriceFeed";
+import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
+import { ContractAddresses } from "../../../libs/ftso-core/src/utils/ContractAddresses";
+import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
+import { Feed } from "../../../libs/ftso-core/src/voting-types";
+import { FTSOClient } from "../../src/FTSOClient";
 import { PriceVoter } from "../../src/PriceVoter";
-import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
-import { BlockIndexer } from "../../src/BlockIndexer";
-import { IndexerClient } from "../../src/protocol/IndexerClient";
+import { Web3Provider } from "../../src/providers/Web3Provider";
+import { createPriceFeedConfigs, RandomPriceFeed } from "../../test-utils/utils/RandomPriceFeed";
+import { loadAccounts, getPriceFeeds, OUTPUT_FILE } from "../tasks/common";
+
 
 async function main() {
   const myId = +process.argv[2];
@@ -69,8 +69,8 @@ function loadContracts(): ContractAddresses {
 function randomizeFeeds(feeds: IPriceProvider[]): IPriceProvider[] {
   return feeds.map(feed => {
     return new (class implements IPriceProvider {
-      getPriceForEpoch(priceEpochId: number): number {
-        const originalPrice = feed.getPriceForEpoch(priceEpochId);
+      getCurrentPrice(priceEpochId: number): number {
+        const originalPrice = feed.getCurrentPrice(priceEpochId);
         return addNoise(originalPrice);
       }
       getFeedInfo(): Feed {

@@ -9,7 +9,7 @@ import { ContractAddresses } from "../../../libs/ftso-core/src/utils/ContractAdd
 import { asError, RevertedTxError } from "../../../libs/ftso-core/src/utils/error";
 import { toBN, hexlifyBN, ZERO_ADDRESS } from "../../../libs/ftso-core/src/utils/voting-utils";
 import { Address, RewardClaimWithProof, Offer, EpochData, BareSignature, EpochResult, BlockData } from "../../../libs/ftso-core/src/voting-types";
-import { FTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
+import { FTSOParameters } from "../../../apps/ftso-calculator/src/config/FTSOParameters";
 import { getLogger } from "../../../apps/ftso-calculator/src/utils/logger";
 import { retryWithTimeout, retryPredicate } from "../../../apps/ftso-calculator/src/utils/retry";
 import { getAccount, signMessage, recoverSigner, getFilteredBlock, isTransientTxError, loadContract } from "../../../apps/ftso-calculator/src/utils/web3";

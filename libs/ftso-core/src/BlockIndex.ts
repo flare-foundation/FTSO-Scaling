@@ -186,7 +186,7 @@ export class BlockIndex extends AsyncEventEmitter {
    */
   // TODO: we need to somehow lock the reward offer set once the reward epoch starts – maybe take a snapshot in the beginning of the epoch?
   private async extractOffers(tx: TxData, blockTimestampSec: number): Promise<void> {
-    const offers = this.encodingUtils.extractOffers(tx);
+    const offers =  [];//this.encodingUtils.extractOffers(tx);
     const priceEpochId = this.epochs.priceEpochIdForTime(blockTimestampSec);
     const offerRewardEpochId = this.epochs.rewardEpochIdForPriceEpochId(priceEpochId);
 

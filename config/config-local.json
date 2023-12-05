@@ -1,0 +1,22 @@
+{
+  "governancePrivateKey": "<set in .env>",
+  "rpcUrl": "ws://127.0.0.1:8545/",
+  "gasLimit": "2500000",
+  "gasPriceMultiplier": 1.2,
+  "feeds": [
+    {
+      "providerImpl": "CcxtPriceFeed",
+      "symbol": {
+        "offerSymbol": "BTC",
+        "quoteSymbol": "USDT"
+      }
+    },
+    {
+      "providerImpl": "CcxtPriceFeed",
+      "symbol": {
+        "offerSymbol": "ETH",
+        "quoteSymbol": "USDT"
+      }
+    }
+  ]
+}

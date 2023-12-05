@@ -1,7 +1,7 @@
 import ccxt, { Exchange, NetworkError, RequestTimeout, Trade } from "ccxt";
 import { IPriceProvider, PriceProviderImplFactory } from "../../../../libs/ftso-core/src/IPriceFeed";
 import { Feed } from "../../../../libs/ftso-core/src/voting-types";
-import { FeedConfig } from "../FTSOParameters";
+import { FeedConfig } from "../config/FTSOParameters";
 import { getLogger } from "../utils/logger";
 
 const UPDATE_INTERVAL_MS = 1_000;
@@ -25,7 +25,7 @@ export class CcxtPriceFeed implements IPriceProvider {
   private lastPriceUSD: number = 0; // TODO: Avoid returning initial value 0
   private lastPriceTimestamp: number = 0;
 
-  private constructor(private readonly feed: Feed, private readonly client: Exchange) {
+  private constructor(readonly feed: Feed, private readonly client: Exchange) {
     const symbol = `${feed.offerSymbol}/${feed.quoteSymbol}`;
     try {
       this.marketId = client.markets[symbol].id;
@@ -65,11 +65,8 @@ export class CcxtPriceFeed implements IPriceProvider {
     }
   }
 
-  getPriceForEpoch(_priceEpochId: number): number {
+  getCurrentPrice(): number {
     return this.lastPriceUSD;
-  }
-  getFeedInfo(): Feed {
-    return this.feed;
   }
 
   @PriceProviderImplFactory

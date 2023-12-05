@@ -7,10 +7,9 @@ import {
   EpochData,
 } from "../../libs/ftso-core/src/voting-types";
 import { getLogger } from "../../apps/ftso-calculator/src/utils/logger";
-import { promiseWithTimeout } from "../../apps/ftso-calculator/src/utils/retry";
+import { TimeoutError, promiseWithTimeout } from "../../apps/ftso-calculator/src/utils/retry";
 import { randomDelay, runWithDuration, sleepFor } from "../../apps/ftso-calculator/src/utils/time";
 import { Controller, Get, Param } from '@nestjs/common';
-import { SubProtocol2 } from './TopLevelRunner';
 
 export interface SubProtocol2 {
 

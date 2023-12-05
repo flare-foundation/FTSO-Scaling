@@ -167,7 +167,7 @@ export class FTSOClient implements SubProtocol {
     const prices = (await this.getPriceProviders(priceEpochId)).map(
       (priceFeed) =>
         priceFeed
-          ? priceFeed.getPriceForEpoch(priceEpochId)
+          ? priceFeed.getCurrentPrice(priceEpochId)
           : NON_EXISTENT_PRICE
     );
     const data: EpochData = {

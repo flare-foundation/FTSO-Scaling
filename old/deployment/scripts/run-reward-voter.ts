@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import { Web3Provider } from "../../src/providers/Web3Provider";
-import { loadFTSOParameters } from "../../../apps/ftso-calculator/src/FTSOParameters";
+import { loadFTSOParameters } from "../../../apps/ftso-calculator/src/config/FTSOParameters";
 import { OUTPUT_FILE, loadAccounts } from "../tasks/common";
 import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";

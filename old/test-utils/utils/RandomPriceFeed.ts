@@ -1,5 +1,5 @@
-import { Feed } from "../../src/protocol/voting-types";
-import { IPriceProvider } from "../../src/protocol/IPriceFeed";
+import { IPriceProvider } from "../../../libs/ftso-core/src/IPriceFeed";
+import { Feed } from "../../../libs/ftso-core/src/voting-types";
 
 export interface RandomPriceFeedConfig {
   period: number;
@@ -9,20 +9,18 @@ export interface RandomPriceFeedConfig {
 }
 
 export class RandomPriceFeed implements IPriceProvider {
-  priceFeedConfig!: RandomPriceFeedConfig;
+  private readonly priceFeedConfig!: RandomPriceFeedConfig;
+  readonly feed: Feed;
 
   constructor(config: RandomPriceFeedConfig) {
     this.priceFeedConfig = config;
+    this.feed = config.feedInfo;
   }
 
-  getFeedInfo(): Feed {
-    return this.priceFeedConfig.feedInfo;
-  }
-
-  getPriceForEpoch(priceEpochId: number) {
+  getCurrentPrice(): number {
     const noise = (Math.random() - 0.5) * this.priceFeedConfig.variance;
     const result = Math.floor(
-      (Math.sin(priceEpochId / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise
+      (Math.sin(Date.now() / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise
     );
     return Math.max(0, result);
   }

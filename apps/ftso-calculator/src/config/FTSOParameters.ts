@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
-import { toBN } from "../../../libs/ftso-core/src/utils/voting-utils";
-import { Feed } from "../../../libs/ftso-core/src/voting-types";
+import { toBN } from "../../../../libs/ftso-core/src/utils/voting-utils";
+import { Feed } from "../../../../libs/ftso-core/src/voting-types";
 import dotenv from "dotenv";
 import BN from "bn.js";
 
@@ -32,7 +32,7 @@ function loadParameters(filename: string): FTSOParameters {
 export function loadFTSOParameters() {
   const chain = process.env.CHAIN_CONFIG;
   if (chain) {
-    const parameters = loadParameters(`deployment/config/config-${chain}.json`);
+    const parameters = loadParameters(`config/config-${chain}.json`);
     if (process.env.DEPLOYER_PRIVATE_KEY) {
       parameters.governancePrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
     }

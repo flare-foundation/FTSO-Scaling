@@ -1,11 +1,10 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
-import {
-  EpochData,
-  BareSignature,
-} from "../../../libs/ftso-core/src/voting-types";
+import { EpochData, BareSignature } from "../../../libs/ftso-core/src/voting-types";
+import { ApiTags } from "@nestjs/swagger";
 
-@Controller()
+@ApiTags("Flare TSO")
+@Controller("ftso/price-controller")
 export class FtsoCalculatorController {
   constructor(private readonly ftsoCalculatorService: FtsoCalculatorService) {}
 
@@ -15,21 +14,17 @@ export class FtsoCalculatorController {
   }
 
   @Get("commit/:epochId")
-  async getCommit(@Param("epochId") epochId: number): Promise<string> {
+  async getCommit(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
     return this.ftsoCalculatorService.getCommit(epochId);
   }
 
   @Get("reveal/:epochId")
-  async getReveal(
-    @Param("epochId") epochId: number
-  ): Promise<EpochData | undefined> {
+  async getReveal(@Param("epochId", ParseIntPipe) epochId: number): Promise<EpochData | undefined> {
     return this.ftsoCalculatorService.getReveal(epochId);
   }
 
   @Get("result/:epochId")
-  async getResult(
-    @Param("epochId") epochId: number
-  ): Promise<[string, BareSignature] | undefined> {
+  async getResult(@Param("epochId", ParseIntPipe) epochId: number): Promise<[string, BareSignature] | undefined> {
     return this.ftsoCalculatorService.getResult(epochId);
   }
 }
