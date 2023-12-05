@@ -15,7 +15,6 @@ import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./utils/EncodingUtils";
 import { asError } from "./utils/error";
 import { Between, EntityManager } from "typeorm";
-import { promiseWithTimeout } from "../../../apps/ftso-calculator/src/utils/retry";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
 import { toBN } from "./utils/voting-utils";
 
@@ -241,8 +240,8 @@ export class IndexerClient extends AsyncEventEmitter {
   // }
 
   async getRewardOffers(rewardEpochId: RewardEpochId): Promise<RewardOffered[]> {
-    // const cached = this.cache.rewardEpochOffers.get(rewardEpochId);
-    // if (cached) return cached;
+    const cached = this.cache.rewardEpochOffers.get(rewardEpochId);
+    if (cached) return cached;
 
     const start = this.epochs.priceEpochStartTimeSec(this.epochs.firstPriceEpochForRewardEpoch(rewardEpochId - 1));
     const nextStart = this.epochs.priceEpochStartTimeSec(
@@ -271,8 +270,10 @@ export class IndexerClient extends AsyncEventEmitter {
       rewardOffers.push(...offers);
     }
 
-    this.cache.rewardEpochOffers.set(rewardEpochId, rewardOffers);
-
+    const max = await this.getMaxTimestamp();
+    if (max > nextStart) {
+      this.cache.rewardEpochOffers.set(rewardEpochId, rewardOffers);
+    }
     return rewardOffers;
   }
 }
