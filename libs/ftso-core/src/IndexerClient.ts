@@ -1,8 +1,6 @@
-import { ContractAddresses } from "./utils/ContractAddresses";
 import { EpochSettings } from "./utils/EpochSettings";
 import {
   Address,
-  BlockData,
   FinalizeData,
   PriceEpochId,
   RevealBitvoteData,
@@ -13,9 +11,8 @@ import {
 } from "./voting-types";
 import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./utils/EncodingUtils";
-import { asError } from "./utils/error";
 import { Between, EntityManager } from "typeorm";
-import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
+import { TLPState, TLPTransaction } from "./orm/entities";
 import { toBN } from "./utils/voting-utils";
 
 import BN from "bn.js";

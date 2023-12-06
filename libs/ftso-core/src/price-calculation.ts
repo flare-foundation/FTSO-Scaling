@@ -82,7 +82,6 @@ export async function calculateRevealers(
   reveals: Map<string, RevealBitvoteData>,
   voterWeights: Map<Address, BN>
 ): Promise<RevealResult> {
-
   // console.log(`Commits: ${[...commits.keys()]}`);
   // console.log(`Reveals: ${[...reveals.keys()]}`);
   // console.log(`Weights: ${[...voterWeights.keys()]}`);

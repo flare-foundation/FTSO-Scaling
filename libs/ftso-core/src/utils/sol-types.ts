@@ -4,6 +4,7 @@ export class Bytes32 {
   private constructor(private readonly bytes: number[], private hex: string | undefined = undefined) {}
 
   static fromHexString(input: string): Bytes32 {
+    if (input == undefined) throw new Error("Input undefined");
     let bytes: number[];
     try {
       bytes = Web3.utils.hexToBytes(input);

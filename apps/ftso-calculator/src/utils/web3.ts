@@ -48,6 +48,10 @@ export function getAccount(web3: Web3, privateKey: string): Account {
   return web3.eth.accounts.privateKeyToAccount(privateKey);
 }
 
+export function getAddress(web3: Web3, privateKey: string): string {
+  return getAccount(web3, privateKey).address;
+}
+
 export function signMessage(web3: Web3, message: string, privateKey: string): BareSignature {
   const signature = web3.eth.accounts.sign(message, privateKey);
   return {

@@ -5,7 +5,7 @@ import { OUTPUT_FILE, loadAccounts } from "../tasks/common";
 import { ContractAddresses } from "../../src/protocol/utils/ContractAddresses";
 import { getLogger, setGlobalLogFile } from "../../src/utils/logger";
 import { getWeb3 } from "../../src/utils/web3";
-import { Finalizer } from "../../../apps/ftso-finalizer/src/Finalizer";
+import { Finalizer } from "../../../apps/ftso-finalizer/src/ftso-finalizer.service";
 import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import { BlockIndexer } from "../../src/BlockIndexer";
 

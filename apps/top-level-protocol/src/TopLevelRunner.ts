@@ -1,25 +1,25 @@
-import { BlockIndex } from "../../libs/ftso-core/src/BlockIndex";
-import { IVotingProvider } from "../../libs/ftso-core/src/IVotingProvider";
-import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
-import { errorString, asError } from "../../libs/ftso-core/src/utils/error";
+import { BlockIndex } from "../../../libs/ftso-core/src/BlockIndex";
+import { IVotingProvider } from "../../../libs/ftso-core/src/IVotingProvider";
+import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
+import { errorString, asError } from "../../../libs/ftso-core/src/utils/error";
 import {
   BareSignature,
   EpochData,
-} from "../../libs/ftso-core/src/voting-types";
-import { getLogger } from "../../apps/ftso-calculator/src/utils/logger";
-import { TimeoutError, promiseWithTimeout } from "../../apps/ftso-calculator/src/utils/retry";
-import { randomDelay, runWithDuration, sleepFor } from "../../apps/ftso-calculator/src/utils/time";
+} from "../../../libs/ftso-core/src/voting-types";
+import { getLogger } from "../../ftso-calculator/src/utils/logger";
+import { TimeoutError, promiseWithTimeout } from "../../ftso-calculator/src/utils/retry";
+import { randomDelay, runWithDuration, sleepFor } from "../../ftso-calculator/src/utils/time";
 import { Controller, Get, Param } from '@nestjs/common';
 
-export interface SubProtocol2 {
+// export interface SubProtocol2 {
 
 
-  protocolId: number;
+//   protocolId: number;
 
-  getCommit(epochId: number): Promise<string>;
-  getReveal(epochId: number): Promise<EpochData | undefined>;
-  getResult(epochId: number): Promise<[string, BareSignature] | undefined>;
-}
+//   getCommit(epochId: number): Promise<string>;
+//   getReveal(epochId: number): Promise<EpochData | undefined>;
+//   getResult(epochId: number): Promise<[string, BareSignature] | undefined>;
+// }
 
 export interface SubProtocol {
   protocolId: number;
@@ -29,6 +29,8 @@ export interface SubProtocol {
   getResult(epochId: number): Promise<string | undefined>;
   getResultAfterDeadline(epochId: number, deadlineSec: number): Promise<string>;
 }
+
+
 
 export class TopLevelRunner {
   private readonly logger = getLogger(TopLevelRunner.name);

@@ -61,6 +61,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/ftso-reward-calculator/tsconfig.app.json"
       }
+    },
+    "top-level-protocol": {
+      "type": "application",
+      "root": "apps/top-level-protocol",
+      "entryFile": "main",
+      "sourceRoot": "apps/top-level-protocol/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/top-level-protocol/tsconfig.app.json"
+      }
     }
   },
   "monorepo": true,

@@ -15,11 +15,17 @@ export interface IConfig {
 
   epochSettings: EpochSettings;
   params: FTSOParameters;
+  privateKey: string;
 }
 
 export default () => {
   const api_keys = process.env.API_KEYS?.split(",") || [""];
   const epochs = process.env.EPOCH_SETTINGS.split(",").map(x => parseInt(x, 10));
+
+  if (process.env.PRIVATE_KEY == undefined) {
+    throw Error("Must provide a private key in PRIVATE_KEY env variable.");
+  }
+
   const config: IConfig = {
     port: parseInt(process.env.PORT || "3000"),
     api_keys,
@@ -30,6 +36,7 @@ export default () => {
     db_name: process.env.DB_NAME || "flare_top_level_indexer",
     epochSettings: new EpochSettings(epochs[0], epochs[1], epochs[2], epochs[3]),
     params: loadFTSOParameters(),
+    privateKey: process.env.PRIVATE_KEY,
   };
   return config;
 };

@@ -32,7 +32,7 @@ import { asError } from "../../libs/ftso-core/src/utils/error";
 import { calculateClaimsForPriceEpoch } from "../../libs/ftso-core/src/reward-calculation";
 import { ILogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { IndexerClient } from "../../libs/ftso-core/src/IndexerClient";
-import { SubProtocol } from "./TopLevelRunner";
+import { SubProtocol } from "../../apps/top-level-protocol/src/TopLevelRunner";
 import { recoverSigner } from "../../apps/ftso-calculator/src/utils/web3";
 import Web3 from "web3";
 

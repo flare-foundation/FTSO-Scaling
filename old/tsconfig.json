@@ -22,7 +22,7 @@
     "./typechain",
     "./typechain-truffle",
     "./typechain-web3",
-    "./test-utils/utils",
+    "./test-utils/utils", "../apps/top-level-protocol/src/TopLevelRunner.ts",
  ],
   "files": ["./hardhat.config.ts"]
 }
