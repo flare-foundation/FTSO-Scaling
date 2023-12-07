@@ -11,19 +11,10 @@ import { TimeoutError, promiseWithTimeout } from "../../ftso-calculator/src/util
 import { randomDelay, runWithDuration, sleepFor } from "../../ftso-calculator/src/utils/time";
 import { Controller, Get, Param } from '@nestjs/common';
 
-// export interface SubProtocol2 {
 
-
-//   protocolId: number;
-
-//   getCommit(epochId: number): Promise<string>;
-//   getReveal(epochId: number): Promise<EpochData | undefined>;
-//   getResult(epochId: number): Promise<[string, BareSignature] | undefined>;
-// }
 
 export interface SubProtocol {
   protocolId: number;
-
   getCommit(epochId: number): Promise<string>;
   getReveal(epochId: number): Promise<EpochData | undefined>;
   getResult(epochId: number): Promise<string | undefined>;
