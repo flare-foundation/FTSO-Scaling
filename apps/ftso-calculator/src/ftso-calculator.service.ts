@@ -47,7 +47,7 @@ export class FtsoCalculatorService {
     }
 
     const data = await this.getPricesForEpoch(epochId, offers);
-    const hash = hashForCommit(this.myAddrres, data.random.value, data.merkleRoot, data.pricesHex);
+    const hash = hashForCommit(this.myAddrres, data.random.value, data.priceHex);
     this.dataByEpoch.set(epochId, data);
     return hash;
   }
@@ -57,12 +57,8 @@ export class FtsoCalculatorService {
 
     const prices = feedSequence.map(feed => this.priceService.getPrice(feed) ?? NON_EXISTENT_PRICE);
     const data: EpochData = {
-      epochId: priceEpochId,
-      merkleRoot: ZERO_BYTES32,
-      prices: prices,
-      pricesHex: packPrices(prices),
+      priceHex: packPrices(prices),
       random: Bytes32.random(),
-      bitVote: "0x00",
     };
     return data;
   }
@@ -71,7 +67,7 @@ export class FtsoCalculatorService {
     return Promise.resolve(this.dataByEpoch.get(epochId));
   }
 
-  async getResult(epochId: number): Promise<[string, BareSignature]> {
+  async getResult(epochId: number): Promise<string> {
     const rewardEpochId = this.epochSettings.rewardEpochIdForPriceEpochId(epochId);
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
 
@@ -83,7 +79,6 @@ export class FtsoCalculatorService {
     }
     const reveals = await this.indexerClient.queryReveals(epochId);
     const result = await calculateResults(epochId, commits, reveals, offers, fakeWeights);
-    const signature = signMessage(web3Helper, result.merkleRoot.toString(), this.myKey.toString());
-    return [result.merkleRoot.toString(), signature];
+    return result.merkleRoot.toString();
   }
 }

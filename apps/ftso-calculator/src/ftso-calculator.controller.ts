@@ -8,7 +8,6 @@ import {
   ParseIntPipe,
 } from "@nestjs/common";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
-import { EpochData, BareSignature } from "../../../libs/ftso-core/src/voting-types";
 import { ApiTags } from "@nestjs/swagger";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 
@@ -24,16 +23,19 @@ export class FtsoCalculatorController {
   }
 
   @Get("reveal/:epochId")
-  async getReveal(@Param("epochId", ParseIntPipe) epochId: number): Promise<EpochData> {
+  async getReveal(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
     const reveal = await this.ftsoCalculatorService.getReveal(epochId);
     if (reveal === undefined) {
       throw new NotFoundException(`Reveal for epoch ${epochId} not found`);
     }
-    return reveal;
+
+    // TODO: Come up with a proper ecnoding format
+    const serializedReveal = reveal.random.toString() + reveal.priceHex.slice(2);
+    return serializedReveal;
   }
 
   @Get("result/:epochId")
-  async getResult(@Param("epochId", ParseIntPipe) epochId: number): Promise<[string, BareSignature] | undefined> {
+  async getResult(@Param("epochId", ParseIntPipe) epochId: number): Promise<string | undefined> {
     try {
       return await this.ftsoCalculatorService.getResult(epochId);
     } catch (e) {

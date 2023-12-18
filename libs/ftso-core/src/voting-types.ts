@@ -92,12 +92,8 @@ export interface BlockData {
 }
 
 export interface EpochData {
-  readonly epochId: number;
-  readonly merkleRoot: string;
   readonly random: Bytes32;
-  readonly prices: number[];
-  readonly pricesHex: string;
-  readonly bitVote: string;
+  readonly priceHex: string;
 }
 
 export interface EpochResult {

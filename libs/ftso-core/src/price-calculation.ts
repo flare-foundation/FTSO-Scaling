@@ -102,7 +102,7 @@ export async function calculateRevealers(
       return false;
     }
     const commitHash = commits.get(committer);
-    return commitHash === hashForCommit(committer, revealData.random, revealData.merkleRoot, revealData.prices);
+    return commitHash === hashForCommit(committer, revealData.random, revealData.prices);
   });
 
   if (committedFailedReveal.length > 0) {

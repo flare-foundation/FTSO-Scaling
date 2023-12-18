@@ -173,9 +173,9 @@ function padEndArray(array: any[], minLength: number, fillValue: any = undefined
   return Object.assign(new Array(minLength).fill(fillValue), array);
 }
 
-export function hashForCommit(voter: string, random: string, merkleRoot: string, prices: string) {
-  const types = ["address", "uint256", "bytes32", "bytes"];
-  const values = [voter.toLowerCase(), random, merkleRoot, prices];
+export function hashForCommit(voter: string, random: string, prices: string) {
+  const types = ["address", "uint256", "bytes"];
+  const values = [voter.toLowerCase(), random, prices];
   const encoded = coder.encodeParameters(types, values);
   return utils.soliditySha3(encoded)!;
 }
