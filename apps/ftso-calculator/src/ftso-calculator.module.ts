@@ -16,11 +16,11 @@ async function getPriceFeeds(feedConfigs: FeedConfig[]) {
     feedConfigs.map(async (config, index) => {
       let provider: IPriceProvider;
       // TODO: Instantiate price provider dynamiocally
-      if (config.providerImpl == "CcxtPriceFeed") {
-        provider = await CcxtPriceFeed.create(config);
-      } else {
+      // if (config.providerImpl == "CcxtPriceFeed") {
+      //   provider = await CcxtPriceFeed.create(config);
+      // } else {
         provider = new RandomPriceFeed(config.symbol, index);
-      }
+      // }
       return provider;
     })
   );
@@ -35,15 +35,21 @@ const IMPORTS_ARRAY = [
     inject: [ConfigService],
     useFactory: async (configService: ConfigService<IConfig>) => {
       return {
-        type: "mysql",
-        host: configService.getOrThrow("db_host"),
-        port: configService.getOrThrow("db_port"),
-        username: configService.getOrThrow("db_user"),
-        password: configService.getOrThrow("db_pass"),
-        database: configService.getOrThrow("db_name"),
+        type: 'sqlite',
+        database: '/Users/work/Code/flare-smart-contracts-v2/db/indexer.db',
         entities: [TLPTransaction, TLPEvents, TLPState],
         synchronize: false,
       };
+      // return {
+      //   type: "mysql",
+      //   host: configService.getOrThrow("db_host"),
+      //   port: configService.getOrThrow("db_port"),
+      //   username: configService.getOrThrow("db_user"),
+      //   password: configService.getOrThrow("db_pass"),
+      //   database: configService.getOrThrow("db_name"),
+      //   entities: [TLPTransaction, TLPEvents, TLPState],
+      //   synchronize: false,
+      // };
     },
   }),
 ];

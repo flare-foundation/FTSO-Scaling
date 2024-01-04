@@ -9,28 +9,23 @@ import {
   SignatureData,
   TxData,
 } from "./voting-types";
-import AsyncEventEmitter from "./utils/AsyncEventEmitter";
 import EncodingUtils from "./utils/EncodingUtils";
 import { Between, EntityManager } from "typeorm";
 import { TLPState, TLPTransaction } from "./orm/entities";
-import { toBN } from "./utils/voting-utils";
+import { ZERO_ADDRESS, toBN, toBytes4 } from "./utils/voting-utils";
 
 import BN from "bn.js";
+import Web3 from "web3";
 
 declare type CommitHash = string;
 declare type Timestamp = number;
 
-export enum Event {
-  Commit = "commit",
-  Reveal = "reveal",
-  Signature = "signature",
-  Finalize = "finalize",
-  Offers = "offers",
-  RewardSignature = "rewardSignature",
-  RewardFinalize = "rewardFinalize",
-  BlockTimestamp = "blockTimestamp",
-}
 
+const REWARD_VALUE = 10_000;
+const IQR_SHARE = 700_000;
+const PCT_SHARE = 300_000;
+const ELASTIC_BAND_WIDTH_PPM = 50_000;
+const DEFAULT_REWARD_BELT_PPM = 500_000;
 class DBCache {
   readonly priceEpochCommits = new Map<PriceEpochId, Map<Address, CommitHash>>();
   readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
@@ -53,14 +48,12 @@ function toTxData(tx: TLPTransaction): TxData {
   return txData;
 }
 
-export class IndexerClient extends AsyncEventEmitter {
+export class IndexerClient {
   private readonly cache = new DBCache();
 
   protected readonly encodingUtils = () => EncodingUtils.instance;
 
-  constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {
-    super();
-  }
+  constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {}
 
   /** We should retrieve weights from tx event logs. */
   async getFakeVoterWeights(rewardEpochId: number): Promise<Map<Address, BN>> {
@@ -83,21 +76,30 @@ export class IndexerClient extends AsyncEventEmitter {
     return state!.block_timestamp;
   }
 
+  commitSelector = Web3.utils.sha3("commit()").slice(2, 10);
+
   async queryCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
-    const cached = this.cache.priceEpochCommits.get(priceEpochId);
-    if (cached) return cached;
+    // const cached = this.cache.priceEpochCommits.get(priceEpochId);
+    // if (cached) return cached;
 
     const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
     const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
 
     const max = await this.getMaxTimestamp();
-    if (max < nextStart) {
-      throw new Error(`Incomplete commit picture for current price epoch: ${max} < ${nextStart}}`);
-    }
+    console.log(`Max timestamp ${max}`);
+    // if (max < nextStart) {
+    //   throw new Error(`Incomplete commit picture for current price epoch: ${max} < ${nextStart}}`);
+    // }
 
+    console.log(
+      `Start: ${new Date(start * 1000).toISOString()}, nextStart: ${new Date(
+        nextStart * 1000
+      ).toISOString()}, in sec: start: ${start}, nextStart: ${nextStart}`
+    );
+    console.log("Commit selector: ", this.commitSelector);
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
-        function_sig: this.encodingUtils().functionSignature("commit").slice(2),
+        function_sig: this.commitSelector,
         timestamp: Between(start, nextStart - 1),
       },
     });
@@ -105,7 +107,7 @@ export class IndexerClient extends AsyncEventEmitter {
     const epochCommits = new Map<Address, CommitHash>();
     for (const tx of txns) {
       const extractedCommit = this.encodingUtils().extractCommitHash(toTxData(tx));
-      // console.log(`Got commit response ${tx.from_address} - ${extractedCommit}`);
+      console.log(`Got commit response ${tx.from_address} - ${extractedCommit}`);
       epochCommits.set("0x" + tx.from_address.toLowerCase(), extractedCommit);
     }
 
@@ -113,20 +115,22 @@ export class IndexerClient extends AsyncEventEmitter {
   }
 
   async queryReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealBitvoteData>> {
-    const cached = this.cache.priceEpochReveals.get(priceEpochId);
-    if (cached) return cached;
+    // const cached = this.cache.priceEpochReveals.get(priceEpochId);
+    // if (cached) return cached;
 
     const start = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
     const revealDeadline = this.epochs.revealDeadlineSec(priceEpochId + 1);
 
     const max = await this.getMaxTimestamp();
-    if (max < revealDeadline) {
-      throw new Error(`Incomplete reveal picture for current price epoch`);
-    }
+    // if (max < revealDeadline) {
+    //   throw new Error(`Incomplete reveal picture for current price epoch`);
+    // }
+    console.log("Reveal selector: ", Web3.utils.sha3("reveal()").slice(2, 10));
+    console.log(`Start: ${start}, deadline: ${revealDeadline}`);
 
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
-        function_sig: this.encodingUtils().functionSignature("revealBitvote").slice(2),
+        function_sig: Web3.utils.sha3("reveal()").slice(2, 10),
         timestamp: Between(start, revealDeadline),
       },
     });
@@ -140,7 +144,7 @@ export class IndexerClient extends AsyncEventEmitter {
     const epochReveals = new Map<Address, RevealBitvoteData>();
     for (const tx of txns) {
       const reveal = this.encodingUtils().extractRevealBitvoteData(toTxData(tx));
-      // console.log(`Got reveal response ${tx.from_address} - ${reveal}`);
+      console.log(`Got reveal response ${tx.from_address} - ${reveal}`);
       epochReveals.set("0x" + tx.from_address.toLowerCase(), reveal);
     }
 
@@ -163,7 +167,7 @@ export class IndexerClient extends AsyncEventEmitter {
 
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
-        function_sig: this.encodingUtils().functionSignature("signResult").slice(2),
+        function_sig: Web3.utils.sha3("sign()").slice(2, 10),
         timestamp: Between(start, nextStart - 1),
       },
     });
@@ -236,7 +240,24 @@ export class IndexerClient extends AsyncEventEmitter {
   //   return this.cache.rewardFinalizes.get(rewardEpochId);
   // }
 
+  // TODO: Get real offers
   async getRewardOffers(rewardEpochId: RewardEpochId): Promise<RewardOffered[]> {
+    const offer: RewardOffered = {
+      amount: toBN(10000),
+      currencyAddress: ZERO_ADDRESS,
+      offerSymbol: toBytes4("BTC"),
+      quoteSymbol: toBytes4("USDT"),
+      leadProviders: [],
+      rewardBeltPPM: toBN(DEFAULT_REWARD_BELT_PPM),
+      elasticBandWidthPPM: toBN(ELASTIC_BAND_WIDTH_PPM),
+      iqrSharePPM: toBN(IQR_SHARE),
+      pctSharePPM: toBN(PCT_SHARE),
+      remainderClaimer: ZERO_ADDRESS,
+      flrValue: toBN(10),
+    };
+
+    return [offer];
+
     const cached = this.cache.rewardEpochOffers.get(rewardEpochId);
     if (cached) return cached;
 

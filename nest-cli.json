@@ -44,15 +44,6 @@
         "tsConfigPath": "apps/ftso-calculator/tsconfig.app.json"
       }
     },
-    "ftso-finalizer": {
-      "type": "application",
-      "root": "apps/ftso-finalizer",
-      "entryFile": "main",
-      "sourceRoot": "apps/ftso-finalizer/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/ftso-finalizer/tsconfig.app.json"
-      }
-    },
     "ftso-reward-calculator": {
       "type": "application",
       "root": "apps/ftso-reward-calculator",
@@ -60,15 +51,6 @@
       "sourceRoot": "apps/ftso-reward-calculator/src",
       "compilerOptions": {
         "tsConfigPath": "apps/ftso-reward-calculator/tsconfig.app.json"
-      }
-    },
-    "top-level-protocol": {
-      "type": "application",
-      "root": "apps/top-level-protocol",
-      "entryFile": "main",
-      "sourceRoot": "apps/top-level-protocol/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/top-level-protocol/tsconfig.app.json"
       }
     }
   },

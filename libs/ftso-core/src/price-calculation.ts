@@ -63,6 +63,7 @@ export async function calculateResults(
   rewardOffers: RewardOffered[],
   voterWeights: Map<Address, BN>
 ): Promise<EpochResult> {
+  console.log("Calculating results with commits: ", [...commits.keys()], "reveals", [...reveals.keys()]);
   const revealResult = await calculateRevealers(commits, reveals, voterWeights)!;
   if (revealResult.revealers.length === 0) {
     throw new Error(`No reveals for price epoch: ${priceEpochId}.`);
@@ -93,7 +94,7 @@ export async function calculateRevealers(
 
   const failedCommit = _.difference(eligibleCommitters, committers);
   if (failedCommit.length > 0) {
-    this.logger.info(`Not seen commits from ${failedCommit.length} voters: ${failedCommit}`);
+    console.log(`Not seen commits from ${failedCommit.length} voters: ${failedCommit}`);
   }
 
   const [revealed, committedFailedReveal] = _.partition(eligibleCommitters, committer => {
@@ -106,7 +107,7 @@ export async function calculateRevealers(
   });
 
   if (committedFailedReveal.length > 0) {
-    this.logger.info(`Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`);
+    console.log(`Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`);
   }
 
   const revealedRandoms = revealed.map(voter => {

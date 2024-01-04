@@ -49,6 +49,7 @@ export class FtsoCalculatorService {
     const data = await this.getPricesForEpoch(epochId, offers);
     const hash = hashForCommit(this.myAddrres, data.random.value, data.priceHex);
     this.dataByEpoch.set(epochId, data);
+    this.logger.log(`Commit for epoch ${epochId}: ${hash}`);
     return hash;
   }
 
@@ -64,6 +65,7 @@ export class FtsoCalculatorService {
   }
 
   async getReveal(epochId: number): Promise<EpochData | undefined> {
+    this.logger.log(`Getting reveal for epoch ${epochId}: ${this.dataByEpoch.get(epochId)}`);
     return Promise.resolve(this.dataByEpoch.get(epochId));
   }
 
@@ -77,7 +79,7 @@ export class FtsoCalculatorService {
     for (const commit of commits) {
       fakeWeights.set(commit[0], new BN(1));
     }
-    const reveals = await this.indexerClient.queryReveals(epochId);
+    const reveals =   await this.indexerClient.queryReveals(epochId);
     const result = await calculateResults(epochId, commits, reveals, offers, fakeWeights);
     return result.merkleRoot.toString();
   }

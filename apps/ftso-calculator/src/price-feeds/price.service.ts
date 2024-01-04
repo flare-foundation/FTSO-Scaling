@@ -14,6 +14,7 @@ export class PriceService {
   }
 
   getPrice(feed: Feed): number | undefined {
+    return 1;
     const provider = this.priceProvidersByFeed.get(feedId(feed));
     if (!provider) {
       return undefined;

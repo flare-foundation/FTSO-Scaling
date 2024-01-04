@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-// import coder from "web3-eth-abi";
 import { AbiItem, AbiInput } from "web3-utils/types";
 import { BareSignature, FinalizeData, RevealBitvoteData, RewardOffered, SignatureData, TxData } from "../voting-types";
 import { toBN } from "./voting-utils";
@@ -76,7 +75,11 @@ export default class EncodingUtils {
     const result = events
       .filter((x: TLPEvents) => "0x" + x.topic0 === this.eventSignature("RewardOffered"))
       .map(event => {
-        const offer = this.coder.decodeLog(this.abiItems.get("RewardOffered")!.inputs!, event.data, [event.topic0, event.topic1, event.topic2, event.topic3].filter(x => x !== ""));
+        const offer = this.coder.decodeLog(
+          this.abiItems.get("RewardOffered")!.inputs!,
+          event.data,
+          [event.topic0, event.topic1, event.topic2, event.topic3].filter(x => x !== "")
+        );
         return convertRewardOfferedEvent(offer as any as RewardOffered);
       });
     return result;
@@ -157,7 +160,6 @@ export default class EncodingUtils {
   }
 
   private decodeFunctionCall(tx: TxData, name: string) {
-    // console.log(`Tx hash: ${ tx.hash}, input: ${tx.input}`);
     const encodedParameters = tx.input!.slice(10); // Drop the function signature
     const parametersEncodingABI = this.abiItems.get(name)!.inputs!;
     return this.coder.decodeParameters(parametersEncodingABI, encodedParameters);

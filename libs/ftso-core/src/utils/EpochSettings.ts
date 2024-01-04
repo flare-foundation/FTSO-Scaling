@@ -1,5 +1,3 @@
-import { IVotingProvider } from "../IVotingProvider";
-
 export class EpochSettings {
   constructor(
     readonly firstPriceEpochStartSec: number,
@@ -58,14 +56,5 @@ export class EpochSettings {
 
   revealDeadlineSec(priceEpochId: number): number {
     return this.priceEpochStartTimeSec(priceEpochId) + this.revealDurationSec;
-  }
-
-  static fromProvider(provider: IVotingProvider): EpochSettings {
-    return new EpochSettings(
-      provider.firstEpochStartSec,
-      provider.epochDurationSec,
-      provider.firstRewardedPriceEpoch,
-      provider.rewardEpochDurationInEpochs
-    );
   }
 }
