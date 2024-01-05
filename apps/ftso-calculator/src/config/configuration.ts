@@ -20,18 +20,25 @@ export interface IConfig {
 
 export default () => {
   const api_keys = process.env.API_KEYS?.split(",") || [""];
-  const epochs = process.env.EPOCH_SETTINGS.split(",").map(x => parseInt(x, 10));
+  // const epochs = process.env.EPOCH_SETTINGS.split(",").map(x => parseInt(x, 10));
 
   // rewardEpochStartSec: 1704213286,
   // rewardEpochDurationSec: 100,
   // firstVotingEpochStartSec: 1704193286,
   // votingEpochDurationSec: 20,
 
+  // const epochSettings = new EpochSettings(
+  //   epochs[2],
+  //   epochs[3],
+  //   Math.floor((epochs[0] - epochs[2]) / epochs[3]),
+  //   epochs[1] / epochs[3]
+  // );
+
   const epochSettings = new EpochSettings(
-    epochs[2],
-    epochs[3],
-    Math.floor((epochs[0] - epochs[2]) / epochs[3]),
-    epochs[1] / epochs[3]
+    parseInt(process.env.ES_FIRST_VOTING_ROUND_START_TS) || 1704250616,
+    parseInt(process.env.ES_VOTING_EPOCH_DURATION_SECONDS) || 20,
+    parseInt(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID) || 1000,
+    parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS) || 5
   );
 
   if (process.env.PRIVATE_KEY == undefined) {
