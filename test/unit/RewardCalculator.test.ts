@@ -2,7 +2,7 @@ import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import { calculateResultsForFeed } from "../../src/protocol/price-calculation";
 import { Feed, Offer, RewardOffered } from "../../src/protocol/voting-types";
 import { feedToText, toBN } from "../../src/protocol/utils/voting-utils";
-import { getTestFile } from "../../test-utils/utils/constants";
+import { getTestFile } from "../../test-utils/constants";
 import { generateOfferForSymbol, prepareSymbols } from "../EndToEnd.utils";
 
 function getAccountAddress(): string {

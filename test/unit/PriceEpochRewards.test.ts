@@ -1,6 +1,6 @@
-import { RewardLogic } from "../../src/protocol/RewardLogic";
-import { toBN } from "../../src/protocol/utils/voting-utils";
-import { getTestFile } from "../../test-utils/utils/constants";
+
+import { toBN } from "../../libs/ftso-core/src/utils/voting-utils";
+import { getTestFile } from "../../test-utils/constants";
 
 describe(`PriceEpochRewards; ${getTestFile(__filename)}`, () => {
   const alice = "alice";

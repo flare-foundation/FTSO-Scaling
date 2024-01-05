@@ -1,5 +1,5 @@
 import { VotingManagerInstance } from "../../typechain-truffle";
-import { getTestFile } from "../../test-utils/utils/constants";
+import { getTestFile } from "../../test-utils/constants";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { EpochSettings } from "../../src/protocol/utils/EpochSettings";
 import Prando from "prando";

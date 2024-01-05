@@ -1,6 +1,6 @@
-import { sleepFor } from "../../src/utils/time";
-import { TimeoutError, retry, retryWithTimeout } from "../../src/utils/retry";
-import { getTestFile } from "../../test-utils/utils/constants";
+import { TimeoutError, retry, retryWithTimeout } from "../../apps/ftso-calculator/src/utils/retry";
+import { sleepFor } from "../../apps/ftso-calculator/src/utils/time";
+import { getTestFile } from "../../test-utils/constants";
 import { expect } from "chai";
 
 const MAX_RETRIES = 3;

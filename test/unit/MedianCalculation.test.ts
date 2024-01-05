@@ -1,9 +1,10 @@
 import BN from "bn.js";
+import { getTestFile } from "../../test-utils/constants";
+import { calculateMedian } from "../../libs/ftso-core/src/price-calculation";
+import { toBN } from "../../libs/ftso-core/src/utils/voting-utils";
+import { MedianCalculationSummary } from "../../libs/ftso-core/src/voting-types";
+import { before } from "node:test";
 import { expect } from "chai";
-import { MedianCalculationSummary } from "../../src/protocol/voting-types";
-import { toBN } from "../../src/protocol/utils/voting-utils";
-import { calculateMedian } from "../../src/protocol/price-calculation";
-import { getTestFile } from "../../test-utils/utils/constants";
 
 describe(`median-calculation-utils; ${getTestFile(__filename)}`, () => {
   let numVoters: number;

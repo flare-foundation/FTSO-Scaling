@@ -1,26 +1,21 @@
 {
   "compilerOptions": {
-    "target": "es2022",
     "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
     "esModuleInterop": true,
-    "noImplicitAny": true,
+    "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "outDir": "dist",
-    "typeRoots": ["node_modules/@types"]
-  },
-  "include": [
-    "./deployment",
-    "./src",
-    "./test",
-    "./typechain-types",
-    "./typechain",
-    "./typechain-truffle",
-    "./typechain-web3",
-    "./test-utils/utils",
- ],
-  "files": ["./hardhat.config.ts"]
+    "paths": {
+      "@app/ftso-core": ["libs/ftso-core/src"],
+      "@app/ftso-core/*": ["libs/ftso-core/src/*"]
+    }
+  }
 }
