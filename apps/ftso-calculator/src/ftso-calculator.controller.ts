@@ -6,17 +6,92 @@ import {
   NotFoundException,
   Param,
   ParseIntPipe,
+  Query,
 } from "@nestjs/common";
-import { FtsoCalculatorService } from "./ftso-calculator.service";
 import { ApiTags } from "@nestjs/swagger";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
+import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/dataProviderResponses.dto";
+import { FtsoCalculatorService } from "./ftso-calculator.service";
 import { sleepFor } from "./utils/time";
 
-@ApiTags("Flare TSO")
-@Controller("ftso/price-controller")
+
+enum ApiTagsEnum {
+  PDP = "FTSO Protocol data provider",
+  EXTERNAL = "External User Facing API",
+}
+
+@Controller("")
 export class FtsoCalculatorController {
   private readonly logger = new Logger(FtsoCalculatorController.name);
   constructor(private readonly ftsoCalculatorService: FtsoCalculatorService) {}
+
+  // Protocol Data Provider APIs
+
+  @ApiTags(ApiTagsEnum.PDP)
+  @Get("submit1/:votingRoundId")
+  async submit1(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
+    @Query("signingAddress") signingAddress: string
+  ): Promise<PDPResponse> {
+    this.logger.log(`Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    return {
+      status: PDPResponseStatusEnum.OK,
+      data: "0x1234",
+      additionalData: "0x5678",
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.PDP)
+  @Get("submit2/:votingRoundId")
+  async submit2(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
+    @Query("signingAddress") signingAddress: string
+  ): Promise<PDPResponse> {
+    this.logger.log(`Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    return {
+      status: PDPResponseStatusEnum.OK,
+      data: "0x1234",
+      additionalData: "0x5678",
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.PDP)
+  @Get("submitSignatures/:votingRoundId")
+  async submitSignatures(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
+    @Query("signingAddress") signingAddress: string
+  ): Promise<PDPResponse> {
+    this.logger.log(`Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    return {
+      status: PDPResponseStatusEnum.OK,
+      data: "0x1234",
+      additionalData: "0x5678",
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.PDP)
+  @Get("submit3/:votingRoundId")
+  async submit3(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
+    @Query("signingAddress") signingAddress: string
+  ): Promise<PDPResponse> {
+    this.logger.log(`Calling GET on submit3 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    throw new InternalServerErrorException("Not used in FTSO protocol")
+  }
+
+  // Additional standardized facing APIs
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("signedMerkleTree/:votingRoundId")
+  async signedMerkleTree(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
+  ): Promise<ExternalResponse> {
+    this.logger.log(`Calling GET on signedMerkleTree with param: votingRoundId ${votingRoundId}`);
+    throw new InternalServerErrorException("Not used in FTSO protocol")
+  }
+
+  ////////////////////////////
+  // OLD API
 
   @Get("commit/:epochId")
   async getCommit(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {

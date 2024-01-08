@@ -14,8 +14,12 @@
     "incremental": true,
     "skipLibCheck": true,
     "paths": {
-      "@app/ftso-core": ["libs/ftso-core/src"],
-      "@app/ftso-core/*": ["libs/ftso-core/src/*"]
+      "@app/ftso-core": [
+        "libs/ftso-core/src"
+      ],
+      "@app/ftso-core/*": [
+        "libs/ftso-core/src/*"
+      ]
     }
   }
 }
