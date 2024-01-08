@@ -1,12 +1,26 @@
 import { readFileSync } from "fs";
 import { AbiItem, AbiInput } from "web3-utils/types";
-import { BareSignature, FinalizeData, RevealBitvoteData, RewardOffered, SignatureData, TxData } from "../voting-types";
+import { BareSignature, FinalizeData, RevealData, RewardOffered, SignatureData, TxData } from "../voting-types";
 import { toBN } from "./voting-utils";
 import Web3 from "web3";
 import { TLPEvents } from "../orm/entities";
+import BN from "bn.js";
 
-const votingAbiPath = "artifacts/contracts/voting/implementation/Voting.sol/Voting.json";
-const rewardsAbiPath = "artifacts/contracts/voting/implementation/VotingRewardManager.sol/VotingRewardManager.json";
+const submissionAbiPath = "abi/Submission.json";
+const systemManagerAbiPath = "abi/FlareSystemManager.json";
+const relayAbiPath = "abi/Relay.json";
+
+const commitFunction = "submit1";
+const revealFunction = "submit2";
+const signFunction = "submitSignatures";
+export interface SigningPolicy {
+  rewardEpochId: number;
+  startVotingRoundId: number;
+  threshold: BN;
+  seed: BN;
+  voters: string[];
+  weights: BN[];
+}
 
 export default class EncodingUtils {
   private functionSignatures = new Map<string, string>();
@@ -17,41 +31,35 @@ export default class EncodingUtils {
   private coder = new Web3().eth.abi;
 
   private constructor() {
-    const votingABI = JSON.parse(readFileSync(votingAbiPath).toString()).abi as AbiItem[];
-    const rewardsABI = JSON.parse(readFileSync(rewardsAbiPath).toString()).abi as AbiItem[];
+    const systemManagerAbi = JSON.parse(readFileSync(systemManagerAbiPath).toString()).abi as AbiItem[];
+    const relayAbi = JSON.parse(readFileSync(relayAbiPath).toString()).abi as AbiItem[];
+    const submissionAbi = JSON.parse(readFileSync(submissionAbiPath).toString()).abi as AbiItem[];
 
-    this.abiItems.set("commit", votingABI.find((x: AbiItem) => x.name === "commit")!);
-    this.abiItems.set("revealBitvote", votingABI.find(x => x.name === "revealBitvote")!);
-    this.abiItems.set("signResult", votingABI.find(x => x.name === "signResult")!);
-    this.abiItems.set("signRewards", votingABI.find(x => x.name === "signRewards")!);
-    this.abiItems.set("finalize", votingABI.find(x => x.name === "finalize")!);
-    this.abiItems.set("finalizeRewards", votingABI.find(x => x.name === "finalizeRewards")!);
-    this.abiItems.set("MerkleRootConfirmed", votingABI.find(x => x.name === "MerkleRootConfirmed")!);
-    this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find(x => x.name === "RewardMerkleRootConfirmed")!);
-    this.abiItems.set("offerRewards", rewardsABI.find(x => x.name === "offerRewards")!);
-    this.abiItems.set("RewardOffered", rewardsABI.find(x => x.name === "RewardOffered")!);
-    this.abiInputs.set("rewardClaimDefinition", rewardsABI.find(x => x.name === "rewardClaimDefinition")!.inputs![0]);
-    this.functionSignatures.set("commit", this.coder.encodeFunctionSignature(this.abiItems.get("commit")!));
-    this.functionSignatures.set(
-      "revealBitvote",
-      this.coder.encodeFunctionSignature(this.abiItems.get("revealBitvote")!)
-    );
-    this.functionSignatures.set("signResult", this.coder.encodeFunctionSignature(this.abiItems.get("signResult")!));
-    this.functionSignatures.set("signRewards", this.coder.encodeFunctionSignature(this.abiItems.get("signRewards")!));
-    this.functionSignatures.set("offerRewards", this.coder.encodeFunctionSignature(this.abiItems.get("offerRewards")!));
-    this.functionSignatures.set("finalize", this.coder.encodeFunctionSignature(this.abiItems.get("finalize")!));
-    this.functionSignatures.set(
-      "finalizeRewards",
-      this.coder.encodeFunctionSignature(this.abiItems.get("finalizeRewards")!)
-    );
-    this.eventSignatures.set("RewardOffered", this.coder.encodeEventSignature(this.abiItems.get("RewardOffered")!));
+    this.abiItems.set(commitFunction, submissionAbi.find((x: AbiItem) => x.name === commitFunction)!);
+    this.abiItems.set(revealFunction, submissionAbi.find(x => x.name === revealFunction)!);
+    this.abiItems.set(signFunction, submissionAbi.find(x => x.name === signFunction)!);
+
+    // this.abiItems.set("finalize", votingABI.find(x => x.name === "finalize")!);
+    this.abiItems.set("SigningPolicyInitialized", relayAbi.find(x => x.name === "SigningPolicyInitialized")!);
+    // this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find(x => x.name === "RewardMerkleRootConfirmed")!);
+    // this.abiItems.set("offerRewards", rewardsABI.find(x => x.name === "offerRewards")!);
+    // this.abiItems.set("RewardOffered", rewardsABI.find(x => x.name === "RewardOffered")!);
+    // this.abiInputs.set("rewardClaimDefinition", rewardsABI.find(x => x.name === "rewardClaimDefinition")!.inputs![0]);
+
+    this.functionSignatures.set(commitFunction, this.coder.encodeFunctionSignature(this.abiItems.get(commitFunction)!));
+    this.functionSignatures.set(revealFunction, this.coder.encodeFunctionSignature(this.abiItems.get(revealFunction)!));
+    this.functionSignatures.set(signFunction, this.coder.encodeFunctionSignature(this.abiItems.get(signFunction)!));
+    // this.functionSignatures.set("offerRewards", this.coder.encodeFunctionSignature(this.abiItems.get("offerRewards")!));
+    // this.functionSignatures.set("finalize", this.coder.encodeFunctionSignature(this.abiItems.get("finalize")!));
+
+    // this.eventSignatures.set("RewardOffered", this.coder.encodeEventSignature(this.abiItems.get("RewardOffered")!));
+    // this.eventSignatures.set(
+    //   "MerkleRootConfirmed",
+    //   this.coder.encodeEventSignature(this.abiItems.get("MerkleRootConfirmed")!)
+    // );
     this.eventSignatures.set(
-      "MerkleRootConfirmed",
-      this.coder.encodeEventSignature(this.abiItems.get("MerkleRootConfirmed")!)
-    );
-    this.eventSignatures.set(
-      "RewardMerkleRootConfirmed",
-      this.coder.encodeEventSignature(this.abiItems.get("RewardMerkleRootConfirmed")!)
+      "SigningPolicyInitialized",
+      this.coder.encodeEventSignature(this.abiItems.get("SigningPolicyInitialized")!)
     );
   }
 
@@ -70,6 +78,47 @@ export default class EncodingUtils {
   abiInputForName(name: string) {
     return this.abiInputs.get(name)!;
   }
+  /*
+  "rewardEpochId": "6",
+    "startVotingRoundId": "1030",
+    "threshold": "32766",
+    "seed": "53065328510085082331184441339942221355359738731470047888994380383026852146168",
+    "voters": [
+      "0x3d91185a02774C70287F6c74Dd26d13DFB58ff16",
+      "0x0a057a7172d0466AEF80976D7E8c80647DfD35e3",
+      "0x650240A1F1024Fe55e6F2ed56679aB430E338581",
+      "0x2E3bfF5d8F20FDb941adC794F9BF3deA0416988f"
+    ],
+    "weights": [
+      "16383",
+      "16383",
+      "16383",
+      "16383"
+    ],
+  */
+
+  extractSigningPolicies(events: TLPEvents[]): SigningPolicy[] {
+    const result = events
+      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("SigningPolicyInitialized"))
+      .map(event => {
+        const rawPolicy = this.coder.decodeLog(
+          this.abiItems.get("SigningPolicyInitialized")!.inputs!,
+          event.data,
+          [event.topic0, event.topic1, event.topic2, event.topic3].filter(x => x !== "")
+        );
+        const tmp = rawPolicy as any;
+        const policy: SigningPolicy = {
+          rewardEpochId: parseIntOrThrow(tmp.rewardEpochId, 10),
+          startVotingRoundId: parseIntOrThrow(tmp.startVotingRoundId, 10),
+          threshold: toBN(tmp.threshold),
+          seed: toBN(tmp.seed),
+          voters: tmp.voters,
+          weights: tmp.weights.map((x: any) => toBN(x)),
+        };
+        return policy;
+      });
+    return result;
+  }
 
   extractOffers(events: TLPEvents[]): RewardOffered[] {
     const result = events
@@ -86,21 +135,20 @@ export default class EncodingUtils {
   }
 
   extractCommitHash(tx: TxData): string {
-    return this.decodeFunctionCall(tx, "commit")._commitHash;
+    return this.decodeFunctionCall(tx, "submit1")._commitHash;
   }
 
-  extractRevealBitvoteData(tx: TxData): RevealBitvoteData {
-    const resultTmp = this.decodeFunctionCall(tx, "revealBitvote");
+  extractReveal(tx: TxData): RevealData {
+    const resultTmp = this.decodeFunctionCall(tx, "submit2");
     return {
       random: resultTmp._random,
       merkleRoot: resultTmp._merkleRoot,
-      bitVote: resultTmp._bitVote,
       prices: resultTmp._prices,
-    } as RevealBitvoteData;
+    } as RevealData;
   }
 
-  extractSignatureData(tx: TxData): SignatureData {
-    const resultTmp = this.decodeFunctionCall(tx, "signResult");
+  extractSignatures(tx: TxData): SignatureData {
+    const resultTmp = this.decodeFunctionCall(tx, "submitSignatures");
 
     return {
       epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
@@ -118,36 +166,6 @@ export default class EncodingUtils {
       confirmed: confirmation !== undefined,
       from: tx.from.toLowerCase(),
       epochId: parseIntOrThrow(resultTmp._priceEpochId, 10),
-      merkleRoot: resultTmp._merkleRoot,
-      signatures: resultTmp._signatures.map((s: any) => {
-        return {
-          v: parseIntOrThrow(s.v, 10),
-          r: s.r,
-          s: s.s,
-        } as BareSignature;
-      }),
-    } as FinalizeData;
-  }
-
-  extractRewardSignatureData(tx: TxData): SignatureData {
-    const resultTmp = this.decodeFunctionCall(tx, "signRewards");
-
-    return {
-      epochId: parseIntOrThrow(resultTmp._rewardEpochId, 10),
-      merkleRoot: resultTmp._merkleRoot,
-      v: parseIntOrThrow(resultTmp._signature.v, 10),
-      r: resultTmp._signature.r,
-      s: resultTmp._signature.s,
-    } as SignatureData;
-  }
-
-  extractRewardFinalize(tx: TxData): FinalizeData {
-    const resultTmp = this.decodeFunctionCall(tx, "finalizeRewards");
-    const confirmation = tx.logs?.find((x: any) => x.topics[0] === this.eventSignature("RewardMerkleRootConfirmed"));
-    return {
-      confirmed: confirmation !== undefined,
-      from: tx.from.toLowerCase(),
-      epochId: parseIntOrThrow(resultTmp._rewardEpochId, 10),
       merkleRoot: resultTmp._merkleRoot,
       signatures: resultTmp._signatures.map((s: any) => {
         return {

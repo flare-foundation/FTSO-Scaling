@@ -51,10 +51,9 @@ export interface BareSignature {
   readonly s: string;
 }
 
-export interface RevealBitvoteData {
+export interface RevealData {
   readonly random: string;
   readonly merkleRoot: string;
-  readonly bitVote: string;
   readonly prices: string; // 4-byte hex strings
 }
 
@@ -136,5 +135,5 @@ export interface RevealResult {
   readonly revealers: Address[];
   readonly committedFailedReveal: Address[];
   readonly revealedRandoms: Bytes32[];
-  readonly reveals: Map<Address, RevealBitvoteData>;
+  readonly reveals: Map<Address, RevealData>;
 }

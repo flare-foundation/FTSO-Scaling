@@ -5,7 +5,6 @@ import {
   Feed,
   MedianCalculationResult,
   MedianCalculationSummary,
-  RevealBitvoteData,
   RevealResult,
   RewardOffered,
 } from "./voting-types";
@@ -22,6 +21,7 @@ import Web3 from "web3";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
 import _ from "lodash";
+import { RevealData } from "./voting-types";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
@@ -59,7 +59,7 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
 export async function calculateResults(
   priceEpochId: number,
   commits: Map<string, string>,
-  reveals: Map<string, RevealBitvoteData>,
+  reveals: Map<string, RevealData>,
   rewardOffers: RewardOffered[],
   voterWeights: Map<Address, BN>
 ): Promise<EpochResult> {
@@ -80,7 +80,7 @@ export async function calculateResults(
 
 export async function calculateRevealers(
   commits: Map<string, string>,
-  reveals: Map<string, RevealBitvoteData>,
+  reveals: Map<string, RevealData>,
   voterWeights: Map<Address, BN>
 ): Promise<RevealResult> {
   // console.log(`Commits: ${[...commits.keys()]}`);

@@ -99,6 +99,11 @@ export class FtsoCalculatorController {
     return await this.ftsoCalculatorService.getCommit(epochId);
   }
 
+  @Get("policy")
+  async getPolicy(): Promise<void> {
+    await this.ftsoCalculatorService.test();
+  }
+
   @Get("reveal/:epochId")
   async getReveal(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
     this.logger.log(`Getting reveal for epoch ${epochId}`);

@@ -3,15 +3,15 @@ import {
   Address,
   FinalizeData,
   PriceEpochId,
-  RevealBitvoteData,
+  RevealData,
   RewardEpochId,
   RewardOffered,
   SignatureData,
   TxData,
 } from "./voting-types";
-import EncodingUtils from "./utils/EncodingUtils";
+import EncodingUtils, { SigningPolicy } from "./utils/EncodingUtils";
 import { Between, EntityManager } from "typeorm";
-import { TLPState, TLPTransaction } from "./orm/entities";
+import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
 import { ZERO_ADDRESS, toBN, toBytes4 } from "./utils/voting-utils";
 
 import BN from "bn.js";
@@ -20,7 +20,6 @@ import Web3 from "web3";
 declare type CommitHash = string;
 declare type Timestamp = number;
 
-
 const REWARD_VALUE = 10_000;
 const IQR_SHARE = 700_000;
 const PCT_SHARE = 300_000;
@@ -28,7 +27,7 @@ const ELASTIC_BAND_WIDTH_PPM = 50_000;
 const DEFAULT_REWARD_BELT_PPM = 500_000;
 class DBCache {
   readonly priceEpochCommits = new Map<PriceEpochId, Map<Address, CommitHash>>();
-  readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealBitvoteData>>();
+  readonly priceEpochReveals = new Map<PriceEpochId, Map<Address, RevealData>>();
   readonly priceEpochSignatures = new Map<PriceEpochId, Map<Address, [SignatureData, Timestamp]>>();
   readonly priceEpochFinalizes = new Map<PriceEpochId, [FinalizeData, Timestamp]>();
   readonly rewardSignatures = new Map<RewardEpochId, Map<Address, [SignatureData, Timestamp]>>();
@@ -52,6 +51,7 @@ export class IndexerClient {
   private readonly cache = new DBCache();
 
   protected readonly encodingUtils = () => EncodingUtils.instance;
+  readonly signingPolicyTopic = this.encodingUtils().eventSignature("SigningPolicyInitialized");
 
   constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {}
 
@@ -76,14 +76,14 @@ export class IndexerClient {
     return state!.block_timestamp;
   }
 
-  commitSelector = Web3.utils.sha3("commit()").slice(2, 10);
+  commitSelector = Web3.utils.sha3("commit()")!.slice(2, 10);
 
   async queryCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
     // const cached = this.cache.priceEpochCommits.get(priceEpochId);
     // if (cached) return cached;
 
-    const start = this.epochs.priceEpochStartTimeSec(priceEpochId);
-    const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
+    const start = this.epochs.votingEpochStartMs(priceEpochId);
+    const nextStart = this.epochs.votingEpochStartMs(priceEpochId + 1);
 
     const max = await this.getMaxTimestamp();
     console.log(`Max timestamp ${max}`);
@@ -92,15 +92,15 @@ export class IndexerClient {
     // }
 
     console.log(
-      `Start: ${new Date(start * 1000).toISOString()}, nextStart: ${new Date(
-        nextStart * 1000
+      `Start: ${new Date(start).toISOString()}, nextStart: ${new Date(
+        nextStart
       ).toISOString()}, in sec: start: ${start}, nextStart: ${nextStart}`
     );
     console.log("Commit selector: ", this.commitSelector);
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
         function_sig: this.commitSelector,
-        timestamp: Between(start, nextStart - 1),
+        timestamp: Between(start / 1000, nextStart / 1000 - 1),
       },
     });
 
@@ -114,24 +114,24 @@ export class IndexerClient {
     return epochCommits;
   }
 
-  async queryReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealBitvoteData>> {
+  async queryReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealData>> {
     // const cached = this.cache.priceEpochReveals.get(priceEpochId);
     // if (cached) return cached;
 
-    const start = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
+    const start = this.epochs.votingEpochStartMs(priceEpochId + 1);
     const revealDeadline = this.epochs.revealDeadlineSec(priceEpochId + 1);
 
     const max = await this.getMaxTimestamp();
     // if (max < revealDeadline) {
     //   throw new Error(`Incomplete reveal picture for current price epoch`);
     // }
-    console.log("Reveal selector: ", Web3.utils.sha3("reveal()").slice(2, 10));
+    console.log("Reveal selector: ", Web3.utils.sha3("reveal()")!.slice(2, 10));
     console.log(`Start: ${start}, deadline: ${revealDeadline}`);
 
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
-        function_sig: Web3.utils.sha3("reveal()").slice(2, 10),
-        timestamp: Between(start, revealDeadline),
+        function_sig: Web3.utils.sha3("reveal()")!.slice(2, 10),
+        timestamp: Between(start / 1000, revealDeadline / 1000),
       },
     });
 
@@ -141,9 +141,9 @@ export class IndexerClient {
     //     .slice(2)}, time interaval: ${start} - ${revealDeadline}, timestamp: ${txns[0]?.timestamp}`
     // );
 
-    const epochReveals = new Map<Address, RevealBitvoteData>();
+    const epochReveals = new Map<Address, RevealData>();
     for (const tx of txns) {
-      const reveal = this.encodingUtils().extractRevealBitvoteData(toTxData(tx));
+      const reveal = this.encodingUtils().extractReveal(toTxData(tx));
       console.log(`Got reveal response ${tx.from_address} - ${reveal}`);
       epochReveals.set("0x" + tx.from_address.toLowerCase(), reveal);
     }
@@ -158,8 +158,8 @@ export class IndexerClient {
       return cached;
     }
 
-    const start = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
-    const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 2);
+    const start = this.epochs.votingEpochStartMs(priceEpochId + 1);
+    const nextStart = this.epochs.votingEpochStartMs(priceEpochId + 2);
 
     // getLogger("IndexerClient").info(
     //   `Querying signatures for epoch ${priceEpochId}, time interval: ${start} - ${nextStart}`
@@ -167,14 +167,14 @@ export class IndexerClient {
 
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
-        function_sig: Web3.utils.sha3("sign()").slice(2, 10),
-        timestamp: Between(start, nextStart - 1),
+        function_sig: Web3.utils.sha3("sign()")!.slice(2, 10),
+        timestamp: Between(start / 1000, nextStart / 1000 - 1),
       },
     });
 
     const signatures = new Map<Address, [SignatureData, Timestamp]>();
     for (const tx of txns) {
-      const sig = this.encodingUtils().extractSignatureData(toTxData(tx));
+      const sig = this.encodingUtils().extractSignatures(toTxData(tx));
       // getLogger("IndexerClient").info(`Got signature ${tx.from} - ${sig.merkleRoot}`);
       signatures.set("0x" + tx.from_address.toLowerCase(), [sig, tx.timestamp]);
     }
@@ -186,30 +186,30 @@ export class IndexerClient {
     return signatures;
   }
 
-  async queryFinalize(priceEpochId: PriceEpochId): Promise<[FinalizeData, Timestamp] | undefined> {
-    const cached = this.cache.priceEpochFinalizes.get(priceEpochId);
-    if (cached) return cached;
+  // async queryFinalize(priceEpochId: PriceEpochId): Promise<[FinalizeData, Timestamp] | undefined> {
+  //   const cached = this.cache.priceEpochFinalizes.get(priceEpochId);
+  //   if (cached) return cached;
 
-    const start = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
-    const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 2);
+  //   const start = this.epochs.priceEpochStartTimeSec(priceEpochId + 1);
+  //   const nextStart = this.epochs.priceEpochStartTimeSec(priceEpochId + 2);
 
-    const tx = await this.entityManager.getRepository(TLPTransaction).findOne({
-      where: {
-        function_sig: this.encodingUtils().functionSignature("finalize").slice(2),
-        timestamp: Between(start, nextStart - 1),
-        status: 1,
-      },
-    });
+  //   const tx = await this.entityManager.getRepository(TLPTransaction).findOne({
+  //     where: {
+  //       function_sig: this.encodingUtils().functionSignature("finalize").slice(2),
+  //       timestamp: Between(start, nextStart - 1),
+  //       status: 1,
+  //     },
+  //   });
 
-    if (tx === null) {
-      return undefined;
-    }
+  //   if (tx === null) {
+  //     return undefined;
+  //   }
 
-    const f = this.encodingUtils().extractFinalize(toTxData(tx));
-    // getLogger("IndexerClient").info(`Got finalize ${tx.from} - ${f.epochId}`);
-    this.cache.priceEpochFinalizes.set(priceEpochId, [f, tx.timestamp]);
-    return [f, tx.timestamp];
-  }
+  //   const f = this.encodingUtils().extractFinalize(toTxData(tx));
+  //   // getLogger("IndexerClient").info(`Got finalize ${tx.from} - ${f.epochId}`);
+  //   this.cache.priceEpochFinalizes.set(priceEpochId, [f, tx.timestamp]);
+  //   return [f, tx.timestamp];
+  // }
 
   // async getRewardSignatures(rewardEpochId: RewardEpochId): Promise<Map<Address, [SignatureData, Timestamp]>> {
   //   const cached = this.cache.rewardSignatures.get(rewardEpochId);
@@ -240,6 +240,43 @@ export class IndexerClient {
   //   return this.cache.rewardFinalizes.get(rewardEpochId);
   // }
 
+  async getVoterWeights(votingEpochId: number): Promise<Map<Address, BN>> {
+    const rewardEpochId = this.epochs.rewardEpochForVotingEpoch(votingEpochId);
+    const signingPolicy = await this.getSigningPolicy(rewardEpochId);
+
+    const voterWeights = new Map<Address, BN>();
+    const voters = signingPolicy.voters;
+    const weights = signingPolicy.weights;
+    for (let i = 0; i < voters.length; i++) {
+      voterWeights.set(voters[i], toBN(weights[i]));
+    }
+    return voterWeights;
+  }
+
+  readonly signingPolicies = new Map<RewardEpochId, SigningPolicy>();
+
+  async getSigningPolicy(rewardEpochId: number): Promise<SigningPolicy> {
+    const cached = this.signingPolicies.get(rewardEpochId);
+    if (cached !== undefined) return cached;
+
+    const previousRewardEpochStart = this.epochs.rewardEpochStartMs(rewardEpochId - 1);
+    const rewardEpochEnd = this.epochs.rewardEpochStartMs(rewardEpochId) + this.epochs.rewardEpochDurationSec * 1000;
+
+    const events = await this.entityManager.getRepository(TLPEvents).find({
+      where: {
+        topic0: this.signingPolicyTopic,
+        // timestamp: Between(previousRewardEpochStart / 1000, rewardEpochEnd / 1000),
+      },
+    });
+
+    const res = this.encodingUtils().extractSigningPolicies(events);
+    const policy = res.filter(x => x.rewardEpochId === rewardEpochId)[0];
+
+    this.signingPolicies.set(rewardEpochId, policy);
+
+    return policy;
+  }
+
   // TODO: Get real offers
   async getRewardOffers(rewardEpochId: RewardEpochId): Promise<RewardOffered[]> {
     const offer: RewardOffered = {
@@ -258,40 +295,40 @@ export class IndexerClient {
 
     return [offer];
 
-    const cached = this.cache.rewardEpochOffers.get(rewardEpochId);
-    if (cached) return cached;
+    // const cached = this.cache.rewardEpochOffers.get(rewardEpochId);
+    // if (cached) return cached;
 
-    const start = this.epochs.priceEpochStartTimeSec(this.epochs.firstPriceEpochForRewardEpoch(rewardEpochId - 1));
-    const nextStart = this.epochs.priceEpochStartTimeSec(
-      this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId - 1) + 1
-    );
+    // const start = this.epochs.priceEpochStartTimeSec(this.epochs.firstPriceEpochForRewardEpoch(rewardEpochId - 1));
+    // const nextStart = this.epochs.priceEpochStartTimeSec(
+    //   this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId - 1) + 1
+    // );
 
-    const txns = await this.entityManager.getRepository(TLPTransaction).find({
-      where: {
-        function_sig: this.encodingUtils().functionSignature("offerRewards").slice(2),
-        timestamp: Between(start, nextStart - 1),
-        status: 1,
-      },
-      relations: ["TPLEvents_set"],
-    });
+    // const txns = await this.entityManager.getRepository(TLPTransaction).find({
+    //   where: {
+    //     function_sig: this.encodingUtils().functionSignature("offerRewards").slice(2),
+    //     timestamp: Between(start, nextStart - 1),
+    //     status: 1,
+    //   },
+    //   relations: ["TPLEvents_set"],
+    // });
 
-    const rewardOffers: RewardOffered[] = [];
-    for (const tx of txns) {
-      const logs1 = tx.TPLEvents_set;
-      logs1.forEach(log => {
-        log.topic0;
-      });
+    // const rewardOffers: RewardOffered[] = [];
+    // for (const tx of txns) {
+    //   const logs1 = tx.TPLEvents_set;
+    //   logs1.forEach(log => {
+    //     log.topic0;
+    //   });
 
-      const events = tx.TPLEvents_set;
-      const offers = this.encodingUtils().extractOffers(events);
-      // console.log(`Got reward offers ${tx.from_address} - ${offers.length}`);
-      rewardOffers.push(...offers);
-    }
+    //   const events = tx.TPLEvents_set;
+    //   const offers = this.encodingUtils().extractOffers(events);
+    //   // console.log(`Got reward offers ${tx.from_address} - ${offers.length}`);
+    //   rewardOffers.push(...offers);
+    // }
 
-    const max = await this.getMaxTimestamp();
-    if (max > nextStart) {
-      this.cache.rewardEpochOffers.set(rewardEpochId, rewardOffers);
-    }
-    return rewardOffers;
+    // const max = await this.getMaxTimestamp();
+    // if (max > nextStart) {
+    //   this.cache.rewardEpochOffers.set(rewardEpochId, rewardOffers);
+    // }
+    // return rewardOffers;
   }
 }
