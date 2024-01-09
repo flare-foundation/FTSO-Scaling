@@ -55,28 +55,29 @@ export class IndexerClient {
 
   constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {}
 
-  /** We should retrieve weights from tx event logs. */
-  async getFakeVoterWeights(rewardEpochId: number): Promise<Map<Address, BN>> {
-    const currentTime = Date.now() / 1000;
-    const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
-      where: {
-        function_sig: this.encodingUtils().functionSignature("commit").slice(2),
-        timestamp: Between(currentTime - 3600, currentTime),
-      },
-    });
-    const fakeWeights = new Map<Address, BN>();
-    for (const addr of txns.map(tx => tx.from_address.toLowerCase())) {
-      fakeWeights.set(addr, toBN(1000));
-    }
-    return fakeWeights;
-  }
+  // /** We should retrieve weights from tx event logs. */
+  // async getFakeVoterWeights(rewardEpochId: number): Promise<Map<Address, BN>> {
+  //   const currentTime = Date.now() / 1000;
+  //   const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
+  //     where: {
+  //       function_sig: this.encodingUtils().functionSignature("commit").slice(2),
+  //       timestamp: Between(currentTime - 3600, currentTime),
+  //     },
+  //   });
+  //   const fakeWeights = new Map<Address, BN>();
+  //   for (const addr of txns.map(tx => tx.from_address.toLowerCase())) {
+  //     fakeWeights.set(addr, toBN(1000));
+  //   }
+  //   return fakeWeights;
+  // }
 
   async getMaxTimestamp(): Promise<number> {
     const state = await this.entityManager.getRepository(TLPState).findOneBy({ id: 3 });
     return state!.block_timestamp;
   }
 
-  commitSelector = Web3.utils.sha3("commit()")!.slice(2, 10);
+  commitSelector = Web3.utils.sha3("submit1()")!.slice(2, 10);
+  revealSelector = Web3.utils.sha3("submit2()")!.slice(2, 10);
 
   async queryCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
     // const cached = this.cache.priceEpochCommits.get(priceEpochId);
@@ -106,7 +107,7 @@ export class IndexerClient {
 
     const epochCommits = new Map<Address, CommitHash>();
     for (const tx of txns) {
-      const extractedCommit = this.encodingUtils().extractCommitHash(toTxData(tx));
+      const extractedCommit = this.encodingUtils().extractCommitHash(tx.input);
       console.log(`Got commit response ${tx.from_address} - ${extractedCommit}`);
       epochCommits.set("0x" + tx.from_address.toLowerCase(), extractedCommit);
     }
@@ -125,12 +126,12 @@ export class IndexerClient {
     // if (max < revealDeadline) {
     //   throw new Error(`Incomplete reveal picture for current price epoch`);
     // }
-    console.log("Reveal selector: ", Web3.utils.sha3("reveal()")!.slice(2, 10));
-    console.log(`Start: ${start}, deadline: ${revealDeadline}`);
+    console.log("Reveal selector: ", this.revealSelector);
+    console.log(`Start (${priceEpochId +1 }): ${start / 1000}, deadline: ${revealDeadline / 1000}`);
 
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
-        function_sig: Web3.utils.sha3("reveal()")!.slice(2, 10),
+        function_sig: this.revealSelector,
         timestamp: Between(start / 1000, revealDeadline / 1000),
       },
     });
@@ -143,7 +144,7 @@ export class IndexerClient {
 
     const epochReveals = new Map<Address, RevealData>();
     for (const tx of txns) {
-      const reveal = this.encodingUtils().extractReveal(toTxData(tx));
+      const reveal = this.encodingUtils().extractReveal(tx.input);
       console.log(`Got reveal response ${tx.from_address} - ${reveal}`);
       epochReveals.set("0x" + tx.from_address.toLowerCase(), reveal);
     }
@@ -243,6 +244,7 @@ export class IndexerClient {
   async getVoterWeights(votingEpochId: number): Promise<Map<Address, BN>> {
     const rewardEpochId = this.epochs.rewardEpochForVotingEpoch(votingEpochId);
     const signingPolicy = await this.getSigningPolicy(rewardEpochId);
+    const voterRegistration = await this.getVoterRegistration(rewardEpochId);
 
     const voterWeights = new Map<Address, BN>();
     const voters = signingPolicy.voters;
@@ -251,6 +253,11 @@ export class IndexerClient {
       voterWeights.set(voters[i], toBN(weights[i]));
     }
     return voterWeights;
+  }
+
+
+  async getVoterRegistration(rewardEpochId: number): Promise<VoterRegistration> {
+    throw new Error("Method not implemented.");
   }
 
   readonly signingPolicies = new Map<RewardEpochId, SigningPolicy>();

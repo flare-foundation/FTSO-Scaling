@@ -53,7 +53,6 @@ export interface BareSignature {
 
 export interface RevealData {
   readonly random: string;
-  readonly merkleRoot: string;
   readonly prices: string; // 4-byte hex strings
 }
 

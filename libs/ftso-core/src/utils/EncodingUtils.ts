@@ -5,6 +5,9 @@ import { toBN } from "./voting-utils";
 import Web3 from "web3";
 import { TLPEvents } from "../orm/entities";
 import BN from "bn.js";
+import { PayloadMessage } from "./PayloadMessage";
+
+export const FTSO2_PROTOCOL_ID = 100;
 
 const submissionAbiPath = "abi/Submission.json";
 const systemManagerAbiPath = "abi/FlareSystemManager.json";
@@ -20,6 +23,15 @@ export interface SigningPolicy {
   seed: BN;
   voters: string[];
   weights: BN[];
+}
+
+export interface VoterRegistered {
+  rewardEpochId: number;
+  voter: string;
+  signingPolicyAddress: string;
+  delegationAddress: string;
+  submitAddress: string;
+  submitSignaturesAddress: string;
 }
 
 export default class EncodingUtils {
@@ -41,6 +53,7 @@ export default class EncodingUtils {
 
     // this.abiItems.set("finalize", votingABI.find(x => x.name === "finalize")!);
     this.abiItems.set("SigningPolicyInitialized", relayAbi.find(x => x.name === "SigningPolicyInitialized")!);
+    this.abiItems.set("VoterRegistered", relayAbi.find(x => x.name === "VoterRegistered")!);
     // this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find(x => x.name === "RewardMerkleRootConfirmed")!);
     // this.abiItems.set("offerRewards", rewardsABI.find(x => x.name === "offerRewards")!);
     // this.abiItems.set("RewardOffered", rewardsABI.find(x => x.name === "RewardOffered")!);
@@ -61,6 +74,7 @@ export default class EncodingUtils {
       "SigningPolicyInitialized",
       this.coder.encodeEventSignature(this.abiItems.get("SigningPolicyInitialized")!)
     );
+    this.eventSignatures.set("VoterRegistered", this.coder.encodeEventSignature(this.abiItems.get("VoterRegistered")!));
   }
 
   functionSignature(name: string): string {
@@ -120,6 +134,31 @@ export default class EncodingUtils {
     return result;
   }
 
+  
+  extractVoterRegistration(events: TLPEvents[]): SigningPolicy[] {
+    const result = events
+      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("SigningPolicyInitialized"))
+      .map(event => {
+        const rawPolicy = this.coder.decodeLog(
+          this.abiItems.get("SigningPolicyInitialized")!.inputs!,
+          event.data,
+          [event.topic0, event.topic1, event.topic2, event.topic3].filter(x => x !== "")
+        );
+        const tmp = rawPolicy as any;
+        const policy: SigningPolicy = {
+          rewardEpochId: parseIntOrThrow(tmp.rewardEpochId, 10),
+          startVotingRoundId: parseIntOrThrow(tmp.startVotingRoundId, 10),
+          threshold: toBN(tmp.threshold),
+          seed: toBN(tmp.seed),
+          voters: tmp.voters,
+          weights: tmp.weights.map((x: any) => toBN(x)),
+        };
+        return policy;
+      });
+    return result;
+  }
+
+
   extractOffers(events: TLPEvents[]): RewardOffered[] {
     const result = events
       .filter((x: TLPEvents) => "0x" + x.topic0 === this.eventSignature("RewardOffered"))
@@ -134,17 +173,26 @@ export default class EncodingUtils {
     return result;
   }
 
-  extractCommitHash(tx: TxData): string {
-    return this.decodeFunctionCall(tx, "submit1")._commitHash;
+  extractCommitHash(txInput: string): string {
+    const commitMessage = this.extractMessage(txInput);
+    if (commitMessage === undefined) throw new Error("No commit message found for FTSO protocol in payload");
+    return commitMessage.payload;
   }
 
-  extractReveal(tx: TxData): RevealData {
-    const resultTmp = this.decodeFunctionCall(tx, "submit2");
-    return {
-      random: resultTmp._random,
-      merkleRoot: resultTmp._merkleRoot,
-      prices: resultTmp._prices,
-    } as RevealData;
+  private extractMessage(txInput: string) {
+    const callData = txInput.slice(8);
+    const messages = PayloadMessage.decode(callData);
+    return messages.find(x => x.protocolId === FTSO2_PROTOCOL_ID);
+  }
+
+  extractReveal(txInput: string): RevealData {
+    const revealMessage = this.extractMessage(txInput);
+    if (revealMessage === undefined) throw new Error("No commit message found for FTSO protocol in payload");
+    const reveal: RevealData = {
+      random: revealMessage.payload.slice(0, 64),
+      prices: revealMessage.payload.slice(64),
+    };
+    return reveal;
   }
 
   extractSignatures(tx: TxData): SignatureData {

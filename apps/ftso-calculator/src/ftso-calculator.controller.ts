@@ -13,6 +13,8 @@ import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
 import { sleepFor } from "./utils/time";
+import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
+import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 
 
 enum ApiTagsEnum {
@@ -96,25 +98,37 @@ export class FtsoCalculatorController {
   @Get("commit/:epochId")
   async getCommit(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
     this.logger.log(`Getting commit for epoch ${epochId}`);
-    return await this.ftsoCalculatorService.getCommit(epochId);
-  }
-
-  @Get("policy")
-  async getPolicy(): Promise<void> {
-    await this.ftsoCalculatorService.test();
+    const commit = await this.ftsoCalculatorService.getCommit(epochId);
+    const msg: IPayloadMessage<string> = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId: epochId,
+      payload: commit,
+    };
+    const encoded = PayloadMessage.encode(msg);
+    const decoded = PayloadMessage.decode(encoded);
+    console.log(`Decoded: ${JSON.stringify(decoded)}`);
+    return PayloadMessage.encode(msg);
   }
 
   @Get("reveal/:epochId")
   async getReveal(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
     this.logger.log(`Getting reveal for epoch ${epochId}`);
     const reveal = await this.ftsoCalculatorService.getReveal(epochId);
+    this.logger.log(`Reveal from service ${epochId}: ${JSON.stringify(reveal)}`);
     if (reveal === undefined) {
       throw new NotFoundException(`Reveal for epoch ${epochId} not found`);
     }
 
     // TODO: Come up with a proper encoding format
-    const serializedReveal = reveal.random.toString() + reveal.priceHex.slice(2);
-    return serializedReveal;
+    const serializedReveal = reveal.random.toString() + reveal.prices.slice(2);
+    this.logger.log(`Reveal for epoch ${epochId}: ${serializedReveal}`);
+
+    const msg: IPayloadMessage<string> = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId: epochId,
+      payload: serializedReveal,
+    };
+    return PayloadMessage.encode(msg);
   }
 
   @Get("result/:epochId")

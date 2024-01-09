@@ -7,7 +7,7 @@ import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { rewardEpochFeedSequence, calculateResults } from "../../../libs/ftso-core/src/price-calculation";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { hashForCommit, packPrices } from "../../../libs/ftso-core/src/utils/voting-utils";
-import { EpochData, RewardOffered } from "../../../libs/ftso-core/src/voting-types";
+import { EpochData, RevealData, RewardOffered } from "../../../libs/ftso-core/src/voting-types";
 import { PriceService } from "./price-feeds/price.service";
 import { getAddress } from "./utils/web3";
 import { sleepFor } from "./utils/time";
@@ -38,25 +38,25 @@ export class FtsoCalculatorService {
     this.myKey = Bytes32.fromHexString(configService.get<string>("privateKey")!);
     this.myAddrres = getAddress(web3Helper, this.myKey.toString());
 
-    setTimeout(() => {
-      this.test();
-    }, 1000);
+    // setTimeout(() => {
+    //   this.test();
+    // }, 1000);
   }
 
-  async test(): Promise<void> {
-    while (true) {
-      const epochId = this.epochSettings.votingEpochForTime(Date.now()) - 1;
+  // async test(): Promise<void> {
+  //   while (true) {
+  //     const epochId = this.epochSettings.votingEpochForTime(Date.now()) - 1;
 
-      const commit = await this.getCommit(epochId);
-      const reveal = await this.getReveal(epochId);
-      // const result = await this.getResult(epochId);
+  //     const commit = await this.getCommit(epochId);
+  //     const reveal = await this.getReveal(epochId);
+  //     // const result = await this.getResult(epochId);
 
-      console.log(`Commit for epoch ${epochId}: ${commit}`);
-      console.log(`Reveal for epoch ${epochId}: ${JSON.stringify(reveal)}`);
+  //     console.log(`Commit for epoch ${epochId}: ${commit}`);
+  //     console.log(`Reveal for epoch ${epochId}: ${JSON.stringify(reveal)}`);
 
-      await sleepFor(this.epochSettings.votingEpochDurationSec * 1000);
-    }
-  }
+  //     await sleepFor(this.epochSettings.votingEpochDurationSec * 1000);
+  //   }
+  // }
 
   async getCommit(epochId: number): Promise<string> {
     const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
@@ -83,9 +83,22 @@ export class FtsoCalculatorService {
     return data;
   }
 
-  async getReveal(epochId: number): Promise<EpochData | undefined> {
-    this.logger.log(`Getting reveal for epoch ${epochId}: ${this.dataByEpoch.get(epochId)}`);
-    return Promise.resolve(this.dataByEpoch.get(epochId));
+  async getReveal(epochId: number): Promise<RevealData | undefined> {
+    this.logger.log(`Getting reveal for epoch ${epochId}`);
+
+    const epochData = this.dataByEpoch.get(epochId)!;
+    if (epochData === undefined) {
+      // TODO: Query indexer if not found - for usecases that are replaying history
+      //       Note: same should be done for getCommit.
+      this.logger.error(`No data found for epoch ${epochId}`);
+      return undefined;
+    }
+    const revealData: RevealData = {
+      random: epochData.random.toString(),
+      prices: epochData.priceHex,
+    };
+
+    return revealData;
   }
 
   async getResult(epochId: number): Promise<string> {
