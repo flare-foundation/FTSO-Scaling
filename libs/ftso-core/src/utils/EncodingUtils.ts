@@ -12,6 +12,7 @@ export const FTSO2_PROTOCOL_ID = 100;
 const submissionAbiPath = "abi/Submission.json";
 const systemManagerAbiPath = "abi/FlareSystemManager.json";
 const relayAbiPath = "abi/Relay.json";
+const voterRegistryAbiPath = "abi/VoterRegistry.json";
 
 const commitFunction = "submit1";
 const revealFunction = "submit2";
@@ -46,6 +47,7 @@ export default class EncodingUtils {
     const systemManagerAbi = JSON.parse(readFileSync(systemManagerAbiPath).toString()).abi as AbiItem[];
     const relayAbi = JSON.parse(readFileSync(relayAbiPath).toString()).abi as AbiItem[];
     const submissionAbi = JSON.parse(readFileSync(submissionAbiPath).toString()).abi as AbiItem[];
+    const voterRegistryAbi = JSON.parse(readFileSync(voterRegistryAbiPath).toString()).abi as AbiItem[];
 
     this.abiItems.set(commitFunction, submissionAbi.find((x: AbiItem) => x.name === commitFunction)!);
     this.abiItems.set(revealFunction, submissionAbi.find(x => x.name === revealFunction)!);
@@ -53,7 +55,7 @@ export default class EncodingUtils {
 
     // this.abiItems.set("finalize", votingABI.find(x => x.name === "finalize")!);
     this.abiItems.set("SigningPolicyInitialized", relayAbi.find(x => x.name === "SigningPolicyInitialized")!);
-    this.abiItems.set("VoterRegistered", relayAbi.find(x => x.name === "VoterRegistered")!);
+    this.abiItems.set("VoterRegistered", voterRegistryAbi.find(x => x.name === "VoterRegistered")!);
     // this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find(x => x.name === "RewardMerkleRootConfirmed")!);
     // this.abiItems.set("offerRewards", rewardsABI.find(x => x.name === "offerRewards")!);
     // this.abiItems.set("RewardOffered", rewardsABI.find(x => x.name === "RewardOffered")!);
@@ -134,30 +136,28 @@ export default class EncodingUtils {
     return result;
   }
 
-  
-  extractVoterRegistration(events: TLPEvents[]): SigningPolicy[] {
+  extractVoterRegistration(events: TLPEvents[]): VoterRegistered[] {
     const result = events
-      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("SigningPolicyInitialized"))
+      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("VoterRegistered"))
       .map(event => {
-        const rawPolicy = this.coder.decodeLog(
-          this.abiItems.get("SigningPolicyInitialized")!.inputs!,
+        const raw = this.coder.decodeLog(
+          this.abiItems.get("VoterRegistered")!.inputs!,
           event.data,
           [event.topic0, event.topic1, event.topic2, event.topic3].filter(x => x !== "")
         );
-        const tmp = rawPolicy as any;
-        const policy: SigningPolicy = {
+        const tmp = raw as any;
+        const voterRegistration: VoterRegistered = {
           rewardEpochId: parseIntOrThrow(tmp.rewardEpochId, 10),
-          startVotingRoundId: parseIntOrThrow(tmp.startVotingRoundId, 10),
-          threshold: toBN(tmp.threshold),
-          seed: toBN(tmp.seed),
-          voters: tmp.voters,
-          weights: tmp.weights.map((x: any) => toBN(x)),
+          voter: tmp.voter,
+          signingPolicyAddress: tmp.signingPolicyAddress,
+          delegationAddress: tmp.delegationAddress,
+          submitAddress: tmp.submitAddress,
+          submitSignaturesAddress: tmp.submitSignaturesAddress,
         };
-        return policy;
+        return voterRegistration;
       });
     return result;
   }
-
 
   extractOffers(events: TLPEvents[]): RewardOffered[] {
     const result = events
@@ -189,8 +189,8 @@ export default class EncodingUtils {
     const revealMessage = this.extractMessage(txInput);
     if (revealMessage === undefined) throw new Error("No commit message found for FTSO protocol in payload");
     const reveal: RevealData = {
-      random: revealMessage.payload.slice(0, 64),
-      prices: revealMessage.payload.slice(64),
+      random: revealMessage.payload.slice(0, 66),
+      prices: "0x" + revealMessage.payload.slice(66),
     };
     return reveal;
   }

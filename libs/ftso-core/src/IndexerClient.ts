@@ -9,7 +9,7 @@ import {
   SignatureData,
   TxData,
 } from "./voting-types";
-import EncodingUtils, { SigningPolicy } from "./utils/EncodingUtils";
+import EncodingUtils, { SigningPolicy, VoterRegistered } from "./utils/EncodingUtils";
 import { Between, EntityManager } from "typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
 import { ZERO_ADDRESS, toBN, toBytes4 } from "./utils/voting-utils";
@@ -52,6 +52,7 @@ export class IndexerClient {
 
   protected readonly encodingUtils = () => EncodingUtils.instance;
   readonly signingPolicyTopic = this.encodingUtils().eventSignature("SigningPolicyInitialized");
+  readonly voterRegisteredTopic = this.encodingUtils().eventSignature("VoterRegistered");
 
   constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {}
 
@@ -127,7 +128,7 @@ export class IndexerClient {
     //   throw new Error(`Incomplete reveal picture for current price epoch`);
     // }
     console.log("Reveal selector: ", this.revealSelector);
-    console.log(`Start (${priceEpochId +1 }): ${start / 1000}, deadline: ${revealDeadline / 1000}`);
+    console.log(`Start (${priceEpochId + 1}): ${start / 1000}, deadline: ${revealDeadline / 1000}`);
 
     const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
       where: {
@@ -244,30 +245,46 @@ export class IndexerClient {
   async getVoterWeights(votingEpochId: number): Promise<Map<Address, BN>> {
     const rewardEpochId = this.epochs.rewardEpochForVotingEpoch(votingEpochId);
     const signingPolicy = await this.getSigningPolicy(rewardEpochId);
-    const voterRegistration = await this.getVoterRegistration(rewardEpochId);
+    const voterRegistrations = await this.getVoterRegistrations(rewardEpochId);
+
+    const toSubmitAddress = new Map<Address, Address>();
+    voterRegistrations.forEach(reg => {
+      toSubmitAddress.set(reg.signingPolicyAddress, reg.submitAddress);
+    });
 
     const voterWeights = new Map<Address, BN>();
     const voters = signingPolicy.voters;
     const weights = signingPolicy.weights;
     for (let i = 0; i < voters.length; i++) {
-      voterWeights.set(voters[i], toBN(weights[i]));
+      voterWeights.set(toSubmitAddress.get(voters[i])!.toLowerCase(), toBN(weights[i]));
     }
     return voterWeights;
   }
 
+  async getVoterRegistrations(rewardEpochId: number): Promise<VoterRegistered[]> {
+    const cached = this.  voterRegistrations.get(rewardEpochId);
+    if (cached !== undefined) return cached;
 
-  async getVoterRegistration(rewardEpochId: number): Promise<VoterRegistration> {
-    throw new Error("Method not implemented.");
+    console.log("Topic for VoterRegistered", this.voterRegisteredTopic);
+    const events = await this.entityManager.getRepository(TLPEvents).find({
+      where: {
+        topic0: this.voterRegisteredTopic,
+        // timestamp: Between(previousRewardEpochStart / 1000, rewardEpochEnd / 1000),
+      },
+    });
+
+    const res = this.encodingUtils().extractVoterRegistration(events);
+    const parsed = res.filter(x => x.rewardEpochId === rewardEpochId);
+    this.voterRegistrations.set(rewardEpochId, parsed);
+    return parsed;
   }
 
   readonly signingPolicies = new Map<RewardEpochId, SigningPolicy>();
+  readonly voterRegistrations = new Map<RewardEpochId, VoterRegistered[]>();
 
   async getSigningPolicy(rewardEpochId: number): Promise<SigningPolicy> {
     const cached = this.signingPolicies.get(rewardEpochId);
     if (cached !== undefined) return cached;
-
-    const previousRewardEpochStart = this.epochs.rewardEpochStartMs(rewardEpochId - 1);
-    const rewardEpochEnd = this.epochs.rewardEpochStartMs(rewardEpochId) + this.epochs.rewardEpochDurationSec * 1000;
 
     const events = await this.entityManager.getRepository(TLPEvents).find({
       where: {
