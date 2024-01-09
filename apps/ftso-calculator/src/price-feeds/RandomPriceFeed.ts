@@ -8,7 +8,7 @@ interface RandomPriceFeedConfig {
 }
 
 export class RandomPriceFeed implements IPriceProvider {
-  private readonly priceFeedConfig!: RandomPriceFeedConfig;
+  private readonly priceFeedConfig: RandomPriceFeedConfig;
 
   constructor(readonly feed: Feed, index: number) {
     this.priceFeedConfig = {

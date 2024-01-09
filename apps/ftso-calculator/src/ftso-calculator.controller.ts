@@ -10,7 +10,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
-import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/dataProviderResponses.dto";
+import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
 import { sleepFor } from "./utils/time";
 

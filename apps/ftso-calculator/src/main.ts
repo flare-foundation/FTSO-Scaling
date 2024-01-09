@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { FtsoCalculatorModule } from './ftso-calculator.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(FtsoCalculatorModule);
-  // TODO: consider adding helmet and cors protectors + some sort of api key protection
+  app.use(helmet());
+  // TODO: consider adding cors protectors + some sort of api key protection
   const basePath = process.env.DATA_PROVIDER_CLIENT_BASE_PATH ?? '';
 
   const config = new DocumentBuilder()

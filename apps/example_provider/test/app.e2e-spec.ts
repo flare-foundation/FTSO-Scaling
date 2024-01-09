@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { ExampleProviderModule } from './../src/example_provider.module';
+import { ExampleProviderModule } from '../src/example-provider.module';
 
 describe('ExampleProviderController (e2e)', () => {
   let app: INestApplication;
