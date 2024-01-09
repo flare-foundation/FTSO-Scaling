@@ -1,7 +1,6 @@
 import { Feed } from "../../../../libs/ftso-core/src/voting-types";
 
 export interface PriceFeedsRequest {
-  votingRoundId: number;
   priceFeeds: Feed[];
 }
 
