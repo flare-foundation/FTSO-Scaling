@@ -83,10 +83,6 @@ export async function calculateRevealers(
   reveals: Map<string, RevealData>,
   voterWeights: Map<Address, BN>
 ): Promise<RevealResult> {
-  // console.log(`Commits: ${[...commits.keys()]}`);
-  // console.log(`Reveals: ${[...reveals.keys()]}`);
-  // console.log(`Weights: ${[...voterWeights.keys()]}`);
-
   const committers = [...commits.keys()];
   const eligibleCommitters = committers
     .map(sender => sender.toLowerCase())
@@ -103,7 +99,7 @@ export async function calculateRevealers(
       return false;
     }
     const commitHash = commits.get(committer);
-    return commitHash === hashForCommit(committer, revealData.random, revealData.prices);
+    return commitHash === hashForCommit(committer, revealData.random, revealData.encodedPrices);
   });
 
   if (committedFailedReveal.length > 0) {
@@ -234,7 +230,7 @@ export async function calculateFeedMedians(
   const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
   voters.forEach(voter => {
     const revealData = revealResult.reveals.get(voter.toLowerCase())!;
-    const voterPrices = parsePrices(revealData.prices, numberOfFeeds);
+    const voterPrices = parsePrices(revealData.encodedPrices, numberOfFeeds);
     voterPrices.forEach((price, i) => feedPrices[i].push(price));
   });
 

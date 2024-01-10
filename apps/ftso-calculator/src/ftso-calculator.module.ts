@@ -6,7 +6,6 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { FTSOParameters, FeedConfig } from "./config/FTSOParameters";
 import { PriceService } from "./price-feeds/price.service";
 import { IPriceProvider } from "../../../libs/ftso-core/src/IPriceFeed";
-import { CcxtPriceFeed } from "./price-feeds/CcxtPriceFeed";
 import { RandomPriceFeed } from "./price-feeds/RandomPriceFeed";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { TLPTransaction, TLPEvents, TLPState } from "../../../libs/ftso-core/src/orm/entities";
@@ -34,22 +33,22 @@ const IMPORTS_ARRAY = [
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: async (configService: ConfigService<IConfig>) => {
-      // return {
-      //   type: 'sqlite',
-      //   database: '/Users/work/Code/flare-smart-contracts-v2/db/indexer.db',
-      //   entities: [TLPTransaction, TLPEvents, TLPState],
-      //   synchronize: false,
-      // };
       return {
-        type: "mysql",
-        host: configService.getOrThrow("db_host"),
-        port: configService.getOrThrow("db_port"),
-        username: configService.getOrThrow("db_user"),
-        password: configService.getOrThrow("db_pass"),
-        database: configService.getOrThrow("db_name"),
+        type: 'sqlite',
+        database: '/Users/work/Code/flare-smart-contracts-v2/db/indexer.db',
         entities: [TLPTransaction, TLPEvents, TLPState],
         synchronize: false,
       };
+      // return {
+      //   type: "mysql",
+      //   host: configService.getOrThrow("db_host"),
+      //   port: configService.getOrThrow("db_port"),
+      //   username: configService.getOrThrow("db_user"),
+      //   password: configService.getOrThrow("db_pass"),
+      //   database: configService.getOrThrow("db_name"),
+      //   entities: [TLPTransaction, TLPEvents, TLPState],
+      //   synchronize: false,
+      // };
     },
   }),
 ];

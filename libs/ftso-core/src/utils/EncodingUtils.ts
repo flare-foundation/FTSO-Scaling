@@ -115,7 +115,7 @@ export default class EncodingUtils {
 
   extractSigningPolicies(events: TLPEvents[]): SigningPolicy[] {
     const result = events
-      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("SigningPolicyInitialized"))
+      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("SigningPolicyInitialized").slice(2))
       .map(event => {
         const rawPolicy = this.coder.decodeLog(
           this.abiItems.get("SigningPolicyInitialized")!.inputs!,
@@ -138,7 +138,7 @@ export default class EncodingUtils {
 
   extractVoterRegistration(events: TLPEvents[]): VoterRegistered[] {
     const result = events
-      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("VoterRegistered"))
+      .filter((x: TLPEvents) => x.topic0 === this.eventSignature("VoterRegistered").slice(2))
       .map(event => {
         const raw = this.coder.decodeLog(
           this.abiItems.get("VoterRegistered")!.inputs!,
@@ -190,8 +190,9 @@ export default class EncodingUtils {
     if (revealMessage === undefined) throw new Error("No commit message found for FTSO protocol in payload");
     const reveal: RevealData = {
       random: revealMessage.payload.slice(0, 66),
-      prices: "0x" + revealMessage.payload.slice(66),
+      encodedPrices: "0x" + revealMessage.payload.slice(66),
     };
+    console.log("Extracted reveal: ", reveal);
     return reveal;
   }
 

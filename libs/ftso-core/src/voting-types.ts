@@ -53,7 +53,7 @@ export interface BareSignature {
 
 export interface RevealData {
   readonly random: string;
-  readonly prices: string; // 4-byte hex strings
+  readonly encodedPrices: string; // 4-byte hex strings
 }
 
 export interface SignatureData {

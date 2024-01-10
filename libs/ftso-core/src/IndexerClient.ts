@@ -16,6 +16,7 @@ import { ZERO_ADDRESS, toBN, toBytes4 } from "./utils/voting-utils";
 
 import BN from "bn.js";
 import Web3 from "web3";
+import { sign } from "node:crypto";
 
 declare type CommitHash = string;
 declare type Timestamp = number;
@@ -51,8 +52,8 @@ export class IndexerClient {
   private readonly cache = new DBCache();
 
   protected readonly encodingUtils = () => EncodingUtils.instance;
-  readonly signingPolicyTopic = this.encodingUtils().eventSignature("SigningPolicyInitialized");
-  readonly voterRegisteredTopic = this.encodingUtils().eventSignature("VoterRegistered");
+  readonly signingPolicyTopic = this.encodingUtils().eventSignature("SigningPolicyInitialized").slice(2);
+  readonly voterRegisteredTopic = this.encodingUtils().eventSignature("VoterRegistered").slice(2);
 
   constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {}
 
@@ -110,10 +111,19 @@ export class IndexerClient {
     for (const tx of txns) {
       const extractedCommit = this.encodingUtils().extractCommitHash(tx.input);
       console.log(`Got commit response ${tx.from_address} - ${extractedCommit}`);
-      epochCommits.set("0x" + tx.from_address.toLowerCase(), extractedCommit);
+      const signingAddress = await this.getSigningAddress(priceEpochId, "0x" + tx.from_address);
+      epochCommits.set(signingAddress, extractedCommit);
     }
 
     return epochCommits;
+  }
+
+  async getSigningAddress(votingEpochId: number, submitAddress: string): Promise<Address> {
+    const rewardEpochId = this.epochs.rewardEpochForVotingEpoch(votingEpochId);
+    const voterRegistrations = await this.getVoterRegistrations(rewardEpochId);
+
+    const reg = voterRegistrations.find(reg => reg.submitAddress.toLowerCase() === submitAddress.toLowerCase());
+    return reg.signingPolicyAddress.toLowerCase();
   }
 
   async queryReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealData>> {
@@ -147,7 +157,8 @@ export class IndexerClient {
     for (const tx of txns) {
       const reveal = this.encodingUtils().extractReveal(tx.input);
       console.log(`Got reveal response ${tx.from_address} - ${reveal}`);
-      epochReveals.set("0x" + tx.from_address.toLowerCase(), reveal);
+      const signingAddress = await this.getSigningAddress(priceEpochId, "0x" + tx.from_address);
+      epochReveals.set(signingAddress, reveal);
     }
 
     return epochReveals;
@@ -245,24 +256,24 @@ export class IndexerClient {
   async getVoterWeights(votingEpochId: number): Promise<Map<Address, BN>> {
     const rewardEpochId = this.epochs.rewardEpochForVotingEpoch(votingEpochId);
     const signingPolicy = await this.getSigningPolicy(rewardEpochId);
-    const voterRegistrations = await this.getVoterRegistrations(rewardEpochId);
+    // const voterRegistrations = await this.getVoterRegistrations(rewardEpochId);
 
-    const toSubmitAddress = new Map<Address, Address>();
-    voterRegistrations.forEach(reg => {
-      toSubmitAddress.set(reg.signingPolicyAddress, reg.submitAddress);
-    });
+    // const toSubmitAddress = new Map<Address, Address>();
+    // voterRegistrations.forEach(reg => {
+    //   toSubmitAddress.set(reg.signingPolicyAddress, reg.submitAddress);
+    // });
 
     const voterWeights = new Map<Address, BN>();
     const voters = signingPolicy.voters;
     const weights = signingPolicy.weights;
     for (let i = 0; i < voters.length; i++) {
-      voterWeights.set(toSubmitAddress.get(voters[i])!.toLowerCase(), toBN(weights[i]));
+      voterWeights.set(voters[i]!.toLowerCase(), toBN(weights[i]));
     }
     return voterWeights;
   }
 
   async getVoterRegistrations(rewardEpochId: number): Promise<VoterRegistered[]> {
-    const cached = this.  voterRegistrations.get(rewardEpochId);
+    const cached = this.voterRegistrations.get(rewardEpochId);
     if (cached !== undefined) return cached;
 
     console.log("Topic for VoterRegistered", this.voterRegisteredTopic);

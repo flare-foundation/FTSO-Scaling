@@ -24,9 +24,6 @@ export class FtsoCalculatorService {
   // TODO: Need to clean up old epoch data so the map doesn't grow indefinitely
   private readonly dataByEpoch = new Map<number, EpochData>();
 
-  private readonly myAddrres: string;
-  private readonly myKey: Bytes32;
-
   constructor(
     @Inject("PRICE_SERVICE")
     private readonly priceService: PriceService,
@@ -35,30 +32,9 @@ export class FtsoCalculatorService {
   ) {
     this.epochSettings = configService.get<EpochSettings>("epochSettings")!;
     this.indexerClient = new IndexerClient(manager, this.epochSettings);
-    this.myKey = Bytes32.fromHexString(configService.get<string>("privateKey")!);
-    this.myAddrres = getAddress(web3Helper, this.myKey.toString());
-
-    // setTimeout(() => {
-    //   this.test();
-    // }, 1000);
   }
 
-  // async test(): Promise<void> {
-  //   while (true) {
-  //     const epochId = this.epochSettings.votingEpochForTime(Date.now()) - 1;
-
-  //     const commit = await this.getCommit(epochId);
-  //     const reveal = await this.getReveal(epochId);
-  //     // const result = await this.getResult(epochId);
-
-  //     console.log(`Commit for epoch ${epochId}: ${commit}`);
-  //     console.log(`Reveal for epoch ${epochId}: ${JSON.stringify(reveal)}`);
-
-  //     await sleepFor(this.epochSettings.votingEpochDurationSec * 1000);
-  //   }
-  // }
-
-  async getCommit(epochId: number): Promise<string> {
+  async getCommit(epochId: number, signingAddress: string): Promise<string> {
     const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
     if (offers.length === 0) {
@@ -66,7 +42,7 @@ export class FtsoCalculatorService {
     }
 
     const data = await this.getPricesForEpoch(epochId, offers);
-    const hash = hashForCommit(this.myAddrres, data.random.value, data.priceHex);
+    const hash = hashForCommit(signingAddress, data.random.value, data.priceHex);
     this.dataByEpoch.set(epochId, data);
     this.logger.log(`Commit for epoch ${epochId}: ${hash}`);
     return hash;
@@ -85,7 +61,7 @@ export class FtsoCalculatorService {
 
   async getReveal(epochId: number): Promise<RevealData | undefined> {
     this.logger.log(`Getting reveal for epoch ${epochId}`);
-
+ 
     const epochData = this.dataByEpoch.get(epochId)!;
     if (epochData === undefined) {
       // TODO: Query indexer if not found - for usecases that are replaying history
@@ -95,23 +71,21 @@ export class FtsoCalculatorService {
     }
     const revealData: RevealData = {
       random: epochData.random.toString(),
-      prices: epochData.priceHex,
+      encodedPrices: epochData.priceHex,
     };
 
     return revealData;
   }
 
-  async getResult(epochId: number): Promise<string> {
+  async getResult(epochId: number): Promise<[Bytes32, boolean]> {
+    // TODO: Added sleep here because the system client calls this before the reveals are properly indexed - need to sort this race condition out.
+    await sleepFor(1000); 
     const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
-
     const commits = await this.indexerClient.queryCommits(epochId);
-
     const reveals = await this.indexerClient.queryReveals(epochId);
-
     const weights = await this.indexerClient.getVoterWeights(epochId);
-
     const result = await calculateResults(epochId, commits, reveals, offers, weights);
-    return result.merkleRoot.toString();
+    return [result.merkleRoot, result.randomQuality == 0];
   }
 }

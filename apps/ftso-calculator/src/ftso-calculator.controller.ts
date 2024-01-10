@@ -12,10 +12,8 @@ import { ApiTags } from "@nestjs/swagger";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
-import { sleepFor } from "./utils/time";
 import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
 import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/utils/EncodingUtils";
-
 
 enum ApiTagsEnum {
   PDP = "FTSO Protocol data provider",
@@ -35,11 +33,13 @@ export class FtsoCalculatorController {
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
     @Query("signingAddress") signingAddress: string
   ): Promise<PDPResponse> {
-    this.logger.log(`Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    this.logger.log(
+      `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+    );
     return {
       status: PDPResponseStatusEnum.OK,
-      data: "0x1234",
-      additionalData: "0x5678",
+      data: await this.getCommitMessage(votingRoundId, signingAddress),
+      additionalData: "",
     };
   }
 
@@ -49,11 +49,13 @@ export class FtsoCalculatorController {
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
     @Query("signingAddress") signingAddress: string
   ): Promise<PDPResponse> {
-    this.logger.log(`Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    this.logger.log(
+      `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+    );
     return {
       status: PDPResponseStatusEnum.OK,
-      data: "0x1234",
-      additionalData: "0x5678",
+      data: await this.getReveal(votingRoundId),
+      additionalData: "",
     };
   }
 
@@ -63,11 +65,13 @@ export class FtsoCalculatorController {
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
     @Query("signingAddress") signingAddress: string
   ): Promise<PDPResponse> {
-    this.logger.log(`Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
+    this.logger.log(
+      `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+    );
     return {
       status: PDPResponseStatusEnum.OK,
-      data: "0x1234",
-      additionalData: "0x5678",
+      data: await this.getResult(votingRoundId),
+      additionalData: "",
     };
   }
 
@@ -77,69 +81,70 @@ export class FtsoCalculatorController {
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
     @Query("signingAddress") signingAddress: string
   ): Promise<PDPResponse> {
-    this.logger.log(`Calling GET on submit3 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`);
-    throw new InternalServerErrorException("Not used in FTSO protocol")
+    this.logger.log(
+      `Calling GET on submit3 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+    );
+    throw new InternalServerErrorException("Not used in FTSO protocol");
   }
 
   // Additional standardized facing APIs
 
   @ApiTags(ApiTagsEnum.EXTERNAL)
   @Get("signedMerkleTree/:votingRoundId")
-  async signedMerkleTree(
-    @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
-  ): Promise<ExternalResponse> {
+  async signedMerkleTree(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalResponse> {
     this.logger.log(`Calling GET on signedMerkleTree with param: votingRoundId ${votingRoundId}`);
-    throw new InternalServerErrorException("Not used in FTSO protocol")
+    throw new InternalServerErrorException("Not used in FTSO protocol");
   }
 
   ////////////////////////////
-  // OLD API
+  // FTOSv2 protocol logic
 
-  @Get("commit/:epochId")
-  async getCommit(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
-    this.logger.log(`Getting commit for epoch ${epochId}`);
-    const commit = await this.ftsoCalculatorService.getCommit(epochId);
+  async getCommitMessage(votingRoundId: number, signingAddress: string): Promise<string> {
+    this.logger.log(`Getting commit for epoch ${votingRoundId}`);
+    const commit = await this.ftsoCalculatorService.getCommit(votingRoundId, signingAddress);
     const msg: IPayloadMessage<string> = {
       protocolId: FTSO2_PROTOCOL_ID,
-      votingRoundId: epochId,
+      votingRoundId: votingRoundId,
       payload: commit,
     };
-    const encoded = PayloadMessage.encode(msg);
-    const decoded = PayloadMessage.decode(encoded);
-    console.log(`Decoded: ${JSON.stringify(decoded)}`);
     return PayloadMessage.encode(msg);
   }
 
-  @Get("reveal/:epochId")
-  async getReveal(@Param("epochId", ParseIntPipe) epochId: number): Promise<string> {
-    this.logger.log(`Getting reveal for epoch ${epochId}`);
-    const reveal = await this.ftsoCalculatorService.getReveal(epochId);
-    this.logger.log(`Reveal from service ${epochId}: ${JSON.stringify(reveal)}`);
+  async getReveal(votingRoundId: number): Promise<string> {
+    this.logger.log(`Getting reveal for epoch ${votingRoundId}`);
+    const reveal = await this.ftsoCalculatorService.getReveal(votingRoundId);
+    this.logger.log(`Reveal from service ${votingRoundId}: ${JSON.stringify(reveal)}`);
     if (reveal === undefined) {
-      throw new NotFoundException(`Reveal for epoch ${epochId} not found`);
+      throw new NotFoundException(`Reveal for epoch ${votingRoundId} not found`);
     }
 
-    // TODO: Come up with a proper encoding format
-    const serializedReveal = reveal.random.toString() + reveal.prices.slice(2);
-    this.logger.log(`Reveal for epoch ${epochId}: ${serializedReveal}`);
+    const serializedReveal = reveal.random.toString() + reveal.encodedPrices.slice(2);
+    this.logger.log(`Reveal for epoch ${votingRoundId}: ${serializedReveal}`);
 
     const msg: IPayloadMessage<string> = {
       protocolId: FTSO2_PROTOCOL_ID,
-      votingRoundId: epochId,
+      votingRoundId: votingRoundId,
       payload: serializedReveal,
     };
     return PayloadMessage.encode(msg);
   }
 
-  @Get("result/:epochId")
-  async getResult(@Param("epochId", ParseIntPipe) epochId: number): Promise<string | undefined> {
-    await sleepFor(2000);
-    this.logger.log(`Getting result for epoch ${epochId}`);
+  async getResult(votingRoundId: number): Promise<string> {
+    this.logger.log(`Getting result for epoch ${votingRoundId}`);
     try {
-      return await this.ftsoCalculatorService.getResult(epochId);
+      const [merkleRoot, goodRandom] = await this.ftsoCalculatorService.getResult(votingRoundId);
+      const encoded = // 38 bytes total
+        "0x" +
+        FTSO2_PROTOCOL_ID.toString(16).padStart(2, "0") + // 2 bytes
+        votingRoundId.toString(16).padStart(8, "0") + // 4 bytes
+        (goodRandom ? "01" : "00") + // 1 byte
+        merkleRoot.toString().slice(2); // 32 bytes
+
+      this.logger.log(`Result for epoch ${votingRoundId}: ${encoded}`);
+      return encoded;
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
-      throw new InternalServerErrorException(`Unable to calculate result for epoch ${epochId}`, { cause: e });
+      throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
   }
 }
