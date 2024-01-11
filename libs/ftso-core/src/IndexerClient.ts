@@ -10,13 +10,12 @@ import {
   TxData,
 } from "./voting-types";
 import EncodingUtils, { SigningPolicy, VoterRegistered } from "./utils/EncodingUtils";
-import { Between, EntityManager } from "typeorm";
+import { Between, EntityManager, MoreThan } from "typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
 import { ZERO_ADDRESS, toBN, toBytes4 } from "./utils/voting-utils";
 
 import BN from "bn.js";
 import Web3 from "web3";
-import { sign } from "node:crypto";
 
 declare type CommitHash = string;
 declare type Timestamp = number;
@@ -57,22 +56,6 @@ export class IndexerClient {
 
   constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) {}
 
-  // /** We should retrieve weights from tx event logs. */
-  // async getFakeVoterWeights(rewardEpochId: number): Promise<Map<Address, BN>> {
-  //   const currentTime = Date.now() / 1000;
-  //   const txns: TLPTransaction[] = await this.entityManager.getRepository(TLPTransaction).find({
-  //     where: {
-  //       function_sig: this.encodingUtils().functionSignature("commit").slice(2),
-  //       timestamp: Between(currentTime - 3600, currentTime),
-  //     },
-  //   });
-  //   const fakeWeights = new Map<Address, BN>();
-  //   for (const addr of txns.map(tx => tx.from_address.toLowerCase())) {
-  //     fakeWeights.set(addr, toBN(1000));
-  //   }
-  //   return fakeWeights;
-  // }
-
   async getMaxTimestamp(): Promise<number> {
     const state = await this.entityManager.getRepository(TLPState).findOneBy({ id: 3 });
     return state!.block_timestamp;
@@ -82,9 +65,6 @@ export class IndexerClient {
   revealSelector = Web3.utils.sha3("submit2()")!.slice(2, 10);
 
   async queryCommits(priceEpochId: PriceEpochId): Promise<Map<Address, CommitHash>> {
-    // const cached = this.cache.priceEpochCommits.get(priceEpochId);
-    // if (cached) return cached;
-
     const start = this.epochs.votingEpochStartMs(priceEpochId);
     const nextStart = this.epochs.votingEpochStartMs(priceEpochId + 1);
 
@@ -127,9 +107,6 @@ export class IndexerClient {
   }
 
   async queryReveals(priceEpochId: PriceEpochId): Promise<Map<Address, RevealData>> {
-    // const cached = this.cache.priceEpochReveals.get(priceEpochId);
-    // if (cached) return cached;
-
     const start = this.epochs.votingEpochStartMs(priceEpochId + 1);
     const revealDeadline = this.epochs.revealDeadlineSec(priceEpochId + 1);
 
@@ -146,12 +123,6 @@ export class IndexerClient {
         timestamp: Between(start / 1000, revealDeadline / 1000),
       },
     });
-
-    // getLogger("IndexerClient").info(
-    //   `Got ${txns.length} reveal transactions, fn sig ${this.encodingUtils
-    //     .functionSignature("revealBitvote")
-    //     .slice(2)}, time interaval: ${start} - ${revealDeadline}, timestamp: ${txns[0]?.timestamp}`
-    // );
 
     const epochReveals = new Map<Address, RevealData>();
     for (const tx of txns) {
@@ -224,44 +195,9 @@ export class IndexerClient {
   //   return [f, tx.timestamp];
   // }
 
-  // async getRewardSignatures(rewardEpochId: RewardEpochId): Promise<Map<Address, [SignatureData, Timestamp]>> {
-  //   const cached = this.cache.rewardSignatures.get(rewardEpochId);
-  //   if (cached) return cached;
-
-  //   const start = this.epochs.priceEpochStartTimeSec(this.epochs.firstPriceEpochForRewardEpoch(rewardEpochId));
-  //   const nextStart = this.epochs.priceEpochStartTimeSec(this.epochs.lastPriceEpochForRewardEpoch(rewardEpochId) + 1);
-
-  //   const txns: FtsoTransaction[] = await this.dataSource.getRepository(FtsoTransaction).find({
-  //     where: {
-  //       func_sig: this.encodingUtils.functionSignature("signRewards").slice(2),
-  //       timestamp: Between(start, nextStart - 1),
-  //     },
-  //   });
-
-  //   const signatures = new Map<Address, [SignatureData, Timestamp]>();
-  //   for (const tx of txns) {
-  //     const sig = this.encodingUtils.extractSignatureData(tx.toTxData());
-  //     getLogger("IndexerClient").info(`Got reward signature ${tx.from} - ${sig.merkleRoot}`);
-  //     signatures.set("0x" + tx.from.toLowerCase(), [sig, tx.timestamp]);
-  //   }
-
-  //   this.cache.rewardSignatures.set(rewardEpochId, signatures);
-  //   return signatures;
-  // }
-
-  // getRewardFinalize(rewardEpochId: RewardEpochId): [FinalizeData, Timestamp] | undefined {
-  //   return this.cache.rewardFinalizes.get(rewardEpochId);
-  // }
-
   async getVoterWeights(votingEpochId: number): Promise<Map<Address, BN>> {
     const rewardEpochId = this.epochs.rewardEpochForVotingEpoch(votingEpochId);
     const signingPolicy = await this.getSigningPolicy(rewardEpochId);
-    // const voterRegistrations = await this.getVoterRegistrations(rewardEpochId);
-
-    // const toSubmitAddress = new Map<Address, Address>();
-    // voterRegistrations.forEach(reg => {
-    //   toSubmitAddress.set(reg.signingPolicyAddress, reg.submitAddress);
-    // });
 
     const voterWeights = new Map<Address, BN>();
     const voters = signingPolicy.voters;
@@ -276,11 +212,13 @@ export class IndexerClient {
     const cached = this.voterRegistrations.get(rewardEpochId);
     if (cached !== undefined) return cached;
 
+    const previousRewardEpochStartSec = this.epochs.rewardEpochStartMs(rewardEpochId - 1) / 1000;
+
     console.log("Topic for VoterRegistered", this.voterRegisteredTopic);
     const events = await this.entityManager.getRepository(TLPEvents).find({
       where: {
         topic0: this.voterRegisteredTopic,
-        // timestamp: Between(previousRewardEpochStart / 1000, rewardEpochEnd / 1000),
+        timestamp: MoreThan(previousRewardEpochStartSec),
       },
     });
 
@@ -297,10 +235,12 @@ export class IndexerClient {
     const cached = this.signingPolicies.get(rewardEpochId);
     if (cached !== undefined) return cached;
 
+    const previousRewardEpochStartSec = this.epochs.rewardEpochStartMs(rewardEpochId - 1) / 1000;
+
     const events = await this.entityManager.getRepository(TLPEvents).find({
       where: {
         topic0: this.signingPolicyTopic,
-        // timestamp: Between(previousRewardEpochStart / 1000, rewardEpochEnd / 1000),
+        timestamp: MoreThan(previousRewardEpochStartSec),
       },
     });
 

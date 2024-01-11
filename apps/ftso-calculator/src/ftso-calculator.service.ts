@@ -9,7 +9,6 @@ import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { hashForCommit, packPrices } from "../../../libs/ftso-core/src/utils/voting-utils";
 import { EpochData, RevealData, RewardOffered } from "../../../libs/ftso-core/src/voting-types";
 import { PriceService } from "./price-feeds/price.service";
-import { getAddress } from "./utils/web3";
 import { sleepFor } from "./utils/time";
 
 const NON_EXISTENT_PRICE = 0;

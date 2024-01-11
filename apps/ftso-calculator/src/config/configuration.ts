@@ -35,6 +35,7 @@ export default () => {
       parseInt(process.env.ES_VOTING_EPOCH_DURATION_SECONDS) || 20,
       parseInt(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID) || 1000,
       parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS) || 5
+      // TODO: Throw if any of these are undefined instead of defaulting to values
     );
   }
   if (process.env.PRIVATE_KEY == undefined) {

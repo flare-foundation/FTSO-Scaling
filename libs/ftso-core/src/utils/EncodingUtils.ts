@@ -56,7 +56,6 @@ export default class EncodingUtils {
     // this.abiItems.set("finalize", votingABI.find(x => x.name === "finalize")!);
     this.abiItems.set("SigningPolicyInitialized", relayAbi.find(x => x.name === "SigningPolicyInitialized")!);
     this.abiItems.set("VoterRegistered", voterRegistryAbi.find(x => x.name === "VoterRegistered")!);
-    // this.abiItems.set("RewardMerkleRootConfirmed", votingABI.find(x => x.name === "RewardMerkleRootConfirmed")!);
     // this.abiItems.set("offerRewards", rewardsABI.find(x => x.name === "offerRewards")!);
     // this.abiItems.set("RewardOffered", rewardsABI.find(x => x.name === "RewardOffered")!);
     // this.abiInputs.set("rewardClaimDefinition", rewardsABI.find(x => x.name === "rewardClaimDefinition")!.inputs![0]);
@@ -65,13 +64,9 @@ export default class EncodingUtils {
     this.functionSignatures.set(revealFunction, this.coder.encodeFunctionSignature(this.abiItems.get(revealFunction)!));
     this.functionSignatures.set(signFunction, this.coder.encodeFunctionSignature(this.abiItems.get(signFunction)!));
     // this.functionSignatures.set("offerRewards", this.coder.encodeFunctionSignature(this.abiItems.get("offerRewards")!));
-    // this.functionSignatures.set("finalize", this.coder.encodeFunctionSignature(this.abiItems.get("finalize")!));
 
     // this.eventSignatures.set("RewardOffered", this.coder.encodeEventSignature(this.abiItems.get("RewardOffered")!));
-    // this.eventSignatures.set(
-    //   "MerkleRootConfirmed",
-    //   this.coder.encodeEventSignature(this.abiItems.get("MerkleRootConfirmed")!)
-    // );
+
     this.eventSignatures.set(
       "SigningPolicyInitialized",
       this.coder.encodeEventSignature(this.abiItems.get("SigningPolicyInitialized")!)
@@ -94,24 +89,6 @@ export default class EncodingUtils {
   abiInputForName(name: string) {
     return this.abiInputs.get(name)!;
   }
-  /*
-  "rewardEpochId": "6",
-    "startVotingRoundId": "1030",
-    "threshold": "32766",
-    "seed": "53065328510085082331184441339942221355359738731470047888994380383026852146168",
-    "voters": [
-      "0x3d91185a02774C70287F6c74Dd26d13DFB58ff16",
-      "0x0a057a7172d0466AEF80976D7E8c80647DfD35e3",
-      "0x650240A1F1024Fe55e6F2ed56679aB430E338581",
-      "0x2E3bfF5d8F20FDb941adC794F9BF3deA0416988f"
-    ],
-    "weights": [
-      "16383",
-      "16383",
-      "16383",
-      "16383"
-    ],
-  */
 
   extractSigningPolicies(events: TLPEvents[]): SigningPolicy[] {
     const result = events
