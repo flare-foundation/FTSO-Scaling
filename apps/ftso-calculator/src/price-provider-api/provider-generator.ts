@@ -26,58 +26,52 @@ generateApi({
   extractRequestBody: false,
   extractEnums: true,
   unwrapResponseData: false,
-  prettier: { // By default prettier config is load from your project
-    printWidth: 120,
-    tabWidth: 2,
-    trailingComma: "all",
-    parser: "typescript",
-  },
   defaultResponseType: "void",
-  singleHttpClient: true,
+  singleHttpClient: false,
   cleanOutput: true,
   enumNamesAsValues: false,
   moduleNameFirstTag: true,
   generateUnionEnums: false,
-  typePrefix: '',
-  typeSuffix: '',
-  enumKeyPrefix: '',
-  enumKeySuffix: '',
-  addReadonly: false,
-  sortTypes: false,
-  sortRouters: false,
-  extractingOptions: {
-    requestBodySuffix: ["Payload", "Body", "Input"],
-    requestParamsSuffix: ["Params"],
-    responseBodySuffix: ["Data", "Result", "Output"],
-    responseErrorSuffix: ["Error", "Fail", "Fails", "ErrorData", "HttpError", "BadResponse"],
-  },
-  /** allow to generate extra files based with this extra templates, see more below */
-  extraTemplates: [],
-  anotherArrayType: false,
-  fixInvalidTypeNamePrefix: "Type",
-  fixInvalidEnumKeyPrefix: "Value", 
-  codeGenConstructs: (constructs) => ({
-    ...constructs,
-    RecordType: (key, value) => `MyRecord<key, value>`
-  }),
-  primitiveTypeConstructs: (constructs) => ({
-      ...constructs,
-      string: {
-        'date-time': 'Date'
-      }
-  }),
-  hooks: {
-    onCreateComponent: (component) => {},
-    onCreateRequestParams: (rawType) => {},
-    onCreateRoute: (routeData) => {},
-    onCreateRouteName: (routeNameInfo, rawRouteInfo) => {},
-    onFormatRouteName: (routeInfo, templateRouteName) => {},
-    onFormatTypeName: (typeName, rawTypeName, schemaType) => {},
-    onInit: (configuration) => {},
-    onPreParseSchema: (originalSchema, typeName, schemaType) => {},
-    onParseSchema: (originalSchema, parsedSchema) => {},
-    onPrepareConfig: (currentConfiguration) => {},
-  }
+  // typePrefix: '',
+  // typeSuffix: '',
+  // enumKeyPrefix: '',
+  // enumKeySuffix: '',
+  // addReadonly: false,
+  // sortTypes: false,
+  // sortRouters: false,
+  // extractingOptions: {
+  //   requestBodySuffix: ["Payload", "Body", "Input"],
+  //   requestParamsSuffix: ["Params"],
+  //   responseBodySuffix: ["Data", "Result", "Output"],
+  //   responseErrorSuffix: ["Error", "Fail", "Fails", "ErrorData", "HttpError", "BadResponse"],
+  // },
+  // /** allow to generate extra files based with this extra templates, see more below */
+  // extraTemplates: [],
+  // anotherArrayType: false,
+  // fixInvalidTypeNamePrefix: "Type",
+  // fixInvalidEnumKeyPrefix: "Value", 
+  // codeGenConstructs: (constructs) => ({
+  //   ...constructs,
+  //   RecordType: (key, value) => `MyRecord<key, value>`
+  // }),
+  // primitiveTypeConstructs: (constructs) => ({
+  //     ...constructs,
+  //     string: {
+  //       'date-time': 'Date'
+  //     }
+  // }),
+  // hooks: {
+  //   onCreateComponent: (component) => {},
+  //   onCreateRequestParams: (rawType) => {},
+  //   onCreateRoute: (routeData) => {},
+  //   onCreateRouteName: (routeNameInfo, rawRouteInfo) => {},
+  //   onFormatRouteName: (routeInfo, templateRouteName) => {},
+  //   onFormatTypeName: (typeName, rawTypeName, schemaType) => {},
+  //   onInit: (configuration) => {},
+  //   onPreParseSchema: (originalSchema, typeName, schemaType) => {},
+  //   onParseSchema: (originalSchema, parsedSchema) => {},
+  //   onPrepareConfig: (currentConfiguration) => {},
+  // }
 })
   .then(({ files, configuration }) => {
     files.forEach(({ content, name }) => {

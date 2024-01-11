@@ -33,7 +33,7 @@ export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" 
 
 export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
   securityWorker?: (
-    securityData: SecurityDataType | null,
+    securityData: SecurityDataType | null
   ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
   secure?: boolean;
   format?: ResponseType;
@@ -147,13 +147,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * This server is used by the FTSO protocol data provider.
  */
-export class Api<SecurityDataType extends unknown> {
-  http: HttpClient<SecurityDataType>;
-
-  constructor(http: HttpClient<SecurityDataType>) {
-    this.http = http;
-  }
-
+export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   exampleProviderApis = {
     /**
      * No description
@@ -161,10 +155,9 @@ export class Api<SecurityDataType extends unknown> {
      * @tags Example Provider APIS
      * @name ExampleProviderControllerGetPriceFeeds
      * @request POST:/preparePriceFeeds/{votingRoundId}
-     * @response `201` `object`
      */
     exampleProviderControllerGetPriceFeeds: (votingRoundId: number, params: RequestParams = {}) =>
-      this.http.request<object, any>({
+      this.request<object, any>({
         path: `/preparePriceFeeds/${votingRoundId}`,
         method: "POST",
         format: "json",
@@ -177,10 +170,9 @@ export class Api<SecurityDataType extends unknown> {
      * @tags Example Provider APIS
      * @name ExampleProviderControllerGetPriceFeed
      * @request GET:/preparePriceFeed/{votingRoundId}/{feed}
-     * @response `200` `object`
      */
     exampleProviderControllerGetPriceFeed: (votingRoundId: number, feed: string, params: RequestParams = {}) =>
-      this.http.request<object, any>({
+      this.request<object, any>({
         path: `/preparePriceFeed/${votingRoundId}/${feed}`,
         method: "GET",
         format: "json",
