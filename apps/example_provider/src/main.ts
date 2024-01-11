@@ -1,10 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { ExampleProviderModule } from './example-provider.module';
+import { RandomExampleProviderModule } from './example-provider.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 
 async function bootstrap() {
-  const app = await NestFactory.create(ExampleProviderModule);
+  const app = await NestFactory.create(RandomExampleProviderModule);
   app.use(helmet());
   // TODO: consider adding cors protectors + some sort of api key protection
   const basePath = process.env.PRICE_PROVIDER_CLIENT_BASE_PATH ?? '';

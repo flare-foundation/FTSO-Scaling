@@ -1,12 +1,12 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Inject } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PriceFeedResponse, PriceFeedsRequest, PriceFeedsResponse } from "./dto/provider-requests.dto";
-import { RandomProviderService } from "./services/random-provider-service";
+import { ExampleProviderService } from "./example-provider-service";
 
 @ApiTags("Example Provider APIS")
 @Controller()
 export class ExampleProviderController {
-  constructor(private readonly priceProviderService: RandomProviderService) {}
+  constructor(@Inject("EXAMPLE_PROVIDER_SERVICE") private readonly priceProviderService: ExampleProviderService) {}
 
   @Post("preparePriceFeeds/:votingRoundId")
   async getPriceFeeds(

@@ -1,10 +1,11 @@
-import { Injectable } from "@nestjs/common";
+
 import { Feed } from "../../../../libs/ftso-core/src/voting-types";
 import { FeedPriceData } from "../dto/provider-requests.dto";
 import { RandomPriceFeedConfig } from "../../../../test-utils/RandomPriceFeed";
+import { BaseDataFeed } from "./base-feed";
 
-@Injectable()
-export class RandomProviderService {
+
+export class RandomFeed implements BaseDataFeed {
   private readonly priceFeedConfig: Omit<RandomPriceFeedConfig, "feedInfo">;
 
   constructor() {

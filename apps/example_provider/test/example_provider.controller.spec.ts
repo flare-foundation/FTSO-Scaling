@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
+import { ExampleProviderService } from "../src/example-provider-service";
 import { ExampleProviderController } from "../src/example-provider.controller";
-import { RandomProviderService } from "../src/services/random-provider-service";
 
 describe("ExampleProviderController", () => {
   let exampleProviderController: ExampleProviderController;
@@ -8,7 +8,7 @@ describe("ExampleProviderController", () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [ExampleProviderController],
-      providers: [RandomProviderService],
+      providers: [ExampleProviderService],
     }).compile();
 
     exampleProviderController = app.get<ExampleProviderController>(ExampleProviderController);
