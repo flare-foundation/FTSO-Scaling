@@ -155,6 +155,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Example Provider APIS
      * @name ExampleProviderControllerGetPriceFeeds
      * @request POST:/preparePriceFeeds/{votingRoundId}
+     * @response `201` `object`
      */
     exampleProviderControllerGetPriceFeeds: (votingRoundId: number, params: RequestParams = {}) =>
       this.request<object, any>({
@@ -170,6 +171,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Example Provider APIS
      * @name ExampleProviderControllerGetPriceFeed
      * @request GET:/preparePriceFeed/{votingRoundId}/{feed}
+     * @response `200` `object`
      */
     exampleProviderControllerGetPriceFeed: (votingRoundId: number, feed: string, params: RequestParams = {}) =>
       this.request<object, any>({
