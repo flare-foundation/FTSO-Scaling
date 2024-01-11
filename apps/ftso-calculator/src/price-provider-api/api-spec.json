@@ -1,0 +1,80 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/preparePriceFeeds/{votingRoundId}": {
+      "post": {
+        "operationId": "ExampleProviderController_getPriceFeeds",
+        "parameters": [
+          {
+            "name": "votingRoundId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Example Provider APIS"]
+      }
+    },
+    "/preparePriceFeed/{votingRoundId}/{feed}": {
+      "get": {
+        "operationId": "ExampleProviderController_getPriceFeed",
+        "parameters": [
+          {
+            "name": "votingRoundId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "feed",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Example Provider APIS"]
+      }
+    }
+  },
+  "info": {
+    "title": "Simple Pricer Provider API interface",
+    "description": "This server is used by the FTSO protocol data provider.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {}
+  }
+}
