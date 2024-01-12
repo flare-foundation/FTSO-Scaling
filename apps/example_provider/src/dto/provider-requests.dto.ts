@@ -1,20 +1,22 @@
-import { Feed } from "../../../../libs/ftso-core/src/voting-types";
 
-export interface PriceFeedsRequest {
-  priceFeeds: Feed[];
+export class PriceFeedsRequest {
+  // Feeds are represented as 8 byte hex strings
+  feeds: string[];
 }
 
-export interface FeedPriceData {
-  feed: Feed;
+export class FeedPriceData {
+  feed: string;
   price: number; // TODO: consider BigInt
+  // decimals: number;
+  // sign: boolean;
 }
 
-export interface PriceFeedsResponse {
+export class PriceFeedsResponse {
   votingRoundId: number;
   feedPriceData: FeedPriceData[];
 }
 
-export interface PriceFeedResponse {
+export class PriceFeedResponse {
   votingRoundId: number;
   feedPriceData: FeedPriceData;
 }

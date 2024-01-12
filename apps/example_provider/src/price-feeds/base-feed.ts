@@ -3,7 +3,7 @@ import { FeedPriceData } from "../dto/provider-requests.dto";
 
 
 export abstract class BaseDataFeed {
-  abstract getPrice(feed: Feed): Promise<FeedPriceData>;
+  abstract getPrice(feed: string): Promise<FeedPriceData>;
 
-  abstract getPrices(feeds: Feed[]): Promise<FeedPriceData[]>;
+  abstract getPrices(feeds: string[]): Promise<FeedPriceData[]>;
 }

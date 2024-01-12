@@ -17,7 +17,7 @@ export class RandomFeed implements BaseDataFeed {
     };
   }
 
-  async getPrice(feed: Feed): Promise<FeedPriceData> {
+  async getPrice(feed: string): Promise<FeedPriceData> {
     const noise = (Math.random() - 0.5) * this.priceFeedConfig.variance;
     const result = Math.floor(
       (Math.sin(Date.now() / this.priceFeedConfig.period) + 1) * this.priceFeedConfig.factor + noise
@@ -28,7 +28,7 @@ export class RandomFeed implements BaseDataFeed {
     };
   }
 
-  async getPrices(feeds: Feed[]): Promise<FeedPriceData[]> {
+  async getPrices(feeds: string[]): Promise<FeedPriceData[]> {
     const promises = feeds.map(feed => this.getPrice(feed));
     return Promise.all(promises);
   }

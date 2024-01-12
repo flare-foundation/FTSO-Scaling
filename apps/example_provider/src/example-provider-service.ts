@@ -7,11 +7,11 @@ import { BaseDataFeed } from "./price-feeds/base-feed";
 export class ExampleProviderService {
   constructor(private readonly priceFeed: BaseDataFeed) {}
 
-  async getPrice(feed: Feed): Promise<FeedPriceData> {
+  async getPrice(feed: string): Promise<FeedPriceData> {
     return this.priceFeed.getPrice(feed);
   }
 
-  async getPrices(feeds: Feed[]): Promise<FeedPriceData[]> {
+  async getPrices(feeds: string[]): Promise<FeedPriceData[]> {
     return this.priceFeed.getPrices(feeds);
   }
 }
