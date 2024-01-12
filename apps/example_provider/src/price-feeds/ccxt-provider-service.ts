@@ -106,7 +106,12 @@ function unPrefix0x(tx: string) {
 function fromHex(h) {
   var s = "";
   for (var i = 0; i < h.length; i += 2) {
-    s += String.fromCharCode(parseInt(h.substr(i, 2), 16));
+    const charCode = parseInt(h.substr(i, 2), 16);
+    if (charCode === 0) {
+      continue;
+    } else {
+      s += String.fromCharCode(charCode);
+    }
   }
   return decodeURIComponent(escape(s));
 }
