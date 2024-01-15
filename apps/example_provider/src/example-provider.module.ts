@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
-import { ExampleProviderController } from "./example-provider.controller";
 import { ExampleProviderService } from "./example-provider-service";
-import { RandomFeed } from "./price-feeds/random-feed";
+import { ExampleProviderController } from "./example-provider.controller";
 import { CcxtFeed } from "./price-feeds/ccxt-provider-service";
 
 @Module({

@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { FeedPriceData } from "./dto/provider-requests.dto";
 import { BaseDataFeed } from "./price-feeds/base-feed";
 
