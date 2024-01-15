@@ -17,9 +17,12 @@ export interface IConfig {
 
   epochSettings: EpochSettings;
   params: FTSOParameters;
-  
+
   // Price Provider url (PRICE_PROVIDER_URL)
   price_provider_url: string;
+
+  // Testing only
+  protocol_id?: number;
 }
 
 export default () => {
@@ -46,7 +49,6 @@ export default () => {
     );
   }
 
-
   const config: IConfig = {
     port: parseInt(process.env.PORT || "3000"),
     api_keys,
@@ -58,6 +60,7 @@ export default () => {
     params: loadFTSOParameters(),
     epochSettings: epochSettings,
     price_provider_url: process.env.PRICE_PROVIDER_BASE_URL,
+    protocol_id: parseInt(process.env.PROTOCOL_ID || "1"),
   };
   return config;
 };
