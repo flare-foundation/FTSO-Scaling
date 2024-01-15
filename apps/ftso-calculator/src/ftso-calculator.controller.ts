@@ -20,6 +20,20 @@ enum ApiTagsEnum {
   EXTERNAL = "External User Facing API",
 }
 
+// TODO: temp solution for testing
+const fakeStatusByte32 = {
+  status: PDPResponseStatusEnum.OK,
+  data: "0x212d7f70aec1447d54a911afb1c86bf52a4602ab8c3d9c8ced0ec948a2cd8a11",
+  additionalData: "0x9ef41920e142ade76ca9c6d9f63b1d0b3ddad00630cfb220d2e422c06529d2ef068bd068cf025baca3e269e791ff2afadcf26d291c8fc5ec7772166ff4209761",
+}
+
+const fakeStatusByte38 = {
+  status: PDPResponseStatusEnum.OK,
+  data: "0x010000A45501777a7662d2939e73fc82d5c15b471ed18971c0341d40c6ae590ced7b898174a0",
+  additionalData: "0x9ef41920e142ade76ca9c6d9f63b1d0b3ddad00630cfb220d2e422c06529d2ef068bd068cf025baca3e269e791ff2afadcf26d291c8fc5ec7772166ff4209761",
+}
+
+
 @Controller("")
 export class FtsoCalculatorController {
   private readonly logger = new Logger(FtsoCalculatorController.name);
@@ -36,11 +50,12 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    return {
-      status: PDPResponseStatusEnum.OK,
-      data: await this.getCommitMessage(votingRoundId, signingAddress),
-      additionalData: "",
-    };
+    return fakeStatusByte32;
+    // return {
+    //   status: PDPResponseStatusEnum.OK,
+    //   data: await this.getCommitMessage(votingRoundId, signingAddress),
+    //   additionalData: "",
+    // };
   }
 
   @ApiTags(ApiTagsEnum.PDP)
@@ -52,11 +67,12 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    return {
-      status: PDPResponseStatusEnum.OK,
-      data: await this.getReveal(votingRoundId),
-      additionalData: "",
-    };
+    return fakeStatusByte32;
+    // return {
+    //   status: PDPResponseStatusEnum.OK,
+    //   data: await this.getReveal(votingRoundId),
+    //   additionalData: "",
+    // };
   }
 
   @ApiTags(ApiTagsEnum.PDP)
@@ -68,11 +84,12 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    return {
-      status: PDPResponseStatusEnum.OK,
-      data: await this.getResult(votingRoundId),
-      additionalData: "",
-    };
+    return fakeStatusByte38;
+    // return {
+    //   status: PDPResponseStatusEnum.OK,
+    //   data: await this.getResult(votingRoundId),
+    //   additionalData: "",
+    // };
   }
 
   @ApiTags(ApiTagsEnum.PDP)

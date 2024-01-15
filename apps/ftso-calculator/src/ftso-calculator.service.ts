@@ -1,40 +1,52 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
-import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import Web3 from "web3";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
-import { rewardEpochFeedSequence, calculateResults } from "../../../libs/ftso-core/src/price-calculation";
+import { calculateResults, rewardEpochFeedSequence } from "../../../libs/ftso-core/src/price-calculation";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
+import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { hashForCommit, packPrices } from "../../../libs/ftso-core/src/utils/voting-utils";
 import { EpochData, RevealData, RewardOffered } from "../../../libs/ftso-core/src/voting-types";
-import { PriceService } from "./price-feeds/price.service";
 import { sleepFor } from "./utils/time";
+import { Api } from "./price-provider-api/generated/provider-api";
+
 
 const NON_EXISTENT_PRICE = 0;
 const web3Helper = new Web3();
 
+const supportedFeeds = [
+  "0x4254430055534454", // BTC USDT
+  "0x4554480055534454", // ETH USDT
+  "0x464c520055534454"  // FLR USDT
+]
+
 @Injectable()
 export class FtsoCalculatorService {
   private readonly logger = new Logger(FtsoCalculatorService.name);
-  private readonly epochSettings: EpochSettings;
+
+  // connections to the indexer and price provider
   private readonly indexerClient: IndexerClient;
+  private readonly priceProviderClient: Api<unknown>;
+
+  // epoch settings configuration
+  private readonly epochSettings: EpochSettings;
 
   // TODO: Need to clean up old epoch data so the map doesn't grow indefinitely
   private readonly dataByEpoch = new Map<number, EpochData>();
 
-  constructor(
-    @Inject("PRICE_SERVICE")
-    private readonly priceService: PriceService,
-    manager: EntityManager,
-    configService: ConfigService
-  ) {
+  constructor(manager: EntityManager, configService: ConfigService) {
     this.epochSettings = configService.get<EpochSettings>("epochSettings")!;
     this.indexerClient = new IndexerClient(manager, this.epochSettings);
+    this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
   }
+
+  // Entry point methods for the protocol data provider
 
   async getCommit(epochId: number, signingAddress: string): Promise<string> {
     const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
+
+    // Get all offers for the reward epoch both inflation and reward offers
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
     if (offers.length === 0) {
       this.logger.error("No offers found for reward epoch: ", rewardEpochId);
@@ -47,20 +59,9 @@ export class FtsoCalculatorService {
     return hash;
   }
 
-  private async getPricesForEpoch(priceEpochId: number, rewardOffers: RewardOffered[]): Promise<EpochData> {
-    const feedSequence = rewardEpochFeedSequence(rewardOffers);
-
-    const prices = feedSequence.map(feed => this.priceService.getPrice(feed) ?? NON_EXISTENT_PRICE);
-    const data: EpochData = {
-      priceHex: packPrices(prices),
-      random: Bytes32.random(),
-    };
-    return data;
-  }
-
   async getReveal(epochId: number): Promise<RevealData | undefined> {
     this.logger.log(`Getting reveal for epoch ${epochId}`);
- 
+
     const epochData = this.dataByEpoch.get(epochId)!;
     if (epochData === undefined) {
       // TODO: Query indexer if not found - for usecases that are replaying history
@@ -78,7 +79,7 @@ export class FtsoCalculatorService {
 
   async getResult(epochId: number): Promise<[Bytes32, boolean]> {
     // TODO: Added sleep here because the system client calls this before the reveals are properly indexed - need to sort this race condition out.
-    await sleepFor(1000); 
+    await sleepFor(1000);
     const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
     const commits = await this.indexerClient.queryCommits(epochId);
@@ -87,4 +88,37 @@ export class FtsoCalculatorService {
     const result = await calculateResults(epochId, commits, reveals, offers, weights);
     return [result.merkleRoot, result.randomQuality == 0];
   }
+
+  // Internal methods
+
+  private async getPricesForEpoch(priceEpochId: number, rewardOffers: RewardOffered[]): Promise<EpochData> {
+    const feedSequence = rewardEpochFeedSequence(rewardOffers);
+
+    // TODO: do some retries here
+    const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(
+      priceEpochId,
+      {feeds: supportedFeeds},
+    );
+
+    // This should just be a warning
+    if (200 <= pricesRes.status && pricesRes.status < 300) {
+      this.logger.warn(`Failed to get prices for epoch ${priceEpochId}: ${pricesRes.data}`);
+      // TODO: exit
+      throw new Error(`Failed to get prices for epoch ${priceEpochId}: ${pricesRes.data}`);
+    }
+
+    const prices = pricesRes.data;
+
+    // transfer prices to 4 byte hex strings and concatenate them
+    // make sure that the order of prices is in line with protocol definition
+    const extractedPrices = prices.feedPriceData.map(pri => pri.price);
+
+    const data: EpochData = {
+      priceHex: packPrices(extractedPrices),
+      random: Bytes32.random(),
+    };
+    return data;
+  }
+
+
 }

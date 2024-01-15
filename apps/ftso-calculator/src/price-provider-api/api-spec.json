@@ -3,7 +3,7 @@
   "paths": {
     "/preparePriceFeeds/{votingRoundId}": {
       "post": {
-        "operationId": "ExampleProviderController_getPriceFeeds",
+        "operationId": "getPriceFeeds",
         "parameters": [
           {
             "name": "votingRoundId",
@@ -14,24 +14,34 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceFeedsRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PriceFeedsResponse"
                 }
               }
             }
           }
         },
-        "tags": ["Example Provider APIS"]
+        "tags": ["Price Provider API"]
       }
     },
     "/preparePriceFeed/{votingRoundId}/{feed}": {
       "get": {
-        "operationId": "ExampleProviderController_getPriceFeed",
+        "operationId": "getPriceFeed",
         "parameters": [
           {
             "name": "votingRoundId",
@@ -56,13 +66,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PriceFeedResponse"
                 }
               }
             }
           }
         },
-        "tags": ["Example Provider APIS"]
+        "tags": ["Price Provider API"]
       }
     }
   },
@@ -75,6 +85,59 @@
   "tags": [],
   "servers": [],
   "components": {
-    "schemas": {}
+    "schemas": {
+      "PriceFeedsRequest": {
+        "type": "object",
+        "properties": {
+          "feeds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["feeds"]
+      },
+      "FeedPriceData": {
+        "type": "object",
+        "properties": {
+          "feed": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "price in base units as float"
+          }
+        },
+        "required": ["feed", "price"]
+      },
+      "PriceFeedsResponse": {
+        "type": "object",
+        "properties": {
+          "votingRoundId": {
+            "type": "number"
+          },
+          "feedPriceData": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedPriceData"
+            }
+          }
+        },
+        "required": ["votingRoundId", "feedPriceData"]
+      },
+      "PriceFeedResponse": {
+        "type": "object",
+        "properties": {
+          "votingRoundId": {
+            "type": "number"
+          },
+          "feedPriceData": {
+            "$ref": "#/components/schemas/FeedPriceData"
+          }
+        },
+        "required": ["votingRoundId", "feedPriceData"]
+      }
+    }
   }
 }

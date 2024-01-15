@@ -20,7 +20,6 @@
     "-----CUSTOM-SCRIPTS-----": "",
     "start:dev:provider": "nest start example_provider --watch",
     "-----DEVELOP-SCRIPTS-----": "echo ONLY FOR DEVELOPMENT",
-    "ftso-calculator-provider-api-gen-old": "swagger-typescript-api -p apps/ftso-calculator/src/price-provider-api/api-spec.json -o apps/ftso-calculator/src/price-provider-api/generated -n provider-api.ts --extract-enums --axios  --clean-output --module-name-first-tag",
     "ftso-calculator-provider-api-gen": "ts-node apps/ftso-calculator/src/price-provider-api/provider-generator.ts"
   },
   "dependencies": {

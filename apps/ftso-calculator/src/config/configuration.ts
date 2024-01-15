@@ -17,10 +17,17 @@ export interface IConfig {
 
   epochSettings: EpochSettings;
   params: FTSOParameters;
-  privateKey: string;
+  
+  // Price Provider url (PRICE_PROVIDER_URL)
+  price_provider_url: string;
 }
 
 export default () => {
+  // First go over env variables that are required
+  if (process.env.PRICE_PROVIDER_BASE_URL == undefined) {
+    throw Error("Must provide a private key in PRICE_PROVIDER_BASE_URL env variable.");
+  }
+
   const api_keys = process.env.API_KEYS?.split(",") || [""];
 
   let epochSettings: EpochSettings;
@@ -38,9 +45,7 @@ export default () => {
       // TODO: Throw if any of these are undefined instead of defaulting to values
     );
   }
-  if (process.env.PRIVATE_KEY == undefined) {
-    throw Error("Must provide a private key in PRIVATE_KEY env variable.");
-  }
+
 
   const config: IConfig = {
     port: parseInt(process.env.PORT || "3000"),
@@ -51,8 +56,8 @@ export default () => {
     db_pass: process.env.DB_PASSWORD || "root",
     db_name: process.env.DB_NAME || "flare_top_level_indexer",
     params: loadFTSOParameters(),
-    privateKey: process.env.PRIVATE_KEY,
     epochSettings: epochSettings,
+    price_provider_url: process.env.PRICE_PROVIDER_BASE_URL,
   };
   return config;
 };

@@ -9,6 +9,26 @@
  * ---------------------------------------------------------------
  */
 
+export interface PriceFeedsRequest {
+  feeds: string[];
+}
+
+export interface FeedPriceData {
+  feed: string;
+  /** price in base units as float */
+  price: number;
+}
+
+export interface PriceFeedsResponse {
+  votingRoundId: number;
+  feedPriceData: FeedPriceData[];
+}
+
+export interface PriceFeedResponse {
+  votingRoundId: number;
+  feedPriceData: FeedPriceData;
+}
+
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
 import axios from "axios";
 
@@ -148,19 +168,21 @@ export class HttpClient<SecurityDataType = unknown> {
  * This server is used by the FTSO protocol data provider.
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
-  exampleProviderApis = {
+  priceProviderApi = {
     /**
      * No description
      *
-     * @tags Example Provider APIS
-     * @name ExampleProviderControllerGetPriceFeeds
+     * @tags Price Provider API
+     * @name GetPriceFeeds
      * @request POST:/preparePriceFeeds/{votingRoundId}
-     * @response `201` `object`
+     * @response `201` `PriceFeedsResponse`
      */
-    exampleProviderControllerGetPriceFeeds: (votingRoundId: number, params: RequestParams = {}) =>
-      this.request<object, any>({
+    getPriceFeeds: (votingRoundId: number, data: PriceFeedsRequest, params: RequestParams = {}) =>
+      this.request<PriceFeedsResponse, any>({
         path: `/preparePriceFeeds/${votingRoundId}`,
         method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -168,13 +190,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Example Provider APIS
-     * @name ExampleProviderControllerGetPriceFeed
+     * @tags Price Provider API
+     * @name GetPriceFeed
      * @request GET:/preparePriceFeed/{votingRoundId}/{feed}
-     * @response `200` `object`
+     * @response `200` `PriceFeedResponse`
      */
-    exampleProviderControllerGetPriceFeed: (votingRoundId: number, feed: string, params: RequestParams = {}) =>
-      this.request<object, any>({
+    getPriceFeed: (votingRoundId: number, feed: string, params: RequestParams = {}) =>
+      this.request<PriceFeedResponse, any>({
         path: `/preparePriceFeed/${votingRoundId}/${feed}`,
         method: "GET",
         format: "json",
