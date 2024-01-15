@@ -6,9 +6,10 @@ export class PriceFeedsRequest {
 
 export class FeedPriceData {
   feed: string;
-  price: number; // TODO: consider BigInt
-  // decimals: number;
-  // sign: boolean;
+  /**
+   * price in base units as float 
+   */ 
+  price: number;
 }
 
 export class PriceFeedsResponse {
