@@ -64,7 +64,7 @@ describe("ExampleProviderController CCXT", () => {
     });
 
     it("should get BTC USDT price", async () => {
-      const BTC_USDT = "0x4254432055534454";
+      const BTC_USDT = "0x4254430055534454";
       const feedRes = await exampleProviderController.getPriceFeed(123, BTC_USDT);
       expect(feedRes.votingRoundId).toBe(123);
       expect(feedRes.feedPriceData.price).toBeGreaterThan(0);

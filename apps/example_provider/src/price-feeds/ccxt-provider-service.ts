@@ -107,11 +107,11 @@ function fromHex(h) {
   var s = "";
   for (var i = 0; i < h.length; i += 2) {
     const charCode = parseInt(h.substr(i, 2), 16);
-    if (charCode === 0) {
+    if (charCode === 0 || charCode > 112) {
       continue;
     } else {
       s += String.fromCharCode(charCode);
     }
   }
-  return decodeURIComponent(escape(s));
+  return decodeURIComponent(s);
 }
