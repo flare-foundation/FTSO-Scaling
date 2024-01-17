@@ -1,6 +1,5 @@
 import { Between, EntityManager, MoreThan } from "typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
-import { decodeEvent, decodePayloadMessageCalldata, getEventSignature, getFunctionSignature } from "./utils/EncodingUtils";
 import { EpochSettings } from "./utils/EpochSettings";
 import {
   Address,
@@ -13,10 +12,8 @@ import {
 } from "./voting-types";
 
 import Web3 from "web3";
-import { CONTRACTS, ContractDefinitions, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./configs/networks";
+import { InflationRewardsOffered, RewardsOffered, VoterRegistered } from "./events";
 import { ISigningPolicy } from "./utils/SigningPolicy";
-import { FullVoterRegistrationInfo, VotePowerBlockSelected, VoterRegistered, RewardOffers, RewardsOffered, InflationRewardsOffered, RandomAcquisitionStarted, SigningPolicyInitialized, RewardEpochStarted, VoterRegistrationInfo } from "./events";
-import { IPayloadMessage } from "./utils/PayloadMessage";
 
 
 declare type CommitHash = string;
@@ -28,6 +25,7 @@ const PCT_SHARE = 300_000;
 const ELASTIC_BAND_WIDTH_PPM = 50_000;
 const DEFAULT_REWARD_BELT_PPM = 500_000;
 
+// 
 // For given rewardEpochId:
 // - start of reward offers
 //    - ["FlareSystemManager", undefined, "RewardEpochStarted"], for rewardEpochId - 1
@@ -42,18 +40,11 @@ const DEFAULT_REWARD_BELT_PPM = 500_000;
 //    - ["VoterRegistry", undefined, "VoterRegistered"],
 //    - ["FlareSystemCalculator", undefined, "VoterRegistrationInfo"],
 
+
+
+
 // All these events should be available before 
 
-export interface SubmissionData {
-  submitAddress: Address;
-  votingEpochId: VotingEpochId; // voting round id in which the message was submitted
-  relativeTimestamp: number; // timestamp relative to the start of the voting round
-  messages: IPayloadMessage<string>[];
-}
-export interface SubmitResponse {
-  queryResult: BlockEnsuranceResult;
-  submits: SubmissionData[];
-}
 class DBCache {
   readonly votingRoundCommits = new Map<VotingEpochId, Map<Address, CommitHash>>();
   readonly votingRoundReveals = new Map<VotingEpochId, Map<Address, RevealData>>();
@@ -77,37 +68,7 @@ function toTxData(tx: TLPTransaction): TxData {
   return txData;
 }
 
-interface IndexerClientInterface {
-
-  getSigningPolicy(rewardEpochId: number): Promise<ISigningPolicy>;
-
-
-  // Only this methods actually create sql queries
-  __getTransactions()
-  __getEvents()
-}
-
-function queryBytesFormat(address: string): string {
-  return (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
-}
-
-export enum BlockEnsuranceResult {
-  /**
-   * Block range indexed and we have insurance of having one block with strictly 
-   * lower timestamp then startTime and one block with strictly greater timestamp than endTime
-   */
-  OK,
-  /**
-   * Block range not indexed
-   */
-  NOT_OK,
-  /**
-   * There exists a block with timestamp strictly lower than startTime but there is no
-   * block with timestamp strictly greater that endTim,e but 
-   */
-  TIMEOUT_OK,
-}
-export class IndexerClient {
+export class DataProcessor {
 
   private readonly cache = new DBCache();
 
@@ -116,208 +77,6 @@ export class IndexerClient {
   readonly voterRegisteredTopic = this.encodingUtils().eventSignature("VoterRegistered").slice(2);
 
   constructor(private readonly entityManager: EntityManager, protected readonly epochs: EpochSettings) { }
-
-
-  private async queryEvents(smartContract: ContractDefinitions, eventName: string, startTime: number, endTime?: number): Promise<TLPEvents[]> {
-    const eventSignature = getEventSignature(smartContract.name, eventName);
-    let query = this.entityManager
-      .createQueryBuilder(TLPEvents, "event")
-      .andWhere("event.timestamp >= :startTime", { startTime })
-      .andWhere("event.address = :contractAddress", { contractAddress: queryBytesFormat(smartContract.address) })
-      .andWhere("event.topic0 = :signature", { signature: queryBytesFormat(eventSignature) })
-    if (endTime) {
-      query = query.andWhere("event.timestamp <= :endTime", { endTime });
-    }
-    return query.getMany();
-  }
-
-  private async queryTransactions(smartContract: ContractDefinitions, functionName: string, startTime: number, endTime?: number): Promise<TLPTransaction[]> {
-    const functionSignature = getFunctionSignature(smartContract.name, functionName);
-    let query = this.entityManager
-      .createQueryBuilder(TLPTransaction, "tx")
-      .andWhere("tx.timestamp >= :startTime", { startTime })
-      .andWhere("tx.to_address = :contractAddress", { contractAddress: queryBytesFormat(smartContract.address) })
-      .andWhere("tx.function_sig = :signature", { signature: functionSignature })
-
-    if (endTime) {
-      query = query.andWhere("tx.timestamp <= :endTime", { endTime });
-    }
-
-    return query.getMany();
-  }
-
-  private async ensureEventRange(startTime: number, endTime: number, endTimeout?: number): Promise<BlockEnsuranceResult> {
-    const queryFirst = this.entityManager
-      .createQueryBuilder(TLPState, "state")
-      .andWhere("state.name = :name", { name: FIRST_DATABASE_INDEX_STATE });
-    const firstState = await queryFirst.getOne();
-    if (!firstState) {
-      return BlockEnsuranceResult.NOT_OK;
-    }
-    if (firstState.block_timestamp >= startTime) {
-      return BlockEnsuranceResult.NOT_OK;;
-    }
-    const queryLast = this.entityManager
-      .createQueryBuilder(TLPState, "state")
-      .andWhere("state.name = :name", { name: LAST_DATABASE_INDEX_STATE });
-    const lastState = await queryLast.getOne();
-    if (!lastState) {
-      return BlockEnsuranceResult.NOT_OK;;
-    }
-    if (lastState.block_timestamp <= endTime) {
-      if (endTimeout) {
-        const now = Math.round(Date.now() / 1000);
-        if (now > endTime + endTimeout) {
-          return BlockEnsuranceResult.TIMEOUT_OK;
-        }
-        // TODO: Check also "best effort" by indexer.
-        // If indexer got stuck, we should return NOT_OK
-      }
-      return BlockEnsuranceResult.NOT_OK;
-    }
-    return BlockEnsuranceResult.OK;
-  }
-
-  // For given rewardEpochId:
-  // - start of reward offers
-  //    - ["FlareSystemManager", undefined, "RewardEpochStarted"], for rewardEpochId - 1
-  public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<RewardEpochStarted | undefined> {
-    const eventName = RewardEpochStarted.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId);
-    const endTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId + 2);
-    const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime, endTime);
-    const events = result.map((event) => RewardEpochStarted.fromRawEvent(event));
-    return events.find(event => event.rewardEpochId === rewardEpochId);
-  }
-
-  // - end of reward offers
-  //    - ["FlareSystemManager", undefined, "RandomAcquisitionStarted"],
-  public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<RandomAcquisitionStarted | undefined> {
-    const eventName = RandomAcquisitionStarted.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const endTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId + 1);
-    const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime, endTime);
-    const events = result.map((event) => RandomAcquisitionStarted.fromRawEvent(event));
-    return events.find(event => event.rewardEpochId === rewardEpochId);
-  }
-
-  // - reward offers 
-  //    - ["FtsoRewardOffersManager", undefined, "InflationRewardsOffered"],
-  //    - ["FtsoRewardOffersManager", undefined, "RewardsOffered"],
-  // Assumption: times are obtained from existing events, hence timestamps are correct.
-  public async getRewardOffers(startTime: number, endTime: number): Promise<RewardOffers> {
-    const rewardOffersResults = await this.queryEvents(CONTRACTS.FtsoRewardOffersManager, RewardsOffered.eventName, startTime, endTime);
-    const rewardOffers = rewardOffersResults.map((event) => RewardsOffered.fromRawEvent(event));
-
-    const inflationOffersResults = await this.queryEvents(CONTRACTS.FtsoRewardOffersManager, InflationRewardsOffered.eventName, startTime, endTime);
-    const inflationOffers = inflationOffersResults.map((event) => InflationRewardsOffered.fromRawEvent(event));
-
-    return {
-      rewardOffers,
-      inflationOffers,
-    };
-  }
-  // - start of voter registration ["FlareSystemManager", undefined, "VotePowerBlockSelected"],
-  public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<VotePowerBlockSelected | undefined> {
-    const eventName = VotePowerBlockSelected.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const endTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId + 1);
-    const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime, endTime);
-    const events = result.map((event) => VotePowerBlockSelected.fromRawEvent(event));
-    return events.find(event => event.rewardEpochId === rewardEpochId);
-  }
-
-  // - end of voter registration and signing policy ["Relay", undefined, "SigningPolicyInitialized"],
-  public async getSigningPolicyInitializedEvent(rewardEpochId: number): Promise<SigningPolicyInitialized | undefined> {
-    const eventName = SigningPolicyInitialized.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const endTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId + 1);
-    const result = await this.queryEvents(CONTRACTS.Relay, eventName, startTime, endTime);
-    const events = result.map((event) => SigningPolicyInitialized.fromRawEvent(event));
-    return events.find(event => event.rewardEpochId === rewardEpochId);
-  }
-
-  // - all voter registration events and related in info events:
-  //    - ["VoterRegistry", undefined, "VoterRegistered"],
-  //    - ["FlareSystemCalculator", undefined, "VoterRegistrationInfo"],
-  // Assumption: times are obtained from existing events, hence timestamps are correct.
-  public async getFullVoterRegistrationInfoEvents(startTime: number, endTime: number): Promise<FullVoterRegistrationInfo[]> {
-    const voterRegisteredResults = await this.queryEvents(CONTRACTS.VoterRegistry, VoterRegistered.eventName, startTime, endTime);
-    const voterRegistered = voterRegisteredResults.map((event) => VoterRegistered.fromRawEvent(event));
-
-    const voterRegistrationInfoResults = await this.queryEvents(CONTRACTS.FlareSystemCalculator, VoterRegistrationInfo.eventName, startTime, endTime);
-    const voterRegistrationInfo = voterRegisteredResults.map((event) => VoterRegistrationInfo.fromRawEvent(event));
-
-    if (voterRegistered.length !== voterRegistrationInfo.length) {
-      throw new Error(`VoterRegistered and VoterRegistrationInfo events count mismatch: ${voterRegistered.length} !== ${voterRegistrationInfo.length}`);
-    }
-    voterRegistered.sort((a, b) => {
-      if (a.voter < b.voter) {
-        return -1
-      }
-      if (a.voter > b.voter) {
-        return 1
-      }
-      return 0;
-    });
-
-    voterRegistrationInfo.sort((a, b) => {
-      if (a.voter < b.voter) {
-        return -1
-      }
-      if (a.voter > b.voter) {
-        return 1
-      }
-      return 0;
-    });
-    let results: FullVoterRegistrationInfo[] = [];
-    for (let i = 0; i < voterRegistered.length; i++) {
-      if (voterRegistered[i].voter !== voterRegistrationInfo[i].voter) {
-        throw new Error(`VoterRegistered and VoterRegistrationInfo events mismatch at index ${i}: ${voterRegistered[i].voter} !== ${voterRegistrationInfo[i].voter}`);
-      }
-      results.push({
-        voterRegistered: voterRegistered[i],
-        voterRegistrationInfo: voterRegistrationInfo[i],
-      });
-    }
-    return results;
-  }
-
-  public async getSubmitionDataInRange(functionName: string, fromVotingEpochId: VotingEpochId, toVotingEpochId?: VotingEpochId, endTimeout?: number): Promise<SubmitResponse> {
-    const realToVotingEpochId = toVotingEpochId ?? fromVotingEpochId;
-    const startTime = EPOCH_SETTINGS.votingEpochStartSec(fromVotingEpochId)
-    const endTime = EPOCH_SETTINGS.votingEpochEndSec(realToVotingEpochId)
-
-    const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
-    if (ensureRange === BlockEnsuranceResult.NOT_OK) {
-      return {
-        queryResult: ensureRange,
-        submits: []
-      }
-    }
-    const transactionsResults = await this.queryTransactions(CONTRACTS.Submission, functionName, startTime, endTime);
-    const submits: SubmissionData[] = transactionsResults.map((tx) => {
-      const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
-      const messages = decodePayloadMessageCalldata(tx);
-      return {
-        submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
-        votingEpochId,
-        messages,
-      }
-    })
-
-    return {
-      queryResult: ensureRange,
-      submits
-    }
-
-  }
-
-
-
-
 
 
 
