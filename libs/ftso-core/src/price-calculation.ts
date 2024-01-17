@@ -1,27 +1,22 @@
-import BN from "bn.js";
+import _ from "lodash";
+import Web3 from "web3";
+import { FeedValueEncoder } from "./utils/FeedEncoder";
+import { MerkleTree } from "./utils/MerkleTree";
+import { Bytes32 } from "./utils/sol-types";
+import {
+  combineRandom,
+  hashBytes,
+  hashForCommit
+} from "./utils/voting-utils";
 import {
   Address,
   EpochResult,
   Feed,
   MedianCalculationResult,
   MedianCalculationSummary,
-  RevealResult,
-  RewardOffered,
-} from "./voting-types";
-import {
-  combineRandom,
-  feedId,
-  hashBytes,
-  hashForCommit,
-  parsePrices,
-  toBN,
-  unprefixedSymbolBytes,
-} from "./utils/voting-utils";
-import Web3 from "web3";
-import { MerkleTree } from "./utils/MerkleTree";
-import { Bytes32 } from "./utils/sol-types";
-import _ from "lodash";
-import { RevealData } from "./voting-types";
+  RevealData,
+  RevealResult} from "./voting-types";
+import { RewardOffers } from "./events/RewardOffers";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
@@ -31,8 +26,8 @@ const RANDOM_QUALITY_BYTES = 4;
  */
 interface VoteData {
   voter: string;
-  price: BN;
-  weight: BN;
+  price: number;
+  weight: bigint;
   initialIndex: number;
 }
 
@@ -40,7 +35,7 @@ interface VoteData {
  * Repacks voters, prices and weights into a single array of VoteData.
  * All arrays must have the same length.
  */
-function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
+function repack(voters: string[], prices: number[], weights: bigint[]): VoteData[] {
   const result: VoteData[] = [];
   if (voters.length !== prices.length || voters.length !== weights.length) {
     throw new Error("voters, prices and weights must have the same length");
@@ -55,13 +50,15 @@ function repack(voters: string[], prices: BN[], weights: BN[]): VoteData[] {
   }
   return result;
 }
-// TODO: Move away from BN
+
+// TODO: must calculate random number as well using revealWithholders
 export async function calculateResults(
   priceEpochId: number,
-  commits: Map<string, string>,
+  commits: Map<Address, string>,
   reveals: Map<string, RevealData>,
-  rewardOffers: RewardOffered[],
-  voterWeights: Map<Address, BN>
+  rewardOffers: RewardOffers,
+  voterWeights: Map<Address, bigint>,
+  revealWithholders: Set<Address>  // TODO: implement
 ): Promise<EpochResult> {
   console.log("Calculating results with commits: ", [...commits.keys()], "reveals", [...reveals.keys()]);
   const revealResult = await calculateRevealers(commits, reveals, voterWeights)!;
@@ -71,9 +68,9 @@ export async function calculateResults(
 
   const results: MedianCalculationResult[] = await calculateFeedMedians(revealResult, voterWeights, rewardOffers);
 
-  const random: [Bytes32, number] = [
+  const random: [Bytes32, boolean] = [
     combineRandom(revealResult.revealedRandoms),
-    revealResult.committedFailedReveal.length,
+    revealResult.committedFailedReveal.length == 0,
   ];
   return calculateEpochResult(results, random, priceEpochId);
 }
@@ -81,7 +78,7 @@ export async function calculateResults(
 export async function calculateRevealers(
   commits: Map<string, string>,
   reveals: Map<string, RevealData>,
-  voterWeights: Map<Address, BN>
+  voterWeights: Map<Address, bigint>
 ): Promise<RevealResult> {
   const committers = [...commits.keys()];
   const eligibleCommitters = committers
@@ -119,49 +116,91 @@ export async function calculateRevealers(
   return result;
 }
 
+
 /**
  * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
  * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
  * In case of equal values the feedId is used to sort in increasing order.
  * The sequence defines positions of the feeds in the price vectors for the reward epoch.
  */
-export function rewardEpochFeedSequence(rewardOffers: RewardOffered[]): Feed[] {
-  const feedValues = new Map<string, FeedValue>();
-  for (const offer of rewardOffers) {
-    let feedValue = feedValues.get(feedId(offer));
-    if (feedValue === undefined) {
-      feedValue = {
-        feedId: feedId(offer),
-        offerSymbol: offer.offerSymbol,
-        quoteSymbol: offer.quoteSymbol,
-        flrValue: toBN(0),
-      };
-      feedValues.set(feedValue.feedId, feedValue);
+export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
+  interface FeedWithTypeAndValue extends Feed {
+    flrValue: bigint;
+    isInflation: boolean;
+  }
+
+  const feedValues = new Map<string, FeedWithTypeAndValue>();
+
+  for (const inflationOffer of rewardOffers.inflationOffers) {
+    for (let i = 0; i < inflationOffer.feedNames.length; i++) {
+      let feedValueType = feedValues.get(inflationOffer.feedNames[i]);
+      if (feedValueType === undefined) {
+        feedValueType = {
+          name: inflationOffer.feedNames[i],
+          decimals: inflationOffer.decimals[i],
+          isInflation: true,
+          flrValue: 0n,  // irrelevant for inflation offers
+        };
+        feedValues.set(feedValueType.name, feedValueType);
+      }
     }
-    feedValue.flrValue = feedValue.flrValue.add(offer.flrValue);
+  }
+
+  for (const communityOffer of rewardOffers.rewardOffers) {
+    let feedValueType = feedValues.get(communityOffer.feedName);
+    if (feedValueType === undefined) {
+      feedValueType = {
+        name: communityOffer.feedName.toLowerCase(), // hex values
+        decimals: communityOffer.decimals,
+        isInflation: false,
+        flrValue: 0n,
+      };
+      feedValues.set(feedValueType.name, feedValueType);
+    }
+    feedValueType.flrValue += feedValueType.flrValue + communityOffer.amount;
   }
 
   const feedSequence = Array.from(feedValues.values());
-  feedSequence.sort((a: FeedValue, b: FeedValue) => {
+  feedSequence.sort((a: FeedWithTypeAndValue, b: FeedWithTypeAndValue) => {
     // sort decreasing by value and on same value increasing by feedId
-    if (a.flrValue.lt(b.flrValue)) {
-      return 1;
-    } else if (a.flrValue.gt(b.flrValue)) {
+    if (a.isInflation && !b.isInflation) {
       return -1;
     }
-    if (feedId(a) < feedId(b)) {
+    if (!a.isInflation && b.isInflation) {
+      return 1;
+    }
+    if (a.isInflation && b.isInflation) {
+      if(a.name < b.name) {
+        return -1;
+      }
+      if(a.name > b.name) {
+        return 1;
+      }
+      return 0 // should not happen
+    }
+    // None is from inflation. 
+    // Sort decreasing by value and on same value increasing by feedName
+
+    if (a.flrValue < b.flrValue) {
+      return 1;
+    } 
+    if (a.flrValue > b.flrValue) {
       return -1;
-    } else if (feedId(a) > feedId(b)) {
+    }
+    if (a.name < b.name) {
+      return -1;
+    } 
+    if (a.name > b.name) {
       return 1;
     }
     return 0;
   });
-  return feedSequence;
-
-  interface FeedValue extends Feed {
-    feedId: string;
-    flrValue: BN;
-  }
+  return feedSequence.map(feedValueType => {
+    return {
+      name: feedValueType.name,
+      decimals: feedValueType.decimals,
+    };
+  })
 }
 
 /**
@@ -171,7 +210,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffered[]): Feed[] {
  */
 export function calculateEpochResult(
   medianResults: MedianCalculationResult[],
-  epochRandom: [Bytes32, number],
+  epochRandom: [Bytes32, boolean],
   priceEpochId: number
 ): EpochResult {
   const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
@@ -181,10 +220,10 @@ export function calculateEpochResult(
   let encodedBulkSymbols = "";
   medianResults.forEach(data => {
     const encodedPrice = Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
-    const encodedSymbol = unprefixedSymbolBytes(data.feed);
     encodedBulkPrices += encodedPrice;
-    encodedBulkSymbols += encodedSymbol;
-    encodedIndividualPrices.push("0x" + encodedPriceEpochId + encodedSymbol + encodedPrice);
+    encodedBulkSymbols += data.feed.name;
+    // TODO: this needs to be fixed to use correct Merkle leaf encoding
+    encodedIndividualPrices.push("0x" + encodedPriceEpochId + data.feed.name.slice(2) + encodedPrice);
   });
 
   const encodedBulkPricesWithSymbols = "0x" + encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
@@ -219,30 +258,30 @@ export function calculateEpochResult(
 
 export async function calculateFeedMedians(
   revealResult: RevealResult,
-  voterWeights: Map<Address, BN>,
-  rewardOffers: RewardOffered[]
+  voterWeights: Map<Address, bigint>,
+  rewardOffers: RewardOffers
 ): Promise<MedianCalculationResult[]> {
   const orderedPriceFeeds: Feed[] = rewardEpochFeedSequence(rewardOffers);
   const numberOfFeeds = orderedPriceFeeds.length;
   const voters = revealResult.revealers;
   const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
 
-  const feedPrices: BN[][] = orderedPriceFeeds.map(() => new Array<BN>());
+  const feedPrices: number[][] = orderedPriceFeeds.map(() => new Array<number>());
   voters.forEach(voter => {
     const revealData = revealResult.reveals.get(voter.toLowerCase())!;
-    const voterPrices = parsePrices(revealData.encodedPrices, numberOfFeeds);
+    const voterPrices = FeedValueEncoder.decode(revealData.encodedPrices, numberOfFeeds);
     voterPrices.forEach((price, i) => feedPrices[i].push(price));
   });
 
   return orderedPriceFeeds.map((feed, i) => calculateResultsForFeed(voters, feedPrices[i], weights, feed));
 }
 
-export function calculateResultsForFeed(voters: string[], prices: BN[], weights: BN[], feed: Feed) {
+export function calculateResultsForFeed(voters: string[], prices: number[], weights: bigint[], feed: Feed) {
   const medianSummary = calculateMedian(voters, prices, weights);
   const result: MedianCalculationResult = {
     feed: feed,
     voters: voters,
-    prices: prices.map(price => price.toNumber()),
+    prices: prices,
     data: medianSummary,
     weights: weights,
   };
@@ -252,39 +291,39 @@ export function calculateResultsForFeed(voters: string[], prices: BN[], weights:
 /**
  * Given a list of voters, prices and weights, it calculates the median and other statistics.
  */
-export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]): MedianCalculationSummary {
+export function calculateMedian(voters: Address[], prices: number[], weights: bigint[]): MedianCalculationSummary {
   const voteData = repack(voters, prices, weights);
   // Sort by price
   voteData.sort((a, b) => {
-    if (a.price.lt(b.price)) {
+    if (a.price < b.price) {
       return -1;
-    } else if (a.price.gt(b.price)) {
+    } else if (a.price > b.price) {
       return 1;
     }
     return 0;
   });
-  let totalWeight = toBN(0);
-  weights.forEach(w => (totalWeight = totalWeight.add(w)));
-  const medianWeight = totalWeight.div(toBN(2)).add(totalWeight.mod(toBN(2)));
-  let currentWeightSum = toBN(0);
+  let totalWeight = 0n;
+  weights.forEach(w => (totalWeight += w));
+  const medianWeight = totalWeight / 2n + totalWeight % 2n;
+  let currentWeightSum = 0n;
 
-  let medianPrice: BN | undefined;
-  const quartileWeight = totalWeight.div(toBN(4));
-  let quartile1Price: BN | undefined;
-  let quartile3Price: BN | undefined;
+  let medianPrice: number | undefined;
+  const quartileWeight = totalWeight / 4n;
+  let quartile1Price: number | undefined;
+  let quartile3Price: number | undefined;
 
   for (let index = 0; index < voteData.length; index++) {
     const vote = voteData[index];
-    currentWeightSum = currentWeightSum.add(vote.weight);
-    if (quartile1Price === undefined && currentWeightSum.gt(quartileWeight)) {
+    currentWeightSum += vote.weight;
+    if (quartile1Price === undefined && currentWeightSum > quartileWeight) {
       // calculation of border price for 1st quartile
       quartile1Price = vote.price;
     }
-    if (medianPrice === undefined && currentWeightSum.gte(medianWeight)) {
-      if (currentWeightSum.eq(medianWeight) && totalWeight.isEven()) {
+    if (medianPrice === undefined && currentWeightSum >= medianWeight) {
+      if (currentWeightSum === medianWeight && totalWeight % 2n === 0n) {
         const next = voteData[index + 1];
         // average of two middle prices in even case
-        medianPrice = vote.price.add(next.price).div(toBN(2));
+        medianPrice = Math.floor((vote.price + next.price) / 2);
       } else {
         medianPrice = vote.price;
       }
@@ -293,20 +332,20 @@ export function calculateMedian(voters: Address[], prices: BN[], weights: BN[]):
       break;
     }
   }
-  currentWeightSum = toBN(0);
+  currentWeightSum = 0n;
   // calculation of border price for 3rd quartile
   for (let index = voteData.length - 1; index >= 0; index--) {
     const vote = voteData[index];
-    currentWeightSum = currentWeightSum.add(vote.weight);
-    if (currentWeightSum.gt(quartileWeight)) {
+    currentWeightSum += vote.weight;
+    if (currentWeightSum > quartileWeight) {
       quartile3Price = vote.price;
       break;
     }
   }
 
   return {
-    finalMedianPrice: medianPrice!.toNumber(),
-    quartile1Price: quartile1Price!.toNumber(),
-    quartile3Price: quartile3Price!.toNumber(),
+    finalMedianPrice: medianPrice,
+    quartile1Price: quartile1Price,
+    quartile3Price: quartile3Price,
   };
 }

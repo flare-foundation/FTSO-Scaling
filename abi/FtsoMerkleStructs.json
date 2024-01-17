@@ -1,0 +1,133 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "FtsoMerkleStructs",
+  "sourceName": "contracts/ftso/merkle/FtsoMerkleStructs.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint32",
+              "name": "votingRoundId",
+              "type": "uint32"
+            },
+            {
+              "internalType": "bytes8",
+              "name": "name",
+              "type": "bytes8"
+            },
+            {
+              "internalType": "int32",
+              "name": "value",
+              "type": "int32"
+            },
+            {
+              "internalType": "uint16",
+              "name": "turnoutBIPS",
+              "type": "uint16"
+            },
+            {
+              "internalType": "int8",
+              "name": "decimals",
+              "type": "int8"
+            }
+          ],
+          "internalType": "struct IFtsoFeedPublisher.Feed",
+          "name": "_feed",
+          "type": "tuple"
+        }
+      ],
+      "name": "feedStruct",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "bytes32[]",
+              "name": "merkleProof",
+              "type": "bytes32[]"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint32",
+                  "name": "votingRoundId",
+                  "type": "uint32"
+                },
+                {
+                  "internalType": "bytes8",
+                  "name": "name",
+                  "type": "bytes8"
+                },
+                {
+                  "internalType": "int32",
+                  "name": "value",
+                  "type": "int32"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "turnoutBIPS",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "int8",
+                  "name": "decimals",
+                  "type": "int8"
+                }
+              ],
+              "internalType": "struct IFtsoFeedPublisher.Feed",
+              "name": "body",
+              "type": "tuple"
+            }
+          ],
+          "internalType": "struct IFtsoFeedPublisher.FeedWithProof",
+          "name": "_proof",
+          "type": "tuple"
+        }
+      ],
+      "name": "feedWithProofStruct",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint32",
+              "name": "votingRoundId",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "isSecure",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct IFtsoFeedPublisher.Random",
+          "name": "_random",
+          "type": "tuple"
+        }
+      ],
+      "name": "randomStruct",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

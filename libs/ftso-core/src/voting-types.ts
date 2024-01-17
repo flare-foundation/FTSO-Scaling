@@ -3,7 +3,8 @@ import { Log } from "web3-core";
 import { Bytes32 } from "./utils/sol-types";
 
 export type Address = string;
-export type PriceEpochId = number;
+export type Bytes20 = string;
+export type VotingEpochId = number;
 export type RewardEpochId = number;
 
 export interface RewardClaim {
@@ -23,27 +24,7 @@ export interface RewardClaimWithProof {
   readonly body: RewardClaim;
 }
 
-export interface Feed {
-  readonly offerSymbol: string; // 4 characters/bytes
-  readonly quoteSymbol: string; // 4 characters/bytes
-}
 
-export interface Offer extends Feed {
-  amount: BN; // 256-bit
-  currencyAddress: string;
-  leadProviders: string[]; // list of trusted providers
-  rewardBeltPPM: BN; // reward belt in PPM (parts per million) in relation to the median price of the trusted providers.
-  elasticBandWidthPPM: BN; // elastic band width in PPM (parts per million) in relation to the median price.
-  iqrSharePPM: BN; // Each offer defines IQR and PCT share in PPM (parts per million). The sum of all offers must be 1M.
-  pctSharePPM: BN;
-  remainderClaimer: string;
-}
-
-export interface RewardOffered extends Offer {
-  priceEpochId?: number;
-  transactionId?: string;
-  flrValue: BN;
-}
 
 export interface BareSignature {
   readonly v: number;
@@ -98,7 +79,7 @@ export interface EpochResult {
   readonly priceEpochId: number;
   readonly medianData: readonly MedianCalculationResult[];
   readonly random: Bytes32;
-  readonly randomQuality: number;
+  readonly randomQuality: boolean;
   readonly encodedBulkPrices: string;
   readonly encodedBulkSymbols: string;
   readonly randomMessage: string;
@@ -112,7 +93,7 @@ export interface MedianCalculationResult {
   readonly voters: readonly string[];
   readonly prices: readonly number[];
   readonly data: MedianCalculationSummary;
-  readonly weights: readonly BN[];
+  readonly weights: readonly bigint[];
 }
 
 export interface MedianCalculationSummary {
@@ -135,4 +116,42 @@ export interface RevealResult {
   readonly committedFailedReveal: Address[];
   readonly revealedRandoms: Bytes32[];
   readonly reveals: Map<Address, RevealData>;
+}
+
+/**
+ * Reward offers 
+ * Defined in FtsoRewardOffersManager.sol
+ */
+
+export interface Feed {
+  /**
+   *  8 characters/bytes or 16 hex chars (18 if 0x prefix)
+   */
+  name: string;
+  /**
+   * int8 (solidity int8) the number of decimals in the price.
+   */
+  decimals: number; 
+}
+
+/**
+ * Median merkle tree items.
+ */
+
+/**
+ * Feed item that goes into the merkle tree.
+ */
+interface FeedTreeNode {
+  votingRoundId: number;
+  feed: Feed;
+  value: number; // 32-bit signed integer (solidity int32)
+  turnoutBIPS: number;
+}
+
+/**
+ * Random item that goes into the merkle tree.
+ */
+interface RandomTreeNode {
+  votingRoundId: number;
+  random: bigint;  
 }

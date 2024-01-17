@@ -5,21 +5,23 @@ import Web3 from "web3";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { calculateResults, rewardEpochFeedSequence } from "../../../libs/ftso-core/src/price-calculation";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
+import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
-import { hashForCommit, packPrices } from "../../../libs/ftso-core/src/utils/voting-utils";
-import { EpochData, RevealData, RewardOffered } from "../../../libs/ftso-core/src/voting-types";
-import { sleepFor } from "./utils/time";
+import { hashForCommit } from "../../../libs/ftso-core/src/utils/voting-utils";
+import { EpochData, RevealData } from "../../../libs/ftso-core/src/voting-types";
+import { RewardOffers } from "@app/ftso-core/events/RewardOffers";
 import { Api } from "./price-provider-api/generated/provider-api";
+import { sleepFor } from "./utils/time";
 
-
-const NON_EXISTENT_PRICE = 0;
-const web3Helper = new Web3();
 
 const supportedFeeds = [
   "0x4254430055534454", // BTC USDT
   "0x4554480055534454", // ETH USDT
   "0x464c520055534454"  // FLR USDT
 ]
+
+const NON_EXISTENT_PRICE = 0;
+const web3Helper = new Web3();
 
 @Injectable()
 export class FtsoCalculatorService {
@@ -44,7 +46,7 @@ export class FtsoCalculatorService {
   // Entry point methods for the protocol data provider
 
   async getCommit(epochId: number, signingAddress: string): Promise<string> {
-    const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
+    const rewardEpochId = this.epochSettings.expectedRewardEpochForVotingEpoch(epochId);
 
     // Get all offers for the reward epoch both inflation and reward offers
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
@@ -77,34 +79,35 @@ export class FtsoCalculatorService {
     return revealData;
   }
 
-  async getResult(epochId: number): Promise<[Bytes32, boolean]> {
+  async getResult(votingEpochId: number): Promise<[Bytes32, boolean]> {
     // TODO: Added sleep here because the system client calls this before the reveals are properly indexed - need to sort this race condition out.
     await sleepFor(1000);
-    const rewardEpochId = this.epochSettings.rewardEpochForVotingEpoch(epochId);
+    const rewardEpochId = this.epochSettings.expectedRewardEpochForVotingEpoch(votingEpochId);
     const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
-    const commits = await this.indexerClient.queryCommits(epochId);
-    const reveals = await this.indexerClient.queryReveals(epochId);
-    const weights = await this.indexerClient.getVoterWeights(epochId);
-    const result = await calculateResults(epochId, commits, reveals, offers, weights);
-    return [result.merkleRoot, result.randomQuality == 0];
+    const commits = await this.indexerClient.queryCommits(votingEpochId);
+    const reveals = await this.indexerClient.queryReveals(votingEpochId);
+    const weights = await this.indexerClient.getVoterWeights(votingEpochId);
+    const revealFails = await this.indexerClient.getRevealWithholders(votingEpochId);
+    const result = await calculateResults(votingEpochId, commits, reveals, offers, weights, revealFails);
+    return [result.merkleRoot, result.randomQuality];
   }
 
   // Internal methods
 
-  private async getPricesForEpoch(priceEpochId: number, rewardOffers: RewardOffered[]): Promise<EpochData> {
+  private async getPricesForEpoch(votingRoundId: number, rewardOffers: RewardOffers): Promise<EpochData> {
     const feedSequence = rewardEpochFeedSequence(rewardOffers);
 
     // TODO: do some retries here
     const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(
-      priceEpochId,
+      votingRoundId,
       {feeds: supportedFeeds},
     );
 
     // This should just be a warning
     if (200 <= pricesRes.status && pricesRes.status < 300) {
-      this.logger.warn(`Failed to get prices for epoch ${priceEpochId}: ${pricesRes.data}`);
+      this.logger.warn(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);
       // TODO: exit
-      throw new Error(`Failed to get prices for epoch ${priceEpochId}: ${pricesRes.data}`);
+      throw new Error(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);
     }
 
     const prices = pricesRes.data;
@@ -114,7 +117,7 @@ export class FtsoCalculatorService {
     const extractedPrices = prices.feedPriceData.map(pri => pri.price);
 
     const data: EpochData = {
-      priceHex: packPrices(extractedPrices),
+      priceHex: FeedValueEncoder.encode(extractedPrices),
       random: Bytes32.random(),
     };
     return data;

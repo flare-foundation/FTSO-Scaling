@@ -13,8 +13,8 @@ import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
 import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
-import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { ConfigService } from "@nestjs/config";
+import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
 
 enum ApiTagsEnum {
   PDP = "FTSO Protocol data provider",

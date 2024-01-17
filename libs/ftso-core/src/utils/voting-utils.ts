@@ -2,12 +2,9 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { Feed, RewardClaim } from "../voting-types";
-import EncodingUtils, { bytes4ToText } from "./EncodingUtils";
+import { RewardClaim } from "../voting-types";
 import { Bytes32 } from "./sol-types";
 
-export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
-export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /**
  * Converts a given number to BN.
@@ -17,18 +14,6 @@ export function toBN(x: BN | number | string): BN {
   return utils.toBN(x);
 }
 
-/**
- * A sorted hash of two 32-byte strings
- * @param x first `0x`-prefixed 32-byte hex string
- * @param y second `0x`-prefixed 32-byte hex string
- * @returns the sorted hash
- */
-export function sortedHashPair(x: string, y: string) {
-  if (x <= y) {
-    return utils.soliditySha3(coder.encodeParameters(["bytes32", "bytes32"], [x, y]));
-  }
-  return utils.soliditySha3(coder.encodeParameters(["bytes32", "bytes32"], [y, x]));
-}
 
 /**
  * Hashing {@link RewardClaim} struct.
@@ -52,38 +37,6 @@ export function toBytes4(text: string): string {
     throw new Error(`Text should be at most 4 characters long`);
   }
   return utils.padRight(utils.asciiToHex(text), 8);
-}
-
-/**
- * Converts feed symbols withing the Feed from text to bytes.
- */
-export function feedToBytes4(feed: Feed): Feed {
-  return {
-    offerSymbol: toBytes4(feed.offerSymbol),
-    quoteSymbol: toBytes4(feed.quoteSymbol),
-  } as Feed;
-}
-
-export function unprefixedSymbolBytes(feed: Feed) {
-  return `${toBytes4(feed.offerSymbol).slice(2)}${toBytes4(feed.quoteSymbol).slice(2)}`;
-}
-
-/**
- * Converts feed symbols withing the Feed from bytes to text.
- */
-export function feedToText(feed: Feed): Feed {
-  return {
-    ...feed,
-    offerSymbol: bytes4ToText(feed.offerSymbol),
-    quoteSymbol: bytes4ToText(feed.quoteSymbol),
-  } as Feed;
-}
-
-/**
- * Id of a feed is a string of the form `offerSymbol-quoteSymbol`.
- */
-export function feedId(feed: Feed) {
-  return `${feed.offerSymbol}-${feed.quoteSymbol}`;
 }
 
 /**
@@ -143,34 +96,6 @@ export function hexlifyBN(obj: any): any {
     return prefix0xSigned(obj);
   }
   return obj;
-}
-
-export function packPrices(prices: (number | string)[]) {
-  return (
-    "0x" +
-    prices
-      .map(price =>
-        parseInt("" + price)
-          .toString(16)
-          .padStart(8, "0")
-      )
-      .join("")
-  );
-}
-
-export function parsePrices(packedPrices: string, numberOfFeeds: number) {
-  let feedPrice =
-    packedPrices
-      .slice(2)
-      .match(/(.{1,8})/g)
-      ?.map(hex => toBN(hex)) || [];
-  feedPrice = feedPrice.slice(0, numberOfFeeds);
-  feedPrice = padEndArray(feedPrice, numberOfFeeds, 0);
-  return feedPrice;
-}
-
-function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
-  return Object.assign(new Array(minLength).fill(fillValue), array);
 }
 
 export function hashForCommit(voter: string, random: string, prices: string) {

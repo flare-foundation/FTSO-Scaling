@@ -1,24 +1,24 @@
 import BN from "bn.js";
-import {
-  RewardClaim,
-  MedianCalculationResult,
-  RewardOffered,
-  VoterRewarding,
-  RewardClaimWithProof,
-  Address,
-  FinalizeData,
-  RevealBitvoteData,
-  SignatureData,
-} from "./voting-types";
-import { ZERO_ADDRESS, feedId, hashRewardClaim, toBN } from "./utils/voting-utils";
+import _ from "lodash";
+import Web3 from "web3";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import _ from "lodash";
+import { recoverSigner } from "../../../apps/ftso-calculator/src/utils/web3";
+import { calculateFeedMedians, calculateRevealers } from "./price-calculation";
 import { EpochSettings } from "./utils/EpochSettings";
 import { MerkleTree } from "./utils/MerkleTree";
-import { calculateRevealers, calculateFeedMedians } from "./price-calculation";
-import { recoverSigner } from "../../../apps/ftso-calculator/src/utils/web3";
-import Web3 from "web3";
+import { ZERO_ADDRESS, hashRewardClaim, toBN } from "./utils/voting-utils";
+import {
+  Address,
+  FinalizeData,
+  MedianCalculationResult,
+  RevealBitvoteData,
+  RewardClaim,
+  RewardClaimWithProof,
+  RewardOffered,
+  SignatureData,
+  VoterRewarding,
+} from "./voting-types";
 
 /** Address to which we allocate penalised reward amounts. */
 const BURN_ADDRESS = ZERO_ADDRESS;
@@ -325,7 +325,7 @@ function calculateClaimsForOffer(
       originalWeight: calculationResult.weights![i],
       iqr:
         (price > lowIQR && price < highIQR) ||
-        ((price === lowIQR || price === highIQR) && randomSelect(feedId(offer), priceEpoch, voterAddress)),
+        ((price === lowIQR || price === highIQR) && randomSelect(offer.name, priceEpoch, voterAddress)),
       pct: price > lowPCT && price < highPCT,
       eligible: pricesOfLeadProvidersThatVoted.length === 0 ? true : price >= lowEligible && price <= highEligible,
     } as VoterRewarding);
@@ -547,7 +547,7 @@ function claimsForSymbols(
 
   const claims: RewardClaim[] = [];
   for (const calculationResult of calculationResults) {
-    const offersForSymbol = offersBySymbol.get(feedId(calculationResult.feed))!;
+    const offersForSymbol = offersBySymbol.get(calculationResult.feed.name)!;
     for (const offer of offersForSymbol) {
       claims.push(...calculateClaimsForOffer(priceEpoch, offer, calculationResult));
     }
@@ -558,7 +558,7 @@ function claimsForSymbols(
 function getOffersBySymbol(offers: RewardOffered[]) {
   const offersBySymbol = new Map<string, RewardOffered[]>();
   for (const offer of offers) {
-    const offerFeedId = feedId(offer);
+    const offerFeedId = offer.name;
     const existing = offersBySymbol.get(offerFeedId) || [];
     existing.push(offer);
     offersBySymbol.set(offerFeedId, existing);
@@ -668,7 +668,7 @@ function generateBackClaims(signingOffers: RewardOffered[], priceEpochId: number
  */
 function randomSelect(symbol: string, priceEpoch: number, voterAddress: Address) {
   return toBN(
-    utils.soliditySha3(coder.encodeParameters(["string", "uint256", "address"], [symbol, priceEpoch, voterAddress]))!
+    utils.soliditySha3(coder.encodeParameters(["bytes8", "uint256", "address"], [symbol, priceEpoch, voterAddress]))!
   )
     .mod(toBN(2))
     .eq(toBN(1));

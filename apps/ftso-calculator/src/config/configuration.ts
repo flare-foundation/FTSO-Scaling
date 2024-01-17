@@ -1,7 +1,6 @@
-import e from "express";
+import fs from "fs";
 import { EpochSettings } from "../../../../libs/ftso-core/src/utils/EpochSettings";
 import { FTSOParameters, loadFTSOParameters } from "./FTSOParameters";
-import fs from "fs";
 
 export interface IConfig {
   // server port (PORT)
@@ -37,14 +36,15 @@ export default () => {
 
   if (process.env.EPOCH_SETTINGS_FILE !== undefined) {
     const rw = JSON.parse(fs.readFileSync(process.env.EPOCH_SETTINGS_FILE, "utf8"));
-    epochSettings = Object.assign(new EpochSettings(0, 0, 0, 0), rw);
+    epochSettings = Object.assign(new EpochSettings(0, 0, 0, 0, 0), rw);
     console.log(`Loaded epoch settings: ${JSON.stringify(epochSettings)}`);
   } else {
     epochSettings = new EpochSettings(
       parseInt(process.env.ES_FIRST_VOTING_ROUND_START_TS) || 1704250616,
       parseInt(process.env.ES_VOTING_EPOCH_DURATION_SECONDS) || 20,
       parseInt(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID) || 1000,
-      parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS) || 5
+      parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS) || 5,
+      parseInt(process.env.ES_REVEAL_DEADLINE_SECONDS) || 10
       // TODO: Throw if any of these are undefined instead of defaulting to values
     );
   }
