@@ -8,10 +8,11 @@ import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { hashForCommit } from "../../../libs/ftso-core/src/utils/voting-utils";
-import { EpochData, RevealData } from "../../../libs/ftso-core/src/voting-types";
+import { EpochData, Feed, RevealData } from "../../../libs/ftso-core/src/voting-types";
 import { RewardOffers } from "@app/ftso-core/events/RewardOffers";
 import { Api } from "./price-provider-api/generated/provider-api";
 import { sleepFor } from "./utils/time";
+import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 
 
 const supportedFeeds = [
@@ -36,39 +37,40 @@ export class FtsoCalculatorService {
 
   // TODO: Need to clean up old epoch data so the map doesn't grow indefinitely
   private readonly dataByEpoch = new Map<number, EpochData>();
+  
+  private rewardEpochManger: RewardEpochManager;
 
-  constructor(manager: EntityManager, configService: ConfigService) {
+  // Indexer top timeout margin
+  private indexer_top_timeout: number;
+
+  constructor(manager: EntityManager, configService: ConfigService, rewardEpochManager) {
     this.epochSettings = configService.get<EpochSettings>("epochSettings")!;
-    this.indexerClient = new IndexerClient(manager, this.epochSettings);
+    const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
+    this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
+    this.indexerClient = new IndexerClient(manager, required_history_sec);
+    this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
   }
 
   // Entry point methods for the protocol data provider
 
-  async getCommit(epochId: number, signingAddress: string): Promise<string> {
-    const rewardEpochId = this.epochSettings.expectedRewardEpochForVotingEpoch(epochId);
-
-    // Get all offers for the reward epoch both inflation and reward offers
-    const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
-    if (offers.length === 0) {
-      this.logger.error("No offers found for reward epoch: ", rewardEpochId);
-    }
-
-    const data = await this.getPricesForEpoch(epochId, offers);
+  async getCommit(votingRoundId: number, signingAddress: string): Promise<string> {
+    const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
+    const data = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     const hash = hashForCommit(signingAddress, data.random.value, data.priceHex);
-    this.dataByEpoch.set(epochId, data);
-    this.logger.log(`Commit for epoch ${epochId}: ${hash}`);
+    this.dataByEpoch.set(votingRoundId, data);
+    this.logger.log(`Commit for epoch ${votingRoundId}: ${hash}`);
     return hash;
   }
 
-  async getReveal(epochId: number): Promise<RevealData | undefined> {
-    this.logger.log(`Getting reveal for epoch ${epochId}`);
+  async getReveal(votingRoundId: number): Promise<RevealData | undefined> {
+    this.logger.log(`Getting reveal for epoch ${votingRoundId}`);
 
-    const epochData = this.dataByEpoch.get(epochId)!;
+    const epochData = this.dataByEpoch.get(votingRoundId)!;
     if (epochData === undefined) {
       // TODO: Query indexer if not found - for usecases that are replaying history
       //       Note: same should be done for getCommit.
-      this.logger.error(`No data found for epoch ${epochId}`);
+      this.logger.error(`No data found for epoch ${votingRoundId}`);
       return undefined;
     }
     const revealData: RevealData = {
@@ -79,28 +81,30 @@ export class FtsoCalculatorService {
     return revealData;
   }
 
-  async getResult(votingEpochId: number): Promise<[Bytes32, boolean]> {
-    // TODO: Added sleep here because the system client calls this before the reveals are properly indexed - need to sort this race condition out.
-    await sleepFor(1000);
-    const rewardEpochId = this.epochSettings.expectedRewardEpochForVotingEpoch(votingEpochId);
-    const offers = await this.indexerClient.getRewardOffers(rewardEpochId);
-    const commits = await this.indexerClient.queryCommits(votingEpochId);
-    const reveals = await this.indexerClient.queryReveals(votingEpochId);
-    const weights = await this.indexerClient.getVoterWeights(votingEpochId);
-    const revealFails = await this.indexerClient.getRevealWithholders(votingEpochId);
-    const result = await calculateResults(votingEpochId, commits, reveals, offers, weights, revealFails);
+  async getResult(votingRoundId: number): Promise<[Bytes32, boolean]> {
+    const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
+    const revealResponse = await this.indexerClient.getSubmissionDataInRange("submit1", votingRoundId, votingRoundId, LUKA_CONST);
+    const commitsResponse = await this.indexerClient.getSubmissionDataInRange("submit1", votingRoundId, votingRoundId, LUKA_CONST);
+
+    commits = rewardEpoch.filterValidSubmitters(commits);
+
+    // const commits = await this.indexerClient.queryCommits(votingRoundId);
+    const reveals = await this.indexerClient.queryReveals(votingRoundId);
+    const weights = await this.indexerClient.getVoterWeights(votingRoundId);
+    const revealFails = await this.indexerClient.getRevealWithholders(votingRoundId);
+
+    const result = await calculateResults(votingRoundId, commits, reveals, rewardEpoch.canonicalFeedOrder, weights, revealFails);
     return [result.merkleRoot, result.randomQuality];
   }
 
   // Internal methods
 
-  private async getPricesForEpoch(votingRoundId: number, rewardOffers: RewardOffers): Promise<EpochData> {
-    const feedSequence = rewardEpochFeedSequence(rewardOffers);
+  private async getPricesForEpoch(votingRoundId: number, feedSequenc: Feed[]): Promise<EpochData> {
 
     // TODO: do some retries here
     const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(
       votingRoundId,
-      {feeds: supportedFeeds},
+      { feeds: supportedFeeds },
     );
 
     // This should just be a warning

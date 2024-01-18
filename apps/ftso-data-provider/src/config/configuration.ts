@@ -13,12 +13,15 @@ export interface IConfig {
   db_user: string;
   db_pass: string;
   db_name: string;
+  required_indexer_history_time_sec: number;
+  indexer_top_timeout: number;
 
   epochSettings: EpochSettings;
   params: FTSOParameters;
 
   // Price Provider url (PRICE_PROVIDER_URL)
   price_provider_url: string;
+  
 
   // Testing only
   protocol_id?: number;
@@ -61,6 +64,8 @@ export default () => {
     epochSettings: epochSettings,
     price_provider_url: process.env.PRICE_PROVIDER_BASE_URL,
     protocol_id: parseInt(process.env.PROTOCOL_ID || "1"),
+    required_indexer_history_time_sec: parseInt(process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC) || 14*24*60*60, // 14 days
+    indexer_top_timeout: parseInt(process.env.INDEXER_TOP_TIMEOUT) || 5
   };
   return config;
 };

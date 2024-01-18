@@ -62,12 +62,12 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    return this.fakeStatusByte32;
-    // return {
-    //   status: PDPResponseStatusEnum.OK,
-    //   data: await this.getCommitMessage(votingRoundId, signingAddress),
-    //   additionalData: "",
-    // };
+    // return this.fakeStatusByte32;
+    return {
+      status: PDPResponseStatusEnum.OK,
+      data: await this.getCommitMessage(votingRoundId, signingAddress),
+      additionalData: "",
+    };
   }
 
   @ApiTags(ApiTagsEnum.PDP)
@@ -79,12 +79,12 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    return this.fakeStatusByte32;
-    // return {
-    //   status: PDPResponseStatusEnum.OK,
-    //   data: await this.getReveal(votingRoundId),
-    //   additionalData: "",
-    // };
+    // return this.fakeStatusByte32;
+    return {
+      status: PDPResponseStatusEnum.OK,
+      data: await this.getReveal(votingRoundId),
+      additionalData: "",
+    };
   }
 
   @ApiTags(ApiTagsEnum.PDP)
@@ -96,12 +96,12 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    return this.fakeStatusByte38;
-    // return {
-    //   status: PDPResponseStatusEnum.OK,
-    //   data: await this.getResult(votingRoundId),
-    //   additionalData: "",
-    // };
+    // return this.fakeStatusByte38;
+    return {
+      status: PDPResponseStatusEnum.OK,
+      data: await this.getResult(votingRoundId),
+      additionalData: "",
+    };
   }
 
   @ApiTags(ApiTagsEnum.PDP)
@@ -128,6 +128,7 @@ export class FtsoCalculatorController {
   ////////////////////////////
   // FTOSv2 protocol logic
 
+  // TODO: move to service
   async getCommitMessage(votingRoundId: number, signingAddress: string): Promise<string> {
     this.logger.log(`Getting commit for epoch ${votingRoundId}`);
     const commit = await this.ftsoCalculatorService.getCommit(votingRoundId, signingAddress);

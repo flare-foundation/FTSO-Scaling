@@ -56,7 +56,7 @@ export async function calculateResults(
   priceEpochId: number,
   commits: Map<Address, string>,
   reveals: Map<string, RevealData>,
-  rewardOffers: RewardOffers,
+  orderedPriceFeeds: Feed[],
   voterWeights: Map<Address, bigint>,
   revealWithholders: Set<Address>  // TODO: implement
 ): Promise<EpochResult> {
@@ -66,7 +66,7 @@ export async function calculateResults(
     throw new Error(`No reveals for price epoch: ${priceEpochId}.`);
   }
 
-  const results: MedianCalculationResult[] = await calculateFeedMedians(revealResult, voterWeights, rewardOffers);
+  const results: MedianCalculationResult[] = await calculateFeedMedians(revealResult, voterWeights, orderedPriceFeeds);
 
   const random: [Bytes32, boolean] = [
     combineRandom(revealResult.revealedRandoms),
@@ -259,9 +259,8 @@ export function calculateEpochResult(
 export async function calculateFeedMedians(
   revealResult: RevealResult,
   voterWeights: Map<Address, bigint>,
-  rewardOffers: RewardOffers
+  orderedPriceFeeds: Feed[]
 ): Promise<MedianCalculationResult[]> {
-  const orderedPriceFeeds: Feed[] = rewardEpochFeedSequence(rewardOffers);
   const numberOfFeeds = orderedPriceFeeds.length;
   const voters = revealResult.revealers;
   const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);

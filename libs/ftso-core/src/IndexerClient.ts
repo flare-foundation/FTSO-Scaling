@@ -415,11 +415,7 @@ export class IndexerClient {
    * @param endTimeout if not provided, it not timeout query is performed
    * @returns 
    */
-  public async getSubmissionDataInRange(functionName: string, fromVotingEpochId: VotingEpochId, toVotingEpochId?: VotingEpochId, endTimeout?: number): Promise<IndexerResponse<SubmissionData[]>> {
-    const realToVotingEpochId = toVotingEpochId ?? fromVotingEpochId;
-    const startTime = EPOCH_SETTINGS.votingEpochStartSec(fromVotingEpochId)
-    const endTime = EPOCH_SETTINGS.votingEpochEndSec(realToVotingEpochId)
-
+  public async getSubmissionDataInRange(functionName: string, startTime: number, endTime: number, endTimeout?: number): Promise<IndexerResponse<SubmissionData[]>> {
     const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
     if (ensureRange === BlockAssuranceResult.NOT_OK) {
       return {

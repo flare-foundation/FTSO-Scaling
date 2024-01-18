@@ -99,8 +99,40 @@ export class RewardEpoch {
       return this._canonicalFeedOrder;
    }
 
+   /**
+    * Filters out submissions that are sent by valid submitters.
+    * The submission are first ordered by relativeTimestamp and for submissions with the 
+    * same relativeTimestamp, by transactionIndex. For each submitAddress, only the 
+    * last one in the order is kept. Also only submitAddress for eligible voters
+    * in the reward epoch are kept, while others are filtered out.
+    * @param submissionData 
+    */
    filterValidSubmitters(submissionData: SubmissionData[]): SubmissionData[] {
-      throw new Error("Not implemented");
+      const result: SubmissionData[] = [];
+      const submitterToLatestSubmissionData = new Map<Address, SubmissionData>();
+      for(let submission of submissionData) {
+         const voter = this.submitterToVoter.get(submission.submitAddress);
+         if(!voter) {
+            continue;
+         }
+         const latestSubmission = submitterToLatestSubmissionData.get(submission.submitAddress);
+         if(!latestSubmission) {
+            submitterToLatestSubmissionData.set(submission.submitAddress, submission);
+            continue;
+         }
+         if(submission.blockNumber > latestSubmission.blockNumber) {
+            submitterToLatestSubmissionData.set(submission.submitAddress, submission);
+            continue;
+         }
+         if(submission.blockNumber === latestSubmission.blockNumber && submission.transactionIndex > latestSubmission.transactionIndex) {
+            submitterToLatestSubmissionData.set(submission.submitAddress, submission);
+            continue;
+         }
+      }
+      for(let latestSubmission of submitterToLatestSubmissionData.values()) {
+         result.push(latestSubmission);
+      }
+      return result;
    } 
 
 }
