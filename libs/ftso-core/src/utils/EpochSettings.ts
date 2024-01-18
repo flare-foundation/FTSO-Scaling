@@ -36,7 +36,8 @@ export class EpochSettings {
   }
 
   revealDeadlineSec(votingEpochId: number): number {
-    return this.revealDeadlineSeconds;
+    // The interval is semi open [startTime, startTime + revealDeadlineSeconds)
+    return this.votingEpochStartSec(votingEpochId) + this.revealDeadlineSeconds - 1;
   }
 
   expectedFirstVotingRoundForRewardEpoch(rewardEpochId: number) {

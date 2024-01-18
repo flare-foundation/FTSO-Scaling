@@ -3,16 +3,14 @@ import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
 import Web3 from "web3";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
-import { calculateResults, rewardEpochFeedSequence } from "../../../libs/ftso-core/src/ftso-calculation-logic";
+import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
+import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { hashForCommit } from "../../../libs/ftso-core/src/utils/voting-utils";
 import { EpochData, Feed, RevealData } from "../../../libs/ftso-core/src/voting-types";
-import { RewardOffers } from "@app/ftso-core/events/RewardOffers";
 import { Api } from "./price-provider-api/generated/provider-api";
-import { sleepFor } from "./utils/time";
-import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 
 
 const supportedFeeds = [
@@ -83,8 +81,9 @@ export class FtsoCalculatorService {
 
   async getResult(votingRoundId: number): Promise<[Bytes32, boolean]> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
-    const revealResponse = await this.indexerClient.getSubmissionDataInRange("submit1", votingRoundId, votingRoundId, LUKA_CONST);
-    const commitsResponse = await this.indexerClient.getSubmissionDataInRange("submit1", votingRoundId, votingRoundId, LUKA_CONST);
+
+    const revealResponse = await this.indexerClient.getRevealsDataForVotingEpoch(votingRoundId, this.indexer_top_timeout);
+    const commitsResponse = await this.indexerClient.getCommitsDataForVotingEpoch(votingRoundId, this.indexer_top_timeout);
 
     commits = rewardEpoch.filterValidSubmitters(commits);
 

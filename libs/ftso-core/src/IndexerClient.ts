@@ -1,29 +1,42 @@
 import { EntityManager } from "typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
 import { decodePayloadMessageCalldata, getEventSignature, getFunctionSignature } from "./utils/EncodingUtils";
-import {
-  Address,
-  VotingEpochId
-} from "./voting-types";
+import { Address, VotingEpochId } from "./voting-types";
 
-import { CONTRACTS, ContractDefinitions, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./configs/networks";
-import { FullVoterRegistrationInfo, InflationRewardsOffered, RandomAcquisitionStarted, RewardEpochStarted, RewardOffers, RewardsOffered, SigningPolicyInitialized, VotePowerBlockSelected, VoterRegistered, VoterRegistrationInfo } from "./events";
+import {
+  CONTRACTS,
+  ContractDefinitions,
+  EPOCH_SETTINGS,
+  FIRST_DATABASE_INDEX_STATE,
+  LAST_DATABASE_INDEX_STATE,
+} from "./configs/networks";
+import {
+  FullVoterRegistrationInfo,
+  InflationRewardsOffered,
+  RandomAcquisitionStarted,
+  RewardEpochStarted,
+  RewardOffers,
+  RewardsOffered,
+  SigningPolicyInitialized,
+  VotePowerBlockSelected,
+  VoterRegistered,
+  VoterRegistrationInfo,
+} from "./events";
 import { IPayloadMessage } from "./utils/PayloadMessage";
 
-
 export interface SubmissionData {
-  submitAddress: Address;  
+  submitAddress: Address;
   votingEpochId: VotingEpochId; // voting round id in which the message was submitted
   relativeTimestamp: number; // timestamp relative to the start of the voting round
   blockNumber: number;
-  transactionIndex: number
+  transactionIndex: number;
   messages: IPayloadMessage<string>[];
 }
+
 export interface IndexerResponse<T> {
   status: BlockAssuranceResult;
   data?: T;
 }
-
 
 function queryBytesFormat(address: string): string {
   return (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
@@ -31,7 +44,7 @@ function queryBytesFormat(address: string): string {
 
 export enum BlockAssuranceResult {
   /**
-   * Block range indexed and we have insurance of having one block with strictly 
+   * Block range indexed and we have insurance of having one block with strictly
    * lower timestamp then startTime and one block with strictly greater timestamp than endTime
    */
   OK,
@@ -41,28 +54,28 @@ export enum BlockAssuranceResult {
   NOT_OK,
   /**
    * There exists a block with timestamp strictly lower than startTime but there is no
-   * block with timestamp strictly greater that endTim,e but 
+   * block with timestamp strictly greater that endTim,e but
    */
   TIMEOUT_OK,
 }
 
-/** 
+/**
  * IndexerClient is a helper class for querying events and transactions from the indexer database.
- * All the queries are based on timestamp ranges. 
+ * All the queries are based on timestamp ranges.
  * Queries of events are of two forms:
- *   - trying to find a boundary event (e.g. start of reward epoch) in a given expected timestamp range. 
+ *   - trying to find a boundary event (e.g. start of reward epoch) in a given expected timestamp range.
  *     Such a query may fail and is repeated until relevant boundary event is found.
- *   - once top and bottom boundaries are obtained, we have insurance that all the events in the range are indexed. Then 
+ *   - once top and bottom boundaries are obtained, we have insurance that all the events in the range are indexed. Then
  *     a query on events in the timestamp range is performed.
- * 
+ *
  * Queries of transactions which hold information in calldata are performed based on timestamp ranges.
  * When a query is executed it is checked whether the indexer database has sufficient indexed range.
  * This is ensured if there exists a block with strictly lower timestamp than startTime and
- * a block with strictly greater timestamp than endTime. 
+ * a block with strictly greater timestamp than endTime.
  * We allow for an option that a block with index strictly greater than endTime is missing in database. In such case
- * we support queries with timeout according to local time. Such a query returns result if the local time of time of 
+ * we support queries with timeout according to local time. Such a query returns result if the local time of time of
  * query is greater than endTime + timeout.
- * 
+ *
  * The lifecycle of events leading to signing policy initialization is as follows.
  * For given rewardEpochId:
  * - Start of reward offers (low boundary event).
@@ -76,69 +89,71 @@ export enum BlockAssuranceResult {
  *    - ["FlareSystemManager", undefined, "VotePowerBlockSelected"]
  * - End of voter registration and signing policy (high boundary event)
  *    - ["Relay", undefined, "SigningPolicyInitialized"],
- * - All voter registration events and related voter info events, 
+ * - All voter registration events and related voter info events,
  *   between the timestamps of the above two events.
  *    - ["VoterRegistry", undefined, "VoterRegistered"],
  *    - ["FlareSystemCalculator", undefined, "VoterRegistrationInfo"],
- * All these events should be available before the first voting round of the rewardEpochId in order for 
+ * All these events should be available before the first voting round of the rewardEpochId in order for
  * the protocol data provider to function properly.
  */
 export class IndexerClient {
-
-  constructor(
-    private readonly entityManager: EntityManager,
-    public readonly requiredHistoryTimeSec: number
-  ) { }
+  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) {}
 
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.
-   * @param smartContract 
-   * @param eventName 
-   * @param startTime 
-   * @param endTime 
-   * @returns 
+   * @param smartContract
+   * @param eventName
+   * @param startTime
+   * @param endTime
+   * @returns
    */
-  private async queryEvents(smartContract: ContractDefinitions, eventName: string, startTime: number, endTime?: number): Promise<TLPEvents[]> {
+  private async queryEvents(
+    smartContract: ContractDefinitions,
+    eventName: string,
+    startTime: number,
+    endTime?: number
+  ): Promise<TLPEvents[]> {
     const eventSignature = getEventSignature(smartContract.name, eventName);
     let query = this.entityManager
       .createQueryBuilder(TLPEvents, "event")
       .andWhere("event.timestamp >= :startTime", { startTime })
       .andWhere("event.address = :contractAddress", { contractAddress: queryBytesFormat(smartContract.address) })
-      .andWhere("event.topic0 = :signature", { signature: queryBytesFormat(eventSignature) })
+      .andWhere("event.topic0 = :signature", { signature: queryBytesFormat(eventSignature) });
     if (endTime) {
       query = query.andWhere("event.timestamp <= :endTime", { endTime });
     }
-    return query
-      .orderBy("event.timestamp", "ASC")
-      .getMany();
+    return query.orderBy("event.timestamp", "ASC").getMany();
   }
 
   /**
    * Queries indexer database for transactions on a smart contract based on function signature in a given timestamp range.
-   * @param smartContract 
-   * @param functionName 
-   * @param startTime 
-   * @param endTime 
-   * @returns 
+   * @param smartContract
+   * @param functionName
+   * @param startTime
+   * @param endTime
+   * @returns
    */
-  private async queryTransactions(smartContract: ContractDefinitions, functionName: string, startTime: number, endTime?: number): Promise<TLPTransaction[]> {
+  private async queryTransactions(
+    smartContract: ContractDefinitions,
+    functionName: string,
+    startTime: number,
+    endTime?: number
+  ): Promise<TLPTransaction[]> {
     const functionSignature = getFunctionSignature(smartContract.name, functionName);
     let query = this.entityManager
       .createQueryBuilder(TLPTransaction, "tx")
       .andWhere("tx.timestamp >= :startTime", { startTime })
       .andWhere("tx.to_address = :contractAddress", { contractAddress: queryBytesFormat(smartContract.address) })
-      .andWhere("tx.function_sig = :signature", { signature: functionSignature })
+      .andWhere("tx.function_sig = :signature", { signature: functionSignature });
     if (endTime) {
       query = query.andWhere("tx.timestamp <= :endTime", { endTime });
     }
 
-    return query
-      .orderBy("tx.timestamp", "ASC")
-      .getMany();
+    return query.orderBy("tx.timestamp", "ASC").getMany();
   }
 
   /**
-   * Checks the indexer database has a block hat has a timestamp strictly smaller than startTime   
+   * Checks the indexer database has a block hat has a timestamp strictly smaller than startTime
    * @param startTime timestamp in seconds
    * @returns BlockAssuranceResult status (OK | NOT_OK)
    */
@@ -151,20 +166,20 @@ export class IndexerClient {
       return BlockAssuranceResult.NOT_OK;
     }
     if (firstState.block_timestamp >= startTime) {
-      return BlockAssuranceResult.NOT_OK;;
+      return BlockAssuranceResult.NOT_OK;
     }
-    return BlockAssuranceResult.OK
+    return BlockAssuranceResult.OK;
   }
 
   /**
    * Checks the indexer database for a given endTime possibly with given timeout.
    * If the database contains a block with timestamp strictly greater than endTime, it returns OK.
-   * If  the database does not contain a block with timestamp strictly greater than endTime, and 
+   * If  the database does not contain a block with timestamp strictly greater than endTime, and
    * no timeout is given, it returns NOT_OK. But if timeout is given, it returns TIMEOUT_OK if the local time
    * is greater than endTime + timeout.
-   * @param endTime 
-   * @param endTimeout 
-   * @returns 
+   * @param endTime
+   * @param endTimeout
+   * @returns
    */
   private async ensureTopBlock(endTime: number, endTimeout?: number): Promise<BlockAssuranceResult> {
     const queryLast = this.entityManager
@@ -172,7 +187,7 @@ export class IndexerClient {
       .andWhere("state.name = :name", { name: LAST_DATABASE_INDEX_STATE });
     const lastState = await queryLast.getOne();
     if (!lastState) {
-      return BlockAssuranceResult.NOT_OK;;
+      return BlockAssuranceResult.NOT_OK;
     }
     if (lastState.block_timestamp <= endTime) {
       if (endTimeout) {
@@ -190,13 +205,20 @@ export class IndexerClient {
 
   /**
    * Checks the indexer database for a given minimal timestamp range, possibly with given timeout.
-   * @param startTime 
-   * @param endTime 
-   * @param endTimeout 
-   * @returns 
+   * @param startTime
+   * @param endTime
+   * @param endTimeout
+   * @returns
    */
-  private async ensureEventRange(startTime: number, endTime: number, endTimeout?: number): Promise<BlockAssuranceResult> {
-    const [bottomState, topState] = await Promise.all([this.ensureLowerBlock(startTime), this.ensureTopBlock(endTime, endTimeout)]);
+  private async ensureEventRange(
+    startTime: number,
+    endTime: number,
+    endTimeout?: number
+  ): Promise<BlockAssuranceResult> {
+    const [bottomState, topState] = await Promise.all([
+      this.ensureLowerBlock(startTime),
+      this.ensureTopBlock(endTime, endTimeout),
+    ]);
     if (bottomState === BlockAssuranceResult.OK) {
       return topState;
     }
@@ -204,11 +226,11 @@ export class IndexerClient {
   }
 
   /**
-   * Extracts RewardEpochStarted for a specific @param rewardEpochId from the indexer database, 
+   * Extracts RewardEpochStarted for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * The event is a low boundary event for the start of reward offers for rewardEpochId + 1.
-   * @param rewardEpochId 
-   * @returns 
+   * @param rewardEpochId
+   * @returns
    */
   public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<IndexerResponse<RewardEpochStarted>> {
     const eventName = RewardEpochStarted.eventName;
@@ -217,21 +239,21 @@ export class IndexerClient {
     let data: RewardEpochStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime);
-      const events = result.map((event) => RewardEpochStarted.fromRawEvent(event));
-      data = events.find(event => event.rewardEpochId === rewardEpochId)
+      const events = result.map(event => RewardEpochStarted.fromRawEvent(event));
+      data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
     return {
       status,
-      data
+      data,
     };
   }
 
   /**
-   * Extracts event RandomAcquisitionStarted for a specific @param rewardEpochId from the indexer database, 
+   * Extracts event RandomAcquisitionStarted for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * The event is boundary event for the end of reward offers for the rewardEpochId.
-   * @param rewardEpochId 
-   * @returns 
+   * @param rewardEpochId
+   * @returns
    */
   public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<IndexerResponse<RandomAcquisitionStarted>> {
     const eventName = RandomAcquisitionStarted.eventName;
@@ -240,12 +262,12 @@ export class IndexerClient {
     let data: RandomAcquisitionStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime);
-      const events = result.map((event) => RandomAcquisitionStarted.fromRawEvent(event));
+      const events = result.map(event => RandomAcquisitionStarted.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
     return {
       status,
-      data
+      data,
     };
   }
 
@@ -253,11 +275,11 @@ export class IndexerClient {
    * Assuming that the indexer has indexed all the events in the given timestamp range,
    * it extracts all the reward offers and inflation reward offers in the given timestamp range.
    * Timestamp range are obtained from timestamps of relevant events RewardEpochStarted and RandomAcquisitionStarted.
-   * IMPORTANT: If this is not the case the function does not provide any guarantee of sufficient data availability in 
+   * IMPORTANT: If this is not the case the function does not provide any guarantee of sufficient data availability in
    * indexer database.
-   * @param startTime 
-   * @param endTime 
-   * @returns 
+   * @param startTime
+   * @param endTime
+   * @returns
    */
   public async getRewardOffers(startTime: number, endTime: number): Promise<IndexerResponse<RewardOffers>> {
     const status = await this.ensureEventRange(startTime, endTime);
@@ -265,27 +287,37 @@ export class IndexerClient {
       return { status };
     }
 
-    const rewardOffersResults = await this.queryEvents(CONTRACTS.FtsoRewardOffersManager, RewardsOffered.eventName, startTime, endTime);
-    const rewardOffers = rewardOffersResults.map((event) => RewardsOffered.fromRawEvent(event));
+    const rewardOffersResults = await this.queryEvents(
+      CONTRACTS.FtsoRewardOffersManager,
+      RewardsOffered.eventName,
+      startTime,
+      endTime
+    );
+    const rewardOffers = rewardOffersResults.map(event => RewardsOffered.fromRawEvent(event));
 
-    const inflationOffersResults = await this.queryEvents(CONTRACTS.FtsoRewardOffersManager, InflationRewardsOffered.eventName, startTime, endTime);
-    const inflationOffers = inflationOffersResults.map((event) => InflationRewardsOffered.fromRawEvent(event));
+    const inflationOffersResults = await this.queryEvents(
+      CONTRACTS.FtsoRewardOffersManager,
+      InflationRewardsOffered.eventName,
+      startTime,
+      endTime
+    );
+    const inflationOffers = inflationOffersResults.map(event => InflationRewardsOffered.fromRawEvent(event));
 
     return {
       status,
       data: {
         rewardOffers,
         inflationOffers,
-      }
+      },
     };
   }
 
   /**
-   * Extracts VotePowerBlockSelected event for a specific @param rewardEpochId from the indexer database, 
+   * Extracts VotePowerBlockSelected event for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * This event is a low boundary event for the start of voter registration for rewardEpochId.
-   * @param rewardEpochId 
-   * @returns 
+   * @param rewardEpochId
+   * @returns
    */
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
     const eventName = VotePowerBlockSelected.eventName;
@@ -294,35 +326,37 @@ export class IndexerClient {
     let data: VotePowerBlockSelected | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime);
-      const events = result.map((event) => VotePowerBlockSelected.fromRawEvent(event));
+      const events = result.map(event => VotePowerBlockSelected.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
     return {
       status,
-      data
-    }
+      data,
+    };
   }
 
   /**
-   * Extracts SigningPolicyInitialized event on Relay contract for a specific @param rewardEpochId from the indexer database, 
+   * Extracts SigningPolicyInitialized event on Relay contract for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * This event is a high boundary event for the end of voter registration for rewardEpochId.
-   * @param rewardEpochId 
-   * @returns 
+   * @param rewardEpochId
+   * @returns
    */
-  public async getSigningPolicyInitializedEvent(rewardEpochId: number): Promise<IndexerResponse<SigningPolicyInitialized>> {
+  public async getSigningPolicyInitializedEvent(
+    rewardEpochId: number
+  ): Promise<IndexerResponse<SigningPolicyInitialized>> {
     const eventName = SigningPolicyInitialized.eventName;
     const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
     const status = await this.ensureLowerBlock(startTime);
     let data: SigningPolicyInitialized | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.Relay, eventName, startTime);
-      const events = result.map((event) => SigningPolicyInitialized.fromRawEvent(event));
+      const events = result.map(event => SigningPolicyInitialized.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
     return {
       status,
-      data
+      data,
     };
   }
 
@@ -330,17 +364,19 @@ export class IndexerClient {
    * Returns the all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
    * Events are sorted by timestamp, hence also by rewardEpochId.
    * The query result is returned even if the indexer database does not contain a block with timestamp strictly lower than fromStartTime.
-   * @param fromStartTime 
-   * @returns 
+   * @param fromStartTime
+   * @returns
    */
-  public async getLatestSigningPolicyInitializedEvents(fromStartTime: number): Promise<IndexerResponse<SigningPolicyInitialized[]>> {
+  public async getLatestSigningPolicyInitializedEvents(
+    fromStartTime: number
+  ): Promise<IndexerResponse<SigningPolicyInitialized[]>> {
     const eventName = SigningPolicyInitialized.eventName;
     const status = await this.ensureLowerBlock(fromStartTime);
     const result = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
-    const data = result.map((event) => SigningPolicyInitialized.fromRawEvent(event));
+    const data = result.map(event => SigningPolicyInitialized.fromRawEvent(event));
     return {
       status,
-      data
+      data,
     };
   }
 
@@ -352,49 +388,66 @@ export class IndexerClient {
    * Assuming that the indexer has indexed all the events in the given timestamp range,
    * it extracts all the reward offers and inflation reward offers in the given timestamp range.
    * Timestamp range are obtained from timestamps of relevant events RewardEpochStarted and RandomAcquisitionStarted.
-   * IMPORTANT: If this is not the case the function does not provide any guarantee of sufficient data availability in 
+   * IMPORTANT: If this is not the case the function does not provide any guarantee of sufficient data availability in
    * indexer database.
-   * @param startTime 
-   * @param endTime 
-   * @returns 
+   * @param startTime
+   * @param endTime
+   * @returns
    */
-  public async getFullVoterRegistrationInfoEvents(startTime: number, endTime: number): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
+  public async getFullVoterRegistrationInfoEvents(
+    startTime: number,
+    endTime: number
+  ): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
     const status = await this.ensureEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
-    const voterRegisteredResults = await this.queryEvents(CONTRACTS.VoterRegistry, VoterRegistered.eventName, startTime, endTime);
-    const voterRegistered = voterRegisteredResults.map((event) => VoterRegistered.fromRawEvent(event));
+    const voterRegisteredResults = await this.queryEvents(
+      CONTRACTS.VoterRegistry,
+      VoterRegistered.eventName,
+      startTime,
+      endTime
+    );
+    const voterRegistered = voterRegisteredResults.map(event => VoterRegistered.fromRawEvent(event));
 
-    const voterRegistrationInfoResults = await this.queryEvents(CONTRACTS.FlareSystemCalculator, VoterRegistrationInfo.eventName, startTime, endTime);
-    const voterRegistrationInfo = voterRegistrationInfoResults.map((event) => VoterRegistrationInfo.fromRawEvent(event));
+    const voterRegistrationInfoResults = await this.queryEvents(
+      CONTRACTS.FlareSystemCalculator,
+      VoterRegistrationInfo.eventName,
+      startTime,
+      endTime
+    );
+    const voterRegistrationInfo = voterRegistrationInfoResults.map(event => VoterRegistrationInfo.fromRawEvent(event));
 
     if (voterRegistered.length !== voterRegistrationInfo.length) {
-      throw new Error(`VoterRegistered and VoterRegistrationInfo events count mismatch: ${voterRegistered.length} !== ${voterRegistrationInfo.length}`);
+      throw new Error(
+        `VoterRegistered and VoterRegistrationInfo events count mismatch: ${voterRegistered.length} !== ${voterRegistrationInfo.length}`
+      );
     }
     voterRegistered.sort((a, b) => {
       if (a.voter < b.voter) {
-        return -1
+        return -1;
       }
       if (a.voter > b.voter) {
-        return 1
+        return 1;
       }
       return 0;
     });
 
     voterRegistrationInfo.sort((a, b) => {
       if (a.voter < b.voter) {
-        return -1
+        return -1;
       }
       if (a.voter > b.voter) {
-        return 1
+        return 1;
       }
       return 0;
     });
     let results: FullVoterRegistrationInfo[] = [];
     for (let i = 0; i < voterRegistered.length; i++) {
       if (voterRegistered[i].voter !== voterRegistrationInfo[i].voter) {
-        throw new Error(`VoterRegistered and VoterRegistrationInfo events mismatch at index ${i}: ${voterRegistered[i].voter} !== ${voterRegistrationInfo[i].voter}`);
+        throw new Error(
+          `VoterRegistered and VoterRegistrationInfo events mismatch at index ${i}: ${voterRegistered[i].voter} !== ${voterRegistrationInfo[i].voter}`
+        );
       }
       results.push({
         voterRegistered: voterRegistered[i],
@@ -403,28 +456,33 @@ export class IndexerClient {
     }
     return {
       status,
-      data: results
+      data: results,
     };
   }
 
   /**
-   * Extracts all the submissions through function @param functionName in a given range of voting epochs.
-   * @param functionName 
-   * @param fromVotingEpochId
-   * @param toVotingEpochId if not provided, it is assumed to be equal to fromVotingEpochId
-   * @param endTimeout if not provided, it not timeout query is performed
-   * @returns 
+   * Extracts all the submissions through function @param functionName in a given time range.
+   * @param functionName
+   * @param startTime
+   * @param endTime
+   * @param endTimeout
+   * @returns
    */
-  public async getSubmissionDataInRange(functionName: string, startTime: number, endTime: number, endTimeout?: number): Promise<IndexerResponse<SubmissionData[]>> {
+  private async getSubmissionDataInRange(
+    functionName: string,
+    startTime: number,
+    endTime: number,
+    endTimeout?: number
+  ): Promise<IndexerResponse<SubmissionData[]>> {
     const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
     if (ensureRange === BlockAssuranceResult.NOT_OK) {
       return {
         status: ensureRange,
-        data: []
-      }
+        data: [],
+      };
     }
     const transactionsResults = await this.queryTransactions(CONTRACTS.Submission, functionName, startTime, endTime);
-    const submits: SubmissionData[] = transactionsResults.map((tx) => {
+    const submits: SubmissionData[] = transactionsResults.map(tx => {
       const timestamp = tx.timestamp;
       const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
       const messages = decodePayloadMessageCalldata(tx);
@@ -435,14 +493,72 @@ export class IndexerClient {
         transactionIndex: tx.transaction_index,
         blockNumber: tx.block_number,
         messages,
-      }
-    })
+      };
+    });
 
     return {
       status: ensureRange,
-      data: submits
-    }
-
+      data: submits,
+    };
   }
 
+  /**
+   * Returns submit1 transactions that were submitted in a given voting round.
+   * @param votingRoundId 
+   * @param endTimeout 
+   * @returns 
+   */
+  async getCommitsDataForVotingEpoch(
+    votingEpochId: number,
+    endTimeout?: number
+  ): Promise<IndexerResponse<SubmissionData[]>> {
+    const startTime = EPOCH_SETTINGS.votingEpochStartSec(votingEpochId);
+    const endTime = EPOCH_SETTINGS.votingEpochEndSec(votingEpochId);
+    return this.getSubmissionDataInRange("submit1", startTime, endTime, endTimeout);
+  }
+
+  async getRevealsDataForVotingEpoch(
+    votingEpochId: number,
+    endTimeout?: number
+  ): Promise<IndexerResponse<SubmissionData[]>> {
+    const startTime = EPOCH_SETTINGS.votingEpochStartSec(votingEpochId);
+    const endTime = EPOCH_SETTINGS.revealDeadlineSec(votingEpochId);
+    return this.getSubmissionDataInRange("submit2", startTime, endTime, endTimeout);
+  }
+
+  async getCommitAndRevealDataForVotingEpochRange(
+    startVotingRoundId: number,
+    endVotingRoundId: number,
+    endTimeout?: number
+  ): Promise<IndexerResponse<{ commits: SubmissionData[]; reveals: SubmissionData[] }>> {
+    const submit1Start = EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId - 1);
+    const submit1End = EPOCH_SETTINGS.votingEpochEndSec(endVotingRoundId - 1);
+
+    const submit2Start = EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId);
+    const submit2End = EPOCH_SETTINGS.revealDeadlineSec(endVotingRoundId);
+
+    const commitData = await this.getSubmissionDataInRange("submit1", submit1Start, submit1End, endTimeout);
+    const revealDataRaw = await this.getSubmissionDataInRange("submit2", submit2Start, submit2End, endTimeout);
+
+    const revealData = revealDataRaw.data?.filter(submit => submit.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds);
+
+    if (commitData.status !== BlockAssuranceResult.OK || revealDataRaw.status !== BlockAssuranceResult.OK) {
+      if (commitData.status === BlockAssuranceResult.NOT_OK || revealDataRaw.status === BlockAssuranceResult.NOT_OK) {
+        return {
+          status: BlockAssuranceResult.NOT_OK,
+        };
+      }
+      return {
+        status: BlockAssuranceResult.TIMEOUT_OK,
+      };
+    }
+
+    return {
+      status: BlockAssuranceResult.OK,
+      data: {
+        commits: commitData.data,
+        reveals: revealData,
+      }
+    };
+  }
 }
