@@ -19,6 +19,7 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
       this.voters = data.voters.map((v: Address) => v.toLowerCase());
       this.weights = data.weights.map((v: number) => Number(v));
       this.signingPolicyBytes = data.signingPolicyBytes;
+      this.timestamp = Number(data.timestamp);
    }
 
    static fromRawEvent(event: any): SigningPolicyInitialized {
@@ -46,4 +47,6 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
    weights: number[];
    // The full signing policy byte encoded.
    signingPolicyBytes: string;
+   // Timestamp of the event
+   timestamp: number;
 }
