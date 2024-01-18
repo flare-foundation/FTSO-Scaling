@@ -7,6 +7,7 @@ export type Bytes20 = string;
 export type VotingEpochId = number;
 export type RewardEpochId = number;
 
+
 export interface RewardClaim {
   /**
    * `true`if the claim is for the full amount claimable by the specified beneficiary. E.g: back claims, signer and finalization claims.
