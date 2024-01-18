@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
 import Web3 from "web3";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
-import { calculateResults, rewardEpochFeedSequence } from "../../../libs/ftso-core/src/price-calculation";
+import { calculateResults, rewardEpochFeedSequence } from "../../../libs/ftso-core/src/ftso-calculation-logic";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";

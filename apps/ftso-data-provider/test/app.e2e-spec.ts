@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { FtsoCalculatorModule } from './../src/ftso-calculator.module';
+import { FtsoCalculatorModule } from '../src/ftso-calculator.module';
 
 describe('FtsoCalculatorController (e2e)', () => {
   let app: INestApplication;

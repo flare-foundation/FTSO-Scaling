@@ -1,7 +1,7 @@
 import Web3 from "web3";
 
 import { getTestFile } from "../../test-utils/constants";
-import { getWeb3, signMessage, recoverSigner } from "../../apps/ftso-calculator/src/utils/web3";
+import { getWeb3, signMessage, recoverSigner } from "../../apps/ftso-data-provider/src/utils/web3";
 import { BareSignature } from "../../libs/ftso-core/src/voting-types";
 
 const rpcLink = "http://localhost:8545";

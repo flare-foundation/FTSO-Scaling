@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { getTestFile } from "../../test-utils/constants";
-import { calculateMedian } from "../../libs/ftso-core/src/price-calculation";
+import { calculateMedian } from "../../libs/ftso-core/src/ftso-calculation-logic";
 import { toBN } from "../../libs/ftso-core/src/utils/voting-utils";
 import { MedianCalculationSummary } from "../../libs/ftso-core/src/voting-types";
 import { before } from "node:test";

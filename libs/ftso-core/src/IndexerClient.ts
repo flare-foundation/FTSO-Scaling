@@ -12,9 +12,11 @@ import { IPayloadMessage } from "./utils/PayloadMessage";
 
 
 export interface SubmissionData {
-  submitAddress: Address;
+  submitAddress: Address;  
   votingEpochId: VotingEpochId; // voting round id in which the message was submitted
   relativeTimestamp: number; // timestamp relative to the start of the voting round
+  blockNumber: number;
+  transactionIndex: number
   messages: IPayloadMessage<string>[];
 }
 export interface IndexerResponse<T> {
@@ -434,6 +436,8 @@ export class IndexerClient {
         submitAddress: "0x" + tx.from_address,
         relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
         votingEpochId,
+        transactionIndex: tx.transaction_index,
+        blockNumber: tx.block_number,
         messages,
       }
     })

@@ -1,5 +1,5 @@
-import { TimeoutError, retry, retryWithTimeout } from "../../apps/ftso-calculator/src/utils/retry";
-import { sleepFor } from "../../apps/ftso-calculator/src/utils/time";
+import { TimeoutError, retry, retryWithTimeout } from "../../apps/ftso-data-provider/src/utils/retry";
+import { sleepFor } from "../../apps/ftso-data-provider/src/utils/time";
 import { getTestFile } from "../../test-utils/constants";
 import { expect } from "chai";
 

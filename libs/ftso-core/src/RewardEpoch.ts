@@ -1,5 +1,6 @@
+import { SubmissionData } from "./IndexerClient";
 import { FullVoterRegistrationInfo, RandomAcquisitionStarted, RewardEpochStarted, RewardOffers, SigningPolicyInitialized, VotePowerBlockSelected } from "./events";
-import { rewardEpochFeedSequence } from "./price-calculation";
+import { rewardEpochFeedSequence } from "./ftso-calculation-logic";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export class RewardEpoch {
@@ -97,5 +98,9 @@ export class RewardEpoch {
    get canonicalFeedOrder(): Feed[] {      
       return this._canonicalFeedOrder;
    }
+
+   filterValidSubmitters(submissionData: SubmissionData[]): SubmissionData[] {
+      throw new Error("Not implemented");
+   } 
 
 }
