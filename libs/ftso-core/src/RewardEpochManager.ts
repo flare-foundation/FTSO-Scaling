@@ -1,94 +1,90 @@
-import { Sign } from "crypto";
-import { IndexerClient } from "./IndexerClient";
+import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { EPOCH_SETTINGS } from "./configs/networks";
-import { RewardEpochId } from "./voting-types";
 import { SigningPolicyInitialized } from "./events";
+import { RewardEpochId, VotingEpochId } from "./voting-types";
 
 export class RewardEpochManager {
    indexerClient: IndexerClient;
    rewardEpochsCache: Map<RewardEpochId, RewardEpoch>;
-   constructor(indexerClient: IndexerClient) { 
+   constructor(indexerClient: IndexerClient) {
       this.indexerClient = indexerClient;
       this.rewardEpochsCache = new Map<RewardEpochId, RewardEpoch>();
    }
 
-   async getRewardEpoch(votingRoundId: RewardEpochId): Promise<RewardEpoch | undefined> {
+   async getRewardEpoch(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
       const currentVotingEpochId = EPOCH_SETTINGS.votingEpochForTime(Date.now());
-      if(votingRoundId > currentVotingEpochId) {
+      if (votingEpochId > currentVotingEpochId) {
          return undefined; // future voting epoch
       }
 
-      // TODO: throw exception on too old voting epoch
-
-      const expectedRewardEpochId = EPOCH_SETTINGS.expectedRewardEpochForVotingEpoch(votingRoundId);      
+      const expectedRewardEpochId = EPOCH_SETTINGS.expectedRewardEpochForVotingEpoch(votingEpochId);
 
       // Try with expected reward epoch
       let rewardEpoch = this.rewardEpochsCache.get(expectedRewardEpochId);
-      if(rewardEpoch) {
-         if(rewardEpoch.startVotingRoundId <= votingRoundId) {
-            return rewardEpoch;
-         }
-         // skip to previous reward epoch check 
-      } else { // No expected reward epoch in cache
-         const expectedSigningPolicy = await this.indexerClient.getSigningPolicyInitializedEvent(expectedRewardEpochId);
-         if(!expectedSigningPolicy) {
-            return undefined; // no signing policy yet
-         }
-         if(expectedSigningPolicy.startVotingRoundId <= votingRoundId) {
-            return this.initializeRewardEpoch(expectedSigningPolicy);
-         }
+      if (rewardEpoch && rewardEpoch.startVotingRoundId <= votingEpochId) {
+         return rewardEpoch;
       }
-      // The expected reward epoch is not the right one, so we need to find the previous one
-      const previousRewardEpoch = this.rewardEpochsCache.get(expectedRewardEpochId - 1);
-      if(previousRewardEpoch) {
-         // sanity check
-         if(previousRewardEpoch.startVotingRoundId > votingRoundId) {
-            throw new Error("Critical error: previous reward epoch starts later than the expected time of the expected reward epoch. This should never happen.");
+      const lowestExpectedIndexerHistoryTime = Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
+      const signingPolicyInitializedEvents = await this.indexerClient.getLatestSigningPolicyInitializedEvents(lowestExpectedIndexerHistoryTime);
+      let i = signingPolicyInitializedEvents.data!.length - 1;
+      while (i >= 0) {
+         const signingPolicyInitializedEvent = signingPolicyInitializedEvents.data![i];
+         if (signingPolicyInitializedEvent.startVotingRoundId <= votingEpochId) {
+            break;
          }
-         return previousRewardEpoch;
-      } else {
-         const previousSigningPolicy = await this.indexerClient.getSigningPolicyInitializedEvent(expectedRewardEpochId - 1);
-         if(!previousSigningPolicy) {
-            throw new Error("Critical error: Previous signing policy not found - most likely the indexer is not synced");
-         }
-         // sanity check
-         if(previousSigningPolicy.startVotingRoundId > votingRoundId) {
-            throw new Error("Critical error: Signing policy starts later than the expected time of the expected reward epoch. This should never happen.");
-         }
-         return this.initializeRewardEpoch(previousSigningPolicy);
+         i--;
       }
+      if (i < 0) {
+         // no such signing policy in requiredHistoryTimeSec window
+         throw new Error(`Critical error: Signing policy not found after ${lowestExpectedIndexerHistoryTime} - most likely the indexer has too short history`);
+      }
+      return this.initializeRewardEpoch(signingPolicyInitializedEvents.data[i]);
    }
 
    async initializeRewardEpoch(signingPolicyInitializedEvent: SigningPolicyInitialized): Promise<RewardEpoch | undefined> {
-      if(!signingPolicyInitializedEvent) {
+      if (!signingPolicyInitializedEvent) {
          throw new Error("Critical error: Signing policy must be provided.");
       }
       const rewardEpochId = signingPolicyInitializedEvent.rewardEpochId;
-      const previousRewardEpochStartedEvent = await this.indexerClient.getStartOfRewardEpochEvent(rewardEpochId - 1);
-      if(!previousRewardEpochStartedEvent) {
+      const previousRewardEpochStartedEventResponse = await this.indexerClient.getStartOfRewardEpochEvent(rewardEpochId - 1);
+      if (previousRewardEpochStartedEventResponse.status !== BlockAssuranceResult.OK || !previousRewardEpochStartedEventResponse.data) {
          throw new Error("Critical error: Previous reward epoch RewardEpochStarted event not found - most likely the indexer has too short history");
       }
-      const randomAcquisitionStartedEvent = await this.indexerClient.getRandomAcquisitionStarted(rewardEpochId);
-      if(!randomAcquisitionStartedEvent) {
+      const randomAcquisitionStartedEventResponse = await this.indexerClient.getRandomAcquisitionStarted(rewardEpochId);
+      if (randomAcquisitionStartedEventResponse.status !== BlockAssuranceResult.OK || !randomAcquisitionStartedEventResponse.data) {
          throw new Error("Critical error: AcquisitionStarted event not found - most likely the indexer has too short history");
       }
-      const rewardOffers = await this.indexerClient.getRewardOffers(previousRewardEpochStartedEvent.timestamp, randomAcquisitionStartedEvent.timestamp);
+      const rewardOffersResponse = await this.indexerClient.getRewardOffers(
+         previousRewardEpochStartedEventResponse.data.timestamp,
+         randomAcquisitionStartedEventResponse.data.timestamp
+      );
 
-      const votePowerBlockSelectedEvent = await this.indexerClient.getVotePowerBlockSelectedEvent(rewardEpochId);
-      if(!votePowerBlockSelectedEvent) {
+      if (rewardOffersResponse.status !== BlockAssuranceResult.OK || !rewardOffersResponse.data) {
+         throw new Error("Critical error: RewardOffers cannot be constructed - most likely the indexer has too short history");
+      }
+
+      const votePowerBlockSelectedEventResponse = await this.indexerClient.getVotePowerBlockSelectedEvent(rewardEpochId);
+      if (votePowerBlockSelectedEventResponse.status !== BlockAssuranceResult.OK || !votePowerBlockSelectedEventResponse.data) {
          throw new Error("Critical error: VotePowerBlockSelected event not found - most likely the indexer has too short history");
       }
 
-      const fullVoterRegistrationInfo = await this.indexerClient.getFullVoterRegistrationInfoEvents(votePowerBlockSelectedEvent.timestamp, signingPolicyInitializedEvent.timestamp);
+      const fullVoterRegistrationInfoResponse = await this.indexerClient.getFullVoterRegistrationInfoEvents(
+         votePowerBlockSelectedEventResponse.data!.timestamp,
+         signingPolicyInitializedEvent.timestamp
+      );
+
+      if (fullVoterRegistrationInfoResponse.status !== BlockAssuranceResult.OK || !fullVoterRegistrationInfoResponse.data) {
+         throw new Error("Critical error: FullVoterRegistrationInfo cannot be constructed - most likely the indexer has too short history");
+      }
 
       const rewardEpoch = new RewardEpoch(
-         previousRewardEpochStartedEvent,
-         randomAcquisitionStartedEvent,
-         rewardOffers,
-         votePowerBlockSelectedEvent,
+         previousRewardEpochStartedEventResponse.data,
+         randomAcquisitionStartedEventResponse.data,
+         rewardOffersResponse.data,
+         votePowerBlockSelectedEventResponse.data,
          signingPolicyInitializedEvent,
-         fullVoterRegistrationInfo
+         fullVoterRegistrationInfoResponse.data
       );
 
       this.rewardEpochsCache.set(rewardEpochId, rewardEpoch);
