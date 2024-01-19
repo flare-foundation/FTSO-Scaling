@@ -17,6 +17,7 @@ import {
   RevealData,
   RevealResult} from "./voting-types";
 import { RewardOffers } from "./events/RewardOffers";
+import { CommitData } from "./utils/CommitData";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
@@ -96,7 +97,7 @@ export async function calculateRevealers(
       return false;
     }
     const commitHash = commits.get(committer);
-    return commitHash === hashForCommit(committer, revealData.random, revealData.encodedPrices);
+    return commitHash === CommitData.hashForCommit(committer, revealData.random, revealData.encodedPrices);
   });
 
   if (committedFailedReveal.length > 0) {

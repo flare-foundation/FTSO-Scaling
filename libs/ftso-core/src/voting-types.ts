@@ -71,11 +71,6 @@ export interface BlockData {
   readonly transactions: readonly TxData[];
 }
 
-export interface EpochData {
-  readonly random: Bytes32;
-  readonly priceHex: string;
-}
-
 export interface EpochResult {
   readonly priceEpochId: number;
   readonly medianData: readonly MedianCalculationResult[];

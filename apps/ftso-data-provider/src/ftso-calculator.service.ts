@@ -1,16 +1,21 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
 import Web3 from "web3";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
+import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
+import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
+import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
+import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
-import { hashForCommit } from "../../../libs/ftso-core/src/utils/voting-utils";
-import { EpochData, Feed, RevealData } from "../../../libs/ftso-core/src/voting-types";
+import { Feed, RevealData } from "../../../libs/ftso-core/src/voting-types";
 import { Api } from "./price-provider-api/generated/provider-api";
+import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/ftso-core/src/utils/ProtocolMessageMerkleRoot";
+import { errorString } from "../../../libs/ftso-core/src/utils/error";
 
 
 const supportedFeeds = [
@@ -34,8 +39,8 @@ export class FtsoCalculatorService {
   private readonly epochSettings: EpochSettings;
 
   // TODO: Need to clean up old epoch data so the map doesn't grow indefinitely
-  private readonly dataByEpoch = new Map<number, EpochData>();
-  
+  private readonly votingRoundToRevealData = new Map<number, IRevealData>();
+
   private rewardEpochManger: RewardEpochManager;
 
   // Indexer top timeout margin
@@ -52,36 +57,46 @@ export class FtsoCalculatorService {
 
   // Entry point methods for the protocol data provider
 
-  async getCommit(votingRoundId: number, signingAddress: string): Promise<string> {
+  async getEncodedCommitData(votingRoundId: number, signingAddress: string): Promise<string> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
-    const data = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
-    const hash = hashForCommit(signingAddress, data.random.value, data.priceHex);
-    this.dataByEpoch.set(votingRoundId, data);
-    this.logger.log(`Commit for epoch ${votingRoundId}: ${hash}`);
-    return hash;
+    const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
+    const hash = CommitData.hashForCommit(signingAddress, revealData.random, revealData.encodedPrices);
+    const commitData = {
+      commitHash: hash,
+    } as ICommitData;
+    this.votingRoundToRevealData.set(votingRoundId, revealData);
+    this.logger.log(`Commit for voting round ${votingRoundId}: ${hash}`);
+    const msg: IPayloadMessage<string> = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId,
+      payload: CommitData.encode(commitData),
+    };
+    return PayloadMessage.encode(msg);
   }
 
-  async getReveal(votingRoundId: number): Promise<RevealData | undefined> {
-    this.logger.log(`Getting reveal for epoch ${votingRoundId}`);
+  async getEncodedRevealData(votingRoundId: number): Promise<RevealData | undefined> {
+    this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
-    const epochData = this.dataByEpoch.get(votingRoundId)!;
-    if (epochData === undefined) {
-      // TODO: Query indexer if not found - for usecases that are replaying history
-      //       Note: same should be done for getCommit.
-      this.logger.error(`No data found for epoch ${votingRoundId}`);
+    const revealData = this.votingRoundToRevealData.get(votingRoundId)!;
+    if (revealData === undefined) {
+      // we do not have reveal data. Either we committed and restarted the client, hence lost the reveal data irreversibly
+      // or we did not commit at all.
+      this.logger.error(`No reveal data found for epoch ${votingRoundId}`);
       return undefined;
     }
-    const revealData: RevealData = {
-      random: epochData.random.toString(),
-      encodedPrices: epochData.priceHex,
-    };
 
-    return revealData;
+    const msg: IPayloadMessage<string> = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId: votingRoundId,
+      payload: RevealData.encode(revealData),
+    };
+    return PayloadMessage.encode(msg);
   }
 
-  async getResult(votingRoundId: number): Promise<[Bytes32, boolean]> {
+  async getEncodedResultData(votingRoundId: number): string {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
 
+    ////// TO FIX ////// - start  
     const revealResponse = await this.indexerClient.getRevealsDataForVotingEpoch(votingRoundId, this.indexer_top_timeout);
     const commitsResponse = await this.indexerClient.getCommitsDataForVotingEpoch(votingRoundId, this.indexer_top_timeout);
 
@@ -91,19 +106,52 @@ export class FtsoCalculatorService {
     const reveals = await this.indexerClient.queryReveals(votingRoundId);
     const weights = await this.indexerClient.getVoterWeights(votingRoundId);
     const revealFails = await this.indexerClient.getRevealWithholders(votingRoundId);
-
-    const result = await calculateResults(votingRoundId, commits, reveals, rewardEpoch.canonicalFeedOrder, weights, revealFails);
-    return [result.merkleRoot, result.randomQuality];
+    
+    ////// TO FIX ////// - start
+    try {
+      const result = await calculateResults(votingRoundId, commits, reveals, rewardEpoch.canonicalFeedOrder, weights, revealFails);
+      const message = {
+        protocolId: FTSO2_PROTOCOL_ID,
+        votingRoundId,
+        randomQualityScore: result.randomQuality,
+        merkleRoot: result.merkleRoot.toString()
+      } as IProtocolMessageMerkleRoot;
+      return ProtocolMessageMerkleRoot.encode(message);
+    } catch (e) {
+      this.logger.error(`Error calculating result: ${errorString(e)}`);
+      throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
+    }
   }
+
+  // async getResult(votingRoundId: number): Promise<string> {
+  //   this.logger.log(`Getting result for epoch ${votingRoundId}`);
+  //   try {
+  //     const [merkleRoot, goodRandom] = await this.ftsoCalculatorService.getResult(votingRoundId);
+  //     const encoded = // 38 bytes total
+  //       "0x" +
+  //       FTSO2_PROTOCOL_ID.toString(16).padStart(2, "0") + // 2 bytes
+  //       votingRoundId.toString(16).padStart(8, "0") + // 4 bytes
+  //       (goodRandom ? "01" : "00") + // 1 byte
+  //       merkleRoot.toString().slice(2); // 32 bytes
+
+  //     this.logger.log(`Result for epoch ${votingRoundId}: ${encoded}`);
+  //     return encoded;
+  //   } catch (e) {
+  //     this.logger.error(`Error calculating result: ${errorString(e)}`);
+  //     throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
+  //   }
+  // }
+
+
 
   // Internal methods
 
-  private async getPricesForEpoch(votingRoundId: number, feedSequenc: Feed[]): Promise<EpochData> {
+  private async getPricesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
 
     // TODO: do some retries here
     const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(
       votingRoundId,
-      { feeds: supportedFeeds },
+      { feeds: supportedFeeds.map(feed => feed.name) },
     );
 
     // This should just be a warning
@@ -119,9 +167,11 @@ export class FtsoCalculatorService {
     // make sure that the order of prices is in line with protocol definition
     const extractedPrices = prices.feedPriceData.map(pri => pri.price);
 
-    const data: EpochData = {
-      priceHex: FeedValueEncoder.encode(extractedPrices),
-      random: Bytes32.random(),
+    const data: IRevealData = {
+      prices: extractedPrices,
+      feeds: supportedFeeds,
+      random: Bytes32.random().toString(),
+      encodedPrices: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
     };
     return data;
   }

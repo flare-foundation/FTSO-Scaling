@@ -98,13 +98,6 @@ export function hexlifyBN(obj: any): any {
   return obj;
 }
 
-export function hashForCommit(voter: string, random: string, prices: string) {
-  const types = ["address", "uint256", "bytes"];
-  const values = [voter.toLowerCase(), random, prices];
-  const encoded = coder.encodeParameters(types, values);
-  return utils.soliditySha3(encoded)!;
-}
-
 /** We XOR the random values provided by each voter to obtain a single combined random value for the price epoch. */
 export function combineRandom(randoms: Bytes32[]): Bytes32 {
   return randoms.reduce((a, b) => a.xor(b), Bytes32.ZERO);

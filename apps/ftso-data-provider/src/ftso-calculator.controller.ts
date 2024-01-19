@@ -62,11 +62,10 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    // return this.fakeStatusByte32;
+    const data = await this.ftsoCalculatorService.getEncodedCommitData(votingRoundId, signingAddress);
     return {
-      status: PDPResponseStatusEnum.OK,
-      data: await this.getCommitMessage(votingRoundId, signingAddress),
-      additionalData: "",
+      status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
+      data
     };
   }
 
@@ -79,11 +78,10 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
     );
-    // return this.fakeStatusByte32;
+    const data = await this.ftsoCalculatorService.getEncodedRevealData(votingRoundId);
     return {
-      status: PDPResponseStatusEnum.OK,
+      status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: await this.getReveal(votingRoundId),
-      additionalData: "",
     };
   }
 

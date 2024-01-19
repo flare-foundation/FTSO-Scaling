@@ -10,7 +10,7 @@ export enum PDPResponseStatusEnum {
 export interface PDPResponse {
   status: PDPResponseStatusEnum;
   data: string;
-  additionalData: string;
+  additionalData?: string;
 }
 
 // External user facing response for merkle tree

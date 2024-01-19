@@ -11,3 +11,4 @@ cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Fl
 
 cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/PayloadMessage.ts libs/ftso-core/src/utils/PayloadMessage.ts
 cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/SigningPolicy.ts libs/ftso-core/src/utils/SigningPolicy.ts
+cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ProtocolMessageMerkleRoot.ts libs/ftso-core/src/utils/ProtocolMessageMerkleRoot.ts
