@@ -74,7 +74,7 @@ export class FtsoCalculatorService {
     return PayloadMessage.encode(msg);
   }
 
-  async getEncodedRevealData(votingRoundId: number): Promise<RevealData | undefined> {
+  async getEncodedRevealData(votingRoundId: number): Promise<string> {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
     const revealData = this.votingRoundToRevealData.get(votingRoundId)!;
@@ -178,3 +178,6 @@ export class FtsoCalculatorService {
 
 
 }
+
+
+

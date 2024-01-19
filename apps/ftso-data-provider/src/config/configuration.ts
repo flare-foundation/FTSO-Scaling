@@ -22,7 +22,6 @@ export interface IConfig {
   // Price Provider url (PRICE_PROVIDER_URL)
   price_provider_url: string;
   
-
   // Testing only
   protocol_id?: number;
 }

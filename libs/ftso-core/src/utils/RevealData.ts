@@ -28,6 +28,4 @@ export namespace RevealData {
          encodedPrices: "0x" + encoded.slice(66).padEnd(8 * feeds.length, "0"),
       };
    }
-
-
 }
