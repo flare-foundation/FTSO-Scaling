@@ -23,6 +23,8 @@ import {
   VoterRegistrationInfo,
 } from "./events";
 import { IPayloadMessage } from "./utils/PayloadMessage";
+import { ICommitData } from "./utils/CommitData";
+import { IRevealData } from "./utils/RevealData";
 
 export interface SubmissionData {
   submitAddress: Address;
@@ -31,6 +33,13 @@ export interface SubmissionData {
   blockNumber: number;
   transactionIndex: number;
   messages: IPayloadMessage<string>[];
+}
+
+export interface VoterData {
+  submitAddress: Address;
+  votingRoundId: VotingEpochId; // voting round id in which the message was submitted
+  commit?: IPayloadMessage<ICommitData>;
+  reveal?: IPayloadMessage<IRevealData>;
 }
 
 export interface IndexerResponse<T> {
@@ -464,7 +473,7 @@ export class IndexerClient {
    * @param endTimeout
    * @returns
    */
-  private async getSubmissionDataInRange(
+  public async getSubmissionDataInRange(
     functionName: string,
     startTime: number,
     endTime: number,

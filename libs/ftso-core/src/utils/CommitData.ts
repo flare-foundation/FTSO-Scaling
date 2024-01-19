@@ -1,6 +1,7 @@
 import { Address } from "../voting-types";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
+import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 
 export interface ICommitData {
    commitHash: string;
@@ -21,6 +22,16 @@ export namespace CommitData {
       return {
          commitHash: encoded,
       };
+   }
+   
+   export function decodePayloadMessages(encoded: string): IPayloadMessage<ICommitData>[] {
+      const messages = PayloadMessage.decode(encoded);
+      return messages.map((message) => {  
+         return {
+            ...message,
+            payload: CommitData.decode(message.payload),
+         }
+      });
    }
    
    export function hashForCommit(voter: Address, random: string, prices: string) {

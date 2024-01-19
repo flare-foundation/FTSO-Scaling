@@ -1,5 +1,7 @@
+import { Fee } from "ccxt";
 import { Feed } from "../voting-types";
 import { FeedValueEncoder, PriceWithDecimals } from "./FeedEncoder";
+import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 
 export interface IRevealData {
    readonly random: string;
@@ -28,4 +30,15 @@ export namespace RevealData {
          encodedPrices: "0x" + encoded.slice(66).padEnd(8 * feeds.length, "0"),
       };
    }
+
+   export function decodePayloadMessages(encoded: string, feeds: Feed[]): IPayloadMessage<IRevealData>[] {
+      const messages = PayloadMessage.decode(encoded);
+      return messages.map((message) => {  
+         return {
+            ...message,
+            payload: RevealData.decode(message.payload, feeds),
+         }
+      });
+   }
+
 }
