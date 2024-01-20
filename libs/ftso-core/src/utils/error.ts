@@ -1,9 +1,3 @@
-export class RevertedTxError extends Error {
-  constructor(message: string, cause?: Error) {
-    super(message, { cause: cause });
-  }
-}
-
 export function asError(e: unknown): Error {
   if (e instanceof Error) {
     return e;

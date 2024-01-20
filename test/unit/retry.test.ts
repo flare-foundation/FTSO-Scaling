@@ -1,7 +1,9 @@
 import { TimeoutError, retry, retryWithTimeout } from "../../apps/ftso-data-provider/src/utils/retry";
 import { sleepFor } from "../../apps/ftso-data-provider/src/utils/time";
-import { getTestFile } from "../../test-utils/constants";
-import { expect } from "chai";
+import { getTestFile } from "../utils/getTestFile";
+import { expect, use as useChai } from "chai";
+import chaiAsPromised from "chai-as-promised";
+useChai(chaiAsPromised);
 
 const MAX_RETRIES = 3;
 const ZERO_BACKOFF = 0;

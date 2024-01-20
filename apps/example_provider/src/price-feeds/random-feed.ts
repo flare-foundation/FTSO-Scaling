@@ -1,9 +1,14 @@
 
 import { Feed } from "../../../../libs/ftso-core/src/voting-types";
 import { FeedPriceData } from "../dto/provider-requests.dto";
-import { RandomPriceFeedConfig } from "../../../../test-utils/RandomPriceFeed";
 import { BaseDataFeed } from "./base-feed";
 
+export interface RandomPriceFeedConfig {
+  period: number;
+  factor: number;
+  variance: number;
+  feedInfo: Feed;
+}
 
 export class RandomFeed implements BaseDataFeed {
   private readonly priceFeedConfig: Omit<RandomPriceFeedConfig, "feedInfo">;
