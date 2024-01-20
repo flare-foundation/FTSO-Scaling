@@ -120,12 +120,18 @@ export class RewardEpoch {
       return !!this.submitterToVoter.get(submitAddress);
    }
 
-   cappedWFLRDelegationWeight(submissionAddress: Address): bigint {
+   ftsoMedianVotingWeight(submissionAddress: Address): bigint {
       if(this.isEligibleVoterSubmissionAddress(submissionAddress)) {
          throw new Error("Invalid submission address");
       }
       return this.submissionAddressToCappedWeight.get(submissionAddress)!;
    }
+
+   ftsoRewardingWeight(submissionAddress: Address): bigint {
+      return this.ftsoMedianVotingWeight(submissionAddress);
+   }
+
+
 //    /**
 //     * Filters out submissions that are sent by valid submitters.
 //     * The submission are first ordered by relativeTimestamp and for submissions with the 

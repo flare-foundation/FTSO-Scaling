@@ -4,6 +4,11 @@ import { EPOCH_SETTINGS } from "./configs/networks";
 import { SigningPolicyInitialized } from "./events";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
 
+/**
+ * Manages reward epochs
+ * 1. Enables access to correct reward epoch for each voting round
+ * 2. Keeps a cache of reward epochs
+ */
 export class RewardEpochManager {
    indexerClient: IndexerClient;
    rewardEpochsCache: Map<RewardEpochId, RewardEpoch>;
@@ -12,6 +17,17 @@ export class RewardEpochManager {
       this.rewardEpochsCache = new Map<RewardEpochId, RewardEpoch>();
    }
 
+   /**
+    * Returns a matching reward epoch for the given voting epoch.
+    * It tries to get the matching epoch using the cached values. If this 
+    * is not possible it queries a range of latest SigningPolicyInitialized
+    * and determines the matching reward epoch subject to startVotingRound id 
+    * parameter. If the corresponding RewardEpoch object containing all the relevant
+    * reward epoch definitions and mappings (including signing policies) is not in cache,
+    * it gets constructed, put in cache and returned.
+    * @param votingEpochId 
+    * @returns 
+    */
    async getRewardEpoch(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
       const currentVotingEpochId = EPOCH_SETTINGS.votingEpochForTime(Date.now());
       if (votingEpochId > currentVotingEpochId) {
@@ -42,6 +58,14 @@ export class RewardEpochManager {
       return this.initializeRewardEpoch(signingPolicyInitializedEvents.data[i]);
    }
 
+   /**
+    * Initializes reward epoch object (RewardEpoch) from signing policy initialized event.
+    * In the process it queries for all signing policy definition protocol events, 
+    * voter registration related events and reward offers. 
+    * Before returning, the object is put in cache.
+    * @param signingPolicyInitializedEvent 
+    * @returns 
+    */
    async initializeRewardEpoch(signingPolicyInitializedEvent: SigningPolicyInitialized): Promise<RewardEpoch | undefined> {
       if (!signingPolicyInitializedEvent) {
          throw new Error("Critical error: Signing policy must be provided.");

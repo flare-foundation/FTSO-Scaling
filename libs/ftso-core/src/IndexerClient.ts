@@ -28,7 +28,7 @@ import { IRevealData } from "./utils/RevealData";
 
 export interface SubmissionData {
   submitAddress: Address;
-  votingEpochId: VotingEpochId; // voting round id in which the message was submitted
+  votingEpochIdFromTimestamp: VotingEpochId; // voting round id in which the message was submitted
   relativeTimestamp: number; // timestamp relative to the start of the voting round
   blockNumber: number;
   transactionIndex: number;
@@ -496,7 +496,7 @@ export class IndexerClient {
       return {
         submitAddress: "0x" + tx.from_address,
         relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
-        votingEpochId,
+        votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
         blockNumber: tx.block_number,
         messages,

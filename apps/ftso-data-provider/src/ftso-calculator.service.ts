@@ -63,10 +63,10 @@ export class FtsoCalculatorService {
 
   // Entry point methods for the protocol data provider
 
-  async getEncodedCommitData(votingRoundId: number, signingAddress: string): Promise<string> {
+  async getEncodedCommitData(votingRoundId: number, submissionAddress: string): Promise<string> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
-    const hash = CommitData.hashForCommit(signingAddress, revealData.random, revealData.encodedValues);
+    const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
     const commitData = {
       commitHash: hash,
     } as ICommitData;

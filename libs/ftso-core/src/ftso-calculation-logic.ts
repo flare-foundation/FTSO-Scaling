@@ -61,7 +61,7 @@ export async function calculateResults(
 
   // TODO: implement randomOffenders!!!
   const randoms = data.orderedVotersSubmissionAddresses
-    .map(voter => data.reveals.get(voter.toLowerCase())?.random)
+    .map(voter => data.validEligibleReveals.get(voter.toLowerCase())?.random)
     .filter(x => x !== undefined)
     .map(x => Bytes32.fromHexString(x));
   // revealResult.revealedRandoms
@@ -72,46 +72,46 @@ export async function calculateResults(
   return calculateEpochResult(results, random, data.votingRoundId);
 }
 
-export async function calculateRevealers(
-  commits: Map<string, string>,
-  reveals: Map<string, RevealData>,
-  voterWeights: Map<Address, bigint>
-): Promise<RevealResult> {
-  const committers = [...commits.keys()];
-  const eligibleCommitters = committers
-    .map(sender => sender.toLowerCase())
-    .filter(voter => voterWeights.has(voter.toLowerCase())!);
+// export async function calculateRevealers(
+//   commits: Map<string, string>,
+//   reveals: Map<string, RevealData>,
+//   voterWeights: Map<Address, bigint>
+// ): Promise<RevealResult> {
+//   const committers = [...commits.keys()];
+//   const eligibleCommitters = committers
+//     .map(sender => sender.toLowerCase())
+//     .filter(voter => voterWeights.has(voter.toLowerCase())!);
 
-  const failedCommit = _.difference(eligibleCommitters, committers);
-  if (failedCommit.length > 0) {
-    console.log(`Not seen commits from ${failedCommit.length} voters: ${failedCommit}`);
-  }
+//   const failedCommit = _.difference(eligibleCommitters, committers);
+//   if (failedCommit.length > 0) {
+//     console.log(`Not seen commits from ${failedCommit.length} voters: ${failedCommit}`);
+//   }
 
-  const [revealed, committedFailedReveal] = _.partition(eligibleCommitters, committer => {
-    const revealData = reveals.get(committer);
-    if (!revealData) {
-      return false;
-    }
-    const commitHash = commits.get(committer);
-    return commitHash === CommitData.hashForCommit(committer, revealData.random, revealData.encodedPrices);
-  });
+//   const [revealed, committedFailedReveal] = _.partition(eligibleCommitters, committer => {
+//     const revealData = reveals.get(committer);
+//     if (!revealData) {
+//       return false;
+//     }
+//     const commitHash = commits.get(committer);
+//     return commitHash === CommitData.hashForCommit(committer, revealData.random, revealData.encodedPrices);
+//   });
 
-  if (committedFailedReveal.length > 0) {
-    console.log(`Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`);
-  }
+//   if (committedFailedReveal.length > 0) {
+//     console.log(`Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`);
+//   }
 
-  const revealedRandoms = revealed.map(voter => {
-    const rawRandom = reveals!.get(voter.toLowerCase())!.random;
-    return Bytes32.fromHexString(rawRandom);
-  });
-  const result: RevealResult = {
-    revealers: revealed,
-    committedFailedReveal,
-    revealedRandoms,
-    reveals,
-  };
-  return result;
-}
+//   const revealedRandoms = revealed.map(voter => {
+//     const rawRandom = reveals!.get(voter.toLowerCase())!.random;
+//     return Bytes32.fromHexString(rawRandom);
+//   });
+//   const result: RevealResult = {
+//     revealers: revealed,
+//     committedFailedReveal,
+//     revealedRandoms,
+//     reveals,
+//   };
+//   return result;
+// }
 
 
 /**
@@ -258,11 +258,11 @@ export async function calculateFeedMedians(
 ): Promise<MedianCalculationResult[]> {
   // const voters = revealResult.revealers;
   const voters = data.orderedVotersSubmissionAddresses;
-  const weights = voters.map(voter => data.voterWeights.get(voter.toLowerCase())!);
+  const weights = voters.map(voter => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
 
   const feedValues: number[][] = data.feedOrder.map(() => new Array<number>());
   voters.forEach(voter => {
-    const revealData = data.reveals.get(voter.toLowerCase())!;
+    const revealData = data.validEligibleReveals.get(voter.toLowerCase())!;
     const encodedVoterValues = FeedValueEncoder.decode(revealData.encodedValues, data.feedOrder);
     encodedVoterValues.forEach((feedValue, i) => feedValues[i].push(feedValue.value));
   });

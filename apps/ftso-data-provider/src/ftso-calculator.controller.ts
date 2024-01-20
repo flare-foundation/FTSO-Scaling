@@ -54,15 +54,15 @@ export class FtsoCalculatorController {
   // Protocol Data Provider APIs
 
   @ApiTags(ApiTagsEnum.PDP)
-  @Get("submit1/:votingRoundId/:signingAddress")
+  @Get("submit1/:votingRoundId/:submitAddress")
   async submit1(
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
-    @Param("signingAddress") signingAddress: string
+    @Param("submitAddress") submitAddress: string
   ): Promise<PDPResponse> {
     this.logger.log(
-      `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+      `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
-    const data = await this.ftsoCalculatorService.getEncodedCommitData(votingRoundId, signingAddress);
+    const data = await this.ftsoCalculatorService.getEncodedCommitData(votingRoundId, submitAddress);
     return {
       status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data
@@ -70,13 +70,13 @@ export class FtsoCalculatorController {
   }
 
   @ApiTags(ApiTagsEnum.PDP)
-  @Get("submit2/:votingRoundId/:signingAddress")
+  @Get("submit2/:votingRoundId/:submitAddress")
   async submit2(
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
-    @Param("signingAddress") signingAddress: string
+    @Param("submitAddress") submitAddress: string
   ): Promise<PDPResponse> {
     this.logger.log(
-      `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+      `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
     const data = await this.ftsoCalculatorService.getEncodedRevealData(votingRoundId);
     return {
@@ -86,13 +86,13 @@ export class FtsoCalculatorController {
   }
 
   @ApiTags(ApiTagsEnum.PDP)
-  @Get("submitSignatures/:votingRoundId/:signingAddress")
+  @Get("submitSignatures/:votingRoundId/:submitSignaturesAddress")
   async submitSignatures(
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
-    @Param("signingAddress") signingAddress: string
+    @Param("submitSignaturesAddress") submitSignaturesAddress: string
   ): Promise<PDPResponse> {
     this.logger.log(
-      `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+      `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: submitSignaturesAddress ${submitSignaturesAddress}`
     );
     return this.fakeStatusByte38;
     // return {
@@ -103,13 +103,13 @@ export class FtsoCalculatorController {
   }
 
   @ApiTags(ApiTagsEnum.PDP)
-  @Get("submit3/:votingRoundId/:signingAddress")
+  @Get("submit3/:votingRoundId/:submitAddress")
   async submit3(
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
-    @Param("signingAddress") signingAddress: string
+    @Param("submitAddress") submitAddress: string
   ): Promise<PDPResponse> {
     this.logger.log(
-      `Calling GET on submit3 with param: votingRoundId ${votingRoundId} and query param: signingAddress ${signingAddress}`
+      `Calling GET on submit3 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
     throw new InternalServerErrorException("Not used in FTSO protocol");
   }
