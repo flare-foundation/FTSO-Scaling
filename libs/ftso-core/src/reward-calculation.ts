@@ -302,7 +302,7 @@ function calculateClaimsForOffer(
     const leadProvidersSet = new Set<string>(offer.leadProviders.map(x => x.toLowerCase()));
     for (let i = 0; i < calculationResult.voters!.length; i++) {
       const voterAddress = calculationResult.voters![i];
-      const price = calculationResult.prices![i];
+      const price = calculationResult.feedValues![i];
       if (leadProvidersSet.has(voterAddress.toLowerCase())) {
         pricesOfLeadProvidersThatVoted.push(price);
       }
@@ -318,7 +318,7 @@ function calculateClaimsForOffer(
   // assemble voter records
   for (let i = 0; i < calculationResult.voters!.length; i++) {
     const voterAddress = calculationResult.voters![i];
-    const price = calculationResult.prices![i];
+    const price = calculationResult.feedValues![i];
     voterRecords.push({
       voterAddress,
       weight: calculationResult.weights![i],

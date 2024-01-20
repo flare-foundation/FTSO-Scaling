@@ -53,11 +53,14 @@ export class ABICache {
    * Returns relevant ABI definitions given a smart contract name and function/event name.
    * For internal use only.
    */
-  getAbi(smartContractName: string, functionName?: string, eventName?: string): AbiData {
+  getAbi(smartContractName: string, functionName?: string, eventName?: string, functionArgumentId?: number): AbiData {
     if ((!functionName && !eventName) || (functionName && eventName)) {
       throw new Error("Must specify either functionName or eventName");
     }
-    let key = this.keyForAbiData(smartContractName, functionName, eventName);
+    if(functionArgumentId && !functionName) {
+      throw new Error("Must specify functionName when functionArgumentId is specified");
+    }
+    let key = this.keyForAbiData(smartContractName, functionName, eventName, functionArgumentId);
     let abiData = this.contractAndNameToAbiData.get(key);
     if (abiData) return abiData;
     let contractAbi = this.contractNameToAbi.get(smartContractName);
@@ -90,7 +93,7 @@ export class ABICache {
    * Returns key for cache dictionary for ABI data
    * Keys are of the form "contractName|functionName" or "contractName|eventName"
    */
-  private keyForAbiData(smartContractName: string, functionName?: string, eventName?: string): string {
-    return `${smartContractName}|${functionName ? functionName : eventName!}`;
+  private keyForAbiData(smartContractName: string, functionName?: string, eventName?: string, functionArgumentId?: number): string {
+    return `${smartContractName}|${functionName ? functionName : eventName!}|${functionArgumentId ?? ""}`;
   }
 }

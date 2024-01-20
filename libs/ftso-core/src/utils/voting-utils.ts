@@ -98,11 +98,6 @@ export function hexlifyBN(obj: any): any {
   return obj;
 }
 
-/** We XOR the random values provided by each voter to obtain a single combined random value for the price epoch. */
-export function combineRandom(randoms: Bytes32[]): Bytes32 {
-  return randoms.reduce((a, b) => a.xor(b), Bytes32.ZERO);
-}
-
 export function hashBytes(hexString: string): string {
   if (hexString.length === 0) throw new Error("Cannot hash empty string");
 

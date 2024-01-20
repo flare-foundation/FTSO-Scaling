@@ -1,34 +1,24 @@
-import _ from "lodash";
 import Web3 from "web3";
 import { DataForCalculations } from "./DataManager";
 import { RewardOffers } from "./events";
-import { CommitData } from "./utils/CommitData";
-import { FeedValueEncoder } from "./utils/FeedEncoder";
+import { FeedValueEncoder, ValueWithDecimals } from "./utils/FeedEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
-import {
-  combineRandom,
-  hashBytes
-} from "./utils/voting-utils";
-import {
-  Address,
-  EpochResult,
-  Feed,
-  MedianCalculationResult,
-  MedianCalculationSummary,
-  RevealData,
-  RevealResult
-} from "./voting-types";
+import { hashBytes } from "./utils/voting-utils";
+import { Address, EpochResult, Feed, MedianCalculationResult, MedianCalculationSummary, RandomCalculationResult } from "./voting-types";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
+
+const RANDOM_MAX_VAL = 2n ** 256n - 1n;
+const NON_BENCHED_RANDOM_VOTERS_MIN_COUNT = 2;
 
 /**
  * Data for a single vote.
  */
 interface VoteData {
   voter: string;
-  price: number;
+  feedValue: ValueWithDecimals;
   weight: bigint;
   initialIndex: number;
 }
@@ -37,15 +27,15 @@ interface VoteData {
  * Repacks voters, prices and weights into a single array of VoteData.
  * All arrays must have the same length.
  */
-function repack(voters: string[], prices: number[], weights: bigint[]): VoteData[] {
+function repack(voters: string[], feedValues: ValueWithDecimals[], weights: bigint[]): VoteData[] {
   const result: VoteData[] = [];
-  if (voters.length !== prices.length || voters.length !== weights.length) {
+  if (voters.length !== feedValues.length || voters.length !== weights.length) {
     throw new Error("voters, prices and weights must have the same length");
   }
   for (let i = 0; i < voters.length; i++) {
     result.push({
       voter: voters[i],
-      price: prices[i],
+      feedValue: feedValues[i],
       weight: weights[i],
       initialIndex: i,
     });
@@ -54,78 +44,103 @@ function repack(voters: string[], prices: number[], weights: bigint[]): VoteData
 }
 
 // TODO: must calculate random number as well using revealWithholders
-export async function calculateResults(
-  data: DataForCalculations,
-): Promise<EpochResult> {
+export async function calculateResults(data: DataForCalculations): Promise<EpochResult> {
   const results: MedianCalculationResult[] = await calculateFeedMedians(data);
 
   // TODO: implement randomOffenders!!!
-  const randoms = data.orderedVotersSubmissionAddresses
-    .map(voter => data.validEligibleReveals.get(voter.toLowerCase())?.random)
-    .filter(x => x !== undefined)
-    .map(x => Bytes32.fromHexString(x));
-  // revealResult.revealedRandoms
-  const random: [Bytes32, boolean] = [
-    combineRandom(randoms),
-    data.revealOffenders.size === 0,
-  ];
+  const random = await calculateRandom(data);
+
   return calculateEpochResult(results, random, data.votingRoundId);
 }
 
-// export async function calculateRevealers(
-//   commits: Map<string, string>,
-//   reveals: Map<string, RevealData>,
-//   voterWeights: Map<Address, bigint>
-// ): Promise<RevealResult> {
-//   const committers = [...commits.keys()];
-//   const eligibleCommitters = committers
-//     .map(sender => sender.toLowerCase())
-//     .filter(voter => voterWeights.has(voter.toLowerCase())!);
+/**
+ * A random is considered safe if
+ * - all of the current round reveal offenders are already benched
+ * - the number of non-benched offenders that successfully revealed is at least 2
+ * @param data
+ * @returns
+ */
+async function calculateRandom(data: DataForCalculations): Promise<RandomCalculationResult> {
+  const nonBenchedOffendersSize = [...data.revealOffenders].filter(
+    voter => !data.benchingWindowRevealOffenders.has(voter.toLowerCase())
+  ).length;
+  let random = 0n;
+  
+  let nonBencherCount = 0;
+  for (const [voter, revealData] of data.validEligibleReveals) {
+    random = random + BigInt(revealData.random) % RANDOM_MAX_VAL;
+    if(!data.benchingWindowRevealOffenders.has(voter)) {
+      nonBencherCount++;
+    }
+  }
 
-//   const failedCommit = _.difference(eligibleCommitters, committers);
-//   if (failedCommit.length > 0) {
-//     console.log(`Not seen commits from ${failedCommit.length} voters: ${failedCommit}`);
-//   }
+  return {
+    // If random is zero, the random may still be good enough, since the real random we use in applications is 
+    // the Merkle root of all medians, which is with many prices hard to predict.
+    random: random,
+    isSafe: (nonBenchedOffendersSize == 0 && nonBencherCount >= NON_BENCHED_RANDOM_VOTERS_MIN_COUNT),
+  };
+}
 
-//   const [revealed, committedFailedReveal] = _.partition(eligibleCommitters, committer => {
-//     const revealData = reveals.get(committer);
-//     if (!revealData) {
-//       return false;
-//     }
-//     const commitHash = commits.get(committer);
-//     return commitHash === CommitData.hashForCommit(committer, revealData.random, revealData.encodedPrices);
-//   });
+interface FeedWithTypeAndValue extends Feed {
+  flrValue: bigint;
+  isInflation: boolean;
+}
 
-//   if (committedFailedReveal.length > 0) {
-//     console.log(`Not seen reveals from ${committedFailedReveal.length} voters: ${committedFailedReveal}`);
-//   }
+/**
+ * Sort feeds in canonical order.
+ * Inflation feeds are first, sorted by feed name.
+ * Then non-inflation feeds are sorted by decreasing value and on same value by feed name.
+ * @param feeds
+ * @returns
+ */
+function sortFeedWithValuesToCanonicalOrder(feeds: FeedWithTypeAndValue[]): FeedWithTypeAndValue[] {
+  feeds.sort((a, b) => {
+    if (a.isInflation && !b.isInflation) {
+      return -1;
+    }
+    if (!a.isInflation && b.isInflation) {
+      return 1;
+    }
+    if (a.isInflation && b.isInflation) {
+      if (a.name < b.name) {
+        return -1;
+      }
+      if (a.name > b.name) {
+        return 1;
+      }
+      return 0; // should not happen
+    }
+    // None is from inflation.
+    // Sort decreasing by value and on same value increasing by feedName
 
-//   const revealedRandoms = revealed.map(voter => {
-//     const rawRandom = reveals!.get(voter.toLowerCase())!.random;
-//     return Bytes32.fromHexString(rawRandom);
-//   });
-//   const result: RevealResult = {
-//     revealers: revealed,
-//     committedFailedReveal,
-//     revealedRandoms,
-//     reveals,
-//   };
-//   return result;
-// }
-
+    if (a.flrValue > b.flrValue) {
+      return -1;
+    }
+    if (a.flrValue < b.flrValue) {
+      return 1;
+    }
+    // values are same, sort lexicographically
+    if (a.name < b.name) {
+      return -1;
+    }
+    if (a.name > b.name) {
+      return 1;
+    }
+    return 0; // Should not happen, Offers for same feed should be merged
+  });
+  return feeds;
+}
 
 /**
  * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
  * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
  * In case of equal values the feedId is used to sort in increasing order.
  * The sequence defines positions of the feeds in the price vectors for the reward epoch.
+ * @param rewardOffers
+ * @returns
  */
 export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
-  interface FeedWithTypeAndValue extends Feed {
-    flrValue: bigint;
-    isInflation: boolean;
-  }
-
   const feedValues = new Map<string, FeedWithTypeAndValue>();
 
   for (const inflationOffer of rewardOffers.inflationOffers) {
@@ -136,7 +151,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
           name: inflationOffer.feedNames[i],
           decimals: inflationOffer.decimals[i],
           isInflation: true,
-          flrValue: 0n,  // irrelevant for inflation offers
+          flrValue: 0n, // irrelevant for inflation offers
         };
         feedValues.set(feedValueType.name, feedValueType);
       }
@@ -157,47 +172,14 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
     feedValueType.flrValue += feedValueType.flrValue + communityOffer.amount;
   }
 
-  const feedSequence = Array.from(feedValues.values());
-  feedSequence.sort((a: FeedWithTypeAndValue, b: FeedWithTypeAndValue) => {
-    // sort decreasing by value and on same value increasing by feedId
-    if (a.isInflation && !b.isInflation) {
-      return -1;
-    }
-    if (!a.isInflation && b.isInflation) {
-      return 1;
-    }
-    if (a.isInflation && b.isInflation) {
-      if (a.name < b.name) {
-        return -1;
-      }
-      if (a.name > b.name) {
-        return 1;
-      }
-      return 0 // should not happen
-    }
-    // None is from inflation. 
-    // Sort decreasing by value and on same value increasing by feedName
+  const feedSequence = sortFeedWithValuesToCanonicalOrder(Array.from(feedValues.values()));
 
-    if (a.flrValue < b.flrValue) {
-      return 1;
-    }
-    if (a.flrValue > b.flrValue) {
-      return -1;
-    }
-    if (a.name < b.name) {
-      return -1;
-    }
-    if (a.name > b.name) {
-      return 1;
-    }
-    return 0;
-  });
   return feedSequence.map(feedValueType => {
     return {
       name: feedValueType.name,
       decimals: feedValueType.decimals,
     };
-  })
+  });
 }
 
 /**
@@ -207,7 +189,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
  */
 export function calculateEpochResult(
   medianResults: MedianCalculationResult[],
-  epochRandom: [Bytes32, boolean],
+  epochRandom: RandomCalculationResult,
   priceEpochId: number
 ): EpochResult {
   const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
@@ -227,11 +209,10 @@ export function calculateEpochResult(
   const bulkHash = hashBytes(encodedBulkPricesWithSymbols);
   const individualPriceHashes = encodedIndividualPrices.map(tuple => hashBytes(tuple));
 
-  const [random, quality] = epochRandom;
   const encodedRandom =
     "0x" +
     encodedPriceEpochId +
-    Web3.utils.padLeft(quality ? "01" : "00", RANDOM_QUALITY_BYTES * 2) +
+    Web3.utils.padLeft(epochRandom.isSafe ? "01" : "00", RANDOM_QUALITY_BYTES * 2) +
     random.value.slice(2);
   const randomHash = hashBytes(encodedRandom);
 
@@ -253,29 +234,43 @@ export function calculateEpochResult(
   return epochResult;
 }
 
-export async function calculateFeedMedians(
-  data: DataForCalculations,
-): Promise<MedianCalculationResult[]> {
+export async function calculateFeedMedians(data: DataForCalculations): Promise<MedianCalculationResult[]> {
   // const voters = revealResult.revealers;
   const voters = data.orderedVotersSubmissionAddresses;
   const weights = voters.map(voter => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
 
-  const feedValues: number[][] = data.feedOrder.map(() => new Array<number>());
-  voters.forEach(voter => {
-    const revealData = data.validEligibleReveals.get(voter.toLowerCase())!;
-    const encodedVoterValues = FeedValueEncoder.decode(revealData.encodedValues, data.feedOrder);
-    encodedVoterValues.forEach((feedValue, i) => feedValues[i].push(feedValue.value));
-  });
-
-  return data.feedOrder.map((feed, i) => calculateResultsForFeed(voters, feedValues[i], weights, feed));
+  // "mapping": feedIndex => array of submissions by voters (in signing policy order)
+  const feedValues = new Map<number, ValueWithDecimals[]>();
+  for (const voter of voters) {
+    const revealData = data.validEligibleReveals.get(voter.toLowerCase());
+    let encodedVoterValues: ValueWithDecimals[] = [];
+    if (revealData) {
+      encodedVoterValues = FeedValueEncoder.decode(revealData.encodedValues, data.feedOrder);
+    } else {
+      encodedVoterValues = FeedValueEncoder.emptyFeeds(data.feedOrder);
+    }
+    // The length of encodedVoterValues always matches the number of feeds
+    for (const [feedIndex, feedValue] of encodedVoterValues.entries()) {
+      const array = feedValues.get(feedIndex) || [];
+      array.push(feedValue);
+      feedValues.set(feedIndex, array);
+    }
+  }
+  // trigger calculations for all feed
+  return data.feedOrder.map((feed, feedIndex) => calculateResultsForFeed(voters, feedValues[feedIndex], weights, feed));
 }
 
-export function calculateResultsForFeed(voters: string[], feedValues: number[], weights: bigint[], feed: Feed) {
-  const medianSummary = calculateMedian(voters, feedValues, weights);
+export function calculateResultsForFeed(
+  voters: string[],
+  feedValues: ValueWithDecimals[],
+  weights: bigint[],
+  feed: Feed
+) {
+  const medianSummary = calculateMedian(voters, feedValues, weights, feed.decimals);
   const result: MedianCalculationResult = {
     feed: feed,
     voters: voters,
-    prices: feedValues,
+    feedValues: feedValues,
     data: medianSummary,
     weights: weights,
   };
@@ -285,20 +280,28 @@ export function calculateResultsForFeed(voters: string[], feedValues: number[], 
 /**
  * Given a list of voters, prices and weights, it calculates the median and other statistics.
  */
-export function calculateMedian(voters: Address[], prices: number[], weights: bigint[]): MedianCalculationSummary {
-  const voteData = repack(voters, prices, weights);
+export function calculateMedian(
+  voters: Address[],
+  feedValues: ValueWithDecimals[],
+  weights: bigint[],
+  decimals: number
+): MedianCalculationSummary {
+  if (voters.length !== feedValues.length || voters.length !== weights.length) {
+    throw new Error("voters, prices and weights must have the same length");
+  }
+  if (voters.length === 0) {
+    return {
+      finalMedianPrice: FeedValueEncoder.emptyFeed(decimals),
+      quartile1Price: FeedValueEncoder.emptyFeed(decimals),
+      quartile3Price: FeedValueEncoder.emptyFeed(decimals),
+    };
+  }
+  const voteData = repack(voters, feedValues, weights).filter(voteDataItem => !voteDataItem.feedValue.isEmpty);
   // Sort by price
-  voteData.sort((a, b) => {
-    if (a.price < b.price) {
-      return -1;
-    } else if (a.price > b.price) {
-      return 1;
-    }
-    return 0;
-  });
+  voteData.sort((a, b) => a.feedValue.value - b.feedValue.value);
   let totalWeight = 0n;
   weights.forEach(w => (totalWeight += w));
-  const medianWeight = totalWeight / 2n + totalWeight % 2n;
+  const medianWeight = totalWeight / 2n + (totalWeight % 2n);
   let currentWeightSum = 0n;
 
   let medianPrice: number | undefined;
@@ -311,15 +314,15 @@ export function calculateMedian(voters: Address[], prices: number[], weights: bi
     currentWeightSum += vote.weight;
     if (quartile1Price === undefined && currentWeightSum > quartileWeight) {
       // calculation of border price for 1st quartile
-      quartile1Price = vote.price;
+      quartile1Price = vote.feedValue.value;
     }
     if (medianPrice === undefined && currentWeightSum >= medianWeight) {
       if (currentWeightSum === medianWeight && totalWeight % 2n === 0n) {
         const next = voteData[index + 1];
         // average of two middle prices in even case
-        medianPrice = Math.floor((vote.price + next.price) / 2);
+        medianPrice = Math.floor((vote.feedValue.value + next.feedValue.value) / 2);
       } else {
-        medianPrice = vote.price;
+        medianPrice = vote.feedValue.value;
       }
     }
     if (medianPrice !== undefined && quartile1Price !== undefined) {
@@ -332,14 +335,14 @@ export function calculateMedian(voters: Address[], prices: number[], weights: bi
     const vote = voteData[index];
     currentWeightSum += vote.weight;
     if (currentWeightSum > quartileWeight) {
-      quartile3Price = vote.price;
+      quartile3Price = vote.feedValue.value;
       break;
     }
   }
 
   return {
-    finalMedianPrice: medianPrice,
-    quartile1Price: quartile1Price,
-    quartile3Price: quartile3Price,
+    finalMedianPrice: FeedValueEncoder.feedForValue(medianPrice, decimals),
+    quartile1Price: FeedValueEncoder.feedForValue(quartile1Price, decimals),
+    quartile3Price: FeedValueEncoder.feedForValue(quartile3Price, decimals),
   };
 }

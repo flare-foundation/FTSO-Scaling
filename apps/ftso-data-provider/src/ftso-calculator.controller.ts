@@ -94,12 +94,11 @@ export class FtsoCalculatorController {
     this.logger.log(
       `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: submitSignaturesAddress ${submitSignaturesAddress}`
     );
-    return this.fakeStatusByte38;
-    // return {
-    //   status: PDPResponseStatusEnum.OK,
-    //   data: await this.getResult(votingRoundId),
-    //   additionalData: "",
-    // };
+    const data = await this.ftsoCalculatorService.getEncodedResultData(votingRoundId);
+    return {
+      status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
+      data
+    };
   }
 
   @ApiTags(ApiTagsEnum.PDP)

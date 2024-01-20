@@ -1,6 +1,7 @@
 import BN from "bn.js";
 import { Log } from "web3-core";
 import { Bytes32 } from "./utils/sol-types";
+import { ValueWithDecimals } from "./utils/FeedEncoder";
 
 export type Address = string;
 export type Bytes20 = string;
@@ -87,15 +88,20 @@ export interface EpochResult {
 export interface MedianCalculationResult {
   readonly feed: Feed;
   readonly voters: readonly string[];
-  readonly prices: readonly number[];
+  readonly feedValues: readonly ValueWithDecimals[];
   readonly data: MedianCalculationSummary;
   readonly weights: readonly bigint[];
 }
 
+export interface RandomCalculationResult {
+  readonly random: bigint
+  readonly isSafe: boolean;
+}
+
 export interface MedianCalculationSummary {
-  readonly finalMedianPrice: number;
-  readonly quartile1Price: number;
-  readonly quartile3Price: number;
+  readonly finalMedianPrice: ValueWithDecimals;
+  readonly quartile1Price: ValueWithDecimals;
+  readonly quartile3Price: ValueWithDecimals;
 }
 
 export interface VoterRewarding {

@@ -99,11 +99,11 @@ export class FtsoCalculatorService {
     return PayloadMessage.encode(msg);
   }
 
-  async getEncodedResultData(votingRoundId: number): Promise<string> {   
+  async getEncodedResultData(votingRoundId: number): Promise<string | undefined> {   
     const dataResponse = await this.dataManager.getDataForCalculations(votingRoundId, RANDOM_GENERATION_BENCHING_WINDOW, this.indexer_top_timeout);
     if(dataResponse.status !== DataAvailabilityStatus.NOT_OK) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
-      return ""; // TODO: ok?
+      return undefined;
     }
     try {
       const result = await calculateResults(dataResponse.data);
@@ -118,6 +118,7 @@ export class FtsoCalculatorService {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
+    return undefined;
   }
 
   // async getResult(votingRoundId: number): Promise<string> {
