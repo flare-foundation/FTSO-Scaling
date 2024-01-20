@@ -1,12 +1,14 @@
 import _ from "lodash";
 import Web3 from "web3";
+import { DataForCalculations } from "./DataManager";
+import { RewardOffers } from "./events";
+import { CommitData } from "./utils/CommitData";
 import { FeedValueEncoder } from "./utils/FeedEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
 import {
   combineRandom,
-  hashBytes,
-  hashForCommit
+  hashBytes
 } from "./utils/voting-utils";
 import {
   Address,
@@ -17,9 +19,6 @@ import {
   RevealData,
   RevealResult
 } from "./voting-types";
-import { RewardOffers } from "./events/RewardOffers";
-import { CommitData } from "./utils/CommitData";
-import { DataForCalculations } from "./DataManager";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
@@ -232,7 +231,7 @@ export function calculateEpochResult(
   const encodedRandom =
     "0x" +
     encodedPriceEpochId +
-    Web3.utils.padLeft(quality.toString(16), RANDOM_QUALITY_BYTES * 2) +
+    Web3.utils.padLeft(quality ? "01" : "00", RANDOM_QUALITY_BYTES * 2) +
     random.value.slice(2);
   const randomHash = hashBytes(encodedRandom);
 

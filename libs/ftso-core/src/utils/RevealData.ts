@@ -1,6 +1,6 @@
 import { Feed } from "../voting-types";
 import { FeedValueEncoder, ValueWithDecimals } from "./FeedEncoder";
-import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
+import { IPayloadMessage } from "./PayloadMessage";
 
 export interface IRevealData {
    readonly random: string;

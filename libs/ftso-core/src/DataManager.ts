@@ -87,8 +87,6 @@ interface CommitAndRevealSubmissionsMappingsForRange {
 
 
 export class DataManager {
-  private static protocolId = FTSO2_PROTOCOL_ID
-
   constructor(
     private indexerClient: IndexerClient,
     private rewardEpochManager: RewardEpochManager
@@ -254,6 +252,15 @@ export class DataManager {
   }
 
   // Exactly all commits and reveals for a single voting round
+  /**
+   * Extracts commits and reveals for a single voting round from the given commit and reveal submission data array.
+   * @requires commitSubmissions and @requires revealSubmissions are all for the same votingRoundId NOTICE: actually assumes, but does not check
+   * @param votingRoundId 
+   * @param commitSubmissions 
+   * @param revealSubmissions 
+   * @param feedOrder 
+   * @returns 
+   */
   private getCommitsAndReveals(
     votingRoundId: number,
     commitSubmissions: SubmissionData[],
@@ -269,7 +276,12 @@ export class DataManager {
     }
   }
 
-  // assure submission data are all for the same votingRoundId
+  /**
+   * Create a mapper form voter address to last commit data message for FTSO protocol from the given submission data array.
+   * @requires submissionDataArray are all for the same votingRoundId NOTICE: actually assumes, but does not check
+   * @param submissionDataArray 
+   * @returns 
+   */
   private getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map<Address, ICommitData> {
     const voterToLastCommit = new Map<Address, ICommitData>();
     for (const submission of submissionDataArray) {
@@ -283,6 +295,13 @@ export class DataManager {
     return voterToLastCommit;
   }
 
+  /**
+   * Create a mapper form voter address to last reveal data message for FTSO protocol from the given submission data array.
+   * @requires submissionDataArray are all for the same votingRoundId NOTICE: actually assumes, but does not check
+   * @param submissionDataArray 
+   * @param feedOrder 
+   * @returns 
+   */
   private getVoterToLastRevealMap(submissionDataArray: SubmissionData[], feedOrder?: Feed[]): Map<Address, IRevealData> {
     const voterToLastReveal = new Map<Address, IRevealData>();
     for (const submission of submissionDataArray) {
