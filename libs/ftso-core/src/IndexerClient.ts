@@ -1,6 +1,6 @@
 import { EntityManager } from "typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
-import { decodePayloadMessageCalldata, getEventSignature, getFunctionSignature } from "./utils/EncodingUtils";
+import { EncodingUtils, decodePayloadMessageCalldata } from "./utils/EncodingUtils";
 import { Address, VotingEpochId } from "./voting-types";
 
 import {
@@ -108,6 +108,8 @@ export enum BlockAssuranceResult {
 export class IndexerClient {
   constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) { }
 
+  private readonly encoding = EncodingUtils.instance;
+
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.
    * @param smartContract
@@ -122,7 +124,7 @@ export class IndexerClient {
     startTime: number,
     endTime?: number
   ): Promise<TLPEvents[]> {
-    const eventSignature = getEventSignature(smartContract.name, eventName);
+    const eventSignature = this.encoding.getEventSignature(smartContract.name, eventName);
     let query = this.entityManager
       .createQueryBuilder(TLPEvents, "event")
       .andWhere("event.timestamp >= :startTime", { startTime })
@@ -148,7 +150,7 @@ export class IndexerClient {
     startTime: number,
     endTime?: number
   ): Promise<TLPTransaction[]> {
-    const functionSignature = getFunctionSignature(smartContract.name, functionName);
+    const functionSignature = this.encoding.getFunctionSignature(smartContract.name, functionName);
     let query = this.entityManager
       .createQueryBuilder(TLPTransaction, "tx")
       .andWhere("tx.timestamp >= :startTime", { startTime })
