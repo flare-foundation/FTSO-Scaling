@@ -3,9 +3,10 @@ import { TLPEvents, TLPTransaction } from "../orm/entities";
 import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 import { ABICache, AbiData } from "./ABICache";
 
+const coder = new Web3().eth.abi;
+
 export class EncodingUtils {
-  private readonly coder = new Web3().eth.abi;
-  private readonly abiCache = new ABICache(this.coder);
+  private readonly abiCache = new ABICache(coder);
 
   private static _instance: EncodingUtils | undefined = undefined;
   public static get instance(): EncodingUtils {
@@ -60,7 +61,7 @@ export function decodeEvent<T>(
     return x.startsWith("0x") ? x : "0x" + x;
   }
   return transform(
-    this.coder.decodeLog(
+    coder.decodeLog(
       abiData.abi!.inputs!,
       prefix0x(data.data),
       // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
