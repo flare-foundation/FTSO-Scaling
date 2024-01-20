@@ -4,6 +4,8 @@ import { rewardEpochFeedSequence } from "./ftso-calculation-logic";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export class RewardEpoch {
+
+   readonly orderedVotersSubmissionAddresses: Address[];
    // TODO: think through the mappings!!!
 
    signingPolicy: SigningPolicyInitialized;
@@ -18,6 +20,9 @@ export class RewardEpoch {
    submitterToVoter: Map<Address, Address>;
    // delegateAddress => identifyingAddress
    delegationAddressToVoter: Map<Address, Address>;
+
+   submissionAddressToCappedWeight: Map<Address, bigint>;
+   submissionAddressToVoterRegistrationInfo: Map<Address, FullVoterRegistrationInfo>;
 
    _canonicalFeedOrder: Feed[]
 
@@ -80,6 +85,9 @@ export class RewardEpoch {
          }
          this.delegationAddressToCappedWeight.set(fullVoterRegistrationInfo.voterRegistered.delegationAddress, fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight);
          this.submitterToVoter.set(fullVoterRegistrationInfo.voterRegistered.submitAddress, voter);
+         this.submissionAddressToCappedWeight.set(fullVoterRegistrationInfo.voterRegistered.submitAddress, fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight);
+         this.submissionAddressToVoterRegistrationInfo.set(fullVoterRegistrationInfo.voterRegistered.submitAddress, fullVoterRegistrationInfo);
+         this.orderedVotersSubmissionAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
       }
    }
 
@@ -108,8 +116,15 @@ export class RewardEpoch {
     * @param submissionData 
     * @returns 
     */
-   isSubmissionByEligibleVoter(submissionData: SubmissionData): boolean {
-      return !!this.submitterToVoter.get(submissionData.submitAddress) && submissionData.votingEpochId >= this.startVotingRoundId
+   isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
+      return !!this.submitterToVoter.get(submitAddress);
+   }
+
+   cappedWFLRDelegationWeight(submissionAddress: Address): bigint {
+      if(this.isEligibleVoterSubmissionAddress(submissionAddress)) {
+         throw new Error("Invalid submission address");
+      }
+      return this.submissionAddressToCappedWeight.get(submissionAddress)!;
    }
 //    /**
 //     * Filters out submissions that are sent by valid submitters.

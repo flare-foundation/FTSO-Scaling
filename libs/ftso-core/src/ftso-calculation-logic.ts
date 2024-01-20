@@ -15,9 +15,11 @@ import {
   MedianCalculationResult,
   MedianCalculationSummary,
   RevealData,
-  RevealResult} from "./voting-types";
+  RevealResult
+} from "./voting-types";
 import { RewardOffers } from "./events/RewardOffers";
 import { CommitData } from "./utils/CommitData";
+import { DataForCalculations } from "./DataManager";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
@@ -54,26 +56,21 @@ function repack(voters: string[], prices: number[], weights: bigint[]): VoteData
 
 // TODO: must calculate random number as well using revealWithholders
 export async function calculateResults(
-  priceEpochId: number,
-  commits: Map<Address, string>,
-  reveals: Map<string, RevealData>,
-  orderedPriceFeeds: Feed[],
-  voterWeights: Map<Address, bigint>,
-  revealWithholders: Set<Address>  // TODO: implement
+  data: DataForCalculations,
 ): Promise<EpochResult> {
-  console.log("Calculating results with commits: ", [...commits.keys()], "reveals", [...reveals.keys()]);
-  const revealResult = await calculateRevealers(commits, reveals, voterWeights)!;
-  if (revealResult.revealers.length === 0) {
-    throw new Error(`No reveals for price epoch: ${priceEpochId}.`);
-  }
+  const results: MedianCalculationResult[] = await calculateFeedMedians(data);
 
-  const results: MedianCalculationResult[] = await calculateFeedMedians(revealResult, voterWeights, orderedPriceFeeds);
-
+  // TODO: implement randomOffenders!!!
+  const randoms = data.orderedVotersSubmissionAddresses
+    .map(voter => data.reveals.get(voter.toLowerCase())?.random)
+    .filter(x => x !== undefined)
+    .map(x => Bytes32.fromHexString(x));
+  // revealResult.revealedRandoms
   const random: [Bytes32, boolean] = [
-    combineRandom(revealResult.revealedRandoms),
-    revealResult.committedFailedReveal.length == 0,
+    combineRandom(randoms),
+    data.revealOffenders.size === 0,
   ];
-  return calculateEpochResult(results, random, priceEpochId);
+  return calculateEpochResult(results, random, data.votingRoundId);
 }
 
 export async function calculateRevealers(
@@ -171,10 +168,10 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
       return 1;
     }
     if (a.isInflation && b.isInflation) {
-      if(a.name < b.name) {
+      if (a.name < b.name) {
         return -1;
       }
-      if(a.name > b.name) {
+      if (a.name > b.name) {
         return 1;
       }
       return 0 // should not happen
@@ -184,13 +181,13 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
 
     if (a.flrValue < b.flrValue) {
       return 1;
-    } 
+    }
     if (a.flrValue > b.flrValue) {
       return -1;
     }
     if (a.name < b.name) {
       return -1;
-    } 
+    }
     if (a.name > b.name) {
       return 1;
     }
@@ -258,30 +255,28 @@ export function calculateEpochResult(
 }
 
 export async function calculateFeedMedians(
-  revealResult: RevealResult,
-  voterWeights: Map<Address, bigint>,
-  orderedPriceFeeds: Feed[]
+  data: DataForCalculations,
 ): Promise<MedianCalculationResult[]> {
-  const numberOfFeeds = orderedPriceFeeds.length;
-  const voters = revealResult.revealers;
-  const weights = voters.map(voter => voterWeights.get(voter.toLowerCase())!);
+  // const voters = revealResult.revealers;
+  const voters = data.orderedVotersSubmissionAddresses;
+  const weights = voters.map(voter => data.voterWeights.get(voter.toLowerCase())!);
 
-  const feedPrices: number[][] = orderedPriceFeeds.map(() => new Array<number>());
+  const feedValues: number[][] = data.feedOrder.map(() => new Array<number>());
   voters.forEach(voter => {
-    const revealData = revealResult.reveals.get(voter.toLowerCase())!;
-    const voterPrices = FeedValueEncoder.decode(revealData.encodedPrices, numberOfFeeds);
-    voterPrices.forEach((price, i) => feedPrices[i].push(price));
+    const revealData = data.reveals.get(voter.toLowerCase())!;
+    const encodedVoterValues = FeedValueEncoder.decode(revealData.encodedValues, data.feedOrder);
+    encodedVoterValues.forEach((feedValue, i) => feedValues[i].push(feedValue.value));
   });
 
-  return orderedPriceFeeds.map((feed, i) => calculateResultsForFeed(voters, feedPrices[i], weights, feed));
+  return data.feedOrder.map((feed, i) => calculateResultsForFeed(voters, feedValues[i], weights, feed));
 }
 
-export function calculateResultsForFeed(voters: string[], prices: number[], weights: bigint[], feed: Feed) {
-  const medianSummary = calculateMedian(voters, prices, weights);
+export function calculateResultsForFeed(voters: string[], feedValues: number[], weights: bigint[], feed: Feed) {
+  const medianSummary = calculateMedian(voters, feedValues, weights);
   const result: MedianCalculationResult = {
     feed: feed,
     voters: voters,
-    prices: prices,
+    prices: feedValues,
     data: medianSummary,
     weights: weights,
   };

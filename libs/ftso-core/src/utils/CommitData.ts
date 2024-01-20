@@ -23,22 +23,19 @@ export namespace CommitData {
          commitHash: encoded,
       };
    }
-   
-   export function decodePayloadMessages(encoded: string): IPayloadMessage<ICommitData>[] {
-      const messages = PayloadMessage.decode(encoded);
-      return messages.map((message) => {  
-         return {
-            ...message,
-            payload: CommitData.decode(message.payload),
-         }
-      });
+
+   export function decodePayloadMessage(message: IPayloadMessage<string>): IPayloadMessage<ICommitData> {
+      return {
+         ...message,
+         payload: CommitData.decode(message.payload),
+      }
    }
-   
+
    export function hashForCommit(voter: Address, random: string, prices: string) {
       const types = ["address", "uint256", "bytes"];
       const values = [voter.toLowerCase(), random, prices];
       const encoded = coder.encodeParameters(types, values);
       return utils.soliditySha3(encoded)!;
-    }
-    
+   }
+
 }

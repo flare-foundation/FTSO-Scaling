@@ -1,7 +1,7 @@
 import { Feed } from "../voting-types";
 
-export interface PriceWithDecimals {
-   readonly price: number;
+export interface ValueWithDecimals {
+   readonly value: number;
    readonly decimals: number;
 }
 
@@ -37,14 +37,14 @@ export namespace FeedValueEncoder {
       return "0x" + result.join("");
    }
 
-   export function decode(packedPrices: string, feeds: Feed[]): PriceWithDecimals[] {
+   export function decode(packedPrices: string, feeds: Feed[]): ValueWithDecimals[] {
       let feedPrice = [...packedPrices.slice(2).match(/(.{1,8})/g)];
       feedPrice = padEndArray(feedPrice, feeds.length, EMPTY_FEED_VALUE);
       return feedPrice.map(hex => {
          return {
-            price: parseInt(hex, 16) - 2 ** 31,
+            value: parseInt(hex, 16) - 2 ** 31,
             decimals: feeds[0].decimals,
-         } as PriceWithDecimals
+         } as ValueWithDecimals
       })
    }
 

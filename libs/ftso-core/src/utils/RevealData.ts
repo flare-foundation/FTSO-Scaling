@@ -1,14 +1,13 @@
-import { Fee } from "ccxt";
 import { Feed } from "../voting-types";
-import { FeedValueEncoder, PriceWithDecimals } from "./FeedEncoder";
+import { FeedValueEncoder, ValueWithDecimals } from "./FeedEncoder";
 import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 
 export interface IRevealData {
    readonly random: string;
    readonly feeds: Feed[];
    readonly prices?: number[];
-   readonly pricesWithDecimals?: PriceWithDecimals[];
-   readonly encodedPrices: string;
+   readonly pricesWithDecimals?: ValueWithDecimals[];
+   readonly encodedValues: string;
 }
 
 export namespace RevealData {
@@ -16,29 +15,25 @@ export namespace RevealData {
       if (!/^0x[0-9a-f]{64}$/i.test(revealData.random)) {
          throw Error(`Invalid random format: ${revealData.random}`);
       }
-      return revealData.random + revealData.encodedPrices ? revealData.encodedPrices.slice(2) : FeedValueEncoder.encode(revealData.prices, revealData.feeds, endStrip);
+      return revealData.random + revealData.encodedValues ? revealData.encodedValues.slice(2) : FeedValueEncoder.encode(revealData.prices, revealData.feeds, endStrip);
    }
 
-   export function decode(encoded: string, feeds: Feed[]): IRevealData {
+   export function decode(encoded: string, feeds?: Feed[]): IRevealData {
       if (!/^0x[0-9a-f]*$/i.test(encoded) || encoded.length % 2 !== 0) {
          throw Error(`Invalid encoding format: ${encoded}`);
       }
       return {
          random: encoded.slice(0, 66),
-         feeds,          
-         pricesWithDecimals: FeedValueEncoder.decode("0x" + encoded.slice(66), feeds),
-         encodedPrices: "0x" + encoded.slice(66).padEnd(8 * feeds.length, "0"),
+         feeds,
+         pricesWithDecimals: feeds ? FeedValueEncoder.decode("0x" + encoded.slice(66), feeds) : undefined,
+         encodedValues: "0x" + encoded.slice(66).padEnd(8 * feeds.length, "0"),
       };
    }
 
-   export function decodePayloadMessages(encoded: string, feeds: Feed[]): IPayloadMessage<IRevealData>[] {
-      const messages = PayloadMessage.decode(encoded);
-      return messages.map((message) => {  
-         return {
-            ...message,
-            payload: RevealData.decode(message.payload, feeds),
-         }
-      });
+   export function decodePayloadMessage(message: IPayloadMessage<string>, feeds: Feed[]): IPayloadMessage<IRevealData> {
+      return {
+         ...message,
+         payload: RevealData.decode(message.payload, feeds),
+      }
    }
-
 }

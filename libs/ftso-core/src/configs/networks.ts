@@ -113,3 +113,14 @@ const epochSettings = () => {
 }
 
 export const EPOCH_SETTINGS = epochSettings();
+
+
+const randomGenerationBenchingWindow = () => {
+   switch (process.env.NETWORK) {
+      case "local-test":
+      default:
+         return 100;
+   }
+}
+
+export const RANDOM_GENERATION_BENCHING_WINDOW = randomGenerationBenchingWindow();

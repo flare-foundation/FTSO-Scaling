@@ -106,7 +106,7 @@ export enum BlockAssuranceResult {
  * the protocol data provider to function properly.
  */
 export class IndexerClient {
-  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) {}
+  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) { }
 
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.

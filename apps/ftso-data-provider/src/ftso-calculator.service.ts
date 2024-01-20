@@ -4,7 +4,7 @@ import { EntityManager } from "typeorm";
 import Web3 from "web3";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
+import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
@@ -12,10 +12,11 @@ import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder"
 import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
 import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
-import { Feed, RevealData } from "../../../libs/ftso-core/src/voting-types";
+import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { Api } from "./price-provider-api/generated/provider-api";
 import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/ftso-core/src/utils/ProtocolMessageMerkleRoot";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
+import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 
 
 const supportedFeeds = [
@@ -42,17 +43,22 @@ export class FtsoCalculatorService {
   private readonly votingRoundToRevealData = new Map<number, IRevealData>();
 
   private rewardEpochManger: RewardEpochManager;
+  private dataManager: DataManager;
 
   // Indexer top timeout margin
   private indexer_top_timeout: number;
 
-  constructor(manager: EntityManager, configService: ConfigService, rewardEpochManager) {
+  constructor(
+    manager: EntityManager,
+    configService: ConfigService
+  ) {
     this.epochSettings = configService.get<EpochSettings>("epochSettings")!;
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     this.indexerClient = new IndexerClient(manager, required_history_sec);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
+    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger);    
   }
 
   // Entry point methods for the protocol data provider
@@ -60,7 +66,7 @@ export class FtsoCalculatorService {
   async getEncodedCommitData(votingRoundId: number, signingAddress: string): Promise<string> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
-    const hash = CommitData.hashForCommit(signingAddress, revealData.random, revealData.encodedPrices);
+    const hash = CommitData.hashForCommit(signingAddress, revealData.random, revealData.encodedValues);
     const commitData = {
       commitHash: hash,
     } as ICommitData;
@@ -93,23 +99,14 @@ export class FtsoCalculatorService {
     return PayloadMessage.encode(msg);
   }
 
-  async getEncodedResultData(votingRoundId: number): string {
-    const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
-
-    ////// TO FIX ////// - start  
-    const revealResponse = await this.indexerClient.getRevealsDataForVotingEpoch(votingRoundId, this.indexer_top_timeout);
-    const commitsResponse = await this.indexerClient.getCommitsDataForVotingEpoch(votingRoundId, this.indexer_top_timeout);
-
-    commits = rewardEpoch.filterValidSubmitters(commits);
-
-    // const commits = await this.indexerClient.queryCommits(votingRoundId);
-    const reveals = await this.indexerClient.queryReveals(votingRoundId);
-    const weights = await this.indexerClient.getVoterWeights(votingRoundId);
-    const revealFails = await this.indexerClient.getRevealWithholders(votingRoundId);
-    
-    ////// TO FIX ////// - start
+  async getEncodedResultData(votingRoundId: number): Promise<string> {   
+    const dataResponse = await this.dataManager.getDataForCalculations(votingRoundId, RANDOM_GENERATION_BENCHING_WINDOW, this.indexer_top_timeout);
+    if(dataResponse.status !== DataAvailabilityStatus.NOT_OK) {
+      this.logger.error(`Data not available for epoch ${votingRoundId}`);
+      return ""; // TODO: ok?
+    }
     try {
-      const result = await calculateResults(votingRoundId, commits, reveals, rewardEpoch.canonicalFeedOrder, weights, revealFails);
+      const result = await calculateResults(dataResponse.data);
       const message = {
         protocolId: FTSO2_PROTOCOL_ID,
         votingRoundId,
@@ -171,7 +168,7 @@ export class FtsoCalculatorService {
       prices: extractedPrices,
       feeds: supportedFeeds,
       random: Bytes32.random().toString(),
-      encodedPrices: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
+      encodedValues: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
     };
     return data;
   }
