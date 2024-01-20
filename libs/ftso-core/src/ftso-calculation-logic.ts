@@ -6,6 +6,7 @@ import { MerkleTree } from "./utils/MerkleTree";
 import { Bytes32 } from "./utils/sol-types";
 import { hashBytes } from "./utils/voting-utils";
 import { Address, EpochResult, Feed, MedianCalculationResult, MedianCalculationSummary, RandomCalculationResult } from "./voting-types";
+import { MerkleTreeStructs } from "./utils/MerkleTreeStructs";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
@@ -50,7 +51,7 @@ export async function calculateResults(data: DataForCalculations): Promise<Epoch
   // TODO: implement randomOffenders!!!
   const random = await calculateRandom(data);
 
-  return calculateEpochResult(results, random, data.votingRoundId);
+  return calculateEpochResult(data.votingRoundId, results, random);
 }
 
 /**
@@ -65,11 +66,11 @@ async function calculateRandom(data: DataForCalculations): Promise<RandomCalcula
     voter => !data.benchingWindowRevealOffenders.has(voter.toLowerCase())
   ).length;
   let random = 0n;
-  
+
   let nonBencherCount = 0;
   for (const [voter, revealData] of data.validEligibleReveals) {
     random = random + BigInt(revealData.random) % RANDOM_MAX_VAL;
-    if(!data.benchingWindowRevealOffenders.has(voter)) {
+    if (!data.benchingWindowRevealOffenders.has(voter)) {
       nonBencherCount++;
     }
   }
@@ -77,8 +78,9 @@ async function calculateRandom(data: DataForCalculations): Promise<RandomCalcula
   return {
     // If random is zero, the random may still be good enough, since the real random we use in applications is 
     // the Merkle root of all medians, which is with many prices hard to predict.
+    votingRoundId: data.votingRoundId,
     random: random,
-    isSafe: (nonBenchedOffendersSize == 0 && nonBencherCount >= NON_BENCHED_RANDOM_VOTERS_MIN_COUNT),
+    isSecure: (nonBenchedOffendersSize == 0 && nonBencherCount >= NON_BENCHED_RANDOM_VOTERS_MIN_COUNT),
   };
 }
 
@@ -188,48 +190,22 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
  * The bulk price hash contains all prices and symbols, and is used for more efficiently retrieving prices for all feeds in the epoch.
  */
 export function calculateEpochResult(
+  votingRoundId: number,
   medianResults: MedianCalculationResult[],
-  epochRandom: RandomCalculationResult,
-  priceEpochId: number
+  epochRandom: RandomCalculationResult
 ): EpochResult {
-  const encodedPriceEpochId = Web3.utils.padLeft(priceEpochId.toString(16), EPOCH_BYTES * 2);
-  const encodedIndividualPrices: string[] = [];
 
-  let encodedBulkPrices = "";
-  let encodedBulkSymbols = "";
-  medianResults.forEach(data => {
-    const encodedPrice = Web3.utils.padLeft(data.data.finalMedianPrice.toString(16), PRICE_BYTES * 2);
-    encodedBulkPrices += encodedPrice;
-    encodedBulkSymbols += data.feed.name;
-    // TODO: this needs to be fixed to use correct Merkle leaf encoding
-    encodedIndividualPrices.push("0x" + encodedPriceEpochId + data.feed.name.slice(2) + encodedPrice);
-  });
 
-  const encodedBulkPricesWithSymbols = "0x" + encodedPriceEpochId + encodedBulkPrices + encodedBulkSymbols;
-  const bulkHash = hashBytes(encodedBulkPricesWithSymbols);
-  const individualPriceHashes = encodedIndividualPrices.map(tuple => hashBytes(tuple));
-
-  const encodedRandom =
-    "0x" +
-    encodedPriceEpochId +
-    Web3.utils.padLeft(epochRandom.isSafe ? "01" : "00", RANDOM_QUALITY_BYTES * 2) +
-    random.value.slice(2);
-  const randomHash = hashBytes(encodedRandom);
-
-  const merkleTree = new MerkleTree([bulkHash, ...individualPriceHashes, randomHash]);
-  const bulkProof: Bytes32[] = merkleTree.getProof(bulkHash)!.map(p => Bytes32.fromHexString(p));
+  const merkleTree = new MerkleTree([
+    MerkleTreeStructs.hashRandomCalculationResult(epochRandom),
+    ...medianResults.map(result => MerkleTreeStructs.hashMedianCalculationResult(result))
+  ]);
 
   const epochResult: EpochResult = {
-    priceEpochId: priceEpochId,
+    votingRoundId: votingRoundId,
     medianData: medianResults,
-    random: random,
-    randomQuality: quality,
-    encodedBulkPrices: "0x" + encodedBulkPrices,
-    encodedBulkSymbols: "0x" + encodedBulkSymbols,
-    randomMessage: encodedRandom,
-    encodedBulkPricesWithSymbols: encodedBulkPricesWithSymbols,
-    bulkPriceProof: bulkProof,
-    merkleRoot: Bytes32.fromHexString(merkleTree.root!),
+    randomData: epochRandom,
+    merkleTree: merkleTree,
   };
   return epochResult;
 }
@@ -241,8 +217,10 @@ export async function calculateFeedMedians(data: DataForCalculations): Promise<M
 
   // "mapping": feedIndex => array of submissions by voters (in signing policy order)
   const feedValues = new Map<number, ValueWithDecimals[]>();
+  let totalVotingWeight = 0n;
   for (const voter of voters) {
     const revealData = data.validEligibleReveals.get(voter.toLowerCase());
+    totalVotingWeight += data.voterMedianVotingWeights.get(voter.toLowerCase());
     let encodedVoterValues: ValueWithDecimals[] = [];
     if (revealData) {
       encodedVoterValues = FeedValueEncoder.decode(revealData.encodedValues, data.feedOrder);
@@ -256,23 +234,31 @@ export async function calculateFeedMedians(data: DataForCalculations): Promise<M
       feedValues.set(feedIndex, array);
     }
   }
+
   // trigger calculations for all feed
-  return data.feedOrder.map((feed, feedIndex) => calculateResultsForFeed(voters, feedValues[feedIndex], weights, feed));
+  return data.feedOrder.map((feed, feedIndex) => calculateResultsForFeed(
+    data.votingRoundId, voters, feedValues[feedIndex],
+    weights, feed, totalVotingWeight
+  ));
 }
 
 export function calculateResultsForFeed(
+  votingRoundId: number,
   voters: string[],
   feedValues: ValueWithDecimals[],
   weights: bigint[],
-  feed: Feed
+  feed: Feed,
+  totalVotingWeight: bigint
 ) {
   const medianSummary = calculateMedian(voters, feedValues, weights, feed.decimals);
   const result: MedianCalculationResult = {
+    votingRoundId,
     feed: feed,
     voters: voters,
     feedValues: feedValues,
     data: medianSummary,
     weights: weights,
+    totalVotingWeight,
   };
   return result;
 }
@@ -294,13 +280,14 @@ export function calculateMedian(
       finalMedianPrice: FeedValueEncoder.emptyFeed(decimals),
       quartile1Price: FeedValueEncoder.emptyFeed(decimals),
       quartile3Price: FeedValueEncoder.emptyFeed(decimals),
+      participatingWeight: 0n,
     };
   }
   const voteData = repack(voters, feedValues, weights).filter(voteDataItem => !voteDataItem.feedValue.isEmpty);
   // Sort by price
   voteData.sort((a, b) => a.feedValue.value - b.feedValue.value);
   let totalWeight = 0n;
-  weights.forEach(w => (totalWeight += w));
+  voteData.forEach(vote => (totalWeight += vote.weight));
   const medianWeight = totalWeight / 2n + (totalWeight % 2n);
   let currentWeightSum = 0n;
 
@@ -344,5 +331,6 @@ export function calculateMedian(
     finalMedianPrice: FeedValueEncoder.feedForValue(medianPrice, decimals),
     quartile1Price: FeedValueEncoder.feedForValue(quartile1Price, decimals),
     quartile3Price: FeedValueEncoder.feedForValue(quartile3Price, decimals),
+    participatingWeight: totalWeight,
   };
 }

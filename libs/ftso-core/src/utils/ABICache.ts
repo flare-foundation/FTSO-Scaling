@@ -1,22 +1,32 @@
 import { readFileSync } from "fs";
-import { AbiItem } from "web3-utils/types";
 import { AbiCoder } from "web3-eth-abi";
+import { AbiInput, AbiItem } from "web3-utils/types";
 import { CONTRACTS } from "../configs/networks";
 import {
-  VotePowerBlockSelected,
+  InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
+  RewardsOffered,
+  SigningPolicyInitialized,
+  VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo,
-  SigningPolicyInitialized,
-  InflationRewardsOffered,
-  RewardsOffered,
 } from "../events";
 
+export enum AbiType {
+  Function,
+  Event,
+  Struct,
+}
 export interface AbiData {
   abi: AbiItem;
   signature: string;
   isEvent: boolean;
+}
+
+export interface AbiDataInput {
+  abi: AbiInput;
+  signature: string;
 }
 
 export class ABICache {
@@ -41,6 +51,9 @@ export class ABICache {
       [CONTRACTS.FlareSystemManager.name, undefined, "SigningPolicySigned"],
       [CONTRACTS.FtsoRewardOffersManager.name, undefined, InflationRewardsOffered.eventName],
       [CONTRACTS.FtsoRewardOffersManager.name, undefined, RewardsOffered.eventName],
+      [CONTRACTS.FtsoMerkleStructs.name, "feedStruct", undefined],
+      [CONTRACTS.FtsoMerkleStructs.name, "randomStruct", undefined],
+      [CONTRACTS.FtsoMerkleStructs.name, "feedWithProofStruct", undefined],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {
@@ -53,14 +66,11 @@ export class ABICache {
    * Returns relevant ABI definitions given a smart contract name and function/event name.
    * For internal use only.
    */
-  getAbi(smartContractName: string, functionName?: string, eventName?: string, functionArgumentId?: number): AbiData {
+  getAbi(smartContractName: string, functionName?: string, eventName?: string): AbiData {
     if ((!functionName && !eventName) || (functionName && eventName)) {
       throw new Error("Must specify either functionName or eventName");
     }
-    if(functionArgumentId && !functionName) {
-      throw new Error("Must specify functionName when functionArgumentId is specified");
-    }
-    let key = this.keyForAbiData(smartContractName, functionName, eventName, functionArgumentId);
+    let key = this.keyForAbiData(smartContractName, functionName, eventName);
     let abiData = this.contractAndNameToAbiData.get(key);
     if (abiData) return abiData;
     let contractAbi = this.contractNameToAbi.get(smartContractName);
@@ -89,11 +99,20 @@ export class ABICache {
     return abiData;
   }
 
+  getAbiInput(smartContractName: string, functionName: string, functionArgumentId: number): AbiDataInput {
+    let abiData = this.getAbi(smartContractName, functionName);
+    const abiDataInput: AbiDataInput = {
+      abi: abiData.abi.inputs[functionArgumentId],
+      signature: abiData.signature,
+    };
+    return abiDataInput;
+  }
+
   /**
    * Returns key for cache dictionary for ABI data
    * Keys are of the form "contractName|functionName" or "contractName|eventName"
    */
-  private keyForAbiData(smartContractName: string, functionName?: string, eventName?: string, functionArgumentId?: number): string {
-    return `${smartContractName}|${functionName ? functionName : eventName!}|${functionArgumentId ?? ""}`;
+  private keyForAbiData(smartContractName: string, functionName?: string, eventName?: string): string {
+    return `${smartContractName}|${functionName ? functionName : eventName!}`;
   }
 }

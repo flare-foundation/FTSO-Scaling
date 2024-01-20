@@ -36,6 +36,11 @@ interface VoterRegistryDefinition {
    address: Address
 }
 
+interface FtsoMerkleStructsDefinition {
+   name: "FtsoMerkleStructs"
+   address: Address
+}
+
 export type ContractDefinitions =
    FlareSystemManagerDefinition |
    FtsoRewardOffersManagerDefinition |
@@ -54,6 +59,7 @@ export interface NetworkContractAddresses {
    Relay: RelayDefinition;
    FlareSystemCalculator: FlareSystemCalculatorDefinition;
    VoterRegistry: VoterRegistryDefinition;
+   FtsoMerkleStructs: FtsoMerkleStructsDefinition;
 }
 
 const TEST_CONFIG: NetworkContractAddresses = {
@@ -64,6 +70,7 @@ const TEST_CONFIG: NetworkContractAddresses = {
    Relay: { name: "Relay", address: "0x5A0773Ff307Bf7C71a832dBB5312237fD3437f9F" },
    FlareSystemCalculator: { name: "FlareSystemCalculator", address: "0x58F132FBB86E21545A4Bace3C19f1C05d86d7A22" },
    VoterRegistry: { name: "VoterRegistry", address: "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d" },
+   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
 }
 
 type networks = "local-test" | "coston2"

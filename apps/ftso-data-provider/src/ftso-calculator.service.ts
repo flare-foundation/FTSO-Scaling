@@ -107,11 +107,12 @@ export class FtsoCalculatorService {
     }
     try {
       const result = await calculateResults(dataResponse.data);
+      const merkleRoot = result.merkleTree.root;
       const message = {
         protocolId: FTSO2_PROTOCOL_ID,
         votingRoundId,
-        randomQualityScore: result.randomQuality,
-        merkleRoot: result.merkleRoot.toString()
+        randomQualityScore: result.randomData.isSecure,
+        merkleRoot,
       } as IProtocolMessageMerkleRoot;
       return ProtocolMessageMerkleRoot.encode(message);
     } catch (e) {

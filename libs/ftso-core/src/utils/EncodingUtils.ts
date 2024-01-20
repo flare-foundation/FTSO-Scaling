@@ -1,7 +1,7 @@
 import Web3 from "web3";
 import { TLPEvents, TLPTransaction } from "../orm/entities";
 import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
-import { ABICache, AbiData } from "./ABICache";
+import { ABICache, AbiData, AbiDataInput } from "./ABICache";
 
 const coder = new Web3().eth.abi;
 
@@ -18,6 +18,9 @@ export class EncodingUtils {
 
   /**
    * Returns ABI definition for a given smart contract name and function name
+   * @param contractName 
+   * @param functionName 
+   * @returns 
    */
   getFunctionAbiData(contractName: string, functionName: string): AbiData {
     return this.abiCache.getAbi(contractName, functionName);
@@ -25,13 +28,30 @@ export class EncodingUtils {
 
   /**
    * Returns ABI definition for a given smart contract name and event name
+   * @param contractName 
+   * @param eventName 
+   * @returns 
    */
   getEventAbiData(contractName: string, eventName: string): AbiData {
     return this.abiCache.getAbi(contractName, undefined, eventName);
   }
 
   /**
+   * Returns ABI input definition for a given smart contract name, function name and function argument id
+   * @param contractName 
+   * @param functionName 
+   * @param functionArgumentId 
+   * @returns 
+   */
+  getFunctionInputAbiData(contractName: string, functionName: string, functionArgumentId): AbiDataInput {
+    return this.abiCache.getAbiInput(contractName, functionName, functionArgumentId);
+  }
+
+  /**
    * Returns function signature for a given smart contract name and function name
+   * @param smartContractName 
+   * @param functionName 
+   * @returns 
    */
   getFunctionSignature(smartContractName: string, functionName: string): string {
     return this.getFunctionAbiData(smartContractName, functionName).signature;
@@ -39,6 +59,9 @@ export class EncodingUtils {
 
   /**
    * Returns event signature for a given smart contract name and event name
+   * @param smartContractName 
+   * @param eventName 
+   * @returns 
    */
   getEventSignature(smartContractName: string, eventName: string): string {
     return this.getEventAbiData(smartContractName, eventName).signature;

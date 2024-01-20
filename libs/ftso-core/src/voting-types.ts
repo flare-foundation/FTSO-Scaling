@@ -2,6 +2,7 @@ import BN from "bn.js";
 import { Log } from "web3-core";
 import { Bytes32 } from "./utils/sol-types";
 import { ValueWithDecimals } from "./utils/FeedEncoder";
+import { MerkleTree } from "./utils/MerkleTree";
 
 export type Address = string;
 export type Bytes20 = string;
@@ -73,35 +74,33 @@ export interface BlockData {
 }
 
 export interface EpochResult {
-  readonly priceEpochId: number;
-  readonly medianData: readonly MedianCalculationResult[];
-  readonly random: Bytes32;
-  readonly randomQuality: boolean;
-  readonly encodedBulkPrices: string;
-  readonly encodedBulkSymbols: string;
-  readonly randomMessage: string;
-  readonly encodedBulkPricesWithSymbols: string;
-  readonly bulkPriceProof: readonly Bytes32[];
-  readonly merkleRoot: Bytes32;
+  readonly votingRoundId: number;
+  readonly medianData: MedianCalculationResult[];
+  readonly randomData: RandomCalculationResult;
+  readonly merkleTree: MerkleTree;
 }
 
 export interface MedianCalculationResult {
+  readonly votingRoundId: number;
   readonly feed: Feed;
   readonly voters: readonly string[];
   readonly feedValues: readonly ValueWithDecimals[];
   readonly data: MedianCalculationSummary;
   readonly weights: readonly bigint[];
+  readonly totalVotingWeight: bigint;
 }
 
 export interface RandomCalculationResult {
+  readonly votingRoundId: number;
   readonly random: bigint
-  readonly isSafe: boolean;
+  readonly isSecure: boolean;
 }
 
 export interface MedianCalculationSummary {
   readonly finalMedianPrice: ValueWithDecimals;
   readonly quartile1Price: ValueWithDecimals;
   readonly quartile3Price: ValueWithDecimals;
+  readonly participatingWeight: bigint;
 }
 
 export interface VoterRewarding {
