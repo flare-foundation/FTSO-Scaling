@@ -25,8 +25,8 @@ export class VoterRegistered extends RawEventConstructible {
     return decodeEvent<VoterRegistered>(CONTRACTS.VoterRegistry.name, VoterRegistered.eventName, event, (data: any) => new VoterRegistered(data))
   }
 
-  rewardEpochId: number;
   voter: Address;
+  rewardEpochId: number;
   signingPolicyAddress: Address;
   delegationAddress: Address;
   submitAddress: Address;
