@@ -26,6 +26,7 @@ describe("RewardEpochManager", () => {
   beforeEach(async () => {
     ds = await getDataSource(false);
     em = ds.createEntityManager();
+    clock = FakeTimers.install({ now: epochSettings.expectedRewardEpochStartTimeSec(0) * 1000 });
   });
 
   afterEach(async () => {
@@ -34,27 +35,28 @@ describe("RewardEpochManager", () => {
   });
 
   it("should retrieve correct reward epoch", async () => {
-    await setUpRewardEpoch(1);
+    const rewardEpochId = 1;
+    await setUpRewardEpoch(rewardEpochId);
 
     const epochManager = new RewardEpochManager(new IndexerClient(em, indexerHistorySec));
-    const rewardEpoch = await epochManager.getRewardEpoch(1000);
-    console.log(voters.map(v => v.submitAddress));
+    const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+    const rewardEpoch = await epochManager.getRewardEpoch(votingRound);
 
+    expect(rewardEpoch.rewardEpochId).to.be.equal(rewardEpochId);
+    expect(rewardEpoch.startVotingRoundId).to.be.equal(votingRound);
     expect(rewardEpoch.orderedVotersSubmissionAddresses).to.eql(voters.map(v => v.submitAddress));
   });
 
   async function setUpRewardEpoch(rewardEpochId: number) {
-    clock = FakeTimers.install({ now: epochSettings.expectedRewardEpochStartTimeSec(rewardEpochId - 1) * 1000 });
-
-    const reEvents = await generateRewardEpochEvents(epochSettings, feeds, offerCount, rewardEpochId - 1, voters);
-    await em.save(reEvents);
+    const epochEvents = await generateRewardEpochEvents(epochSettings, feeds, offerCount, rewardEpochId, voters);
+    await em.save(epochEvents);
 
     const lowerState = generateState(FIRST_DATABASE_INDEX_STATE, 0);
     const upperState = generateState(LAST_DATABASE_INDEX_STATE, 1);
     lowerState.block_timestamp = 0;
-    upperState.block_timestamp = reEvents[reEvents.length - 1].timestamp + 1;
+    upperState.block_timestamp = epochEvents[epochEvents.length - 1].timestamp + 1;
     await em.save([lowerState, upperState]);
 
-    clock.setSystemTime(EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId) * 1000);
+    clock.setSystemTime(epochSettings.expectedRewardEpochStartTimeSec(rewardEpochId) * 1000);
   }
 });

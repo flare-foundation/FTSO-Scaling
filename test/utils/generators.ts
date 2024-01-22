@@ -81,26 +81,26 @@ export async function generateRewardEpochEvents(
   rewardEpochId: number,
   voters: TestVoter[]
 ): Promise<TLPEvents[]> {
-  const rewardEpochStartSec = epochSettings.expectedRewardEpochStartTimeSec(rewardEpochId);
-  const nextRewardEpochId = rewardEpochId + 1;
+  const previousRewardEpochId = rewardEpochId - 1;
+  const rewardEpochStartSec = epochSettings.expectedRewardEpochStartTimeSec(previousRewardEpochId);
   return [
     generateEvent(
       CONTRACTS.FlareSystemManager,
       RewardEpochStarted.eventName,
       new RewardEpochStarted({
-        rewardEpochId,
-        startVotingRoundId: 1,
+        rewardEpochId: previousRewardEpochId,
+        startVotingRoundId: epochSettings.expectedFirstVotingRoundForRewardEpoch(previousRewardEpochId),
         timestamp: rewardEpochStartSec,
       }),
       rewardEpochStartSec
     ),
-    ...generateRewards(offerCount, feeds, nextRewardEpochId, rewardEpochStartSec + 10),
+    ...generateRewards(offerCount, feeds, rewardEpochId, rewardEpochStartSec + 10),
 
     generateEvent(
       CONTRACTS.FlareSystemManager,
       RandomAcquisitionStarted.eventName,
       new RandomAcquisitionStarted({
-        rewardEpochId: nextRewardEpochId,
+        rewardEpochId: rewardEpochId,
         timestamp: rewardEpochStartSec + 20,
       }),
       rewardEpochStartSec + 20
@@ -109,22 +109,22 @@ export async function generateRewardEpochEvents(
       CONTRACTS.FlareSystemManager,
       VotePowerBlockSelected.eventName,
       new VotePowerBlockSelected({
-        rewardEpochId: nextRewardEpochId,
+        rewardEpochId: rewardEpochId,
         votePowerBlock: 1, // TODO: set block numbers
         timestamp: rewardEpochStartSec + 30,
       }),
       rewardEpochStartSec + 30
     ),
 
-    ...registerVoters(voters, nextRewardEpochId, rewardEpochStartSec + 40),
+    ...registerVoters(voters, rewardEpochId, rewardEpochStartSec + 40),
 
     // TODO: set correct values for signing policy
     generateEvent(
       CONTRACTS.Relay,
       SigningPolicyInitialized.eventName,
       new SigningPolicyInitialized({
-        rewardEpochId: nextRewardEpochId,
-        startVotingRoundId: 1, // TODO: set correct value
+        rewardEpochId: rewardEpochId,
+        startVotingRoundId: epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId),
         threshold: 1,
         seed: "0x123",
         voters: voters.map(v => v.signingAddress),
