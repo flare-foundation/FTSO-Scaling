@@ -1,5 +1,5 @@
 import { CONTRACTS } from "../configs/networks";
-import { decodeEvent } from "../utils/EncodingUtils";
+import { decodeEvent, unPrefix0x } from "../utils/EncodingUtils";
 import { Address } from "../voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
 
@@ -12,7 +12,7 @@ export class RewardsOffered extends RawEventConstructible {
   constructor(data: any) {
     super();
     this.rewardEpochId = Number(data.rewardEpochId);
-    this.feedName = data.feedName;
+    this.feedName = unPrefix0x(data.feedName);
     this.decimals = Number(data.decimals);
     this.amount = BigInt(data.amount);
     this.primaryBandRewardSharePPM = Number(data.primaryBandRewardSharePPM);
