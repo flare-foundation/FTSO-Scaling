@@ -2,7 +2,7 @@ import { Feed } from "../voting-types";
 
 export interface ValueWithDecimals {
   readonly isEmpty: boolean;
-  readonly value: number;
+  readonly value: number; // Never a float
   readonly decimals: number;
 }
 
