@@ -2,13 +2,13 @@ import {
   EPOCH_SETTINGS,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
-} from "../../libs/ftso-core/src/configs/networks";
-import { IndexerClient } from "../../libs/ftso-core/src/IndexerClient";
-import { RewardEpochManager } from "../../libs/ftso-core/src/RewardEpochManager";
+} from "../../../libs/ftso-core/src/configs/networks";
+import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
+import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 
 import FakeTimers from "@sinonjs/fake-timers";
-import { generateVoters, generateRewardEpochEvents, generateState, TestVoter } from "../utils/generators";
-import { getDataSource } from "../utils/db";
+import { generateVoters, generateRewardEpochEvents, generateState, TestVoter } from "../../utils/generators";
+import { getDataSource } from "../../utils/db";
 import { DataSource, EntityManager } from "typeorm";
 import { expect } from "chai";
 

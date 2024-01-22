@@ -101,3 +101,7 @@ export function decodePayloadMessageCalldata(tx: TLPTransaction): IPayloadMessag
   const payloadData = tx.input!.slice(8); // dropping function signature
   return PayloadMessage.decode(payloadData);
 }
+
+export function unPrefix0x(str: string) {
+   return str.startsWith("0x") ? str.slice(2) : str
+}

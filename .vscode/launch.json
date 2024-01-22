@@ -19,5 +19,21 @@
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["start:debug"]
     },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "---TEST---",
+      "runtimeExecutable": "echo",
+      "runtimeArgs": ["BTC tests separator"]
+   },
+
+   {
+      "type": "node",
+      "request": "launch",
+      "name": "Test FTSO reward logic",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["test", "test/libs/unit/ftso-calculation-logic.test.ts"]
+   },
   ]
 }

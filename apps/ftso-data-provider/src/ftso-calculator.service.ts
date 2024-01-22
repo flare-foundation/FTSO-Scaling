@@ -154,7 +154,7 @@ export class FtsoCalculatorService {
     );
 
     // This should just be a warning
-    if (200 <= pricesRes.status && pricesRes.status < 300) {
+    if (pricesRes.status < 200 || pricesRes.status >= 300) {
       this.logger.warn(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);
       // TODO: exit
       throw new Error(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);

@@ -1,8 +1,7 @@
-import { CONTRACTS, ContractDefinitions } from "../configs/networks";
-import { decodeEvent } from "../utils/EncodingUtils";
+import { CONTRACTS } from "../configs/networks";
+import { decodeEvent, unPrefix0x } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
-const unPrefix0x = (str: string) => str.startsWith("0x") ? str.slice(2) : str;
 
 /**
  * Inflation rewards offer as obtained from an event of 
@@ -28,7 +27,17 @@ export class InflationRewardsOffered extends RawEventConstructible {
       throw new Error("Feed names and secondary band width PPMs must have same length");
     }
     this.rewardEpochId = Number(data.rewardEpochId);
-    this.decimals = Number(data.decimals);
+
+    const unprefixedDecimals = unPrefix0x(data.decimals)
+    if (unprefixedDecimals.length % 2 !== 0) {
+      throw new Error("Decimals must be multiple of 1 byte");
+    }
+  
+    this.decimals = unprefixedDecimals.match(/.{1,2}/g).map(v => parseInt(v, 16));
+    if (this.decimals.length !== this.feedNames.length) {
+      throw new Error("Feed names and decimals must have same length");
+    }
+
     this.amount = BigInt(data.amount);
     this.mode = Number(data.mode);
     this.primaryBandRewardSharePPM = Number(data.primaryBandRewardSharePPM);
@@ -43,7 +52,7 @@ export class InflationRewardsOffered extends RawEventConstructible {
   // feed names - i.e. base/quote symbols - multiple of 8 (one feedName is bytes8)
   feedNames: string[];
   // number of decimals (negative exponent)
-  decimals: number;
+  decimals: number[];
   // amount (in wei) of reward in native coin
   amount: bigint;
   // rewards split mode (0 means equally, 1 means random,...)
