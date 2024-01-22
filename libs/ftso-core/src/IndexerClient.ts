@@ -25,24 +25,25 @@ import {
 import { IPayloadMessage } from "./utils/PayloadMessage";
 import { ICommitData } from "./utils/CommitData";
 import { IRevealData } from "./utils/RevealData";
+import { IRelayMessage } from "./utils/RelayMessage";
 
-export interface SubmissionData {
+// IPayloadMessage<string>[]
+export interface GenericSubmissionData<T> {
   submitAddress: Address;
   votingEpochIdFromTimestamp: VotingEpochId; // voting round id in which the message was submitted
   relativeTimestamp: number; // timestamp relative to the start of the voting round
   blockNumber: number;
   transactionIndex: number;
-  messages: IPayloadMessage<string>[];
+  messages: T;
 }
 
-export interface FinalizationData {
-  senderAddress: Address;
-  votingEpochIdFromTimestamp: VotingEpochId; // voting round id in which the message was submitted
-  relativeTimestamp: number; // timestamp relative to the start of the voting round
-  blockNumber: number;
-  transactionIndex: number;
-  calldata: string;
-}
+export interface SubmissionData extends GenericSubmissionData<IPayloadMessage<string>[]> {};
+export interface FinalizationData extends GenericSubmissionData<string> {
+  successfulOnChain: boolean;
+};
+export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMessage> {
+  successfulOnChain: boolean;
+};
 
 export interface VoterData {
   submitAddress: Address;
@@ -537,22 +538,23 @@ export class IndexerClient {
       };
     }
     const transactionsResults = await this.queryTransactions(CONTRACTS.Relay, "relay", startTime, endTime);
-    const submits: FinalizationData[] = transactionsResults.map(tx => {
+    const finalizations: FinalizationData[] = transactionsResults.map(tx => {
       const timestamp = tx.timestamp;
       const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
       return {
-        senderAddress: "0x" + tx.from_address,
+        submitAddress: "0x" + tx.from_address,
         relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
         votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
         blockNumber: tx.block_number,
-        calldata: tx.input,
-      };
+        messages: tx.input,
+        successfulOnChain: tx.status > 0,
+      } as FinalizationData;
     });
 
     return {
       status: ensureRange,
-      data: submits,
+      data: finalizations,
     };
   }
  

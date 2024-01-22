@@ -3,11 +3,12 @@ import { rewardEpochFeedSequence } from "./ftso-calculation-logic";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export class RewardEpoch {
+// TODO: think through the mappings!!!
 
    readonly orderedVotersSubmissionAddresses: Address[] = [];
-   // TODO: think through the mappings!!!
-
-   private readonly signingPolicy: SigningPolicyInitialized;
+   
+   public readonly rewardOffers: RewardOffers;
+   public readonly signingPolicy: SigningPolicyInitialized;
    // delegationAddress => weight (capped WFLR)
    readonly delegationAddressToCappedWeight = new Map<Address, bigint>;
    // identifyingAddress => info
@@ -65,6 +66,7 @@ export class RewardEpoch {
       }
 
       ///////// Data initialization /////////
+      this.rewardOffers = rewardOffers;
       this._canonicalFeedOrder = rewardEpochFeedSequence(rewardOffers);
       const tmpSigningAddressToVoter = new Map<Address, Address>();
       for(let voterRegistration of fullVoterRegistrationInfo) {
@@ -116,6 +118,10 @@ export class RewardEpoch {
     */
    isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
       return !!this.submitterToVoter.get(submitAddress);
+   }
+
+   isEligibleSignerAddress(signerAddress: Address): boolean {
+      return !!this.signingAddressToVoter.get(signerAddress);
    }
 
    ftsoMedianVotingWeight(submissionAddress: Address): bigint {

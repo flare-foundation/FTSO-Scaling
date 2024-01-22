@@ -6,6 +6,7 @@ export type Address = string;
 export type Bytes20 = string;
 export type VotingEpochId = number;
 export type RewardEpochId = number;
+export type MessageHash = string;
 
 
 export interface RewardClaim {

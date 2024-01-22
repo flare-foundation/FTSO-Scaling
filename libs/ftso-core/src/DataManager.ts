@@ -1,10 +1,18 @@
-import { BlockAssuranceResult, FinalizationData, IndexerClient, SubmissionData } from "./IndexerClient";
+import { BlockAssuranceResult, FinalizationData, GenericSubmissionData, IndexerClient, ParsedFinalizationData, SubmissionData } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
 import { CommitData, ICommitData } from "./utils/CommitData";
+import { ECDSASignature } from "./utils/ECDSASignature";
+import { ProtocolMessageMerkleRoot } from "./utils/ProtocolMessageMerkleRoot";
+import { RelayMessage } from "./utils/RelayMessage";
 import { IRevealData, RevealData } from "./utils/RevealData";
-import { Address, Feed } from "./voting-types";
+import { ISignaturePayload, SignaturePayload } from "./utils/SignaturePayload";
+import { SigningPolicy } from "./utils/SigningPolicy";
+import { Address, Feed, MessageHash } from "./voting-types";
+
+// For a given voting round id, the rewarded finalization is 
+const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = 0;
 
 export enum DataAvailabilityStatus {
   /**
@@ -50,13 +58,6 @@ export interface DataForCalculationsPartial {
   feedOrder: Feed[];
 }
 
-/*
-export interface DataForRewardCalculation {
-  dataForCalculations: DataForCalculations;
-  
-  
-}
-*/
 export interface DataForCalculations extends DataForCalculationsPartial {
   // Window in which offenses related to reveal withholding or providing wrong reveals are counted
   randomGenerationBenchingWindow: number;
@@ -66,6 +67,13 @@ export interface DataForCalculations extends DataForCalculationsPartial {
   rewardEpoch: RewardEpoch;
 }
 
+export interface DataForRewardCalculation {
+  dataForCalculations: DataForCalculations;
+  signatures: Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>;
+  finalizations: ParsedFinalizationData[];
+}
+
+
 interface CommitAndRevealSubmissionsMappingsForRange {
   votingRoundIdToCommits: Map<number, SubmissionData[]>;
   votingRoundIdToReveals: Map<number, SubmissionData[]>;
@@ -73,15 +81,8 @@ interface CommitAndRevealSubmissionsMappingsForRange {
 
 interface SignAndFinalizeSubmissionData {
   signatures: SubmissionData[];
-  finalization: FinalizationData[];
+  finalizations: FinalizationData[];
 }
-
-// * query both commits and reveals from indexer in one query (in IndexerClient) for specific voting round id
-// * filter out valid commits and reveal pairs and make sure they were committed in time correct times
-// * aggregate payload messages in order, filter out the ones for FTSO (ProtocolId), take last message for each voter in each votingRound
-// * filter out eligible voters in current rewardEpoch (signing policy) (match submitter nad signer)
-// * return array of correct reveal data for each voter in current voting round
-// * return another array of offenders (no reveal or mismatch of commit and reveal)
 
 /**
  * Helps in extracting data in a consistent way for FTSO scaling feed median calculations, random number calculation and rewarding.
@@ -90,7 +91,7 @@ interface SignAndFinalizeSubmissionData {
  * It uses EPOCH_SETTINGS to get manage timestamp to voting round id conversions
  */
 export class DataManager {
-  constructor(private indexerClient: IndexerClient, private rewardEpochManager: RewardEpochManager) {}
+  constructor(private indexerClient: IndexerClient, private rewardEpochManager: RewardEpochManager) { }
 
   /**
    * Prepare data for median calculation and rewarding given the voting round id and the random generation benching window.
@@ -158,6 +159,51 @@ export class DataManager {
   }
 
   /**
+   * Provides the data for reward calculation given the voting round id and the random generation benching window.
+   * Since calculation of rewards takes place when all the data is surely on the blockchain, no timeout queries are relevant here.
+   * The data for reward calculation is composed of:
+   * - data for median calculation 
+   * - signatures for the given voting round id in given rewarding window
+   * - finalizations for the given voting round id in given rewarding window
+   * Data for median calculation is used to calculate the median feed value for each feed in the rewarding boundaries.
+   * The data also contains the RewardEpoch objects, which contains all reward offers.
+   * Signatures and finalizations are used to calculate the rewards for signature deposition and finalizations. 
+   * Each finalization is checked if it is valid and finalizable. Note that only one such finalization is fully executed on chain, while
+   * others are reverted. Nevertheless, all finalizations in rewarded window are considered for the reward calculation, since a certain 
+   * subset is eligible for a reward if submitted in due time.
+   * @param votingRoundId 
+   * @param randomGenerationBenchingWindow 
+   * @returns 
+   */
+  public async getDataForRewardCalculation(
+    votingRoundId: number,
+    randomGenerationBenchingWindow: number,
+  ): Promise<DataMangerResponse<DataForRewardCalculation>> {
+    const dataForCalculationsResponse = await this.getDataForCalculations(votingRoundId, randomGenerationBenchingWindow);
+    if (dataForCalculationsResponse.status !== DataAvailabilityStatus.OK) {
+      return {
+        status: dataForCalculationsResponse.status,
+      };
+    }
+    const signaturesResponse = await this.getSignAndFinalizeSubmissionDataForVotingRound(votingRoundId);
+    if (signaturesResponse.status !== DataAvailabilityStatus.OK) {
+      return {
+        status: signaturesResponse.status,
+      };
+    }
+    const signatures = this.extractSignatures(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.signatures, FTSO2_PROTOCOL_ID);
+    const finalizations = this.extractFinalizations(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.finalizations, FTSO2_PROTOCOL_ID);
+    return {
+      status: DataAvailabilityStatus.OK,
+      data: {
+        dataForCalculations: dataForCalculationsResponse.data,
+        signatures,
+        finalizations,
+      },
+    };
+  }
+
+  /**
    * Creates a pair of mappings
    * 1. votingRoundId -> commit submissions, chronologically ordered
    * 2. votingRoundId -> reveal submissions, chronologically ordered, too late filtered out
@@ -171,75 +217,192 @@ export class DataManager {
    * @returns
    */
   private async getCommitAndRevealMappingsForVotingRoundRange(
-    startVotingRoundId: number,
-    endVotingRoundId: number,
-    endTimeout?: number
-  ): Promise<DataMangerResponse<CommitAndRevealSubmissionsMappingsForRange>> {
-    const commitSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      "submit1",
-      EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId),
-      EPOCH_SETTINGS.votingEpochEndSec(endVotingRoundId)
-    );
-    // Timeout is only considered when querying the reveals data which come later
-    if (commitSubmissionResponse.status !== BlockAssuranceResult.OK) {
-      return {
-        status: DataAvailabilityStatus.NOT_OK,
-      };
-    }
-    const revealSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      "submit2",
-      EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId + 1),
-      EPOCH_SETTINGS.revealDeadlineSec(endVotingRoundId + 1),
-      endTimeout
-    );
-    if (revealSubmissionResponse.status === BlockAssuranceResult.NOT_OK) {
-      return {
-        status: DataAvailabilityStatus.NOT_OK,
-      };
-    }
-    if (revealSubmissionResponse.status === BlockAssuranceResult.TIMEOUT_OK) {
-      // USELOGER
-      console.warn("Used revels data with timeout assumption on indexer client. TIMEOUT_OK");
-    }
+  startVotingRoundId: number,
+  endVotingRoundId: number,
+  endTimeout ?: number
+): Promise < DataMangerResponse < CommitAndRevealSubmissionsMappingsForRange >> {
+  const commitSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
+    "submit1",
+    EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId),
+    EPOCH_SETTINGS.votingEpochEndSec(endVotingRoundId)
+  );
+  // Timeout is only considered when querying the reveals data which come later
+  if(commitSubmissionResponse.status !== BlockAssuranceResult.OK) {
+  return {
+    status: DataAvailabilityStatus.NOT_OK,
+  };
+}
+const revealSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
+  "submit2",
+  EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId + 1),
+  EPOCH_SETTINGS.revealDeadlineSec(endVotingRoundId + 1),
+  endTimeout
+);
+if (revealSubmissionResponse.status === BlockAssuranceResult.NOT_OK) {
+  return {
+    status: DataAvailabilityStatus.NOT_OK,
+  };
+}
+if (revealSubmissionResponse.status === BlockAssuranceResult.TIMEOUT_OK) {
+  // USELOGER
+  console.warn("Used revels data with timeout assumption on indexer client. TIMEOUT_OK");
+}
 
-    const votingRoundIdToCommits = this.remapSubmissionDataArrayToVotingRounds(commitSubmissionResponse.data, "commit");
-    const votingRoundIdToReveals = this.remapSubmissionDataArrayToVotingRounds(revealSubmissionResponse.data, "reveal");
+const votingRoundIdToCommits = this.remapSubmissionDataArrayToVotingRounds(commitSubmissionResponse.data, "commit");
+const votingRoundIdToReveals = this.remapSubmissionDataArrayToVotingRounds(revealSubmissionResponse.data, "reveal");
 
-    // Filtering out too late reveals
-    for (const [votingRoundId, revealSubmissions] of votingRoundIdToReveals.entries()) {
-      const filteredRevealSubmissions = this.filterRevealsByDeadlineTime(revealSubmissions);
-      votingRoundIdToReveals.set(votingRoundId, filteredRevealSubmissions);
-    }
+// Filtering out too late reveals
+for (const [votingRoundId, revealSubmissions] of votingRoundIdToReveals.entries()) {
+  const filteredRevealSubmissions = this.filterRevealsByDeadlineTime(revealSubmissions);
+  votingRoundIdToReveals.set(votingRoundId, filteredRevealSubmissions);
+}
 
-    return {
-      status:
-        revealSubmissionResponse.status === BlockAssuranceResult.TIMEOUT_OK
-          ? DataAvailabilityStatus.TIMEOUT_OK
-          : DataAvailabilityStatus.OK,
-      data: {
-        votingRoundIdToCommits,
-        votingRoundIdToReveals,
-      },
-    };
+return {
+  status:
+    revealSubmissionResponse.status === BlockAssuranceResult.TIMEOUT_OK
+      ? DataAvailabilityStatus.TIMEOUT_OK
+      : DataAvailabilityStatus.OK,
+  data: {
+    votingRoundIdToCommits,
+    votingRoundIdToReveals,
+  },
+};
   }
 
-  /*
-  private async getSignAndFinaliseSubmissionDataForVotingRound(
-    votingRoundId: number,
-  ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
-    const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      "submitSignatures",
-      EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
-      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1)
-    );
-    if (submitSignaturesSubmissionResponse.status !== BlockAssuranceResult.OK) {
-      return {
-        status: DataAvailabilityStatus.NOT_OK,
-      };
-    }
-    const signatures = this.sortSubmissionDataArray(submitSignaturesSubmissionResponse.data);
+  /**
+   * Extract signatures and finalizations for the given voting round id from indexer database.
+   * This function is used for reward calculation, which is executed at the time when all the data 
+   * is surely on the blockchain. Nevertheless the data availability is checked. Timeout queries are 
+   * not relevant here. The transactions are taken from the rewarded window for each 
+   * voting round. The rewarded window starts at the reveal deadline which is in votingEpochId = votingRoundId + 1.
+   * The end of the rewarded window is the end of voting epoch with 
+   * votingEpochId = votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS.
+   * Rewarding will consider submissions are finalizations only in the rewarding window and this function 
+   * queries exactly those.
+   * @param votingRoundId 
+   * @returns 
+   */
+  private async getSignAndFinalizeSubmissionDataForVotingRound(
+  votingRoundId: number,
+): Promise < DataMangerResponse < SignAndFinalizeSubmissionData >> {
+  const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
+    "submitSignatures",
+    EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
+    EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
+  );
+  if(submitSignaturesSubmissionResponse.status !== BlockAssuranceResult.OK) {
+  return {
+    status: DataAvailabilityStatus.NOT_OK,
+  };
+}
+const signatures = submitSignaturesSubmissionResponse.data;
+this.sortSubmissionDataArray(signatures);
+// Finalization data only on the rewarded range
+const submitFinalizeSubmissionResponse = await this.indexerClient.getFinalizationDataInRange(
+  EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
+  EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
+);
+if (submitFinalizeSubmissionResponse.status !== BlockAssuranceResult.OK) {
+  return {
+    status: DataAvailabilityStatus.NOT_OK,
+  };
+}
+const finalizations = submitFinalizeSubmissionResponse.data;
+this.sortSubmissionDataArray(finalizations);
+return {
+  status: DataAvailabilityStatus.OK,
+  data: {
+    signatures,
+    finalizations,
+  },
+};
   }
-  */
+
+  /**
+   * Extract signature payloads for the given voting round id from the given submissions.
+   * Each signature is filtered out for the correct protocol id. Signatures are returned in the form of a map
+   * from message hash to a map from signer address to submission data containing parsed signature payload.
+   * ASSUMPTION: all signature submissions for voting round id, hence contained in votingEpochId = votingRoundId + 1,
+   * between reveal deadline and voting epoch end
+   * @param votingRoundId 
+   * @param rewardEpoch
+   * @param submissions 
+   * @returns 
+   */
+  private extractSignatures(votingRoundId: number, rewardEpoch: RewardEpoch, submissions: SubmissionData[], protocolId = FTSO2_PROTOCOL_ID): Map < MessageHash, Map < Address, GenericSubmissionData < ISignaturePayload >>> {
+  const signatureMap = new Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>();
+  for(const submission of submissions) {
+    for (const message of submission.messages) {
+      const signaturePayload = SignaturePayload.decode(message.payload);
+      if (signaturePayload.message.votingRoundId === votingRoundId && signaturePayload.message.protocolId === protocolId) {
+        const messageHash = ProtocolMessageMerkleRoot.hash(signaturePayload.message);
+        signaturePayload.messageHash = messageHash;
+        const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
+        if (!rewardEpoch.isEligibleSignerAddress(signer)) {
+          continue;
+        }
+        let signatures = signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
+        const submissionData: GenericSubmissionData<ISignaturePayload> = {
+          ...submission,
+          messages: signaturePayload,
+        };
+        signatureMap.set(messageHash, signatures);
+        signatures.set(signer, submissionData);
+      }
+    }
+  }
+    return signatureMap;
+}
+
+  /**
+   * Given submissions of finalizations eligible for voting round @param votingRoundId and matching reward epoch @param rewardEpoch to the 
+   * voting round id, extract finalizations which match voting round id, given protocol id and are parsable and finalizeable (would cause finalisation)
+   * @param votingRoundId 
+   * @param rewardEpoch 
+   * @param submissions 
+   * @param protocolId 
+   * @returns 
+   */
+  private extractFinalizations(votingRoundId: number, rewardEpoch: RewardEpoch, submissions: FinalizationData[], protocolId = FTSO2_PROTOCOL_ID): ParsedFinalizationData[] {
+  const finalizations: ParsedFinalizationData[] = [];
+  for (const submission of submissions) {
+    try {
+      const calldata = submission.messages;
+      if (calldata.length < 10) {
+        continue;
+      }
+      const relayMessage = RelayMessage.decode(calldata.slice(10));
+      // ignore irrelevant messages
+      if (!relayMessage.protocolMessageMerkleRoot ||
+        relayMessage.protocolMessageMerkleRoot.protocolId !== protocolId ||
+        relayMessage.protocolMessageMerkleRoot.votingRoundId !== votingRoundId ||
+        relayMessage.signingPolicy.rewardEpochId !== rewardEpoch.rewardEpochId
+      ) {
+        continue;
+      }
+      // TODO: Check if the signing policy is correct
+      const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
+      const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
+      if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
+        throw new Error(`Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`);
+      }
+      const finalization: ParsedFinalizationData = {
+        ...submission,
+        messages: relayMessage,
+      }
+      // Verify the relay message by trying to encode it with verification.
+      // If it excepts it is non-finalisable
+      RelayMessage.encode(relayMessage, true);
+      // The message is eligible for consideration.
+      finalizations.push(finalization);
+    } catch (e) {
+      // TODO: log properly
+      console.log(`Unparsable or non-finalisable finalization message: ${e}`);
+      // ignore unparsable message
+    }
+  }
+  return finalizations;
+}
 
   /**
    * Prepares data for median calculation and rewarding.
@@ -248,44 +411,44 @@ export class DataManager {
    * @returns
    */
   private getDataForCalculationsPartial(
-    commitsAndReveals: CommitsAndReveals,
-    rewardEpoch: RewardEpoch
-  ): DataForCalculationsPartial {
-    const eligibleCommits = new Map<Address, ICommitData>();
-    const eligibleReveals = new Map<Address, IRevealData>();
-    // Filter out commits from non-eligible voters
-    for (const [submitAddress, commit] of commitsAndReveals.commits.entries()) {
-      if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
-        eligibleCommits.set(submitAddress, commit);
-      }
+  commitsAndReveals: CommitsAndReveals,
+  rewardEpoch: RewardEpoch
+): DataForCalculationsPartial {
+  const eligibleCommits = new Map<Address, ICommitData>();
+  const eligibleReveals = new Map<Address, IRevealData>();
+  // Filter out commits from non-eligible voters
+  for (const [submitAddress, commit] of commitsAndReveals.commits.entries()) {
+    if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
+      eligibleCommits.set(submitAddress, commit);
     }
-    // Filter out reveals from non-eligible voters
-    for (const [submitAddress, reveal] of commitsAndReveals.reveals.entries()) {
-      if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
-        eligibleReveals.set(submitAddress, reveal);
-      }
-    }
-    const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
-    const revealOffenders = this.getRevealOffenders(eligibleCommits, eligibleReveals);
-    const voterMedianVotingWeights = new Map<Address, bigint>();
-    const voterRewardingWeights = new Map<Address, bigint>();
-    const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmissionAddresses;
-    for (const submitAddress of orderedVotersSubmissionAddresses) {
-      voterMedianVotingWeights.set(submitAddress, rewardEpoch.ftsoMedianVotingWeight(submitAddress));
-      voterRewardingWeights.set(submitAddress, rewardEpoch.ftsoRewardingWeight(submitAddress));
-    }
-
-    const result: DataForCalculationsPartial = {
-      votingRoundId: commitsAndReveals.votingRoundId,
-      orderedVotersSubmissionAddresses,
-      validEligibleReveals,
-      revealOffenders,
-      voterMedianVotingWeights,
-      voterRewardingWeights,
-      feedOrder: rewardEpoch.canonicalFeedOrder,
-    };
-    return result;
   }
+  // Filter out reveals from non-eligible voters
+  for (const [submitAddress, reveal] of commitsAndReveals.reveals.entries()) {
+    if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
+      eligibleReveals.set(submitAddress, reveal);
+    }
+  }
+  const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
+  const revealOffenders = this.getRevealOffenders(eligibleCommits, eligibleReveals);
+  const voterMedianVotingWeights = new Map<Address, bigint>();
+  const voterRewardingWeights = new Map<Address, bigint>();
+  const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmissionAddresses;
+  for (const submitAddress of orderedVotersSubmissionAddresses) {
+    voterMedianVotingWeights.set(submitAddress, rewardEpoch.ftsoMedianVotingWeight(submitAddress));
+    voterRewardingWeights.set(submitAddress, rewardEpoch.ftsoRewardingWeight(submitAddress));
+  }
+
+  const result: DataForCalculationsPartial = {
+    votingRoundId: commitsAndReveals.votingRoundId,
+    orderedVotersSubmissionAddresses,
+    validEligibleReveals,
+    revealOffenders,
+    voterMedianVotingWeights,
+    voterRewardingWeights,
+    feedOrder: rewardEpoch.canonicalFeedOrder,
+  };
+  return result;
+}
 
   /**
    * Construct a mapping submissionAddress => reveal data for valid reveals of eligible voters.
@@ -295,22 +458,22 @@ export class DataManager {
    * @returns
    */
   private getValidReveals(
-    eligibleCommits: Map<Address, ICommitData>,
-    eligibleReveals: Map<Address, IRevealData>
-  ): Map<Address, IRevealData> {
-    const validEligibleReveals = new Map<Address, IRevealData>();
-    for (const [submitAddress, reveal] of eligibleReveals.entries()) {
-      const commit = eligibleCommits.get(submitAddress);
-      if (!commit) {
-        continue;
-      }
-      const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
-      if (commit.commitHash !== commitHash) {
-        continue;
-      }
-      validEligibleReveals.set(submitAddress, reveal);
-    }
-    return validEligibleReveals;
+  eligibleCommits: Map<Address, ICommitData>,
+  eligibleReveals: Map<Address, IRevealData>
+): Map < Address, IRevealData > {
+  const validEligibleReveals = new Map<Address, IRevealData>();
+  for(const [submitAddress, reveal] of eligibleReveals.entries()) {
+  const commit = eligibleCommits.get(submitAddress);
+  if (!commit) {
+    continue;
+  }
+  const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
+  if (commit.commitHash !== commitHash) {
+    continue;
+  }
+  validEligibleReveals.set(submitAddress, reveal);
+}
+return validEligibleReveals;
   }
 
   /**
@@ -321,22 +484,22 @@ export class DataManager {
    * @returns
    */
   private getRevealOffenders(
-    availableCommits: Map<Address, ICommitData>,
-    availableReveals: Map<Address, IRevealData>
-  ): Set<Address> {
-    const revealOffenders = new Set<Address>();
-    for (const [submitAddress, commit] of availableCommits.entries()) {
-      const reveal = availableReveals.get(submitAddress);
-      if (!reveal) {
-        revealOffenders.add(submitAddress);
-        continue;
-      }
-      const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
-      if (commit.commitHash !== commitHash) {
-        revealOffenders.add(submitAddress);
-      }
-    }
-    return revealOffenders;
+  availableCommits: Map<Address, ICommitData>,
+  availableReveals: Map<Address, IRevealData>
+): Set < Address > {
+  const revealOffenders = new Set<Address>();
+  for(const [submitAddress, commit] of availableCommits.entries()) {
+  const reveal = availableReveals.get(submitAddress);
+  if (!reveal) {
+    revealOffenders.add(submitAddress);
+    continue;
+  }
+  const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
+  if (commit.commitHash !== commitHash) {
+    revealOffenders.add(submitAddress);
+  }
+}
+return revealOffenders;
   }
 
   /**
@@ -351,26 +514,26 @@ export class DataManager {
    * @returns
    */
   private async getBenchingWindowRevealOffenders(
-    votingRoundId: number,
-    votingRoundIdToCommits: Map<number, SubmissionData[]>,
-    votingRoundIdToReveals: Map<number, SubmissionData[]>,
-    randomGenerationBenchingWindow: number
-  ) {
-    const randomOffenders = new Set<Address>();
-    for (let i = votingRoundId - randomGenerationBenchingWindow; i < votingRoundId; i++) {
-      const commits = votingRoundIdToCommits.get(i);
-      const reveals = votingRoundIdToReveals.get(i);
-      if (!commits || commits.length === 0) {
-        continue;
-      }
-      const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals);
-      const revealOffenders = this.getRevealOffenders(commitsAndReveals.commits, commitsAndReveals.reveals);
-      for (const offender of revealOffenders) {
-        randomOffenders.add(offender);
-      }
+  votingRoundId: number,
+  votingRoundIdToCommits: Map<number, SubmissionData[]>,
+  votingRoundIdToReveals: Map<number, SubmissionData[]>,
+  randomGenerationBenchingWindow: number
+) {
+  const randomOffenders = new Set<Address>();
+  for (let i = votingRoundId - randomGenerationBenchingWindow; i < votingRoundId; i++) {
+    const commits = votingRoundIdToCommits.get(i);
+    const reveals = votingRoundIdToReveals.get(i);
+    if (!commits || commits.length === 0) {
+      continue;
     }
-    return randomOffenders;
+    const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals);
+    const revealOffenders = this.getRevealOffenders(commitsAndReveals.commits, commitsAndReveals.reveals);
+    for (const offender of revealOffenders) {
+      randomOffenders.add(offender);
+    }
   }
+  return randomOffenders;
+}
 
   /**
    * Extracts commits and reveals for a single voting round from the given commit and reveal submission data array.
@@ -390,19 +553,19 @@ export class DataManager {
    * @returns
    */
   private getVoterToLastCommitAndRevealMapsForVotingRound(
-    votingRoundId: number,
-    commitSubmissions: SubmissionData[],
-    revealSubmissions: SubmissionData[],
-    feedOrder?: Feed[]
-  ): CommitsAndReveals {
-    const commits = this.getVoterToLastCommitMap(commitSubmissions);
-    const reveals = this.getVoterToLastRevealMap(revealSubmissions, feedOrder);
-    return {
-      votingRoundId,
-      commits,
-      reveals,
-    };
-  }
+  votingRoundId: number,
+  commitSubmissions: SubmissionData[],
+  revealSubmissions: SubmissionData[],
+  feedOrder ?: Feed[]
+): CommitsAndReveals {
+  const commits = this.getVoterToLastCommitMap(commitSubmissions);
+  const reveals = this.getVoterToLastRevealMap(revealSubmissions, feedOrder);
+  return {
+    votingRoundId,
+    commits,
+    reveals,
+  };
+}
 
   /**
    * Creates a mapper form voter address to last commit data message for FTSO protocol and matching voting round id
@@ -414,21 +577,21 @@ export class DataManager {
    * @param submissionDataArray
    * @returns
    */
-  private getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map<Address, ICommitData> {
-    const voterToLastCommit = new Map<Address, ICommitData>();
-    for (const submission of submissionDataArray) {
-      for (const message of submission.messages) {
-        if (
-          message.protocolId === FTSO2_PROTOCOL_ID &&
-          message.votingRoundId === submission.votingEpochIdFromTimestamp
-        ) {
-          const commit = CommitData.decode(message.payload);
-          voterToLastCommit.set(submission.submitAddress, commit);
-        }
+  private getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map < Address, ICommitData > {
+  const voterToLastCommit = new Map<Address, ICommitData>();
+  for(const submission of submissionDataArray) {
+    for (const message of submission.messages) {
+      if (
+        message.protocolId === FTSO2_PROTOCOL_ID &&
+        message.votingRoundId === submission.votingEpochIdFromTimestamp
+      ) {
+        const commit = CommitData.decode(message.payload);
+        voterToLastCommit.set(submission.submitAddress, commit);
       }
     }
-    return voterToLastCommit;
   }
+    return voterToLastCommit;
+}
 
   /**
    * Create a mapper form voter address to last reveal data message for FTSO protocol and matching voting round id
@@ -443,37 +606,37 @@ export class DataManager {
    * @returns
    */
   private getVoterToLastRevealMap(
-    submissionDataArray: SubmissionData[],
-    feedOrder?: Feed[]
-  ): Map<Address, IRevealData> {
-    const voterToLastReveal = new Map<Address, IRevealData>();
-    for (const submission of submissionDataArray) {
-      for (const message of submission.messages) {
-        if (
-          message.protocolId === FTSO2_PROTOCOL_ID &&
-          message.votingRoundId + 1 === submission.votingEpochIdFromTimestamp
-        ) {
-          const reveal = RevealData.decode(message.payload, feedOrder);
-          voterToLastReveal.set(submission.submitAddress, reveal);
-        }
+  submissionDataArray: SubmissionData[],
+  feedOrder ?: Feed[]
+): Map < Address, IRevealData > {
+  const voterToLastReveal = new Map<Address, IRevealData>();
+  for(const submission of submissionDataArray) {
+    for (const message of submission.messages) {
+      if (
+        message.protocolId === FTSO2_PROTOCOL_ID &&
+        message.votingRoundId + 1 === submission.votingEpochIdFromTimestamp
+      ) {
+        const reveal = RevealData.decode(message.payload, feedOrder);
+        voterToLastReveal.set(submission.submitAddress, reveal);
       }
     }
-    return voterToLastReveal;
   }
+    return voterToLastReveal;
+}
 
   /**
    * Sorts submission data array in the blockchain chronological order.
    * @param submissionDataArray
    */
-  private sortSubmissionDataArray(submissionDataArray: SubmissionData[]) {
-    submissionDataArray.sort((a, b) => {
-      const order = a.blockNumber - b.blockNumber;
-      if (order !== 0) {
-        return order;
-      }
-      return a.transactionIndex - b.transactionIndex;
-    });
-  }
+  private sortSubmissionDataArray<T>(submissionDataArray: GenericSubmissionData < T > []) {
+  submissionDataArray.sort((a, b) => {
+    const order = a.blockNumber - b.blockNumber;
+    if (order !== 0) {
+      return order;
+    }
+    return a.transactionIndex - b.transactionIndex;
+  });
+}
 
   // votingRoundId -> commit/reveal submissions
   /**
@@ -485,20 +648,20 @@ export class DataManager {
    * @returns
    */
   private remapSubmissionDataArrayToVotingRounds(submissionEpochArray: SubmissionData[], type: "commit" | "reveal") {
-    const offset = type === "commit" ? 0 : 1;
-    const votingRoundIdWithOffsetToSubmission = new Map<number, SubmissionData[]>();
-    for (const submission of submissionEpochArray) {
-      const votingRoundId = submission.votingEpochIdFromTimestamp - offset;
-      if (!votingRoundIdWithOffsetToSubmission.has(votingRoundId)) {
-        votingRoundIdWithOffsetToSubmission.set(votingRoundId, []);
-      }
-      votingRoundIdWithOffsetToSubmission.get(votingRoundId)!.push(submission);
+  const offset = type === "commit" ? 0 : 1;
+  const votingRoundIdWithOffsetToSubmission = new Map<number, SubmissionData[]>();
+  for (const submission of submissionEpochArray) {
+    const votingRoundId = submission.votingEpochIdFromTimestamp - offset;
+    if (!votingRoundIdWithOffsetToSubmission.has(votingRoundId)) {
+      votingRoundIdWithOffsetToSubmission.set(votingRoundId, []);
     }
-    for (const submissionList of votingRoundIdWithOffsetToSubmission.values()) {
-      this.sortSubmissionDataArray(submissionList);
-    }
-    return votingRoundIdWithOffsetToSubmission;
+    votingRoundIdWithOffsetToSubmission.get(votingRoundId)!.push(submission);
   }
+  for (const submissionList of votingRoundIdWithOffsetToSubmission.values()) {
+    this.sortSubmissionDataArray(submissionList);
+  }
+  return votingRoundIdWithOffsetToSubmission;
+}
 
   /**
    * Filters out too late reveals.
@@ -506,6 +669,6 @@ export class DataManager {
    * @returns
    */
   private filterRevealsByDeadlineTime(reveals: SubmissionData[]) {
-    return reveals.filter(reveal => reveal.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds);
-  }
+  return reveals.filter(reveal => reveal.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds);
+}
 }
