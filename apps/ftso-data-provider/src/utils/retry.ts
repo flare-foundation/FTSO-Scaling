@@ -95,7 +95,7 @@ export function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number = D
   return Promise.race<T>([promise, timeout]);
 }
 
-async function sleepFor(ms: number) {
+export async function sleepFor(ms: number) {
   await new Promise((resolve: any) => {
     setTimeout(() => resolve(), ms);
   });
