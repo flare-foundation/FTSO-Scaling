@@ -1,6 +1,4 @@
-import { sleepFor } from "./time";
-import { getLogger } from "./logger";
-import { asError, errorString } from "../../../../libs/ftso-core/src/utils/error";
+import { asError } from "../../../../libs/ftso-core/src/utils/error";
 
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_BACKOFF_MS = 1_000;
@@ -32,7 +30,6 @@ export async function retry<T>(
       return await action();
     } catch (e) {
       const error = asError(e);
-      getLogger("retry").info(`Error in retry attempt ${attempt}/${maxRetries}: ${errorString(error)}`);
       attempt++;
       if (attempt > maxRetries) {
         throw new RetryError(`Failed to execute action after ${maxRetries} attempts`, error);
@@ -96,4 +93,10 @@ export function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number = D
     }, timeoutMs);
   });
   return Promise.race<T>([promise, timeout]);
+}
+
+async function sleepFor(ms: number) {
+  await new Promise((resolve: any) => {
+    setTimeout(() => resolve(), ms);
+  });
 }

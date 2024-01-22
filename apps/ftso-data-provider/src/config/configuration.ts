@@ -1,6 +1,5 @@
 import fs from "fs";
 import { EpochSettings } from "../../../../libs/ftso-core/src/utils/EpochSettings";
-import { FTSOParameters, loadFTSOParameters } from "./FTSOParameters";
 
 export interface IConfig {
   // server port (PORT)
@@ -17,7 +16,6 @@ export interface IConfig {
   indexer_top_timeout: number;
 
   epochSettings: EpochSettings;
-  params: FTSOParameters;
 
   // Price Provider url (PRICE_PROVIDER_URL)
   price_provider_url: string;
@@ -59,7 +57,6 @@ export default () => {
     db_user: process.env.DB_USERNAME || "root",
     db_pass: process.env.DB_PASSWORD || "root",
     db_name: process.env.DB_NAME || "flare_top_level_indexer",
-    params: loadFTSOParameters(),
     epochSettings: epochSettings,
     price_provider_url: process.env.PRICE_PROVIDER_BASE_URL,
     protocol_id: parseInt(process.env.PROTOCOL_ID || "1"),

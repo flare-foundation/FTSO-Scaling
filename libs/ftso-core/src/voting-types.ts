@@ -1,6 +1,4 @@
 import BN from "bn.js";
-import { Log } from "web3-core";
-import { Bytes32 } from "./utils/sol-types";
 import { ValueWithDecimals } from "./utils/FeedEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 
@@ -35,11 +33,6 @@ export interface BareSignature {
   readonly s: string;
 }
 
-export interface RevealData {
-  readonly random: string;
-  readonly encodedPrices: string; // 4-byte hex strings
-}
-
 export interface SignatureData {
   readonly epochId: number;
   readonly merkleRoot: string;
@@ -54,23 +47,6 @@ export interface FinalizeData {
   readonly epochId: number;
   readonly merkleRoot: string;
   readonly signatures: readonly BareSignature[];
-}
-
-export interface TxData {
-  readonly blockNumber: number;
-  readonly hash: string;
-  readonly input: string;
-  readonly from: string;
-  /** Will be `null` for contract creation transactions. */
-  readonly to: string | null;
-  readonly status: boolean;
-  readonly logs?: Log[];
-}
-
-export interface BlockData {
-  readonly number: number;
-  readonly timestamp: number;
-  readonly transactions: readonly TxData[];
 }
 
 export interface EpochResult {
@@ -110,13 +86,6 @@ export interface VoterRewarding {
   readonly pct: boolean; // gets PCT reward
   readonly iqr: boolean; // gets IQR reward
   readonly eligible: boolean; // is eligible for reward
-}
-
-export interface RevealResult {
-  readonly revealers: Address[];
-  readonly committedFailedReveal: Address[];
-  readonly revealedRandoms: Bytes32[];
-  readonly reveals: Map<Address, RevealData>;
 }
 
 /**
