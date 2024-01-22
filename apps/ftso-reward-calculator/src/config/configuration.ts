@@ -26,7 +26,7 @@ export default () => {
     db_user: process.env.DB_USERNAME || "root",
     db_pass: process.env.DB_PASSWORD || "root",
     db_name: process.env.DB_NAME || "flare_top_level_indexer",
-    epochSettings: new EpochSettings(epochs[0], epochs[1], epochs[2], epochs[3]),
+    epochSettings: new EpochSettings(epochs[0], epochs[1], epochs[2], epochs[3], epochs[4]),
   };
   return config;
 };

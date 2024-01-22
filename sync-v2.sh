@@ -1,6 +1,7 @@
 rm -rf abi
 mkdir -p abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/ftso/merkle/FtsoMerkleStructs.sol/FtsoMerkleStructs.json abi
+cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/merkle/ProtocolMerkleStructs.sol/ProtocolMerkleStructs.json abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/FlareSystemManager.sol/FlareSystemManager.json abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Relay.sol/Relay.json abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Submission.sol/Submission.json abi

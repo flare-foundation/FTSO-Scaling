@@ -1,17 +1,14 @@
-import Web3 from "web3";
 import { DataForCalculations } from "./DataManager";
 import { RewardOffers } from "./events";
 import { FeedValueEncoder, ValueWithDecimals } from "./utils/FeedEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
-import { Bytes32 } from "./utils/sol-types";
-import { hashBytes } from "./utils/voting-utils";
-import { Address, EpochResult, Feed, MedianCalculationResult, MedianCalculationSummary, RandomCalculationResult } from "./voting-types";
 import { MerkleTreeStructs } from "./utils/MerkleTreeStructs";
+import { Address, EpochResult, Feed, MedianCalculationResult, MedianCalculationSummary, RandomCalculationResult } from "./voting-types";
 const EPOCH_BYTES = 4;
 const PRICE_BYTES = 4;
 const RANDOM_QUALITY_BYTES = 4;
 
-const RANDOM_MAX_VAL = 2n ** 256n - 1n;
+const MAX_2_256 = 2n ** 256n;
 const NON_BENCHED_RANDOM_VOTERS_MIN_COUNT = 2;
 
 /**
@@ -69,11 +66,12 @@ async function calculateRandom(data: DataForCalculations): Promise<RandomCalcula
 
   let nonBencherCount = 0;
   for (const [voter, revealData] of data.validEligibleReveals) {
-    random = random + BigInt(revealData.random) % RANDOM_MAX_VAL;
+    random = random + BigInt(revealData.random);
     if (!data.benchingWindowRevealOffenders.has(voter)) {
       nonBencherCount++;
     }
   }
+  random = random % MAX_2_256;
 
   return {
     // If random is zero, the random may still be good enough, since the real random we use in applications is 

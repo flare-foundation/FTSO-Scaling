@@ -4,6 +4,7 @@ import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { RewardClaim } from "../voting-types";
 import { Bytes32 } from "./sol-types";
+import { EncodingUtils } from "./EncodingUtils";
 
 
 /**
@@ -15,13 +16,13 @@ export function toBN(x: BN | number | string): BN {
 }
 
 
-/**
- * Hashing {@link RewardClaim} struct.
- */
-export function hashRewardClaim(data: RewardClaim): string {
-  const rewardClaimAbi: any = EncodingUtils.instance.abiInputForName("rewardClaimDefinition")!;
-  return utils.soliditySha3(defaultAbiCoder.encode([rewardClaimAbi], [hexlifyBN(data)]))!;
-}
+// /**
+//  * Hashing {@link RewardClaim} struct.
+//  */
+// export function hashRewardClaim(data: RewardClaim): string {
+//   const rewardClaimAbi: any = EncodingUtils.instance.abiInputForName("rewardClaimDefinition")!;
+//   return utils.soliditySha3(defaultAbiCoder.encode([rewardClaimAbi], [hexlifyBN(data)]))!;
+// }
 
 /**
  * Converts text representation of a symbol to bytes4.

@@ -4,18 +4,20 @@ import Web3 from "web3";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
 import { recoverSigner } from "../../../apps/ftso-data-provider/src/utils/web3";
-import { calculateFeedMedians, calculateRevealers } from "./ftso-calculation-logic";
+import { DataForCalculations } from "./DataManager";
+import { ZERO_ADDRESS } from "./configs/networks";
+import { calculateFeedMedians } from "./ftso-calculation-logic";
 import { EpochSettings } from "./utils/EpochSettings";
 import { MerkleTree } from "./utils/MerkleTree";
-import { ZERO_ADDRESS, hashRewardClaim, toBN } from "./utils/voting-utils";
+import { toBN } from "./utils/voting-utils";
 import {
   Address,
   FinalizeData,
   MedianCalculationResult,
-  RevealBitvoteData,
+  // RevealBitvoteData,
   RewardClaim,
   RewardClaimWithProof,
-  RewardOffered,
+  // RewardOffered,
   SignatureData,
   VoterRewarding,
 } from "./voting-types";
@@ -46,6 +48,22 @@ export class Penalty implements RewardClaim {
  * Collection of utility methods used for reward claim calculation.
  */
 
+
+
+// votingRoundId: number;
+// // Ordered list of submission addresses matching the order in the signing policy
+// orderedVotersSubmissionAddresses: Address[];
+// // Reveals from eligible submission addresses that match to existing commits
+// validEligibleReveals: Map<Address, IRevealData>;
+// // Submission addresses of eligible voters that committed but withheld or provided wrong reveals in the voting round
+// revealOffenders: Set<Address>;
+// // Median voting weight
+// voterMedianVotingWeights: Map<Address, bigint>;
+// // Rewarding weights
+// voterRewardingWeights: Map<Address, bigint>;
+// // Feed order for the reward epoch of the voting round id
+// feedOrder: Feed[];
+
 /**
  * @param priceEpochId
  * @param commits
@@ -56,7 +74,9 @@ export class Penalty implements RewardClaim {
  * @param voterWeights
  * @returns
  */
+/*
 export async function calculateRewards(
+  data: DataForCalculations,
   priceEpochId: number,
   commits: Map<string, string>,
   reveals: Map<string, RevealBitvoteData>,
@@ -66,12 +86,12 @@ export async function calculateRewards(
   voterWeights: Map<string, BN>,
   epochs: EpochSettings
 ): Promise<RewardClaim[]> {
-  const revealResult = await calculateRevealers(commits, reveals, voterWeights)!;
-  if (revealResult.revealers.length === 0) {
-    throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
-  }
+  // const revealResult = await calculateRevealers(commits, reveals, voterWeights)!;
+  // if (revealResult.revealers.length === 0) {
+  //   throw new Error(`No reveals for for price epoch: ${priceEpochId}.`);
+  // }
 
-  const medianResults: MedianCalculationResult[] = await calculateFeedMedians(revealResult, voterWeights, rewardOffers);
+  const medianResults: MedianCalculationResult[] = await calculateFeedMedians(data);
   const committedFailedReveal = revealResult.committedFailedReveal;
 
   let rewardedSigners: string[] = [];
@@ -92,7 +112,7 @@ export async function calculateRewards(
     epochs
   );
 }
-
+*/
 /**
  * We reward signers whose signatures were recorded in blocks preceding the finalization transaction block.
  * Note that the sender of a signature transaction may not match the author of that signature. We only want
@@ -131,10 +151,11 @@ async function getSignersToReward(
  *
  * The function must be called for sequential price epochs.
  */
+/*
 export function calculateClaimsForPriceEpoch(
   rewardEpochOffers: RewardOffered[],
   priceEpochId: number,
-  /** Can only be undefined during for the very first price epoch in FTSO. */
+  // an only be undefined during for the very first price epoch in FTSO.
   finalizerAddress: Address | undefined,
   signers: Address[],
   calculationResults: MedianCalculationResult[],
@@ -195,7 +216,9 @@ export function calculateClaimsForPriceEpoch(
 
   return generatedClaims;
 }
+*/
 
+/*
 export function generateProofsForClaims(allClaims: readonly RewardClaim[], mroot: string, claimer: Address) {
   const allHashes = allClaims.map(claim => hashRewardClaim(claim));
   const merkleTree = new MerkleTree(allHashes);
@@ -222,10 +245,11 @@ export function generateProofsForClaims(allClaims: readonly RewardClaim[], mroot
     return proof;
   }
 }
-
+*/
 /**
  * Returns customized reward offer with the share of the reward for the given price epoch.
  */
+/*
 function rewardOfferForPriceEpoch(priceEpoch: number, offer: RewardOffered, epochs: EpochSettings): RewardOffered {
   const rewardEpoch = epochs.rewardEpochIdForPriceEpochId(priceEpoch);
   let reward = offer.amount.div(toBN(epochs.rewardEpochDurationInEpochs));
@@ -266,10 +290,11 @@ function computePenalties(
 
   return penaltyClaims;
 }
-
+*/
 /**
  * Given a slotId it calculates the claims for the slot from all active pools
  */
+/*
 function calculateClaimsForOffer(
   priceEpoch: number,
   offer: RewardOffered,
@@ -422,7 +447,7 @@ function calculateClaimsForOffer(
 
   return rewardClaims;
 }
-
+*/
 /**
  * Merges claims for the same beneficiary, currency and type in the provided {@link unmergedClaims} list.
  * Applies penalties if there are any. All penalised reward amounts are allocated to the {@link BURN_ADDRESS}
@@ -538,6 +563,7 @@ function applyPenalty(claim: RewardClaim, penalty: RewardClaim): [RewardClaim | 
 /**
  * Calculates claims for all slots in the price epoch.
  */
+/*
 function claimsForSymbols(
   priceEpoch: number,
   calculationResults: MedianCalculationResult[],
@@ -565,7 +591,7 @@ function getOffersBySymbol(offers: RewardOffered[]) {
   }
   return offersBySymbol;
 }
-
+*/
 /**
  * Produces a map from currencyAddress to total reward amount for all claims
  */
@@ -581,6 +607,7 @@ function claimRewardsMap(claims: RewardClaim[]) {
 /**
  * Asserts that the sum of all offers is equal to the sum of all claims, for each currencyAddress
  */
+/*
 function assertOffersVsClaimsStats(offers: RewardOffered[], claims: RewardClaim[]) {
   const offersRewards = new Map<string, BN>();
 
@@ -600,10 +627,11 @@ function assertOffersVsClaimsStats(offers: RewardOffered[], claims: RewardClaim[
     }
   }
 }
-
+*/
 /**
  * Generates reward claims for the party that submitted the finalization transaction in the previous price epoch.
  */
+/*
 function claimsForFinalizer(finalizationOffers: RewardOffered[], finalizerAddress: Address, priceEpochId: number) {
   const claims: RewardClaim[] = [];
   for (const offer of finalizationOffers) {
@@ -618,10 +646,11 @@ function claimsForFinalizer(finalizationOffers: RewardOffered[], finalizerAddres
   }
   return claims;
 }
-
+*/
 /**
  * Generates reward claims for voters whose signatures were included the the previous epoch's finalization transaction.
  */
+/*
 function claimsForSigners(signingOffers: RewardOffered[], signers: Address[], priceEpochId: number): RewardClaim[] {
   if (signers.length == 0) {
     return generateBackClaims(signingOffers, priceEpochId);
@@ -661,7 +690,7 @@ function generateBackClaims(signingOffers: RewardOffered[], priceEpochId: number
   }
   return backClaims;
 }
-
+*/
 /**
  * Pseudo random selection based on the hash of (slotId, priceEpoch, voterAddress).
  * Used to get deterministic randomization for border cases of IQR belt.

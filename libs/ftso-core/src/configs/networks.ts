@@ -41,6 +41,11 @@ interface FtsoMerkleStructsDefinition {
    address: Address
 }
 
+interface ProtocolMerkleStructsDefinition {
+   name: "ProtocolMerkleStructs"
+   address: Address
+}
+
 export type ContractDefinitions =
    FlareSystemManagerDefinition |
    FtsoRewardOffersManagerDefinition |
@@ -48,7 +53,8 @@ export type ContractDefinitions =
    SubmissionDefinition |
    RelayDefinition |
    FlareSystemCalculatorDefinition |
-   VoterRegistryDefinition
+   VoterRegistryDefinition |
+   ProtocolMerkleStructsDefinition
 
 
 export interface NetworkContractAddresses {
@@ -60,6 +66,7 @@ export interface NetworkContractAddresses {
    FlareSystemCalculator: FlareSystemCalculatorDefinition;
    VoterRegistry: VoterRegistryDefinition;
    FtsoMerkleStructs: FtsoMerkleStructsDefinition;
+   ProtocolMerkleStructs: ProtocolMerkleStructsDefinition;
 }
 
 const TEST_CONFIG: NetworkContractAddresses = {
@@ -71,6 +78,7 @@ const TEST_CONFIG: NetworkContractAddresses = {
    FlareSystemCalculator: { name: "FlareSystemCalculator", address: "0x58F132FBB86E21545A4Bace3C19f1C05d86d7A22" },
    VoterRegistry: { name: "VoterRegistry", address: "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d" },
    FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
+   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 }
 
 type networks = "local-test" | "coston2"

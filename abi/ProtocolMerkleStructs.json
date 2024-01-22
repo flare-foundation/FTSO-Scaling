@@ -1,0 +1,93 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ProtocolMerkleStructs",
+  "sourceName": "contracts/protocol/merkle/ProtocolMerkleStructs.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint24",
+              "name": "rewardEpochId",
+              "type": "uint24"
+            },
+            {
+              "internalType": "bytes20",
+              "name": "beneficiary",
+              "type": "bytes20"
+            },
+            {
+              "internalType": "uint120",
+              "name": "amount",
+              "type": "uint120"
+            },
+            {
+              "internalType": "enum IRewardManager.ClaimType",
+              "name": "claimType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct IRewardManager.RewardClaim",
+          "name": "_claim",
+          "type": "tuple"
+        }
+      ],
+      "name": "rewardClaimStruct",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "bytes32[]",
+              "name": "merkleProof",
+              "type": "bytes32[]"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint24",
+                  "name": "rewardEpochId",
+                  "type": "uint24"
+                },
+                {
+                  "internalType": "bytes20",
+                  "name": "beneficiary",
+                  "type": "bytes20"
+                },
+                {
+                  "internalType": "uint120",
+                  "name": "amount",
+                  "type": "uint120"
+                },
+                {
+                  "internalType": "enum IRewardManager.ClaimType",
+                  "name": "claimType",
+                  "type": "uint8"
+                }
+              ],
+              "internalType": "struct IRewardManager.RewardClaim",
+              "name": "body",
+              "type": "tuple"
+            }
+          ],
+          "internalType": "struct IRewardManager.RewardClaimWithProof",
+          "name": "_proof",
+          "type": "tuple"
+        }
+      ],
+      "name": "rewardClaimWithProofStruct",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

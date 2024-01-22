@@ -1,13 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { EntityManager } from "typeorm";
-import { BaseRewardingService } from "../common/base.service";
-import { RewardClaimTypeEnum, RewardClaimUnit } from "../../dto/reward-claim.dto";
 import { ConfigService } from "@nestjs/config";
+import { EntityManager } from "typeorm";
 import { IndexerClient } from "../../../../../libs/ftso-core/src/IndexerClient";
 import { EpochSettings } from "../../../../../libs/ftso-core/src/utils/EpochSettings";
-import { calculateRewards, mergeClaims } from "../../../../../libs/ftso-core/src/reward-calculation";
-import BN from "bn.js";
 import { RewardClaim } from "../../../../../libs/ftso-core/src/voting-types";
+import { RewardClaimTypeEnum, RewardClaimUnit } from "../../dto/reward-claim.dto";
+import { BaseRewardingService } from "../common/base.service";
 
 @Injectable()
 export class FtsoRewardingService extends BaseRewardingService {
@@ -20,13 +18,15 @@ export class FtsoRewardingService extends BaseRewardingService {
     this.entityManager = manager;
     // TODO: Get real epoch setting values from smart contracts
     this.epochSettings = configService.get<EpochSettings>("epochSettings");
-    this.indexerClient = new IndexerClient(manager, this.epochSettings);
+    // this.indexerClient = new IndexerClient(manager, this.epochSettings);
   }
 
   async calculateRewardsForEpoch(rewardEpochId: number): Promise<RewardClaimUnit[]> {
+    return [];
+    /*
     const firstPriceEpoch = this.epochSettings.firstPriceEpochForRewardEpoch(rewardEpochId);
     const lastPriceEpoch = this.epochSettings.lastPriceEpochForRewardEpoch(rewardEpochId);
-
+    
     this.logger.log(
       `Calcualting rewards for reward epoch ${rewardEpochId}, first price epoch: ${firstPriceEpoch}, start time: ${this.epochSettings.priceEpochStartTimeSec(
         firstPriceEpoch
@@ -75,6 +75,7 @@ export class FtsoRewardingService extends BaseRewardingService {
 
     const merged = mergeClaims(0, allClaims);
     return merged.map(claim => this.toUnit(claim, rewardEpochId));
+    */
   }
 
   // TODO: Replace all uses of RewardClaim with RewardClaimUnit

@@ -35,6 +35,15 @@ export interface SubmissionData {
   messages: IPayloadMessage<string>[];
 }
 
+export interface FinalizationData {
+  senderAddress: Address;
+  votingEpochIdFromTimestamp: VotingEpochId; // voting round id in which the message was submitted
+  relativeTimestamp: number; // timestamp relative to the start of the voting round
+  blockNumber: number;
+  transactionIndex: number;
+  calldata: string;
+}
+
 export interface VoterData {
   submitAddress: Address;
   votingRoundId: VotingEpochId; // voting round id in which the message was submitted
@@ -508,4 +517,43 @@ export class IndexerClient {
       data: submits,
     };
   }
+
+  /**
+   * Queries indexer database for all finalization transactions on the Relay contract in a given timestamp range.
+   * It returns the result if the indexer database ensures the data availability in the given timestamp range.
+   * @param startTime 
+   * @param endTime 
+   * @returns 
+   */
+  public async getFinalizationDataInRange(
+    startTime: number,
+    endTime: number,
+  ): Promise<IndexerResponse<FinalizationData[]>> {
+    const ensureRange = await this.ensureEventRange(startTime, endTime);
+    if (ensureRange !== BlockAssuranceResult.OK) {
+      return {
+        status: ensureRange,
+        data: [],
+      };
+    }
+    const transactionsResults = await this.queryTransactions(CONTRACTS.Relay, "relay", startTime, endTime);
+    const submits: FinalizationData[] = transactionsResults.map(tx => {
+      const timestamp = tx.timestamp;
+      const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
+      return {
+        senderAddress: "0x" + tx.from_address,
+        relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
+        votingEpochIdFromTimestamp: votingEpochId,
+        transactionIndex: tx.transaction_index,
+        blockNumber: tx.block_number,
+        calldata: tx.input,
+      };
+    });
+
+    return {
+      status: ensureRange,
+      data: submits,
+    };
+  }
+ 
 }

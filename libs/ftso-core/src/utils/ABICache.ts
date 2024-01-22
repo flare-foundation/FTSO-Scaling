@@ -43,17 +43,20 @@ export class ABICache {
       [CONTRACTS.Submission.name, "submit3", undefined],
       [CONTRACTS.Submission.name, "submitSignatures", undefined],
       [CONTRACTS.FlareSystemManager.name, undefined, VotePowerBlockSelected.eventName],
-      [CONTRACTS.FlareSystemManager.name, undefined, RandomAcquisitionStarted.eventName], //  "RandomAcquisitionStarted"],
+      [CONTRACTS.FlareSystemManager.name, undefined, RandomAcquisitionStarted.eventName], 
       [CONTRACTS.FlareSystemManager.name, undefined, RewardEpochStarted.eventName],
       [CONTRACTS.VoterRegistry.name, undefined, VoterRegistered.eventName],
       [CONTRACTS.FlareSystemCalculator.name, undefined, VoterRegistrationInfo.eventName],
       [CONTRACTS.Relay.name, undefined, SigningPolicyInitialized.eventName],
+      [CONTRACTS.Relay.name, "relay", undefined],
       [CONTRACTS.FlareSystemManager.name, undefined, "SigningPolicySigned"],
       [CONTRACTS.FtsoRewardOffersManager.name, undefined, InflationRewardsOffered.eventName],
       [CONTRACTS.FtsoRewardOffersManager.name, undefined, RewardsOffered.eventName],
       [CONTRACTS.FtsoMerkleStructs.name, "feedStruct", undefined],
       [CONTRACTS.FtsoMerkleStructs.name, "randomStruct", undefined],
       [CONTRACTS.FtsoMerkleStructs.name, "feedWithProofStruct", undefined],
+      [CONTRACTS.ProtocolMerkleStructs.name, "rewardClaimStruct", undefined],
+      [CONTRACTS.ProtocolMerkleStructs.name, "rewardClaimWithProofStruct", undefined],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {

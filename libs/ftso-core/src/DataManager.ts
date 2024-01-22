@@ -1,4 +1,4 @@
-import { BlockAssuranceResult, IndexerClient, SubmissionData } from "./IndexerClient";
+import { BlockAssuranceResult, FinalizationData, IndexerClient, SubmissionData } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
@@ -50,16 +50,30 @@ export interface DataForCalculationsPartial {
   feedOrder: Feed[];
 }
 
+/*
+export interface DataForRewardCalculation {
+  dataForCalculations: DataForCalculations;
+  
+  
+}
+*/
 export interface DataForCalculations extends DataForCalculationsPartial {
   // Window in which offenses related to reveal withholding or providing wrong reveals are counted
   randomGenerationBenchingWindow: number;
   // Set of offending submission addresses in the randomGenerationBenchingWindow
   benchingWindowRevealOffenders: Set<Address>;
+  // Reward epoch
+  rewardEpoch: RewardEpoch;
 }
 
 interface CommitAndRevealSubmissionsMappingsForRange {
   votingRoundIdToCommits: Map<number, SubmissionData[]>;
   votingRoundIdToReveals: Map<number, SubmissionData[]>;
+}
+
+interface SignAndFinalizeSubmissionData {
+  signatures: SubmissionData[];
+  finalization: FinalizationData[];
 }
 
 // * query both commits and reveals from indexer in one query (in IndexerClient) for specific voting round id
@@ -138,6 +152,7 @@ export class DataManager {
         ...partialData,
         randomGenerationBenchingWindow,
         benchingWindowRevealOffenders,
+        rewardEpoch,
       } as DataForCalculations,
     };
   }
@@ -145,7 +160,7 @@ export class DataManager {
   /**
    * Creates a pair of mappings
    * 1. votingRoundId -> commit submissions, chronologically ordered
-   * 2. votingRoundId -> reveal submissions, chronologically ordered, to late filtered out
+   * 2. votingRoundId -> reveal submissions, chronologically ordered, too late filtered out
    * It covers all voting rounds in the given range. For each voting round id it
    * ensures that exactly all commit and reveal submissions are present and ordered
    * also ensures that all reveal happen in the correct time windows
@@ -207,6 +222,24 @@ export class DataManager {
       },
     };
   }
+
+  /*
+  private async getSignAndFinaliseSubmissionDataForVotingRound(
+    votingRoundId: number,
+  ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
+    const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
+      "submitSignatures",
+      EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
+      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1)
+    );
+    if (submitSignaturesSubmissionResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const signatures = this.sortSubmissionDataArray(submitSignaturesSubmissionResponse.data);
+  }
+  */
 
   /**
    * Prepares data for median calculation and rewarding.
