@@ -1,30 +1,29 @@
-import { SubmissionData } from "./IndexerClient";
 import { FullVoterRegistrationInfo, RandomAcquisitionStarted, RewardEpochStarted, RewardOffers, SigningPolicyInitialized, VotePowerBlockSelected } from "./events";
 import { rewardEpochFeedSequence } from "./ftso-calculation-logic";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export class RewardEpoch {
 
-   readonly orderedVotersSubmissionAddresses: Address[];
+   readonly orderedVotersSubmissionAddresses: Address[] = [];
    // TODO: think through the mappings!!!
 
-   signingPolicy: SigningPolicyInitialized;
+   private readonly signingPolicy: SigningPolicyInitialized;
    // delegationAddress => weight (capped WFLR)
-   delegationAddressToCappedWeight: Map<Address, bigint>;
+   readonly delegationAddressToCappedWeight = new Map<Address, bigint>;
    // identifyingAddress => info
    // Only for voters in signing policy
-   voterToRegistrationInfo: Map<Address, FullVoterRegistrationInfo>;
+   readonly voterToRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>;
    // signingAddress => identifyingAddress
-   signingAddressToVoter: Map<Address, Address>;
+   readonly signingAddressToVoter = new Map<Address, Address>;
    // submittingAddress => identifyingAddress
-   submitterToVoter: Map<Address, Address>;
+   readonly submitterToVoter = new Map<Address, Address>;
    // delegateAddress => identifyingAddress
-   delegationAddressToVoter: Map<Address, Address>;
+   readonly delegationAddressToVoter = new Map<Address, Address>;
 
-   submissionAddressToCappedWeight: Map<Address, bigint>;
-   submissionAddressToVoterRegistrationInfo: Map<Address, FullVoterRegistrationInfo>;
+   readonly submissionAddressToCappedWeight = new Map<Address, bigint>;
+   readonly submissionAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>;
 
-   _canonicalFeedOrder: Feed[]
+   private readonly _canonicalFeedOrder: Feed[]
 
    constructor(
       previousRewardEpochStartedEvent: RewardEpochStarted,
@@ -67,7 +66,6 @@ export class RewardEpoch {
 
       ///////// Data initialization /////////
       this._canonicalFeedOrder = rewardEpochFeedSequence(rewardOffers);
-      this.voterToRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
       const tmpSigningAddressToVoter = new Map<Address, Address>();
       for(let voterRegistration of fullVoterRegistrationInfo) {
          this.voterToRegistrationInfo.set(voterRegistration.voterRegistered.voter, voterRegistration);
