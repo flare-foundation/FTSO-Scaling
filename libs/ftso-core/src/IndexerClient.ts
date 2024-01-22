@@ -56,7 +56,7 @@ export interface IndexerResponse<T> {
   data?: T;
 }
 
-function queryBytesFormat(address: string): string {
+export function queryBytesFormat(address: string): string {
   return (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
 }
 
