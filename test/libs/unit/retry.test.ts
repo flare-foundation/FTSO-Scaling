@@ -1,5 +1,4 @@
-import { TimeoutError, retry, retryWithTimeout } from "../../../apps/ftso-data-provider/src/utils/retry";
-import { sleepFor } from "../../../apps/ftso-data-provider/src/utils/time";
+import { TimeoutError, retry, retryWithTimeout, sleepFor } from "../../../apps/ftso-data-provider/src/utils/retry";
 import { getTestFile } from "../../utils/getTestFile";
 import { expect, use as useChai } from "chai";
 import chaiAsPromised from "chai-as-promised";

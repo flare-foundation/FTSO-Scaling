@@ -8,8 +8,6 @@ import {
 import { ValueWithDecimals } from "../../../libs/ftso-core/src/utils/FeedEncoder";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { getTestFile } from "../../utils/getTestFile";
-import exp from "constants";
-import e from "express";
 import { RewardOffers } from "../../../libs/ftso-core/src/events";
 
 describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
@@ -404,7 +402,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           {
             rewardEpochId: 1,
             feedNames: ["0x4254430055534454", "0x4554480055534454", "0x464c520055534454", "0x5852500055534454"],
-            decimals: 6,
+            decimals: [6, 6, 6, 6],
             amount: 1000n,
             mode: 0,
             primaryBandRewardSharePPM: 500000,
@@ -486,7 +484,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           {
             rewardEpochId: 1,
             feedNames: ["0x4254430055534454", "0x4554480055534454", "0x464c520055534454"],
-            decimals: 6,
+            decimals: [6, 6, 6, 6],
             amount: 1000n,
             mode: 0,
             primaryBandRewardSharePPM: 500000,
@@ -495,7 +493,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           {
             rewardEpochId: 1,
             feedNames: ["0x464c520055534454", "0x5852500055534454"],
-            decimals: 6,
+            decimals: [6, 6, 6, 6],
             amount: 1000n,
             mode: 0,
             primaryBandRewardSharePPM: 500000,
