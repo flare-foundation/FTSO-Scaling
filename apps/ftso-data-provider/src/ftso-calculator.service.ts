@@ -8,7 +8,7 @@ import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../l
 import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
-import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
+import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
 import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
@@ -67,9 +67,9 @@ export class FtsoCalculatorService {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
-    const commitData = {
+    const commitData: ICommitData = {
       commitHash: hash,
-    } as ICommitData;
+    };
     this.votingRoundToRevealData.set(votingRoundId, revealData);
     this.logger.log(`Commit for voting round ${votingRoundId}: ${hash}`);
     const msg: IPayloadMessage<string> = {
@@ -101,25 +101,24 @@ export class FtsoCalculatorService {
 
   async getEncodedResultData(votingRoundId: number): Promise<string | undefined> {   
     const dataResponse = await this.dataManager.getDataForCalculations(votingRoundId, RANDOM_GENERATION_BENCHING_WINDOW, this.indexer_top_timeout);
-    if(dataResponse.status !== DataAvailabilityStatus.NOT_OK) {
+    if (dataResponse.status !== DataAvailabilityStatus.OK) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
       return undefined;
     }
     try {
       const result = await calculateResults(dataResponse.data);
       const merkleRoot = result.merkleTree.root;
-      const message = {
+      const message: IProtocolMessageMerkleRoot = {
         protocolId: FTSO2_PROTOCOL_ID,
         votingRoundId,
-        randomQualityScore: result.randomData.isSecure,
+        isGoodRandom: result.randomData.isSecure,
         merkleRoot,
-      } as IProtocolMessageMerkleRoot;
+      };
       return ProtocolMessageMerkleRoot.encode(message);
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
-    return undefined;
   }
 
   // async getResult(votingRoundId: number): Promise<string> {
@@ -166,17 +165,11 @@ export class FtsoCalculatorService {
     // make sure that the order of prices is in line with protocol definition
     const extractedPrices = prices.feedPriceData.map(pri => pri.price);
 
-    const data: IRevealData = {
+    return {
       prices: extractedPrices,
       feeds: supportedFeeds,
       random: Bytes32.random().toString(),
       encodedValues: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
     };
-    return data;
   }
-
-
 }
-
-
-

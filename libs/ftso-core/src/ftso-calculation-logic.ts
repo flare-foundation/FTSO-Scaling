@@ -1,6 +1,6 @@
 import { DataForCalculations } from "./DataManager";
 import { RewardOffers } from "./events";
-import { FeedValueEncoder, ValueWithDecimals } from "./utils/FeedEncoder";
+import { FeedValueEncoder, ValueWithDecimals } from "./utils/FeedValueEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 import { MerkleTreeStructs } from "./utils/MerkleTreeStructs";
 import {
@@ -13,11 +13,6 @@ import {
 } from "./voting-types";
 
 // Constants
-
-const EPOCH_BYTES = 4;
-const PRICE_BYTES = 4;
-const RANDOM_QUALITY_BYTES = 4;
-
 const MAX_2_256 = 2n ** 256n;
 const NON_BENCHED_RANDOM_VOTERS_MIN_COUNT = 2;
 
@@ -112,7 +107,7 @@ export async function calculateFeedMedians(data: DataForCalculations): Promise<M
 
   // trigger calculations for all feed
   return data.feedOrder.map((feed, feedIndex) =>
-    calculateResultsForFeed(data.votingRoundId, voters, feedValues[feedIndex], weights, feed, totalVotingWeight)
+    calculateResultsForFeed(data.votingRoundId, voters, feedValues.get(feedIndex), weights, feed, totalVotingWeight)
   );
 }
 

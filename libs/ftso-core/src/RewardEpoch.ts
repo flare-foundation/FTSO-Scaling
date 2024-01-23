@@ -119,15 +119,11 @@ export class RewardEpoch {
 
    /**
     * Checks if the given address is a valid voter in this reward epoch.
-    * The function also checks if the submission voting epoch id is greater than or equal 
-    * to the start voting round id. 
-    * Warning: this function does not check whether voting epoch id might be in some of subsequent reward epoch.
-    * That assurance should be done by the caller.
     * @param submissionData 
     * @returns 
     */
    isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
-      return !!this.submitterToVoter.get(submitAddress);
+      return this.submitterToVoter.has(submitAddress);
    }
 
    isEligibleSignerAddress(signerAddress: Address): boolean {
@@ -140,7 +136,7 @@ export class RewardEpoch {
     * @returns 
     */
    ftsoMedianVotingWeight(submissionAddress: Address): bigint {
-      if (this.isEligibleVoterSubmissionAddress(submissionAddress)) {
+      if(!this.isEligibleVoterSubmissionAddress(submissionAddress)) {
          throw new Error("Invalid submission address");
       }
       return this.submissionAddressToCappedWeight.get(submissionAddress)!;

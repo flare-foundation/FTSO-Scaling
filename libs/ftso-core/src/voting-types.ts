@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { ValueWithDecimals } from "./utils/FeedEncoder";
+import { ValueWithDecimals } from "./utils/FeedValueEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 
 export type Address = string;
