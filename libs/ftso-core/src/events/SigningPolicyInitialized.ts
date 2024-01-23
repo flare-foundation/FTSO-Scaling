@@ -1,16 +1,8 @@
 import { CONTRACTS } from "../configs/networks";
 import { decodeEvent } from "../utils/EncodingUtils";
+import { ISigningPolicy } from "../utils/SigningPolicy";
 import { Address } from "../voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
-
-export interface ISigningPolicy {
-   rewardEpochId: number;
-   startVotingRoundId: number;
-   threshold: number;
-   seed: string;
-   voters: string[];
-   weights: number[];
-}
 
 /**
  * SigningPolicyInitialized object obtained from the Relay smart contract
