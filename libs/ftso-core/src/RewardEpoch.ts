@@ -2,11 +2,21 @@ import { FullVoterRegistrationInfo, RandomAcquisitionStarted, RewardEpochStarted
 import { rewardEpochFeedSequence } from "./ftso-calculation-logic";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
+export interface VoterWeights {
+   readonly submitAddress: string;
+   readonly delegationAddress: string;
+   readonly delegationWeight: bigint;
+   readonly cappedDelegationWeight: bigint;
+   readonly feeBIPS: number;
+   readonly nodeIDs: string[];
+   readonly nodeWeights: bigint[];
+}
+
 export class RewardEpoch {
-// TODO: think through the mappings!!!
+   // TODO: think through the mappings!!!
 
    readonly orderedVotersSubmissionAddresses: Address[] = [];
-   
+
    public readonly rewardOffers: RewardOffers;
    public readonly signingPolicy: SigningPolicyInitialized;
    // delegationAddress => weight (capped WFLR)
@@ -69,18 +79,18 @@ export class RewardEpoch {
       this.rewardOffers = rewardOffers;
       this._canonicalFeedOrder = rewardEpochFeedSequence(rewardOffers);
       const tmpSigningAddressToVoter = new Map<Address, Address>();
-      for(let voterRegistration of fullVoterRegistrationInfo) {
+      for (let voterRegistration of fullVoterRegistrationInfo) {
          this.voterToRegistrationInfo.set(voterRegistration.voterRegistered.voter, voterRegistration);
          tmpSigningAddressToVoter.set(voterRegistration.voterRegistered.signingPolicyAddress, voterRegistration.voterRegistered.voter);
       }
-      for(let voterSigningAddress of signingPolicyInitializedEvent.voters) {
-         if(!tmpSigningAddressToVoter.has(voterSigningAddress)) {
+      for (let voterSigningAddress of signingPolicyInitializedEvent.voters) {
+         if (!tmpSigningAddressToVoter.has(voterSigningAddress)) {
             throw new Error("Critical error: Voter in signing policy not found in voter registration info. This should never happen.");
          }
          let voter = tmpSigningAddressToVoter.get(voterSigningAddress)!
          this.signingAddressToVoter.set(voterSigningAddress, voter);
          const fullVoterRegistrationInfo = this.voterToRegistrationInfo.get(voter);
-         if(!fullVoterRegistrationInfo) {
+         if (!fullVoterRegistrationInfo) {
             throw new Error("Critical error: Voter in signing policy not found in voter registration info. This should never happen.");
          }
          this.delegationAddressToCappedWeight.set(fullVoterRegistrationInfo.voterRegistered.delegationAddress, fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight);
@@ -103,7 +113,7 @@ export class RewardEpoch {
     * The canonical order of feeds for this reward epoch.
     * Note: consumer should not change the array in any way.
     */
-   get canonicalFeedOrder(): Feed[] {      
+   get canonicalFeedOrder(): Feed[] {
       return this._canonicalFeedOrder;
    }
 
@@ -124,8 +134,13 @@ export class RewardEpoch {
       return !!this.signingAddressToVoter.get(signerAddress);
    }
 
+   /**
+    * Returns weight for participation in median voting.
+    * @param submissionAddress 
+    * @returns 
+    */
    ftsoMedianVotingWeight(submissionAddress: Address): bigint {
-      if(this.isEligibleVoterSubmissionAddress(submissionAddress)) {
+      if (this.isEligibleVoterSubmissionAddress(submissionAddress)) {
          throw new Error("Invalid submission address");
       }
       return this.submissionAddressToCappedWeight.get(submissionAddress)!;
@@ -135,40 +150,25 @@ export class RewardEpoch {
       return this.ftsoMedianVotingWeight(submissionAddress);
    }
 
-
-//    /**
-//     * Filters out submissions that are sent by valid submitters.
-//     * The submission are first ordered by relativeTimestamp and for submissions with the 
-//     * same relativeTimestamp, by transactionIndex. For each submitAddress, only the 
-//     * last one in the order is kept. Also only submitAddress for eligible voters
-//     * in the reward epoch are kept, while others are filtered out.
-//     * @param submissionData 
-//     */
-//    filterValidSubmitters(submissionData: SubmissionData[]): SubmissionData[] {
-//       const result: SubmissionData[] = [];
-//       const submitterToLatestSubmissionData = new Map<Address, SubmissionData>();
-//       for(let submission of submissionData) {
-//          const voter = this.submitterToVoter.get(submission.submitAddress);
-//          if(!voter) {
-//             continue;
-//          }
-//          const latestSubmission = submitterToLatestSubmissionData.get(submission.submitAddress);
-//          if(!latestSubmission) {
-//             submitterToLatestSubmissionData.set(submission.submitAddress, submission);
-//             continue;
-//          }
-//          if(submission.blockNumber > latestSubmission.blockNumber) {
-//             submitterToLatestSubmissionData.set(submission.submitAddress, submission);
-//             continue;
-//          }
-//          if(submission.blockNumber === latestSubmission.blockNumber && submission.transactionIndex > latestSubmission.transactionIndex) {
-//             submitterToLatestSubmissionData.set(submission.submitAddress, submission);
-//             continue;
-//          }
-//       }
-//       for(let latestSubmission of submitterToLatestSubmissionData.values()) {
-//          result.push(latestSubmission);
-//       }
-//       return result;
-//    } 
+   /**
+    * Returns a map from submission address to voter weights information.
+    * @returns 
+    */
+   getVoterWeights(): Map<Address, VoterWeights> {
+      const result = new Map<Address, VoterWeights>();
+      this.orderedVotersSubmissionAddresses.forEach(submissionAddress => {
+         const voterRegistrationInfo = this.submissionAddressToVoterRegistrationInfo.get(submissionAddress)!;
+         const voterWeights: VoterWeights = {
+            submitAddress: voterRegistrationInfo.voterRegistered.submitAddress,
+            delegationAddress: voterRegistrationInfo.voterRegistered.delegationAddress,
+            delegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatWeight,
+            cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
+            feeBIPS: voterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS,
+            nodeIDs: voterRegistrationInfo.voterRegistrationInfo.nodeIds,
+            nodeWeights: voterRegistrationInfo.voterRegistrationInfo.nodeWeights,
+         }
+         result.set(submissionAddress, voterWeights);
+      });
+      return result;
+   }
 }

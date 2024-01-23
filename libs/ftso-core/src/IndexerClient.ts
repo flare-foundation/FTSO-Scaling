@@ -45,13 +45,6 @@ export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMess
   successfulOnChain: boolean;
 };
 
-export interface VoterData {
-  submitAddress: Address;
-  votingRoundId: VotingEpochId; // voting round id in which the message was submitted
-  commit?: IPayloadMessage<ICommitData>;
-  reveal?: IPayloadMessage<IRevealData>;
-}
-
 export interface IndexerResponse<T> {
   status: BlockAssuranceResult;
   data?: T;

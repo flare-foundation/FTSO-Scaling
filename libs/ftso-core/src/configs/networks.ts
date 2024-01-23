@@ -139,3 +139,13 @@ const randomGenerationBenchingWindow = () => {
 }
 
 export const RANDOM_GENERATION_BENCHING_WINDOW = randomGenerationBenchingWindow();
+
+const burnAddress = () => {
+   switch (process.env.NETWORK) {
+      case "local-test":
+      default:
+         return "0x000000000000000000000000000000000000dEaD";
+   }
+}
+
+export const BURN_ADDRESS = burnAddress();

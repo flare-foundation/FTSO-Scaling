@@ -80,15 +80,6 @@ export interface MedianCalculationSummary {
   readonly participatingWeight: bigint;
 }
 
-export interface VoterRewarding {
-  readonly voterAddress: string;
-  weight: BN;
-  readonly originalWeight: BN;
-  readonly pct: boolean; // gets PCT reward
-  readonly iqr: boolean; // gets IQR reward
-  readonly eligible: boolean; // is eligible for reward
-}
-
 /**
  * Reward offers 
  * Defined in FtsoRewardOffersManager.sol

@@ -4,6 +4,12 @@ import { EPOCH_SETTINGS } from "./configs/networks";
 import { SigningPolicyInitialized } from "./events";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
 
+
+export interface RewardEpochDuration {
+   startVotingRoundId: VotingEpochId;
+   endVotingRoundId: VotingEpochId;
+}
+
 /**
  * Manages reward epochs
  * 1. Enables access to correct reward epoch for each voting round
@@ -28,7 +34,7 @@ export class RewardEpochManager {
     * @param votingEpochId 
     * @returns 
     */
-   async getRewardEpoch(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
+   async getRewardEpoch(votingEpochId: VotingEpochId, partial = false): Promise<RewardEpoch | undefined> {
       const currentVotingEpochId = EPOCH_SETTINGS.votingEpochForTime(Date.now());
       if (votingEpochId > currentVotingEpochId) {
          return undefined; // future voting epoch
@@ -43,6 +49,7 @@ export class RewardEpochManager {
       }
       const lowestExpectedIndexerHistoryTime = Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
       const signingPolicyInitializedEvents = await this.indexerClient.getLatestSigningPolicyInitializedEvents(lowestExpectedIndexerHistoryTime);
+      // With a limited history the number of possible events is small. Therefore linear search is ok.
       let i = signingPolicyInitializedEvents.data!.length - 1;
       while (i >= 0) {
          const signingPolicyInitializedEvent = signingPolicyInitializedEvents.data![i];
@@ -113,6 +120,34 @@ export class RewardEpochManager {
 
       this.rewardEpochsCache.set(rewardEpochId, rewardEpoch);
       return rewardEpoch;
+   }
+
+   /**
+    * By finding the latest SigningPolicyInitialized event for reward epoch id, and a subsequent event
+    * for the next reward epoch id, it determines the start and end voting round ids for the given reward epoch id.
+    * If the events cannot be found in the database, error is thrown.
+    * @param rewardEpochId 
+    * @returns 
+    */
+   public async getRewardEpochDurationRange(rewardEpochId: number): Promise<RewardEpochDuration> {
+      const lowestExpectedIndexerHistoryTime = Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
+      const signingPolicyInitializedEventsResponse = await this.indexerClient.getLatestSigningPolicyInitializedEvents(lowestExpectedIndexerHistoryTime);
+      if (signingPolicyInitializedEventsResponse.status !== BlockAssuranceResult.OK) {
+         throw new Error("Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history");
+      }
+      for (let i = 0; i < signingPolicyInitializedEventsResponse.data!.length; i++) {
+         const signingPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i];
+         if (signingPolicyInitializedEvent.rewardEpochId === rewardEpochId) {
+            if (i === signingPolicyInitializedEventsResponse.data!.length - 1) {
+               throw new Error("Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history");
+            }
+            const nextSigningPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i + 1];
+            return {
+               startVotingRoundId: signingPolicyInitializedEvent.startVotingRoundId,
+               endVotingRoundId: nextSigningPolicyInitializedEvent.startVotingRoundId - 1
+            }
+         }
+      }
    }
 
 }

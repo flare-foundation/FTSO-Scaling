@@ -1,5 +1,5 @@
 import { BlockAssuranceResult, FinalizationData, GenericSubmissionData, IndexerClient, ParsedFinalizationData, SubmissionData } from "./IndexerClient";
-import { RewardEpoch } from "./RewardEpoch";
+import { RewardEpoch, VoterWeights } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
 import { CommitData, ICommitData } from "./utils/CommitData";
@@ -52,8 +52,6 @@ export interface DataForCalculationsPartial {
   revealOffenders: Set<Address>;
   // Median voting weight
   voterMedianVotingWeights: Map<Address, bigint>;
-  // Rewarding weights
-  voterRewardingWeights: Map<Address, bigint>;
   // Feed order for the reward epoch of the voting round id
   feedOrder: Feed[];
 }
@@ -71,6 +69,7 @@ export interface DataForRewardCalculation {
   dataForCalculations: DataForCalculations;
   signatures: Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>;
   finalizations: ParsedFinalizationData[];
+  voterWeights: Map<Address, VoterWeights>;
 }
 
 
@@ -178,6 +177,7 @@ export class DataManager {
   public async getDataForRewardCalculation(
     votingRoundId: number,
     randomGenerationBenchingWindow: number,
+    rewardEpoch: RewardEpoch
   ): Promise<DataMangerResponse<DataForRewardCalculation>> {
     const dataForCalculationsResponse = await this.getDataForCalculations(votingRoundId, randomGenerationBenchingWindow);
     if (dataForCalculationsResponse.status !== DataAvailabilityStatus.OK) {
@@ -199,6 +199,7 @@ export class DataManager {
         dataForCalculations: dataForCalculationsResponse.data,
         signatures,
         finalizations,
+        voterWeights: rewardEpoch.getVoterWeights(),
       },
     };
   }
@@ -435,7 +436,6 @@ return {
   const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmissionAddresses;
   for (const submitAddress of orderedVotersSubmissionAddresses) {
     voterMedianVotingWeights.set(submitAddress, rewardEpoch.ftsoMedianVotingWeight(submitAddress));
-    voterRewardingWeights.set(submitAddress, rewardEpoch.ftsoRewardingWeight(submitAddress));
   }
 
   const result: DataForCalculationsPartial = {
@@ -444,7 +444,6 @@ return {
     validEligibleReveals,
     revealOffenders,
     voterMedianVotingWeights,
-    voterRewardingWeights,
     feedOrder: rewardEpoch.canonicalFeedOrder,
   };
   return result;
