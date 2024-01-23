@@ -164,7 +164,7 @@ export class IndexerClient {
       .createQueryBuilder(TLPTransaction, "tx")
       .andWhere("tx.timestamp >= :startTime", { startTime })
       .andWhere("tx.to_address = :contractAddress", { contractAddress: queryBytesFormat(smartContract.address) })
-      .andWhere("tx.function_sig = :signature", { signature: functionSignature });
+      .andWhere("tx.function_sig = :signature", { signature: queryBytesFormat(functionSignature) });
     if (endTime) {
       query = query.andWhere("tx.timestamp <= :endTime", { endTime });
     }

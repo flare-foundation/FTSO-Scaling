@@ -112,7 +112,7 @@ export async function calculateFeedMedians(data: DataForCalculations): Promise<M
 
   // trigger calculations for all feed
   return data.feedOrder.map((feed, feedIndex) =>
-    calculateResultsForFeed(data.votingRoundId, voters, feedValues[feedIndex], weights, feed, totalVotingWeight)
+    calculateResultsForFeed(data.votingRoundId, voters, feedValues.get(feedIndex), weights, feed, totalVotingWeight)
   );
 }
 

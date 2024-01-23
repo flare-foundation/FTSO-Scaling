@@ -27,6 +27,7 @@ import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
+import { ProtocolMessageMerkleRoot } from "../../../libs/ftso-core/src/utils/ProtocolMessageMerkleRoot";
 
 describe("ftso-calculator.service", () => {
   const feeds: Feed[] = [
@@ -91,7 +92,7 @@ describe("ftso-calculator.service", () => {
     expect(commit.commitHash).to.be.equal(expectedCommit);
   });
 
-  it.skip("should compute results", async () => {
+  it("should compute results", async () => {
     const rewardEpochId = 1;
     await setUpRewardEpoch(rewardEpochId);
 
@@ -138,8 +139,11 @@ describe("ftso-calculator.service", () => {
 
     console.log("Current voting epoch " + epochSettings.votingEpochForTimeSec(Date.now() / 1000));
 
+    const encodedResult = await service.getEncodedResultData(votingRound);
+    const result = ProtocolMessageMerkleRoot.decode(encodedResult);
 
-    const results = await service.getEncodedResultData(votingRound);
+    expect(result.votingRoundId).to.be.equal(votingRound);
+    expect(result.randomQualityScore).to.be.equal(false);
   });
 
   class MockDB {

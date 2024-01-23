@@ -5,17 +5,17 @@ import { MedianCalculationResult, RandomCalculationResult } from "../voting-type
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 export interface FeedResult {
-   votingRoundId: number;
-   name: string;
-   value: number;
-   turnoutBIPS: number;
-   decimals: number;
+   readonly votingRoundId: number;
+   readonly name: string; // Needs to be 0x-prefixed for abi encoding
+   readonly value: number;
+   readonly turnoutBIPS: number;
+   readonly decimals: number;
 }
 
 export interface RandomResult {
-   votingRoundId: number;
-   value: string;  // 0x-prefixed bytes32 encoded uint256
-   isSecure: boolean;
+   readonly votingRoundId: number;
+   readonly value: string;  // 0x-prefixed bytes32 encoded uint256
+   readonly isSecure: boolean;
 }
 
 export namespace MerkleTreeStructs {
@@ -34,7 +34,7 @@ export namespace MerkleTreeStructs {
    export function fromMedianCalculationResult(medianCalculationResult: MedianCalculationResult): FeedResult {
       return {
          votingRoundId: medianCalculationResult.votingRoundId,
-         name: medianCalculationResult.feed.name,
+         name: "0x" + medianCalculationResult.feed.name,
          value: medianCalculationResult.data.finalMedianPrice.value,
          turnoutBIPS: Number((medianCalculationResult.data.participatingWeight * 10000n)/medianCalculationResult.totalVotingWeight),
          decimals: medianCalculationResult.feed.decimals,
