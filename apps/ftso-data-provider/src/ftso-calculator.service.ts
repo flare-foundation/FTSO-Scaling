@@ -8,7 +8,7 @@ import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../l
 import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
-import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedEncoder";
+import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
 import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";

@@ -3,10 +3,11 @@ import { Feed } from "../voting-types";
 export interface ValueWithDecimals {
   readonly isEmpty: boolean;
   readonly value: number; // Never a float
-  readonly decimals: number;
+  readonly decimals: number; //
 }
 
 const EMPTY_FEED_VALUE = "".padStart(8, "0");
+
 export namespace FeedValueEncoder {
   /**
    * Encodes price to a vector of 4-byte Excess-2^31 formated values combined in a single hex string.
@@ -17,11 +18,11 @@ export namespace FeedValueEncoder {
     if (prices.length !== feeds.length) {
       throw new Error(`Number of prices (${prices.length}) does not match number of feeds (${feeds.length})`);
     }
-    let result = prices.map(price => {
+    const result = prices.map((price, index) => {
       if (price === undefined) {
         return EMPTY_FEED_VALUE; // undefined value is encoded as 0
       }
-      let value = Math.round(price * 10 ** feeds[0].decimals) + 2 ** 31;
+      const value = Math.round(price * 10 ** feeds[index].decimals) + 2 ** 31;
       if (value <= 0 || value >= 2 ** 32) {
         throw new Error(`Price ${price} is out of range`);
       }
@@ -40,37 +41,37 @@ export namespace FeedValueEncoder {
     if (unPrefixedPrices.length % 8 !== 0) {
       throw new Error(`Invalid packed prices length: ${unPrefixedPrices.length}: must be multiple of 8`);
     }
-    let feedPrice = [...unPrefixedPrices.slice(2).match(/(.{1,8})/g)];
+    let feedPrice = [...unPrefixedPrices.match(/(.{1,8})/g)];
     feedPrice = padEndArray(feedPrice, feeds.length, EMPTY_FEED_VALUE);
-    return feedPrice.map(hex => {
+    return feedPrice.map((hex, index) => {
       const isEmpty = hex === EMPTY_FEED_VALUE;
       const result: ValueWithDecimals = {
         isEmpty,
         value: isEmpty ? 0 : parseInt(hex, 16) - 2 ** 31,
-        decimals: feeds[0].decimals,
+        decimals: feeds[index].decimals,
       };
       return result;
     });
   }
 
   export function emptyFeed(decimals: number): ValueWithDecimals {
-   return {
+    return {
       isEmpty: true,
       value: 0,
-      decimals: decimals
-   }
+      decimals: decimals,
+    };
   }
 
   export function emptyFeeds(feeds: Feed[]): ValueWithDecimals[] {
-      return feeds.map(feed => emptyFeed(feed.decimals));
+    return feeds.map(feed => emptyFeed(feed.decimals));
   }
 
-  export function feedForValue(value: number, decimals: number) {      
-      return {
-         isEmpty: true,
-         value,
-         decimals
-      }
+  export function feedForValue(value: number, decimals: number) {
+    return {
+      isEmpty: true,
+      value,
+      decimals,
+    };
   }
 
   function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {

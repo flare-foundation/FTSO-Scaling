@@ -1,6 +1,6 @@
 import { DataForCalculations } from "./DataManager";
 import { RewardOffers } from "./events";
-import { FeedValueEncoder, ValueWithDecimals } from "./utils/FeedEncoder";
+import { FeedValueEncoder, ValueWithDecimals } from "./utils/FeedValueEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 import { MerkleTreeStructs } from "./utils/MerkleTreeStructs";
 import {

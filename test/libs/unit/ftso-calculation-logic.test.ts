@@ -5,7 +5,7 @@ import {
   rewardEpochFeedSequence,
   sortFeedWithValuesToCanonicalOrder,
 } from "../../../libs/ftso-core/src/ftso-calculation-logic";
-import { ValueWithDecimals } from "../../../libs/ftso-core/src/utils/FeedEncoder";
+import { ValueWithDecimals } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { getTestFile } from "../../utils/getTestFile";
 import { RewardOffers } from "../../../libs/ftso-core/src/events";
