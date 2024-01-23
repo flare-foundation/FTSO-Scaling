@@ -67,9 +67,9 @@ export class FtsoCalculatorService {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
-    const commitData = {
+    const commitData: ICommitData = {
       commitHash: hash,
-    } as ICommitData;
+    };
     this.votingRoundToRevealData.set(votingRoundId, revealData);
     this.logger.log(`Commit for voting round ${votingRoundId}: ${hash}`);
     const msg: IPayloadMessage<string> = {
@@ -108,12 +108,12 @@ export class FtsoCalculatorService {
     try {
       const result = await calculateResults(dataResponse.data);
       const merkleRoot = result.merkleTree.root;
-      const message = {
+      const message: IProtocolMessageMerkleRoot = {
         protocolId: FTSO2_PROTOCOL_ID,
         votingRoundId,
         randomQualityScore: result.randomData.isSecure,
         merkleRoot,
-      } as IProtocolMessageMerkleRoot;
+      };
       return ProtocolMessageMerkleRoot.encode(message);
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
@@ -166,17 +166,11 @@ export class FtsoCalculatorService {
     // make sure that the order of prices is in line with protocol definition
     const extractedPrices = prices.feedPriceData.map(pri => pri.price);
 
-    const data: IRevealData = {
+    return {
       prices: extractedPrices,
       feeds: supportedFeeds,
       random: Bytes32.random().toString(),
       encodedValues: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
     };
-    return data;
   }
-
-
 }
-
-
-

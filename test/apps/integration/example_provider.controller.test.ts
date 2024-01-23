@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { ExampleProviderService } from "../../apps/example_provider/src/example-provider-service";
-import { ExampleProviderController } from "../../apps/example_provider/src/example-provider.controller";
-import { CcxtFeed, CCXT_FALLBACK_PRICE } from "../../apps/example_provider/src/price-feeds/ccxt-provider-service";
-import { RandomFeed } from "../../apps/example_provider/src/price-feeds/random-feed";
+import { ExampleProviderService } from "../../../apps/example_provider/src/example-provider-service";
+import { ExampleProviderController } from "../../../apps/example_provider/src/example-provider.controller";
+import { CcxtFeed, CCXT_FALLBACK_PRICE } from "../../../apps/example_provider/src/price-feeds/ccxt-provider-service";
+import { RandomFeed } from "../../../apps/example_provider/src/price-feeds/random-feed";
 
 describe("ExampleProviderController Random", () => {
   let exampleProviderController: ExampleProviderController;

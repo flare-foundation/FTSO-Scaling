@@ -1,4 +1,5 @@
 import { Feed } from "../voting-types";
+import { unPrefix0x } from "./EncodingUtils";
 import { FeedValueEncoder, ValueWithDecimals } from "./FeedEncoder";
 import { IPayloadMessage } from "./PayloadMessage";
 
@@ -11,11 +12,11 @@ export interface IRevealData {
 }
 
 export namespace RevealData {
-   export function encode(revealData: IRevealData, endStrip = true): string {
+   export function encode(revealData: IRevealData): string {
       if (!/^0x[0-9a-f]{64}$/i.test(revealData.random)) {
          throw Error(`Invalid random format: ${revealData.random}`);
       }
-      return revealData.random + revealData.encodedValues ? revealData.encodedValues.slice(2) : FeedValueEncoder.encode(revealData.prices, revealData.feeds, endStrip);
+      return revealData.random + unPrefix0x(revealData.encodedValues);
    }
 
    export function decode(encoded: string, feeds?: Feed[]): IRevealData {
