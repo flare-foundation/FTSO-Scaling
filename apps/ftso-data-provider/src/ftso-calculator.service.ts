@@ -111,7 +111,7 @@ export class FtsoCalculatorService {
       const message: IProtocolMessageMerkleRoot = {
         protocolId: FTSO2_PROTOCOL_ID,
         votingRoundId,
-        randomQualityScore: result.randomData.isSecure,
+        isGoodRandom: result.randomData.isSecure,
         merkleRoot,
       };
       return ProtocolMessageMerkleRoot.encode(message);
@@ -119,7 +119,6 @@ export class FtsoCalculatorService {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
-    return undefined;
   }
 
   // async getResult(votingRoundId: number): Promise<string> {

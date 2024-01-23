@@ -13,11 +13,6 @@ import {
 } from "./voting-types";
 
 // Constants
-
-const EPOCH_BYTES = 4;
-const PRICE_BYTES = 4;
-const RANDOM_QUALITY_BYTES = 4;
-
 const MAX_2_256 = 2n ** 256n;
 const NON_BENCHED_RANDOM_VOTERS_MIN_COUNT = 2;
 

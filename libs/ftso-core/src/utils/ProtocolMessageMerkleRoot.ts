@@ -2,7 +2,7 @@
 export interface IProtocolMessageMerkleRoot {
   protocolId: number;
   votingRoundId: number;
-  randomQualityScore: boolean;
+  isGoodRandom: boolean;
   merkleRoot: string;
 }
 
@@ -41,7 +41,7 @@ export namespace ProtocolMessageMerkleRoot {
       "0x" +
       message.protocolId.toString(16).padStart(2, "0") +
       message.votingRoundId.toString(16).padStart(8, "0") +
-      (message.randomQualityScore ? 1 : 0).toString(16).padStart(2, "0") +
+      (message.isGoodRandom ? 1 : 0).toString(16).padStart(2, "0") +
       message.merkleRoot.slice(2)
     ).toLowerCase();
   }
@@ -60,11 +60,11 @@ export namespace ProtocolMessageMerkleRoot {
     const protocolId = parseInt(encodedMessageInternal.slice(0, 2), 16);
     const votingRoundId = parseInt(encodedMessageInternal.slice(2, 10), 16);
     const encodedRandomQualityScore = encodedMessageInternal.slice(10, 12);
-    let randomQualityScore = false;
+    let isGoodRandom = false;
     if (encodedRandomQualityScore === "00") {
-      randomQualityScore = false;
+      isGoodRandom = false;
     } else if (encodedRandomQualityScore === "01") {
-      randomQualityScore = true;
+      isGoodRandom = true;
     } else {
       throw Error("Invalid random quality score");
     }
@@ -72,7 +72,7 @@ export namespace ProtocolMessageMerkleRoot {
     return {
       protocolId,
       votingRoundId,
-      randomQualityScore,
+      isGoodRandom,
       merkleRoot,
     };
   }
@@ -87,7 +87,7 @@ export namespace ProtocolMessageMerkleRoot {
     return (
       a.protocolId === b.protocolId &&
       a.votingRoundId === b.votingRoundId &&
-      a.randomQualityScore === b.randomQualityScore &&
+      a.isGoodRandom === b.isGoodRandom &&
       a.merkleRoot === b.merkleRoot
     );
   }
@@ -99,6 +99,6 @@ export namespace ProtocolMessageMerkleRoot {
    * @returns 
    */
   export function print(message: IProtocolMessageMerkleRoot) {
-    return `(${message.protocolId}, ${message.votingRoundId}, ${message.randomQualityScore}, ${message.merkleRoot})`
+    return `(${message.protocolId}, ${message.votingRoundId}, ${message.isGoodRandom}, ${message.merkleRoot})`
   } 
 }

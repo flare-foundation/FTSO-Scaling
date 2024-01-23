@@ -287,3 +287,7 @@ function randomHash() {
   }
   return keccak256(array).slice(2);
 }
+
+export function curretTimeSec(): number {
+  return Math.floor(Date.now() / 1000);
+}
