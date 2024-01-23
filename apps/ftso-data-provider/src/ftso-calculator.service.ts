@@ -101,7 +101,7 @@ export class FtsoCalculatorService {
 
   async getEncodedResultData(votingRoundId: number): Promise<string | undefined> {   
     const dataResponse = await this.dataManager.getDataForCalculations(votingRoundId, RANDOM_GENERATION_BENCHING_WINDOW, this.indexer_top_timeout);
-    if(dataResponse.status !== DataAvailabilityStatus.NOT_OK) {
+    if (dataResponse.status !== DataAvailabilityStatus.OK) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
       return undefined;
     }

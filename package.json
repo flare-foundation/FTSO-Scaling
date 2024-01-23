@@ -96,7 +96,8 @@
       "{apps,libs}/**/!(*.test|*.spec|*.dto).[tj]s?(x)"
     ],
     "exclude": [
-      "src/_tests_/**/*.*"
+      "apps/**/main.ts",
+      "apps/**/*.module.ts"
     ],
     "reporter": [
       "html",

@@ -8,7 +8,7 @@ import {
   VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
-import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
+import { EncodingUtils, unPrefix0x } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { keccak256 } from "ethers";
 import { toHex } from "../../libs/ftso-core/src/utils/voting-utils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
@@ -244,19 +244,28 @@ function generateEvent(
   return e;
 }
 
-function generateTx(from: string, to: string, blockNo: number, timestamp: number, payload: string) {
+export function generateTx(
+  from: string,
+  to: string,
+  functionSig: string,
+  blockNo: number,
+  timestamp: number,
+  payload: string
+) {
   const tx = new TLPTransaction();
   tx.block_number = blockNo;
-  tx.block_hash = randomHash();
+  tx.block_hash = queryBytesFormat(randomHash());
   tx.transaction_index = 0;
-  tx.from_address = from;
-  tx.to_address = to;
-  tx.input = payload;
+  tx.from_address = queryBytesFormat(from);
+  tx.to_address = queryBytesFormat(to);
+  tx.input = queryBytesFormat(payload);
   tx.status = 1;
-  tx.value = toHex(1);
-  tx.gas_price = toHex(1000);
+  tx.value = queryBytesFormat(toHex(1));
+  tx.gas_price = queryBytesFormat(toHex(1000));
   tx.gas = 10000;
   tx.timestamp = timestamp;
+  tx.hash = queryBytesFormat(randomHash());
+  tx.function_sig = queryBytesFormat(functionSig);
   return tx;
 }
 
@@ -272,5 +281,9 @@ export function generateRandomAddress(): string {
 }
 
 function randomHash() {
-  return keccak256(random.next().toString(16)).slice(2);
+  const array = new Uint8Array(40);
+  for (let i = 0; i < array.length; i++) {
+    array[i] = random.nextInt(0, 255);
+  }
+  return keccak256(array).slice(2);
 }
