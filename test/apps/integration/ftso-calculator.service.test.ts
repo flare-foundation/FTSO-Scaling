@@ -150,7 +150,7 @@ describe("ftso-calculator.service", () => {
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
     const epochEvents = await generateRewardEpochEvents(
       epochSettings,
-      feeds.map(f => f.name),
+      feeds,
       offerCount,
       rewardEpochId,
       voters

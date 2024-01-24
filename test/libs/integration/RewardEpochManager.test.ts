@@ -11,9 +11,14 @@ import { generateVoters, generateRewardEpochEvents, generateState, TestVoter } f
 import { getDataSource } from "../../utils/db";
 import { DataSource, EntityManager } from "typeorm";
 import { expect } from "chai";
+import { Feed } from "../../../libs/ftso-core/src/voting-types";
 
 describe("RewardEpochManager", () => {
-  const feeds = ["0000000000000000", "0000000000000001"];
+  const feeds: Feed[] = [
+    { name: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
+    { name: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
+    { name: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
+  ];
   const voters: TestVoter[] = generateVoters(4);
   const offerCount = 2;
   const epochSettings = EPOCH_SETTINGS;
