@@ -6,7 +6,6 @@ import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManag
 import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
-import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { IPayloadMessage, PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
 import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
@@ -24,10 +23,6 @@ export class FtsoCalculatorService {
   // connections to the indexer and price provider
   private readonly indexerClient: IndexerClient;
   private readonly priceProviderClient: Api<unknown>;
-
-  // epoch settings configuration
-  private readonly epochSettings: EpochSettings;
-
   // TODO: Need to clean up old epoch data so the map doesn't grow indefinitely
   private readonly votingRoundToRevealData = new Map<number, IRevealData>();
 
@@ -41,7 +36,6 @@ export class FtsoCalculatorService {
     manager: EntityManager,
     configService: ConfigService
   ) {
-    this.epochSettings = configService.get<EpochSettings>("epochSettings")!;
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     this.indexerClient = new IndexerClient(manager, required_history_sec);
