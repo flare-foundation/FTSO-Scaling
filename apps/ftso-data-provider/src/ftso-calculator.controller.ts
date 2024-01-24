@@ -12,7 +12,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoCalculatorService } from "./ftso-calculator.service";
-import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
+import { IPayloadMessage, PayloadMessage } from "../../../libs/fsp-utils/PayloadMessage";
 import { ConfigService } from "@nestjs/config";
 import { FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
 

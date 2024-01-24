@@ -149,6 +149,7 @@ function generateRewards(offerCount: number, feeds: string[], rewardEpochId: num
           feedNamesEncoded: "0x" + feeds.join(""),
           decimals: "0x" + feeds.map(() => "01").join(""),
           amount: BigInt(1000),
+          minimalThresholdBIPS: 100,
           mode: 0,
           primaryBandRewardSharePPM: 10000,
           secondaryBandWidthPPMsEncoded: "0x" + feeds.map(() => "002710").join(""), // 10_000
