@@ -193,13 +193,14 @@ export class DataManager {
     }
     const signatures = this.extractSignatures(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.signatures, FTSO2_PROTOCOL_ID);
     const finalizations = this.extractFinalizations(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.finalizations, FTSO2_PROTOCOL_ID);
+    const voterWeights = rewardEpoch.getVoterWeights();
     return {
       status: DataAvailabilityStatus.OK,
       data: {
         dataForCalculations: dataForCalculationsResponse.data,
         signatures,
         finalizations,
-        voterWeights: rewardEpoch.getVoterWeights(),
+        voterWeights
       },
     };
   }

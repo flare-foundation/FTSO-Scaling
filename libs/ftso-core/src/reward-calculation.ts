@@ -1,17 +1,16 @@
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
+import { DataAvailabilityStatus, DataForRewardCalculation, DataManager } from "./DataManager";
 import { RewardEpoch, VoterWeights } from "./RewardEpoch";
+import { RewardEpochManager } from "./RewardEpochManager";
+import { InflationRewardsOffered, RewardOffers } from "./events";
+import { calculateFeedMedians } from "./ftso-calculation-logic";
 import { IPartialRewardOffer, PartialRewardOffer } from "./utils/PartialRewardOffer";
-import { ClaimType, IPartialRewardClaim, IRewardClaim, RewardClaim } from "./utils/RewardClaim";
+import { ClaimType, IPartialRewardClaim, RewardClaim } from "./utils/RewardClaim";
 import {
   Address,
   MedianCalculationResult
 } from "./voting-types";
-import { DataAvailabilityStatus, DataForRewardCalculation, DataManager } from "./DataManager";
-import { calculateFeedMedians } from "./ftso-calculation-logic";
-import { RewardEpochManager } from "./RewardEpochManager";
-import { InflationRewardsOffered, RewardOffers } from "./events";
-import { start } from "repl";
 
 
 /**
@@ -63,6 +62,15 @@ export function splitRewardOffer(offer: IPartialRewardOffer, SIGNING_BIPS = 10_0
  */
 export function rewardDistributionWeight(voterWeights: VoterWeights): bigint {
   return voterWeights.cappedDelegationWeight;
+}
+
+/**
+ * Penalty factor for reveal withdrawal. Given a weight relative share of an partial reward offer's amount
+ * the value is multiplied by this factor to get the penalty amount.
+ * @returns 
+ */
+export function penaltyFactor(): bigint {
+  return 10n;
 }
 
 export function distributeInflationRewardOfferToFeeds(inflationRewardOffer: InflationRewardsOffered): IPartialRewardOffer[] {
@@ -137,6 +145,10 @@ export async function rewardOffersForVotingRound(
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
+  const totalRewardedWeight = [...rewardDataForCalculationResponse.data.voterWeights.values()]
+    .map(voterWeight => rewardDistributionWeight(voterWeight))
+    .reduce((a, b) => a + b, 0n);
+
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
   const medianResults: MedianCalculationResult[] = await calculateFeedMedians(rewardDataForCalculations.dataForCalculations);
   // feedName => medianResult
@@ -156,10 +168,10 @@ export async function rewardOffersForVotingRound(
     }
     for (const offer of offers) {
       const splitOffers = splitRewardOffer(offer);
-      const medianRewardClaims = calculateMedianRewardClaimsForPartialOffer(splitOffers.medianRewardOffer, medianResult, rewardDataForCalculations.voterWeights);      
+      const medianRewardClaims = calculateMedianRewardClaimsForPartialOffer(splitOffers.medianRewardOffer, medianResult, rewardDataForCalculations.voterWeights);
       const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations);
       const finalizationRewardClaims = calculateFinalizationRewards(splitOffers.finalizationRewardOffer, rewardDataForCalculations);
-      const penalties = calculateRevealWithdrawalPenalties(rewardDataForCalculations);
+      const penalties = calculateRevealWithdrawalPenalties(offer, totalRewardedWeight, rewardDataForCalculations);
       allRewardClaims = RewardClaim.merge([...allRewardClaims, ...medianRewardClaims, ...signingRewardClaims, ...finalizationRewardClaims, ...penalties]);
     }
   }
@@ -365,10 +377,20 @@ export function calculateFinalizationRewards(
 }
 
 export function calculateRevealWithdrawalPenalties(
+  fullOffer: IPartialRewardOffer,
+  totalRewardedWeight: bigint,
   data: DataForRewardCalculation,
 ): IPartialRewardClaim[] {
-  // TODO
-  return [];
+  return [...data.dataForCalculations.revealOffenders].map(submitAddress => {
+    const voterWeight = rewardDistributionWeight(data.voterWeights.get(submitAddress)!);
+    const penalty = - (voterWeight * fullOffer.amount) / totalRewardedWeight * penaltyFactor();
+    const penaltyClaim: IPartialRewardClaim = {
+      beneficiary: submitAddress.toLowerCase(),
+      amount: penalty,
+      claimType: ClaimType.DIRECT,
+    };
+    return penaltyClaim;
+  })
 }
 
 

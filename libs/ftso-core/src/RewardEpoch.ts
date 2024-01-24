@@ -101,11 +101,11 @@ export class RewardEpoch {
       }
    }
 
-   get rewardEpochId(): RewardEpochId {
+   public get rewardEpochId(): RewardEpochId {
       return this.signingPolicy.rewardEpochId;
    }
 
-   get startVotingRoundId(): VotingEpochId {
+   public get startVotingRoundId(): VotingEpochId {
       return this.signingPolicy.startVotingRoundId;
    }
 
@@ -113,7 +113,7 @@ export class RewardEpoch {
     * The canonical order of feeds for this reward epoch.
     * Note: consumer should not change the array in any way.
     */
-   get canonicalFeedOrder(): Feed[] {
+   public get canonicalFeedOrder(): Feed[] {
       return this._canonicalFeedOrder;
    }
 
@@ -122,11 +122,11 @@ export class RewardEpoch {
     * @param submissionData 
     * @returns 
     */
-   isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
+   pubic isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
       return this.submitterToVoter.has(submitAddress);
    }
 
-   isEligibleSignerAddress(signerAddress: Address): boolean {
+   public isEligibleSignerAddress(signerAddress: Address): boolean {
       return !!this.signingAddressToVoter.get(signerAddress);
    }
 
@@ -135,14 +135,14 @@ export class RewardEpoch {
     * @param submissionAddress 
     * @returns 
     */
-   ftsoMedianVotingWeight(submissionAddress: Address): bigint {
+   public ftsoMedianVotingWeight(submissionAddress: Address): bigint {
       if(!this.isEligibleVoterSubmissionAddress(submissionAddress)) {
          throw new Error("Invalid submission address");
       }
       return this.submissionAddressToCappedWeight.get(submissionAddress)!;
    }
 
-   ftsoRewardingWeight(submissionAddress: Address): bigint {
+   public ftsoRewardingWeight(submissionAddress: Address): bigint {
       return this.ftsoMedianVotingWeight(submissionAddress);
    }
 
@@ -150,7 +150,7 @@ export class RewardEpoch {
     * Returns a map from submission address to voter weights information.
     * @returns 
     */
-   getVoterWeights(): Map<Address, VoterWeights> {
+   public getVoterWeights(): Map<Address, VoterWeights> {
       const result = new Map<Address, VoterWeights>();
       this.orderedVotersSubmissionAddresses.forEach(submissionAddress => {
          const voterRegistrationInfo = this.submissionAddressToVoterRegistrationInfo.get(submissionAddress)!;
@@ -167,4 +167,12 @@ export class RewardEpoch {
       });
       return result;
    }
+
+   // public weightedRandomSubmitterChoice(seed: string): Address {
+
+   // }
+
+   // public chooseSubmitterSetForWeight(seed: string, threshold: bigint): Address[] {
+
+   // }
 }
