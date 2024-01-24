@@ -23,7 +23,9 @@ describe("ExampleProviderController Random", () => {
   });
 });
 
-describe("ExampleProviderController CCXT", () => {
+// Ignoring for now as querying binance fails in CI
+// "ExchangeNotAvailable: binance GET https://api.binance.com/api/v3/exchangeInfo 451"
+describe.skip("ExampleProviderController CCXT", () => {
   let exampleProviderController: ExampleProviderController;
 
   beforeEach(async () => {
