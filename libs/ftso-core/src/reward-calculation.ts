@@ -159,7 +159,7 @@ export async function rewardOffersForVotingRound(
       const medianRewardClaims = calculateMedianRewardClaimsForPartialOffer(splitOffers.medianRewardOffer, medianResult, rewardDataForCalculations.voterWeights);      
       const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations);
       const finalizationRewardClaims = calculateFinalizationRewards(splitOffers.finalizationRewardOffer, rewardDataForCalculations);
-      const penalties = calculateRevealWithdrawalPenalties(splitOffers.finalizationRewardOffer, rewardDataForCalculations);
+      const penalties = calculateRevealWithdrawalPenalties(rewardDataForCalculations);
       allRewardClaims = RewardClaim.merge([...allRewardClaims, ...medianRewardClaims, ...signingRewardClaims, ...finalizationRewardClaims, ...penalties]);
     }
   }
@@ -365,7 +365,6 @@ export function calculateFinalizationRewards(
 }
 
 export function calculateRevealWithdrawalPenalties(
-  offer: IPartialRewardOffer,
   data: DataForRewardCalculation,
 ): IPartialRewardClaim[] {
   // TODO
