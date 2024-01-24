@@ -12,8 +12,8 @@ cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Fl
 
 cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/PayloadMessage.ts libs/fsp-utils/src/PayloadMessage.ts
 cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/SigningPolicy.ts libs/fsp-utils/src/SigningPolicy.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ProtocolMessageMerkleRoot.ts libs/fsp-utils//src/ProtocolMessageMerkleRoot.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ECDSASignature.ts libs/fsp-utils//src/ECDSASignature.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ECDSASignatureWithIndex.ts libs/fsp-utils//src/ECDSASignatureWithIndex.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/RelayMessage.ts libs/fsp-utils//src/RelayMessage.ts
+cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ProtocolMessageMerkleRoot.ts libs/fsp-utils/src/ProtocolMessageMerkleRoot.ts
+cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ECDSASignature.ts libs/fsp-utils/src/ECDSASignature.ts
+cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ECDSASignatureWithIndex.ts libs/fsp-utils/src/ECDSASignatureWithIndex.ts
+cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/RelayMessage.ts libs/fsp-utils/src/RelayMessage.ts
 cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/SignaturePayload.ts libs/fsp-utils/src/SignaturePayload.ts
