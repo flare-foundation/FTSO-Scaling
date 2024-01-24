@@ -4,7 +4,7 @@ import { RewardEpochManager } from "../RewardEpochManager";
 import { FTSO2_PROTOCOL_ID } from "../configs/networks";
 import { calculateFeedMedians } from "../ftso-calculation-logic";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
-import { IPartialRewardClaim, RewardClaim } from "../utils/RewardClaim";
+import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import {
   MedianCalculationResult
 } from "../voting-types";
@@ -32,7 +32,7 @@ export async function rewardClaimsForRewardEpoch(
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
   rewardEpochManager: RewardEpochManager
-) {
+): Promise<IRewardClaim[]> {
   // Reward epoch definitions
   const rewardEpoch = await rewardEpochManager.getRewardEpoch(rewardEpochId);
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
@@ -53,7 +53,7 @@ export async function rewardClaimsForRewardEpoch(
     );
     allRewardClaims = RewardClaim.merge([...allRewardClaims, ...rewardClaims]);
   }
-  return allRewardClaims;
+  return RewardClaim.convertToRewardClaims(rewardEpochId, allRewardClaims);
 }
 
 /**
