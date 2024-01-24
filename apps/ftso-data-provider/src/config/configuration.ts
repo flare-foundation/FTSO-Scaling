@@ -1,6 +1,3 @@
-import fs from "fs";
-import { EpochSettings } from "../../../../libs/ftso-core/src/utils/EpochSettings";
-
 export interface IConfig {
   // server port (PORT)
   port: number;
@@ -15,13 +12,8 @@ export interface IConfig {
   required_indexer_history_time_sec: number;
   indexer_top_timeout: number;
 
-  epochSettings: EpochSettings;
-
   // Price Provider url (PRICE_PROVIDER_URL)
   price_provider_url: string;
-  
-  // Testing only
-  protocol_id?: number;
 }
 
 export default () => {
@@ -32,23 +24,6 @@ export default () => {
 
   const api_keys = process.env.API_KEYS?.split(",") || [""];
 
-  let epochSettings: EpochSettings;
-
-  if (process.env.EPOCH_SETTINGS_FILE !== undefined) {
-    const rw = JSON.parse(fs.readFileSync(process.env.EPOCH_SETTINGS_FILE, "utf8"));
-    epochSettings = Object.assign(new EpochSettings(0, 0, 0, 0, 0), rw);
-    console.log(`Loaded epoch settings: ${JSON.stringify(epochSettings)}`);
-  } else {
-    epochSettings = new EpochSettings(
-      parseInt(process.env.ES_FIRST_VOTING_ROUND_START_TS) || 1704250616,
-      parseInt(process.env.ES_VOTING_EPOCH_DURATION_SECONDS) || 20,
-      parseInt(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID) || 1000,
-      parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS) || 5,
-      parseInt(process.env.ES_REVEAL_DEADLINE_SECONDS) || 10
-      // TODO: Throw if any of these are undefined instead of defaulting to values
-    );
-  }
-
   const config: IConfig = {
     port: parseInt(process.env.PORT || "3000"),
     api_keys,
@@ -57,11 +32,9 @@ export default () => {
     db_user: process.env.DB_USERNAME || "root",
     db_pass: process.env.DB_PASSWORD || "root",
     db_name: process.env.DB_NAME || "flare_top_level_indexer",
-    epochSettings: epochSettings,
     price_provider_url: process.env.PRICE_PROVIDER_BASE_URL,
-    protocol_id: parseInt(process.env.PROTOCOL_ID || "1"),
-    required_indexer_history_time_sec: parseInt(process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC) || 14*24*60*60, // 14 days
-    indexer_top_timeout: parseInt(process.env.INDEXER_TOP_TIMEOUT) || 5
+    required_indexer_history_time_sec: parseInt(process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC) || 14 * 24 * 60 * 60, // 14 days
+    indexer_top_timeout: parseInt(process.env.INDEXER_TOP_TIMEOUT) || 5,
   };
   return config;
 };
