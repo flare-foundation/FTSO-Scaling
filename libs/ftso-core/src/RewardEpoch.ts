@@ -33,8 +33,13 @@ export class RewardEpoch {
 
    readonly submissionAddressToCappedWeight = new Map<Address, bigint>;
    readonly submissionAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>;
+   readonly signingAddressToDelegationAddress = new Map<Address, Address>();
+   readonly signingAddressToSigningWeight = new Map<Address, number>();
+   readonly signingAddressToVotingPolicyIndex = new Map<Address, number>();
+   
+   private readonly _canonicalFeedOrder: Feed[];
 
-   private readonly _canonicalFeedOrder: Feed[]
+   public readonly totalSigningWeight: number = 0;
 
    constructor(
       previousRewardEpochStartedEvent: RewardEpochStarted,
@@ -83,7 +88,11 @@ export class RewardEpoch {
          this.voterToRegistrationInfo.set(voterRegistration.voterRegistered.voter, voterRegistration);
          tmpSigningAddressToVoter.set(voterRegistration.voterRegistered.signingPolicyAddress, voterRegistration.voterRegistered.voter);
       }
-      for (let voterSigningAddress of signingPolicyInitializedEvent.voters) {
+      for (let i = 0; i < signingPolicyInitializedEvent.voters.length; i++) {
+         const voterSigningAddress = signingPolicyInitializedEvent.voters[i];
+         const signingWeight = signingPolicyInitializedEvent.weights[i];
+         this.totalSigningWeight += signingWeight;
+         this.signingAddressToVotingPolicyIndex.set(voterSigningAddress, i);
          if (!tmpSigningAddressToVoter.has(voterSigningAddress)) {
             throw new Error("Critical error: Voter in signing policy not found in voter registration info. This should never happen.");
          }
@@ -98,6 +107,8 @@ export class RewardEpoch {
          this.submissionAddressToCappedWeight.set(fullVoterRegistrationInfo.voterRegistered.submitAddress, fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight);
          this.submissionAddressToVoterRegistrationInfo.set(fullVoterRegistrationInfo.voterRegistered.submitAddress, fullVoterRegistrationInfo);
          this.orderedVotersSubmissionAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
+         this.signingAddressToDelegationAddress.set(voterSigningAddress, fullVoterRegistrationInfo.voterRegistered.delegationAddress);
+         this.signingAddressToSigningWeight.set(voterSigningAddress, signingWeight)
       }
    }
 
@@ -144,6 +155,46 @@ export class RewardEpoch {
 
    public ftsoRewardingWeight(submissionAddress: Address): bigint {
       return this.ftsoMedianVotingWeight(submissionAddress);
+   }
+
+   /**
+    * Maps signer address to delegation address.
+    * @param signerAddress 
+    * @returns 
+    */
+   public signerToDelegationAddress(signerAddress: Address): Address | undefined {
+      return this.signingAddressToDelegationAddress.get(signerAddress);
+   }
+
+   /**
+    * Given signer address it returns weight in signing policy.
+    * @param signerAddress 
+    * @returns 
+    */
+   public signerToSigningWeight(signerAddress: Address): number | undefined {
+      return this.signingAddressToSigningWeight.get(signerAddress);
+   }
+
+   /**
+    * Given signer address it returns index in voting policy.
+    * @param signerAddress 
+    * @returns 
+    */
+   public signerToVotingPolicyIndex(signerAddress: Address): number | undefined {
+      return this.signingAddressToVotingPolicyIndex.get(signerAddress);
+   }
+
+   /**
+    * Given a signer address it returns the full voter registration info.
+    * @param signerAddress 
+    * @returns 
+    */
+   public fullVoterRegistrationInfoForSigner(signerAddress: Address): FullVoterRegistrationInfo | undefined {
+      const voterAddress = this.signingAddressToVoter.get(signerAddress);
+      if(!voterAddress) {
+         return undefined;
+      }
+      return this.voterToRegistrationInfo.get(voterAddress);
    }
 
    /**

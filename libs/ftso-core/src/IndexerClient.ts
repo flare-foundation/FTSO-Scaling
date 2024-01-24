@@ -33,6 +33,7 @@ export interface GenericSubmissionData<T> {
   votingEpochIdFromTimestamp: VotingEpochId; // voting round id in which the message was submitted
   relativeTimestamp: number; // timestamp relative to the start of the voting round
   blockNumber: number;
+  timestamp: number;
   transactionIndex: number;
   messages: T;
 }
@@ -501,6 +502,7 @@ export class IndexerClient {
         relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
         votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
+        timestamp,
         blockNumber: tx.block_number,
         messages,
       };
@@ -539,6 +541,7 @@ export class IndexerClient {
         relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
         votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
+        timestamp,
         blockNumber: tx.block_number,
         messages: tx.input,
         successfulOnChain: tx.status > 0,
