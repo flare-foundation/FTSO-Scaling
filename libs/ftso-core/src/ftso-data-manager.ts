@@ -1,4 +1,4 @@
-import { IPayloadMessage } from "./utils/PayloadMessage";
+import { IPayloadMessage } from "../../fsp-utils/PayloadMessage";
 
 
 interface IFtsoDataManager {

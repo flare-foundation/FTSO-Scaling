@@ -9,12 +9,12 @@ import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-l
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EpochSettings } from "../../../libs/ftso-core/src/utils/EpochSettings";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
-import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/utils/PayloadMessage";
+import { IPayloadMessage, PayloadMessage } from "../../../libs/fsp-utils/PayloadMessage";
 import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { Api } from "./price-provider-api/generated/provider-api";
-import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/ftso-core/src/utils/ProtocolMessageMerkleRoot";
+import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/ProtocolMessageMerkleRoot";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 

@@ -1,7 +1,7 @@
 import { Address } from "../voting-types";
 import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
+import { IPayloadMessage, PayloadMessage } from "../../../fsp-utils/PayloadMessage";
 
 export interface ICommitData {
    commitHash: string;

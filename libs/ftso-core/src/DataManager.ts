@@ -3,12 +3,12 @@ import { RewardEpoch, VoterWeights } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
 import { CommitData, ICommitData } from "./utils/CommitData";
-import { ECDSASignature } from "./utils/ECDSASignature";
-import { ProtocolMessageMerkleRoot } from "./utils/ProtocolMessageMerkleRoot";
-import { RelayMessage } from "./utils/RelayMessage";
+import { ECDSASignature } from "../../fsp-utils/ECDSASignature";
+import { ProtocolMessageMerkleRoot } from "../../fsp-utils/ProtocolMessageMerkleRoot";
+import { RelayMessage } from "../../fsp-utils/RelayMessage";
 import { IRevealData, RevealData } from "./utils/RevealData";
-import { ISignaturePayload, SignaturePayload } from "./utils/SignaturePayload";
-import { SigningPolicy } from "./utils/SigningPolicy";
+import { ISignaturePayload, SignaturePayload } from "../../fsp-utils/SignaturePayload";
+import { SigningPolicy } from "../../fsp-utils/SigningPolicy";
 import { Address, Feed, MessageHash } from "./voting-types";
 
 // For a given voting round id, the rewarded finalization is 
