@@ -141,7 +141,7 @@ describe("ftso-calculator.service", () => {
       const encodedResult = await services[i].getEncodedResultData(votingRound);
       const result = ProtocolMessageMerkleRoot.decode(encodedResult);
       expect(result.votingRoundId).to.be.equal(votingRound);
-      expect(result.isGoodRandom).to.be.equal(true);
+      expect(result.isSecureRandom).to.be.equal(true);
       mRoots.add(result.merkleRoot);
     }
     expect(mRoots.size).to.be.equal(1);

@@ -122,7 +122,7 @@ export class RewardEpoch {
     * @param submissionData 
     * @returns 
     */
-   pubic isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
+   public isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
       return this.submitterToVoter.has(submitAddress);
    }
 

@@ -13,8 +13,8 @@ export interface IPartialRewardOffer {
    decimals: number;
    // amount (in wei) of reward in native coin
    amount: bigint;
-   // minimal reward eligibility threshold in BIPS (basis points)
-   minimalThresholdBIPS: number;
+   // minimal reward eligibility turnout threshold in BIPS (basis points)
+   minRewardedTurnoutBIPS: number;
    // primary band reward share in PPM (parts per million)
    primaryBandRewardSharePPM: number;
    // secondary band width in PPM (parts per million) in relation to the median
@@ -33,7 +33,7 @@ export namespace PartialRewardOffer {
          feedName: rewardOffer.feedName,
          decimals: rewardOffer.decimals,
          amount: rewardOffer.amount,
-         minimalThresholdBIPS: rewardOffer.minimalThresholdBIPS,
+         minRewardedTurnoutBIPS: rewardOffer.minRewardedTurnoutBIPS,
          primaryBandRewardSharePPM: rewardOffer.primaryBandRewardSharePPM,
          secondaryBandWidthPPM: rewardOffer.secondaryBandWidthPPM,
          claimBackAddress: rewardOffer.claimBackAddress,
@@ -56,7 +56,7 @@ export namespace PartialRewardOffer {
             feedName: inflationRewardOffer.feedNames[i],
             decimals: inflationRewardOffer.decimals[i],
             amount: sharePerOne + (i < remainder ? 1n : 0n),
-            minimalThresholdBIPS: inflationRewardOffer.minimalThresholdBIPS,
+            minRewardedTurnoutBIPS: inflationRewardOffer.minRewardedTurnoutBIPS,
             primaryBandRewardSharePPM: inflationRewardOffer.primaryBandRewardSharePPM,
             secondaryBandWidthPPM: inflationRewardOffer.secondaryBandWidthPPMs[i],
             claimBackAddress: BURN_ADDRESS,

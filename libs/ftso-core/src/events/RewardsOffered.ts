@@ -15,7 +15,7 @@ export class RewardsOffered extends RawEventConstructible {
     this.feedName = unPrefix0x(data.feedName);
     this.decimals = Number(data.decimals);
     this.amount = BigInt(data.amount);
-    this.minimalThresholdBIPS = Number(data.minimalThresholdBIPS);
+    this.minRewardedTurnoutBIPS = Number(data.minRewardedTurnoutBIPS);
     this.primaryBandRewardSharePPM = Number(data.primaryBandRewardSharePPM);
     this.secondaryBandWidthPPM = Number(data.secondaryBandWidthPPM);
     this.claimBackAddress = data.claimBackAddress.toLowerCase();
@@ -33,8 +33,8 @@ export class RewardsOffered extends RawEventConstructible {
   decimals: number;
   // amount (in wei) of reward in native coin
   amount: bigint;
-  // minimal reward eligibility threshold in BIPS (basis points)
-  minimalThresholdBIPS: number;
+  // minimal reward eligibility turnout threshold in BIPS (basis points)
+  minRewardedTurnoutBIPS: number;
   // primary band reward share in PPM (parts per million)
   primaryBandRewardSharePPM: number;
   // secondary band width in PPM (parts per million) in relation to the median

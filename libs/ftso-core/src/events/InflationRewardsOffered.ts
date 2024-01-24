@@ -41,7 +41,7 @@ export class InflationRewardsOffered extends RawEventConstructible {
     this.amount = BigInt(data.amount);
     this.mode = Number(data.mode);
     this.primaryBandRewardSharePPM = Number(data.primaryBandRewardSharePPM);
-    this.minimalThresholdBIPS = Number(data.minimalThresholdBIPS);
+    this.minRewardedTurnoutBIPS = Number(data.minRewardedTurnoutBIPS);
   }
 
   static fromRawEvent(event: any): InflationRewardsOffered {
@@ -56,8 +56,8 @@ export class InflationRewardsOffered extends RawEventConstructible {
   decimals: number[];
   // amount (in wei) of reward in native coin
   amount: bigint;
-  // minimal reward eligibility threshold in BIPS (basis points)
-  minimalThresholdBIPS: number;
+  // minimal reward eligibility turnout threshold in BIPS (basis points)
+  minRewardedTurnoutBIPS: number;
   // primary band reward share in PPM (parts per million)
   primaryBandRewardSharePPM: number;
   // secondary band width in PPM (parts per million) in relation to the median - multiple of 3 (uint24)

@@ -111,7 +111,7 @@ export class FtsoCalculatorService {
       const message: IProtocolMessageMerkleRoot = {
         protocolId: FTSO2_PROTOCOL_ID,
         votingRoundId,
-        isGoodRandom: result.randomData.isSecure,
+        isSecureRandom: result.randomData.isSecure,
         merkleRoot,
       };
       return ProtocolMessageMerkleRoot.encode(message);
