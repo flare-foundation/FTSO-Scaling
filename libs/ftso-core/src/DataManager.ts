@@ -69,6 +69,8 @@ export interface DataForRewardCalculation {
   dataForCalculations: DataForCalculations;
   signatures: Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>;
   finalizations: ParsedFinalizationData[];
+  // might be undefined, if such finalization does not exist in an observed range
+  firstSuccessfulFinalization?: ParsedFinalizationData; 
   voterWeights: Map<Address, VoterWeights>;
 }
 
@@ -194,13 +196,15 @@ export class DataManager {
     const signatures = this.extractSignatures(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.signatures, FTSO2_PROTOCOL_ID);
     const finalizations = this.extractFinalizations(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.finalizations, FTSO2_PROTOCOL_ID);
     const voterWeights = rewardEpoch.getVoterWeights();
+    const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
     return {
       status: DataAvailabilityStatus.OK,
       data: {
         dataForCalculations: dataForCalculationsResponse.data,
         signatures,
         finalizations,
-        voterWeights
+        voterWeights,
+        firstSuccessfulFinalization,
       },
     };
   }

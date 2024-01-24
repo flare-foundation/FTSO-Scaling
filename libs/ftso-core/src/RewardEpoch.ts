@@ -167,12 +167,4 @@ export class RewardEpoch {
       });
       return result;
    }
-
-   // public weightedRandomSubmitterChoice(seed: string): Address {
-
-   // }
-
-   // public chooseSubmitterSetForWeight(seed: string, threshold: bigint): Address[] {
-
-   // }
 }
