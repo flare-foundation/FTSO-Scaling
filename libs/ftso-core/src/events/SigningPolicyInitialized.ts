@@ -1,6 +1,6 @@
 import { CONTRACTS } from "../configs/networks";
 import { decodeEvent } from "../utils/EncodingUtils";
-import { ISigningPolicy } from "../../../fsp-utils/SigningPolicy";
+import { ISigningPolicy } from "../../../fsp-utils/src/SigningPolicy";
 import { Address } from "../voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
 

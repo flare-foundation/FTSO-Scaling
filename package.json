@@ -21,7 +21,7 @@
     "-----CUSTOM-SCRIPTS-----": "",
     "start:dev:provider": "nest start example_provider --watch",
     "-----DEVELOP-SCRIPTS-----": "echo ONLY FOR DEVELOPMENT",
-    "ftso-calculator-provider-api-gen": "ts-node apps/ftso-calculator/src/price-provider-api/provider-generator.ts"
+    "ftso-data-provider-provider-api-gen": "ts-node apps/ftso-data-provider/src/price-provider-api/provider-generator.ts"
   },
   "dependencies": {
     "@ethersproject/abi": "^5.7.0",

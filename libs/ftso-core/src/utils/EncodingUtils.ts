@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import { TLPEvents, TLPTransaction } from "../orm/entities";
-import { IPayloadMessage, PayloadMessage } from "../../../fsp-utils/PayloadMessage";
+import { IPayloadMessage, PayloadMessage } from "../../../fsp-utils/src/PayloadMessage";
 import { ABICache, AbiData, AbiDataInput } from "./ABICache";
 
 const coder = new Web3().eth.abi;

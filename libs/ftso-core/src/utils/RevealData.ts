@@ -1,7 +1,7 @@
 import { Feed } from "../voting-types";
 import { unPrefix0x } from "./EncodingUtils";
 import { FeedValueEncoder, ValueWithDecimals } from "./FeedValueEncoder";
-import { IPayloadMessage } from "../../../fsp-utils/PayloadMessage";
+import { IPayloadMessage } from "../../../fsp-utils/src/PayloadMessage";
 
 export interface IRevealData {
    readonly random: string;
