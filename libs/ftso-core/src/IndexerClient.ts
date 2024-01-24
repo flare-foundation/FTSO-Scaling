@@ -22,10 +22,10 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "./events";
-import { IPayloadMessage } from "../../fsp-utils/PayloadMessage";
+import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
 import { ICommitData } from "./utils/CommitData";
 import { IRevealData } from "./utils/RevealData";
-import { IRelayMessage } from "../../fsp-utils/RelayMessage";
+import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
 
 // IPayloadMessage<string>[]
 export interface GenericSubmissionData<T> {

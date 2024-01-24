@@ -12,7 +12,7 @@ import { EncodingUtils, unPrefix0x } from "../../libs/ftso-core/src/utils/Encodi
 import { keccak256 } from "ethers";
 import { toHex } from "../../libs/ftso-core/src/utils/voting-utils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
-import { Bytes20 } from "../../libs/ftso-core/src/voting-types";
+import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
 import Prando from "prando";
 import Web3 from "web3";
 import crypto from "crypto";
@@ -76,7 +76,7 @@ export function generateState(name: string, id: number): TLPState {
 // TODO: fix event timings
 export async function generateRewardEpochEvents(
   epochSettings: EpochSettings,
-  feeds: string[],
+  feeds: Feed[],
   offerCount: number,
   rewardEpochId: number,
   voters: TestVoter[]
@@ -137,7 +137,7 @@ export async function generateRewardEpochEvents(
   ];
 }
 
-function generateRewards(offerCount: number, feeds: string[], rewardEpochId: number, timestamp: number) {
+function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: number, timestamp: number) {
   const events = [];
   for (let i = 0; i < offerCount; i++) {
     events.push(
@@ -146,8 +146,8 @@ function generateRewards(offerCount: number, feeds: string[], rewardEpochId: num
         "InflationRewardsOffered",
         {
           rewardEpochId,
-          feedNamesEncoded: "0x" + feeds.join(""),
-          decimals: "0x" + feeds.map(() => "01").join(""),
+          feedNamesEncoded: "0x" + feeds.map(f => f.name).join(""),
+          decimals: "0x" + feeds.map((f) => f.decimals.toString(16).padStart(2,"0")).join(""),
           amount: BigInt(1000),
           minRewardedTurnoutBIPS: 100,
           primaryBandRewardSharePPM: 10000,
@@ -165,8 +165,8 @@ function generateRewards(offerCount: number, feeds: string[], rewardEpochId: num
           "RewardsOffered",
           {
             rewardEpochId,
-            feedName: "0x" + feed,
-            decimals: 1,
+            feedName: "0x" + feed.name,
+            decimals: feed.decimals,
             amount: BigInt(1000),
             minRewardedTurnoutBIPS: 100,
             primaryBandRewardSharePPM: 10000,

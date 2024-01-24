@@ -15,12 +15,12 @@ import { ConfigService } from "@nestjs/config";
 import { FtsoCalculatorService } from "../../../apps/ftso-data-provider/src/ftso-calculator.service";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { PayloadMessage } from "../../../libs/fsp-utils/PayloadMessage";
+import { PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
 import { RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
-import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/ProtocolMessageMerkleRoot";
+import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 
 describe("ftso-calculator.service", () => {
   const feeds: Feed[] = [
@@ -150,7 +150,7 @@ describe("ftso-calculator.service", () => {
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
     const epochEvents = await generateRewardEpochEvents(
       epochSettings,
-      feeds.map(f => f.name),
+      feeds,
       offerCount,
       rewardEpochId,
       voters

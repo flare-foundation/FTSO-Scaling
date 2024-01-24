@@ -4,8 +4,8 @@ const fs = require("fs");
 
 // NOTE: its assumed that this scrypt is run from the root of the project
 
-const input = path.resolve(process.cwd(), './apps/ftso-calculator/src/price-provider-api/api-spec.json');
-const output = path.resolve(process.cwd(), './apps/ftso-calculator/src/price-provider-api/generated');
+const input = path.resolve(process.cwd(), './apps/ftso-data-provider/src/price-provider-api/api-spec.json');
+const output = path.resolve(process.cwd(), './apps/ftso-data-provider/src/price-provider-api/generated');
 
 console.log(`Generating API from ${input} to ${output}`);
 
