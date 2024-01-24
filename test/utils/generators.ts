@@ -167,10 +167,9 @@ function generateRewards(offerCount: number, feeds: string[], rewardEpochId: num
             feedName: "0x" + feed,
             decimals: 1,
             amount: BigInt(1000),
+            minimalThresholdBIPS: 100,
             primaryBandRewardSharePPM: 10000,
             secondaryBandWidthPPM: 10000,
-            rewardEligibilityPPM: 10000,
-            leadProviders: [generateRandomAddress()],
             claimBackAddress: burnAddress,
           },
           timestamp

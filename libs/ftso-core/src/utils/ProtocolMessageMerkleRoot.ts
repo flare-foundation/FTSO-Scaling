@@ -14,7 +14,7 @@ export namespace ProtocolMessageMerkleRoot {
   // Protocol message merkle root structure
   // 1 byte - protocolId
   // 4 bytes - votingRoundId
-  // 1 byte - randomQualityScore
+  // 1 byte - isGoodRandom
   // 32 bytes - merkleRoot
   // Total 38 bytes
   //////////////////////////////////////////////////////////////////////////////
@@ -117,5 +117,5 @@ export namespace ProtocolMessageMerkleRoot {
    */
   export function print(message: IProtocolMessageMerkleRoot) {
     return `(${message.protocolId}, ${message.votingRoundId}, ${message.isGoodRandom}, ${message.merkleRoot})`
-  } 
+  }
 }

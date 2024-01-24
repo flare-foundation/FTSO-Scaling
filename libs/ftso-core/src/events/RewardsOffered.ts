@@ -15,10 +15,9 @@ export class RewardsOffered extends RawEventConstructible {
     this.feedName = unPrefix0x(data.feedName);
     this.decimals = Number(data.decimals);
     this.amount = BigInt(data.amount);
+    this.minimalThresholdBIPS = Number(data.minimalThresholdBIPS);
     this.primaryBandRewardSharePPM = Number(data.primaryBandRewardSharePPM);
     this.secondaryBandWidthPPM = Number(data.secondaryBandWidthPPM);
-    this.rewardEligibilityPPM = Number(data.rewardEligibilityPPM);
-    this.leadProviders = data.leadProviders.map((v: string) => v.toLowerCase());
     this.claimBackAddress = data.claimBackAddress.toLowerCase();
   }
 
@@ -34,14 +33,12 @@ export class RewardsOffered extends RawEventConstructible {
   decimals: number;
   // amount (in wei) of reward in native coin
   amount: bigint;
+  // minimal reward eligibility threshold in BIPS (basis points)
+  minimalThresholdBIPS: number;
   // primary band reward share in PPM (parts per million)
   primaryBandRewardSharePPM: number;
   // secondary band width in PPM (parts per million) in relation to the median
   secondaryBandWidthPPM: number;
-  // reward eligibility in PPM (parts per million) in relation to the median of the lead providers
-  rewardEligibilityPPM: number;
-  // list of lead providers
-  leadProviders: Address[];
   // address that can claim undistributed part of the reward (or burn address)
   claimBackAddress: Address;
 }

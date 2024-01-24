@@ -13,17 +13,15 @@ export interface IPartialRewardOffer {
    decimals: number;
    // amount (in wei) of reward in native coin
    amount: bigint;
+   // minimal reward eligibility threshold in BIPS (basis points)
+   minimalThresholdBIPS: number;
    // primary band reward share in PPM (parts per million)
    primaryBandRewardSharePPM: number;
    // secondary band width in PPM (parts per million) in relation to the median
    secondaryBandWidthPPM: number;
-   // reward eligibility in PPM (parts per million) in relation to the median of the lead providers
-   rewardEligibilityPPM: number;
-   // list of lead providers
-   leadProviders: Address[];
    // address that can claim undistributed part of the reward (or burn address)
    claimBackAddress: Address;
-   // indicates if the reward is frome inflation
+   // indicates if the reward is from inflation
    isInflation: boolean;
 }
 
@@ -35,10 +33,9 @@ export namespace PartialRewardOffer {
          feedName: rewardOffer.feedName,
          decimals: rewardOffer.decimals,
          amount: rewardOffer.amount,
+         minimalThresholdBIPS: rewardOffer.minimalThresholdBIPS,
          primaryBandRewardSharePPM: rewardOffer.primaryBandRewardSharePPM,
          secondaryBandWidthPPM: rewardOffer.secondaryBandWidthPPM,
-         rewardEligibilityPPM: rewardOffer.rewardEligibilityPPM,
-         leadProviders: rewardOffer.leadProviders,
          claimBackAddress: rewardOffer.claimBackAddress,
          isInflation: false,
       };
@@ -59,10 +56,9 @@ export namespace PartialRewardOffer {
             feedName: inflationRewardOffer.feedNames[i],
             decimals: inflationRewardOffer.decimals[i],
             amount: sharePerOne + (i < remainder ? 1n : 0n),
+            minimalThresholdBIPS: inflationRewardOffer.minimalThresholdBIPS,
             primaryBandRewardSharePPM: inflationRewardOffer.primaryBandRewardSharePPM,
             secondaryBandWidthPPM: inflationRewardOffer.secondaryBandWidthPPMs[i],
-            rewardEligibilityPPM: 0,
-            leadProviders: [],
             claimBackAddress: BURN_ADDRESS,
             isInflation: true,
          });
