@@ -1,0 +1,68 @@
+import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
+import { GenericSubmissionData, ParsedFinalizationData } from "../IndexerClient";
+import { VoterWeights } from "../RewardEpoch";
+import { EPOCH_SETTINGS } from "../configs/networks";
+import { Address } from "../voting-types";
+import { GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC } from "./reward-constants";
+
+/**
+ * Returns reward distribution weight for the voter.
+ * @param voterWeights
+ * @returns
+ */
+export function rewardDistributionWeight(voterWeights: VoterWeights): bigint {
+  return voterWeights.cappedDelegationWeight;
+}
+
+/**
+ * Checks if the signature submission is in grace period of voting round id.
+ * @param votingRoundId 
+ * @param signatureSubmission 
+ * @returns 
+ */
+export function isSignatureInGracePeriod(votingRoundId: number, signatureSubmission: GenericSubmissionData<ISignaturePayload>) {
+  return signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
+    signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds &&
+    signatureSubmission.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC;
+}
+
+/**
+ * Checks if the signature submission is before the timestamp.
+ * @param votingRoundId 
+ * @param signatureSubmission 
+ * @param timestamp 
+ * @returns 
+ */
+export function isSignatureBeforeTimestamp(votingRoundId: number, signatureSubmission: GenericSubmissionData<ISignaturePayload>, timestamp: number) {
+  return signatureSubmission.votingEpochIdFromTimestamp >= votingRoundId + 1 &&
+    signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds &&
+    signatureSubmission.timestamp <= timestamp;
+}
+
+/**
+ * Checks if the finalization is in grace period of voting round id and the submitter is eligible for the 
+ * reward in the grace period.
+ * @param votingRoundId 
+ * @param eligibleVoters 
+ * @param finalization 
+ * @returns 
+ */
+export function isFinalizationInGracePeriodAndEligible(votingRoundId: number, eligibleVoters: Set<Address>, finalization: ParsedFinalizationData) {
+  return eligibleVoters.has(finalization.submitAddress) && finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
+    finalization.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds &&
+    finalization.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC;
+}
+
+/**
+ * Checks if the finalization is outside of grace period of voting round id.
+ * @param votingRoundId 
+ * @param finalization 
+ * @returns 
+ */
+export function isFinalizationOutsideOfGracePeriod(votingRoundId: number, finalization: ParsedFinalizationData) {
+  return finalization.votingEpochIdFromTimestamp >= votingRoundId + 1 &&
+    (
+      finalization.votingEpochIdFromTimestamp > votingRoundId + 1 ||
+      finalization.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC
+    );
+}
