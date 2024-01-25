@@ -8,9 +8,6 @@ import { isFinalizationOutsideOfGracePeriod, isFinalizationInGracePeriodAndEligi
 
 /**
  * Calculates partial finalization reward claims for the given offer.
- * @param offer
- * @param data
- * @returns
  */
 export function calculateFinalizationRewardClaims(
   offer: IPartialRewardOffer,
@@ -68,10 +65,6 @@ export function calculateFinalizationRewardClaims(
 /**
  * Given an amount of a reward it produces specific partial reward claims for finalizations according to here defined split of the reward amount.
  * This includes split to fees and participation rewards.
- * @param amount
- * @param signerAddress
- * @param rewardEpoch
- * @returns
  */
 export function generateFinalizationRewardClaimsForVoter(amount: bigint, signerAddress: Address, rewardEpoch: RewardEpoch): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];

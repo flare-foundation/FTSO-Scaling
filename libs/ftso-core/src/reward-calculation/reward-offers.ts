@@ -14,8 +14,6 @@ export interface SplitRewardOffer {
 /**
  * Creates partial reward offers for feeds from inflation reward offer.
  * Currently only equally distributed inflation reward offers are supported (mode === 0)
- * @param inflationRewardOffer 
- * @returns 
  */
 export function distributeInflationRewardOfferToFeeds(inflationRewardOffer: InflationRewardsOffered): IPartialRewardOffer[] {
   if (inflationRewardOffer.mode === 0) {
@@ -29,10 +27,6 @@ export function distributeInflationRewardOfferToFeeds(inflationRewardOffer: Infl
  * First inflation reward offers are used to generate partial reward offers for feeds.
  * Then each reward offer is split to partial reward offers for each voting round.
  * A map: votingRoundId => feedName => partialRewardOffer[] is returned containing all partial reward offers.
- * @param startVotingRoundId
- * @param endVotingRoundId
- * @param rewardOffers
- * @returns
  */
 export function granulatedPartialOfferMap(
   startVotingRoundId: number,
@@ -67,8 +61,6 @@ export function granulatedPartialOfferMap(
  * Splits a partial reward offer into three parts: median, signing and finalization.
  * These split offers are used as inputs into reward calculation for specific types 
  * of rewards.
- * @param offer 
- * @returns 
  */
 export function splitRewardOfferByTypes(offer: IPartialRewardOffer): SplitRewardOffer {
   const forSigning = (offer.amount * SIGNING_BIPS) / TOTAL_BIPS;

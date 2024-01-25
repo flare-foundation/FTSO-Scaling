@@ -3,8 +3,6 @@ import { IRewardClaim, IRewardClaimWithProof, RewardClaim } from "../utils/Rewar
 
 /**
  * Builds a reward claim Merkle tree from the given reward epoch claims.
- * @param rewardClaims 
- * @returns 
  */
 export function buildRewardClaimMerkleTree(rewardClaims: IRewardClaim[]): MerkleTree {
    const leaves = rewardClaims.map(rewardClaim => RewardClaim.hashRewardClaim(rewardClaim));
@@ -18,9 +16,6 @@ export function buildRewardClaimMerkleTree(rewardClaims: IRewardClaim[]): Merkle
 
 /**
  * Obtains a Merkle proof for the given reward claim.
- * @param rewardClaim 
- * @param rewardClaimMerkleTree 
- * @returns 
  */
 export function getMerkleProof(rewardClaim: IRewardClaim, rewardClaimMerkleTree: MerkleTree): IRewardClaimWithProof | undefined {
    const leafHash = RewardClaim.hashRewardClaim(rewardClaim);

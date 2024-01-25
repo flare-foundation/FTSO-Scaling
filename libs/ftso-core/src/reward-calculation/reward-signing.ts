@@ -18,9 +18,6 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
  * In this case rewards can be still paid out if there is (are) a signed hash which has more than certain percentage of
  * the total weight of the voting weight deposits.
  * TODO: think through whether to reward only in grace period or up to the end of the voting epoch id of votingRoundId + 1.
- * @param offer
- * @param data
- * @returns
  */
 export function calculateSigningRewards(
   offer: IPartialRewardOffer,
@@ -93,10 +90,6 @@ export function calculateSigningRewards(
 /**
  * Given an amount of a reward it produces specific partial reward claims according to here defined split of the reward amount.
  * This includes split to fees and participation rewards.
- * @param amount
- * @param signerAddress
- * @param rewardEpoch
- * @returns
  */
 export function generateSigningRewardClaimsForVoter(amount: bigint, signerAddress: Address, rewardEpoch: RewardEpoch): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];

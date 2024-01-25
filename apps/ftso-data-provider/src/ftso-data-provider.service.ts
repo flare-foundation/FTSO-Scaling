@@ -1,20 +1,20 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
+import { IPayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
+import { IProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
-import { IPayloadMessage, PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
-import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
+import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
+import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { Api } from "./price-provider-api/generated/provider-api";
-import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { errorString } from "../../../libs/ftso-core/src/utils/error";
-import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 
 @Injectable()
 export class FtsoDataProviderService {

@@ -13,10 +13,6 @@ import { rewardDistributionWeight } from "./reward-utils";
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
  * reward claims for the offer for all voters (with non-zero reward). For each voter all relevant partial claims are generated (including fees, participation rewards, etc).
- * @param offer
- * @param calculationResult
- * @param voterWeights
- * @returns
  */
 export function calculateMedianRewardClaims(
   offer: IPartialRewardOffer,
@@ -168,9 +164,6 @@ export function calculateMedianRewardClaims(
 /**
  * Given assigned reward it generates reward claims for the voter.
  * Currently only a partial fee claim and capped wnat delegation participation weight claims are created.
- * @param reward
- * @param voterWeights
- * @returns
  */
 export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights: VoterWeights) {
   const result: IPartialRewardClaim[] = [];

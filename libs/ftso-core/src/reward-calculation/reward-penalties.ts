@@ -7,10 +7,6 @@ import { rewardDistributionWeight } from "./reward-utils";
 /**
  * Given a full reward offer, total rewarded weight and data for reward calculation it calculates penalty claims for reveal withdrawal offenders.
  * The penalty amount is proportional to the weight of the offender.
- * @param fullOffer
- * @param totalRewardedWeight
- * @param data
- * @returns
  */
 export function calculateRevealWithdrawalPenalties(
   fullOffer: IPartialRewardOffer,

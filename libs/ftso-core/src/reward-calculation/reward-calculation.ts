@@ -21,11 +21,6 @@ import { rewardDistributionWeight } from "./reward-utils";
  * Calculates merged reward claims for the given reward epoch.
  * It triggers reward distribution throughout voting rounds and feeds, yielding reward claims that get merged at the end.
  * The resulting reward claims are then returned and can be used to assemble reward Merkle tree representing the rewards for the epoch.
- * @param rewardEpochId 
- * @param randomGenerationBenchingWindow 
- * @param dataManager 
- * @param rewardEpochManager 
- * @returns 
  */
 export async function rewardClaimsForRewardEpoch(
   rewardEpochId: number,
@@ -64,12 +59,6 @@ export async function rewardClaimsForRewardEpoch(
  * Result of processing yields even more specific reward claims, like fees, participation rewards, etc.
  * In addition, possible penalty claims are generated for reveal withdrawal offenders.
  * All reward claims are then merged into a single array and returned.
- * @param votingRoundId 
- * @param randomGenerationBenchingWindow 
- * @param rewardEpoch 
- * @param dataManager 
- * @param feedOffers 
- * @returns 
  */
 export async function partialRewardClaimsForVotingRound(
   votingRoundId: number,

@@ -7,8 +7,6 @@ import { GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, GRACE_PERIOD_FOR_FINALIZATION
 
 /**
  * Returns reward distribution weight for the voter.
- * @param voterWeights
- * @returns
  */
 export function rewardDistributionWeight(voterWeights: VoterWeights): bigint {
   return voterWeights.cappedDelegationWeight;
@@ -16,9 +14,6 @@ export function rewardDistributionWeight(voterWeights: VoterWeights): bigint {
 
 /**
  * Checks if the signature submission is in grace period of voting round id.
- * @param votingRoundId 
- * @param signatureSubmission 
- * @returns 
  */
 export function isSignatureInGracePeriod(votingRoundId: number, signatureSubmission: GenericSubmissionData<ISignaturePayload>) {
   return signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
@@ -28,10 +23,6 @@ export function isSignatureInGracePeriod(votingRoundId: number, signatureSubmiss
 
 /**
  * Checks if the signature submission is before the timestamp.
- * @param votingRoundId 
- * @param signatureSubmission 
- * @param timestamp 
- * @returns 
  */
 export function isSignatureBeforeTimestamp(votingRoundId: number, signatureSubmission: GenericSubmissionData<ISignaturePayload>, timestamp: number) {
   return signatureSubmission.votingEpochIdFromTimestamp >= votingRoundId + 1 &&
@@ -42,10 +33,6 @@ export function isSignatureBeforeTimestamp(votingRoundId: number, signatureSubmi
 /**
  * Checks if the finalization is in grace period of voting round id and the submitter is eligible for the 
  * reward in the grace period.
- * @param votingRoundId 
- * @param eligibleVoters 
- * @param finalization 
- * @returns 
  */
 export function isFinalizationInGracePeriodAndEligible(votingRoundId: number, eligibleVoters: Set<Address>, finalization: ParsedFinalizationData) {
   return eligibleVoters.has(finalization.submitAddress) && finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
@@ -55,9 +42,6 @@ export function isFinalizationInGracePeriodAndEligible(votingRoundId: number, el
 
 /**
  * Checks if the finalization is outside of grace period of voting round id.
- * @param votingRoundId 
- * @param finalization 
- * @returns 
  */
 export function isFinalizationOutsideOfGracePeriod(votingRoundId: number, finalization: ParsedFinalizationData) {
   return finalization.votingEpochIdFromTimestamp >= votingRoundId + 1 &&
