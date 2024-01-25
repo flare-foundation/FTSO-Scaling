@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import { ValueWithDecimals } from "./utils/FeedValueEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 
@@ -15,7 +14,7 @@ export interface RewardClaim {
    * `false` if the claim is for voting rewards, where the amount is shared between the beneficiary voter and its delegators proportionally to their weights.
    */
   readonly isFixedClaim: boolean;
-  readonly amount: BN; // 256-bit
+  readonly amount: bigint; // 256-bit
   readonly currencyAddress: string;
   readonly beneficiary: string;
   readonly priceEpochId: number;
