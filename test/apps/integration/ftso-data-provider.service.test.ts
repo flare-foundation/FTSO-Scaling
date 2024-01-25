@@ -11,7 +11,7 @@ import {
 import { MockIndexerDB } from "../../utils/db";
 import { expect } from "chai";
 import { ConfigService } from "@nestjs/config";
-import { FtsoCalculatorService } from "../../../apps/ftso-data-provider/src/ftso-calculator.service";
+import { FtsoDataProviderService } from "../../../apps/ftso-data-provider/src/ftso-data-provider.service";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
@@ -21,8 +21,9 @@ import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { generateRandomAddress } from "../../utils/testRandom";
+import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../../apps/ftso-data-provider/src/response-encoders";
 
-describe("ftso-calculator.service", () => {
+describe("ftso-data-provider.service", () => {
   const feeds: Feed[] = [
     { name: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
     { name: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
@@ -71,16 +72,14 @@ describe("ftso-calculator.service", () => {
       feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
     });
 
-    const service = new FtsoCalculatorService(db.em, configService);
+    const service = new FtsoDataProviderService(db.em, configService);
 
     const submissionAddress = generateRandomAddress();
     const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
 
-    const encodedCommit = await service.getEncodedCommitData(votingRound, submissionAddress);
-    const commit = CommitData.decode(PayloadMessage.decode(encodedCommit)[0].payload);
+    const commit = (await service.getCommitData(votingRound, submissionAddress)).payload;
 
-    const encodedReveal = await service.getEncodedRevealData(votingRound);
-    const reveal = RevealData.decode(PayloadMessage.decode(encodedReveal)[0].payload, feeds);
+    const reveal = (await service.getRevealData(votingRound)).payload;
 
     const expectedCommit = CommitData.hashForCommit(submissionAddress, reveal.random, reveal.encodedValues);
     expect(commit.commitHash).to.be.equal(expectedCommit);
@@ -97,13 +96,13 @@ describe("ftso-calculator.service", () => {
       feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
     });
 
-    const services = voters.map(() => new FtsoCalculatorService(db.em, configService));
+    const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
     const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
 
     clock.tick(1000);
 
     for (let i = 0; i < voters.length; i++) {
-      const encodedCommit = await services[i].getEncodedCommitData(votingRound, voters[i].submitAddress);
+      const encodedCommit = encodeCommitPayloadMessage(await services[i].getCommitData(votingRound, voters[i].submitAddress));
       const comimtPayload = sigCommit + unPrefix0x(encodedCommit);
       const commitTx = generateTx(
         voters[i].submitAddress,
@@ -119,7 +118,7 @@ describe("ftso-calculator.service", () => {
     clock.tick(epochSettings.votingEpochDurationSeconds * 1000);
 
     for (let i = 0; i < voters.length; i++) {
-      const encodedReveal = await services[i].getEncodedRevealData(votingRound);
+      const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound));
       const revealPayload = sigReveal + unPrefix0x(encodedReveal);
       const revealTx = generateTx(
         voters[i].submitAddress,
@@ -138,8 +137,7 @@ describe("ftso-calculator.service", () => {
 
     const mRoots = new Set<string>();
     for (let i = 0; i < voters.length; i++) {
-      const encodedResult = await services[i].getEncodedResultData(votingRound);
-      const result = ProtocolMessageMerkleRoot.decode(encodedResult);
+      const result = await services[i].getResultData(votingRound);
       expect(result.votingRoundId).to.be.equal(votingRound);
       expect(result.isSecureRandom).to.be.equal(true);
       mRoots.add(result.merkleRoot);

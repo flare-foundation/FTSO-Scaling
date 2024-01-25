@@ -17,8 +17,8 @@ import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 
 @Injectable()
-export class FtsoCalculatorService {
-  private readonly logger = new Logger(FtsoCalculatorService.name);
+export class FtsoDataProviderService {
+  private readonly logger = new Logger(FtsoDataProviderService.name);
 
   // connections to the indexer and price provider
   private readonly indexerClient: IndexerClient;
@@ -41,12 +41,12 @@ export class FtsoCalculatorService {
     this.indexerClient = new IndexerClient(manager, required_history_sec);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
-    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger);    
+    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger);
   }
 
   // Entry point methods for the protocol data provider
 
-  async getEncodedCommitData(votingRoundId: number, submissionAddress: string): Promise<string> {
+  async getCommitData(votingRoundId: number, submissionAddress: string): Promise<IPayloadMessage<ICommitData> | undefined> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
@@ -55,15 +55,15 @@ export class FtsoCalculatorService {
     };
     this.votingRoundToRevealData.set(votingRoundId, revealData);
     this.logger.log(`Commit for voting round ${votingRoundId}: ${hash}`);
-    const msg: IPayloadMessage<string> = {
+    const msg: IPayloadMessage<ICommitData> = {
       protocolId: FTSO2_PROTOCOL_ID,
       votingRoundId,
-      payload: CommitData.encode(commitData),
+      payload: commitData,
     };
-    return PayloadMessage.encode(msg);
+    return msg;
   }
 
-  async getEncodedRevealData(votingRoundId: number): Promise<string> {
+  async getRevealData(votingRoundId: number): Promise<IPayloadMessage<IRevealData> | undefined> {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
     const revealData = this.votingRoundToRevealData.get(votingRoundId)!;
@@ -74,15 +74,15 @@ export class FtsoCalculatorService {
       return undefined;
     }
 
-    const msg: IPayloadMessage<string> = {
+    const msg: IPayloadMessage<IRevealData> = {
       protocolId: FTSO2_PROTOCOL_ID,
       votingRoundId: votingRoundId,
-      payload: RevealData.encode(revealData),
+      payload: revealData,
     };
-    return PayloadMessage.encode(msg);
+    return msg;
   }
 
-  async getEncodedResultData(votingRoundId: number): Promise<string | undefined> {   
+  async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(votingRoundId, RANDOM_GENERATION_BENCHING_WINDOW, this.indexer_top_timeout);
     if (dataResponse.status !== DataAvailabilityStatus.OK) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
@@ -97,7 +97,7 @@ export class FtsoCalculatorService {
         isSecureRandom: result.randomData.isSecure,
         merkleRoot,
       };
-      return ProtocolMessageMerkleRoot.encode(message);
+      return message;
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });

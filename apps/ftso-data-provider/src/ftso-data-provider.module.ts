@@ -3,8 +3,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
 import configuration, { IConfig } from "./config/configuration";
-import { FtsoCalculatorController } from "./ftso-calculator.controller";
-import { FtsoCalculatorService } from "./ftso-calculator.service";
+import { FtsoDataProviderController } from "./ftso-data-provider.controller";
+import { FtsoDataProviderService } from "./ftso-data-provider.service";
 
 const IMPORTS_ARRAY = [
   ConfigModule.forRoot({
@@ -36,7 +36,7 @@ const IMPORTS_ARRAY = [
 
 @Module({
   imports: IMPORTS_ARRAY,
-  controllers: [FtsoCalculatorController],
-  providers: [FtsoCalculatorService],
+  controllers: [FtsoDataProviderController],
+  providers: [FtsoDataProviderService],
 })
-export class FtsoCalculatorModule {}
+export class FtsoDataProviderModule {}
