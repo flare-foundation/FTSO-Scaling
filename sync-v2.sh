@@ -10,10 +10,27 @@ cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Re
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/ftso/implementation/FtsoRewardOffersManager.sol/FtsoRewardOffersManager.json abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/FlareSystemCalculator.sol/FlareSystemCalculator.json abi
 
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/PayloadMessage.ts libs/fsp-utils/src/PayloadMessage.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/SigningPolicy.ts libs/fsp-utils/src/SigningPolicy.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ProtocolMessageMerkleRoot.ts libs/fsp-utils/src/ProtocolMessageMerkleRoot.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ECDSASignature.ts libs/fsp-utils/src/ECDSASignature.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/ECDSASignatureWithIndex.ts libs/fsp-utils/src/ECDSASignatureWithIndex.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/RelayMessage.ts libs/fsp-utils/src/RelayMessage.ts
-cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/SignaturePayload.ts libs/fsp-utils/src/SignaturePayload.ts
+COPY_HEADER="
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// This file is copied from the Flare Smart Contract V2 repository.
+// DO NOT CHANGE!
+// See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+"
+
+copy_libs_add_header() {
+   cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/$1.ts libs/fsp-utils/src/$1.ts.tmp
+   echo "$COPY_HEADER" > libs/fsp-utils/src/$1.ts
+   cat libs/fsp-utils/src/$1.ts.tmp >> libs/fsp-utils/src/$1.ts
+   rm libs/fsp-utils/src/$1.ts.tmp
+}
+
+copy_libs_add_header "PayloadMessage"
+copy_libs_add_header "SigningPolicy"
+copy_libs_add_header "ProtocolMessageMerkleRoot"
+copy_libs_add_header "ECDSASignature"
+copy_libs_add_header "ECDSASignatureWithIndex"
+copy_libs_add_header "RelayMessage"
+copy_libs_add_header "SignaturePayload"
+

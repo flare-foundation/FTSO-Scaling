@@ -1,3 +1,11 @@
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// This file is copied from the Flare Smart Contract V2 repository.
+// DO NOT CHANGE!
+// See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 import { ethers } from "ethers";
 import { ECDSASignatureWithIndex, IECDSASignatureWithIndex } from "./ECDSASignatureWithIndex";
 import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "./ProtocolMessageMerkleRoot";
