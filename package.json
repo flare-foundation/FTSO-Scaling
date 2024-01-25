@@ -49,7 +49,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.17",
-    "web3": "^1",
+    "web3": "^4",
     "winston": "^3.10.0"
   },
   "devDependencies": {
@@ -81,7 +81,6 @@
     "sqlite3": "^5.1.7",
     "supertest": "^6.3.3",
     "swagger-typescript-api": "^13.0.3",
-    "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
     "ts-prune": "^0.10.3",

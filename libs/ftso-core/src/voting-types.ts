@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import { ValueWithDecimals } from "./utils/FeedValueEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 

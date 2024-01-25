@@ -8,19 +8,14 @@ import {
   VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
-import { EncodingUtils, unPrefix0x } from "../../libs/ftso-core/src/utils/EncodingUtils";
-import { keccak256 } from "ethers";
+import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { toHex } from "../../libs/ftso-core/src/utils/voting-utils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
-import Prando from "prando";
-import Web3 from "web3";
-import crypto from "crypto";
+import { encodeParameters } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
+import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 
-const web3 = new Web3();
-const coder = web3.eth.abi;
-const random = new Prando(42);
 const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
 
@@ -49,7 +44,7 @@ export function generateVoter(): TestVoter {
     registrationWeight: BigInt(1000),
     wNatCappedWeight: BigInt(1000),
     wNatWeight: BigInt(1000),
-    nodeIds: [generateRandomBytes20(), generateRandomBytes20()],
+    nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
     nodeWeights: [BigInt(1000), BigInt(1000)],
     delegationFeeBIPS: 0,
   };
@@ -94,6 +89,7 @@ export async function generateRewardEpochEvents(
       }),
       rewardEpochStartSec
     ),
+
     ...generateRewards(offerCount, feeds, rewardEpochId, rewardEpochStartSec + 10),
 
     generateEvent(
@@ -147,7 +143,7 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
         {
           rewardEpochId,
           feedNamesEncoded: "0x" + feeds.map(f => f.name).join(""),
-          decimals: "0x" + feeds.map((f) => f.decimals.toString(16).padStart(2,"0")).join(""),
+          decimals: "0x" + feeds.map(f => f.decimals.toString(16).padStart(2, "0")).join(""),
           amount: BigInt(1000),
           minRewardedTurnoutBIPS: 100,
           primaryBandRewardSharePPM: 10000,
@@ -230,7 +226,7 @@ function generateEvent(
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
   const types = abi.abi.inputs.map(x => x.type);
   const values = Object.getOwnPropertyNames(eventData).map(x => eventData[x]);
-  const data = coder.encodeParameters(types, values);
+  const data = encodeParameters(types, values);
 
   const e = new TLPEvents();
   e.address = queryBytesFormat(contract.address);
@@ -269,25 +265,6 @@ export function generateTx(
   return tx;
 }
 
-function generateRandomBytes20(): string {
-  const bytes = crypto.randomBytes(20);
-  const hex = bytes.toString("hex");
-  return `0x${hex}`;
-}
-
-export function generateRandomAddress(): string {
-  const account = web3.eth.accounts.create(random.nextString());
-  return account.address.toLowerCase();
-}
-
-function randomHash() {
-  const array = new Uint8Array(40);
-  for (let i = 0; i < array.length; i++) {
-    array[i] = random.nextInt(0, 255);
-  }
-  return keccak256(array).slice(2);
-}
-
-export function curretTimeSec(): number {
+export function currentTimeSec(): number {
   return Math.floor(Date.now() / 1000);
 }

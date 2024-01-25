@@ -1,11 +1,11 @@
 import Web3 from "web3";
 
 export class Bytes32 {
-  private constructor(private readonly bytes: number[], private hex: string | undefined = undefined) {}
+  private constructor(private readonly bytes: Uint8Array, private hex: string | undefined = undefined) {}
 
   static fromHexString(input: string): Bytes32 {
     if (input == undefined) throw new Error("Input undefined");
-    let bytes: number[];
+    let bytes: Uint8Array;
     try {
       bytes = Web3.utils.hexToBytes(input);
     } catch (e) {
@@ -28,7 +28,7 @@ export class Bytes32 {
   xor(other: Bytes32): Bytes32 {
     const a = this.bytes;
     const b = other.bytes;
-    const result = new Array<number>(32);
+    const result = new Uint8Array(32);
     for (let i = 0; i < 32; i++) {
       result[i] = a[i] ^ b[i];
     }
@@ -43,5 +43,5 @@ export class Bytes32 {
     return this.fromHexString(Web3.utils.randomHex(32));
   }
 
-  static ZERO: Bytes32 = new Bytes32(new Array<number>(32).fill(0));
+  static ZERO: Bytes32 = new Bytes32(new Uint8Array(32).fill(0));
 }
