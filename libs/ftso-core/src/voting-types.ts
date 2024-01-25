@@ -15,6 +15,9 @@ export interface EpochResult {
   readonly merkleTree: MerkleTree;
 }
 
+/**
+ * Encapsulates the result of median calculation for a specific voting round.
+ */
 export interface MedianCalculationResult {
   readonly votingRoundId: number;
   readonly feed: Feed;
@@ -25,12 +28,18 @@ export interface MedianCalculationResult {
   readonly totalVotingWeight: bigint;
 }
 
+/**
+ * Encapsulates the result of random calculation for a specific voting round.
+ */
 export interface RandomCalculationResult {
   readonly votingRoundId: number;
   readonly random: bigint
   readonly isSecure: boolean;
 }
 
+/**
+ * Provides calculation summary for median calculation.
+ */
 export interface MedianCalculationSummary {
   readonly finalMedianPrice: ValueWithDecimals;
   readonly quartile1Price: ValueWithDecimals;
@@ -39,10 +48,8 @@ export interface MedianCalculationSummary {
 }
 
 /**
- * Reward offers 
- * Defined in FtsoRewardOffersManager.sol
+ * Feed representation.
  */
-
 export interface Feed {
   /**
    *  8 characters/bytes or 16 hex chars (18 if 0x prefix)
