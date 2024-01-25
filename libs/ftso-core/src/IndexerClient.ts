@@ -3,6 +3,8 @@ import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
 import { EncodingUtils, decodePayloadMessageCalldata } from "./utils/EncodingUtils";
 import { Address, VotingEpochId } from "./voting-types";
 
+import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
+import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
 import {
   CONTRACTS,
   ContractDefinitions,
@@ -22,12 +24,10 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "./events";
-import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
-import { ICommitData } from "./utils/CommitData";
-import { IRevealData } from "./utils/RevealData";
-import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
 
-// IPayloadMessage<string>[]
+/**
+ * Generic object for submission data and finalization data.
+ */
 export interface GenericSubmissionData<T> {
   submitAddress: Address;
   votingEpochIdFromTimestamp: VotingEpochId; // voting round id in which the message was submitted
@@ -38,23 +38,44 @@ export interface GenericSubmissionData<T> {
   messages: T;
 }
 
-export interface SubmissionData extends GenericSubmissionData<IPayloadMessage<string>[]> {};
+/**
+ * Submission data for messages sent to function 'submit1', ..., 'submit3' of contract Submission.
+ */
+export interface SubmissionData extends GenericSubmissionData<IPayloadMessage<string>[]> { };
+/**
+ * Unparsed finalization data from finalization calls (relay()) on Relay contract.
+ */
 export interface FinalizationData extends GenericSubmissionData<string> {
   successfulOnChain: boolean;
 };
+/**
+ * Parsed finalization data from finalization calls (relay()) on Relay contract.
+ */
 export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMessage> {
   successfulOnChain: boolean;
 };
 
+/**
+ * Indexer query response wrapper.
+ */
 export interface IndexerResponse<T> {
   status: BlockAssuranceResult;
   data?: T;
 }
 
+/**
+ * Prepares hex byte value for querying the indexer database.
+ * In the indexer database all hex values are strings without '0x' prefix, lowercase.
+ * @param address 
+ * @returns 
+ */
 export function queryBytesFormat(address: string): string {
   return (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
 }
 
+/**
+ * Result of block assurance check.
+ */
 export enum BlockAssuranceResult {
   /**
    * Block range indexed and we have insurance of having one block with strictly
@@ -116,11 +137,6 @@ export class IndexerClient {
 
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.
-   * @param smartContract
-   * @param eventName
-   * @param startTime
-   * @param endTime
-   * @returns
    */
   private async queryEvents(
     smartContract: ContractDefinitions,
@@ -142,11 +158,6 @@ export class IndexerClient {
 
   /**
    * Queries indexer database for transactions on a smart contract based on function signature in a given timestamp range.
-   * @param smartContract
-   * @param functionName
-   * @param startTime
-   * @param endTime
-   * @returns
    */
   private async queryTransactions(
     smartContract: ContractDefinitions,
@@ -192,9 +203,6 @@ export class IndexerClient {
    * If  the database does not contain a block with timestamp strictly greater than endTime, and
    * no timeout is given, it returns NOT_OK. But if timeout is given, it returns TIMEOUT_OK if the local time
    * is greater than endTime + timeout.
-   * @param endTime
-   * @param endTimeout
-   * @returns
    */
   private async ensureTopBlock(endTime: number, endTimeout?: number): Promise<BlockAssuranceResult> {
     const queryLast = this.entityManager
@@ -220,10 +228,6 @@ export class IndexerClient {
 
   /**
    * Checks the indexer database for a given minimal timestamp range, possibly with given timeout.
-   * @param startTime
-   * @param endTime
-   * @param endTimeout
-   * @returns
    */
   private async ensureEventRange(
     startTime: number,
@@ -244,8 +248,6 @@ export class IndexerClient {
    * Extracts RewardEpochStarted for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * The event is a low boundary event for the start of reward offers for rewardEpochId + 1.
-   * @param rewardEpochId
-   * @returns
    */
   public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<IndexerResponse<RewardEpochStarted>> {
     const eventName = RewardEpochStarted.eventName;
@@ -267,8 +269,6 @@ export class IndexerClient {
    * Extracts event RandomAcquisitionStarted for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * The event is boundary event for the end of reward offers for the rewardEpochId.
-   * @param rewardEpochId
-   * @returns
    */
   public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<IndexerResponse<RandomAcquisitionStarted>> {
     const eventName = RandomAcquisitionStarted.eventName;
@@ -292,9 +292,6 @@ export class IndexerClient {
    * Timestamp range are obtained from timestamps of relevant events RewardEpochStarted and RandomAcquisitionStarted.
    * IMPORTANT: If this is not the case the function does not provide any guarantee of sufficient data availability in
    * indexer database.
-   * @param startTime
-   * @param endTime
-   * @returns
    */
   public async getRewardOffers(startTime: number, endTime: number): Promise<IndexerResponse<RewardOffers>> {
     const status = await this.ensureEventRange(startTime, endTime);
@@ -331,8 +328,6 @@ export class IndexerClient {
    * Extracts VotePowerBlockSelected event for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * This event is a low boundary event for the start of voter registration for rewardEpochId.
-   * @param rewardEpochId
-   * @returns
    */
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
     const eventName = VotePowerBlockSelected.eventName;
@@ -354,8 +349,6 @@ export class IndexerClient {
    * Extracts SigningPolicyInitialized event on Relay contract for a specific @param rewardEpochId from the indexer database,
    * if the event is already indexed. Otherwise returns undefined.
    * This event is a high boundary event for the end of voter registration for rewardEpochId.
-   * @param rewardEpochId
-   * @returns
    */
   public async getSigningPolicyInitializedEvent(
     rewardEpochId: number
@@ -379,8 +372,6 @@ export class IndexerClient {
    * Returns the all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
    * Events are sorted by timestamp, hence also by rewardEpochId.
    * The query result is returned even if the indexer database does not contain a block with timestamp strictly lower than fromStartTime.
-   * @param fromStartTime
-   * @returns
    */
   public async getLatestSigningPolicyInitializedEvents(
     fromStartTime: number
@@ -401,9 +392,6 @@ export class IndexerClient {
    * VoterRegistrationInfo (FlareSystemCalculator contract) events in the given timestamp range.
    * Timestamp range are obtained from timestamps of relevant events VotePowerBlockSelectedEvent and SigningPolicyInitialized.
    * The function checks the availability of block range in the indexer database.
-   * @param startTime
-   * @param endTime
-   * @returns
    */
   public async getFullVoterRegistrationInfoEvents(
     startTime: number,
@@ -473,14 +461,9 @@ export class IndexerClient {
 
   /**
    * Extracts all the submissions through function @param functionName in a given time range.
-   * @param functionName
-   * @param startTime
-   * @param endTime
-   * @param endTimeout
-   * @returns
    */
   public async getSubmissionDataInRange(
-    functionName: string,
+    functionName: "submit1" | "submit2" | "submit3" | "submitSignatures",
     startTime: number,
     endTime: number,
     endTimeout?: number
@@ -517,9 +500,6 @@ export class IndexerClient {
   /**
    * Queries indexer database for all finalization transactions on the Relay contract in a given timestamp range.
    * It returns the result if the indexer database ensures the data availability in the given timestamp range.
-   * @param startTime 
-   * @param endTime 
-   * @returns 
    */
   public async getFinalizationDataInRange(
     startTime: number,
@@ -553,5 +533,5 @@ export class IndexerClient {
       data: finalizations,
     };
   }
- 
+
 }

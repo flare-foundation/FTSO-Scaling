@@ -1,10 +1,5 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
 import BN from "bn.js";
-import coder from "web3-eth-abi";
 import utils from "web3-utils";
-import { RewardClaim } from "../voting-types";
-import { Bytes32 } from "./sol-types";
-import { EncodingUtils } from "./EncodingUtils";
 
 
 /**

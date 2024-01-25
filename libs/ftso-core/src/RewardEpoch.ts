@@ -1,5 +1,5 @@
 import { FullVoterRegistrationInfo, RandomAcquisitionStarted, RewardEpochStarted, RewardOffers, SigningPolicyInitialized, VotePowerBlockSelected } from "./events";
-import { rewardEpochFeedSequence } from "./ftso-calculation-logic";
+import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export interface VoterWeights {

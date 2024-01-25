@@ -4,7 +4,7 @@ import { EntityManager } from "typeorm";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
-import { calculateResults } from "../../../libs/ftso-core/src/ftso-calculation-logic";
+import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { IPayloadMessage, PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
@@ -89,7 +89,7 @@ export class FtsoCalculatorService {
       return undefined;
     }
     try {
-      const result = await calculateResults(dataResponse.data);
+      const result = await calculateResultsForVotingRound(dataResponse.data);
       const merkleRoot = result.merkleTree.root;
       const message: IProtocolMessageMerkleRoot = {
         protocolId: FTSO2_PROTOCOL_ID,
@@ -103,27 +103,6 @@ export class FtsoCalculatorService {
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
   }
-
-  // async getResult(votingRoundId: number): Promise<string> {
-  //   this.logger.log(`Getting result for epoch ${votingRoundId}`);
-  //   try {
-  //     const [merkleRoot, goodRandom] = await this.ftsoCalculatorService.getResult(votingRoundId);
-  //     const encoded = // 38 bytes total
-  //       "0x" +
-  //       FTSO2_PROTOCOL_ID.toString(16).padStart(2, "0") + // 2 bytes
-  //       votingRoundId.toString(16).padStart(8, "0") + // 4 bytes
-  //       (goodRandom ? "01" : "00") + // 1 byte
-  //       merkleRoot.toString().slice(2); // 32 bytes
-
-  //     this.logger.log(`Result for epoch ${votingRoundId}: ${encoded}`);
-  //     return encoded;
-  //   } catch (e) {
-  //     this.logger.error(`Error calculating result: ${errorString(e)}`);
-  //     throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
-  //   }
-  // }
-
-
 
   // Internal methods
 

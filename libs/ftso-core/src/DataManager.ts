@@ -1,7 +1,7 @@
 import { BlockAssuranceResult, FinalizationData, GenericSubmissionData, IndexerClient, ParsedFinalizationData, SubmissionData } from "./IndexerClient";
-import { RewardEpoch, VoterWeights } from "./RewardEpoch";
+import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
+import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
 import { CommitData, ICommitData } from "./utils/CommitData";
 import { ECDSASignature } from "../../fsp-utils/src/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../fsp-utils/src/ProtocolMessageMerkleRoot";
@@ -10,10 +10,12 @@ import { IRevealData, RevealData } from "./utils/RevealData";
 import { ISignaturePayload, SignaturePayload } from "../../fsp-utils/src/SignaturePayload";
 import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
 import { Address, Feed, MessageHash } from "./voting-types";
+import { DataForCalculations, DataForRewardCalculation, DataForCalculationsPartial } from "./data-calculation-interfaces";
 
-// For a given voting round id, the rewarded finalization is 
-const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = 0;
 
+/**
+ * Data availability status for data manager responses.
+ */
 export enum DataAvailabilityStatus {
   /**
    * All relevant data is available on the indexer and the data is consistent.
@@ -30,6 +32,9 @@ export enum DataAvailabilityStatus {
   TIMEOUT_OK,
 }
 
+/**
+ * Response wrapper for data manager responses.
+ */
 export interface DataMangerResponse<T> {
   status: DataAvailabilityStatus;
   data?: T;
@@ -40,40 +45,6 @@ interface CommitsAndReveals {
   commits: Map<Address, ICommitData>;
   reveals: Map<Address, IRevealData>;
 }
-
-export interface DataForCalculationsPartial {
-  // voting round id
-  votingRoundId: number;
-  // Ordered list of submission addresses matching the order in the signing policy
-  orderedVotersSubmissionAddresses: Address[];
-  // Reveals from eligible submission addresses that match to existing commits
-  validEligibleReveals: Map<Address, IRevealData>;
-  // Submission addresses of eligible voters that committed but withheld or provided wrong reveals in the voting round
-  revealOffenders: Set<Address>;
-  // Median voting weight
-  voterMedianVotingWeights: Map<Address, bigint>;
-  // Feed order for the reward epoch of the voting round id
-  feedOrder: Feed[];
-}
-
-export interface DataForCalculations extends DataForCalculationsPartial {
-  // Window in which offenses related to reveal withholding or providing wrong reveals are counted
-  randomGenerationBenchingWindow: number;
-  // Set of offending submission addresses in the randomGenerationBenchingWindow
-  benchingWindowRevealOffenders: Set<Address>;
-  // Reward epoch
-  rewardEpoch: RewardEpoch;
-}
-
-export interface DataForRewardCalculation {
-  dataForCalculations: DataForCalculations;
-  signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
-  finalizations: ParsedFinalizationData[];
-  // might be undefined, if such finalization does not exist in an observed range
-  firstSuccessfulFinalization?: ParsedFinalizationData;
-  voterWeights: Map<Address, VoterWeights>;
-}
-
 
 interface CommitAndRevealSubmissionsMappingsForRange {
   votingRoundIdToCommits: Map<number, SubmissionData[]>;
@@ -101,10 +72,6 @@ export class DataManager {
    *  - filters out leaving commits and reveals by eligible voters in the current reward epoch
    *  - calculates reveal offenders in the voting round id
    *  - calculates all reveal offenders in the random generation benching window (@param votingRoundId - @param randomGenerationBenchingWindow, @param votingRoundId - 1)
-   * @param votingRoundId 
-   * @param randomGenerationBenchingWindow 
-   * @param endTimeout 
-   * @returns 
    */
   public async getDataForCalculations(
     votingRoundId: number,
@@ -172,9 +139,6 @@ export class DataManager {
    * Each finalization is checked if it is valid and finalizable. Note that only one such finalization is fully executed on chain, while
    * others are reverted. Nevertheless, all finalizations in rewarded window are considered for the reward calculation, since a certain 
    * subset is eligible for a reward if submitted in due time.
-   * @param votingRoundId 
-   * @param randomGenerationBenchingWindow 
-   * @returns 
    */
   public async getDataForRewardCalculation(
     votingRoundId: number,
@@ -433,9 +397,6 @@ export class DataManager {
 
   /**
    * Prepares data for median calculation and rewarding.
-   * @param commitsAndReveals
-   * @param rewardEpoch
-   * @returns
    */
   private getDataForCalculationsPartial(
     commitsAndReveals: CommitsAndReveals,
@@ -478,9 +439,6 @@ export class DataManager {
   /**
    * Construct a mapping submissionAddress => reveal data for valid reveals of eligible voters.
    * A reveal is considered valid if there exists a matching commit.
-   * @param eligibleCommits
-   * @param eligibleReveals
-   * @returns
    */
   private getValidReveals(
     eligibleCommits: Map<Address, ICommitData>,
@@ -504,9 +462,6 @@ export class DataManager {
   /**
    * Construct a set of submission addresses that incorrectly revealed or did not reveal at all.
    * Iterate over commits and check if they were revealed correctly., return those that were not.
-   * @param availableCommits
-   * @param availableReveals
-   * @returns
    */
   private getRevealOffenders(
     availableCommits: Map<Address, ICommitData>,
@@ -532,11 +487,6 @@ export class DataManager {
    * The interval of voting rounds is defined as [@param votingRoundId - @param randomGenerationBenchingWindow, @param votingRoundId - 1]
    * A reveal offender is any voter (eligible or not), which has committed but did not reveal for a specific voting round,
    * or has provided invalid reveal (not matching to the commit)
-   * @param votingRoundId
-   * @param votingRoundIdToCommits
-   * @param votingRoundIdToReveals
-   * @param randomGenerationBenchingWindow
-   * @returns
    */
   private async getBenchingWindowRevealOffenders(
     votingRoundId: number,
@@ -599,8 +549,6 @@ export class DataManager {
    * ASSUMPTION 2: submissions in submissionDataArray are all commit transactions that happen in this votingRoundId
    * ASSUMPTION 3: submissionDataArray is ordered in the blockchain chronological order
    * NOTICE: actually assumes, but does not check
-   * @param submissionDataArray
-   * @returns
    */
   private getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map<Address, ICommitData> {
     const voterToLastCommit = new Map<Address, ICommitData>();

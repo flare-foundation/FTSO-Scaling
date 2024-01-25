@@ -1,6 +1,6 @@
 import { ProtocolMessageMerkleRoot } from "../../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
-import { DataForRewardCalculation } from "../DataManager";
+import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { GenericSubmissionData } from "../IndexerClient";
 import { RewardEpoch } from "../RewardEpoch";
 import { EPOCH_SETTINGS } from "../configs/networks";
@@ -42,11 +42,6 @@ export function calculateSigningRewards(
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot);
     const signatures = data.signatures.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
-
-
-
-
-
     // rewarded:
     // - all signatures in grace period (no matter of finalization timestamp)
     // - signatures outside grace period but before timestamp of first successful finalization, if the timestamp is still within before the 

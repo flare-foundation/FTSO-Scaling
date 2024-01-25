@@ -2,7 +2,7 @@ import { DataAvailabilityStatus, DataManager } from "../DataManager";
 import { RewardEpoch } from "../RewardEpoch";
 import { RewardEpochManager } from "../RewardEpochManager";
 import { FTSO2_PROTOCOL_ID } from "../configs/networks";
-import { calculateFeedMedians } from "../ftso-calculation-logic";
+import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import {
@@ -91,7 +91,7 @@ export async function partialRewardClaimsForVotingRound(
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
   // Calculate feed medians
-  const medianResults: MedianCalculationResult[] = await calculateFeedMedians(rewardDataForCalculations.dataForCalculations);
+  const medianResults: MedianCalculationResult[] = await calculateMedianResults(rewardDataForCalculations.dataForCalculations);
   // feedName => medianResult
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of medianResults) {

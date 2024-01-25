@@ -1,4 +1,4 @@
-import { DataForRewardCalculation } from "../DataManager";
+import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { RewardEpoch } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";

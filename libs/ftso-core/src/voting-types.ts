@@ -9,47 +9,6 @@ export type RewardEpochId = number;
 export type MessageHash = string;
 
 
-export interface RewardClaim {
-  /**
-   * `true`if the claim is for the full amount claimable by the specified beneficiary. E.g: back claims, signer and finalization claims.
-   * `false` if the claim is for voting rewards, where the amount is shared between the beneficiary voter and its delegators proportionally to their weights.
-   */
-  readonly isFixedClaim: boolean;
-  readonly amount: BN; // 256-bit
-  readonly currencyAddress: string;
-  readonly beneficiary: string;
-  readonly priceEpochId: number;
-}
-
-export interface RewardClaimWithProof {
-  readonly merkleProof: readonly string[];
-  readonly body: RewardClaim;
-}
-
-
-
-export interface BareSignature {
-  readonly v: number;
-  readonly r: string;
-  readonly s: string;
-}
-
-export interface SignatureData {
-  readonly epochId: number;
-  readonly merkleRoot: string;
-  readonly v: number;
-  readonly r: string;
-  readonly s: string;
-}
-
-export interface FinalizeData {
-  readonly confirmed: boolean;
-  readonly from: string;
-  readonly epochId: number;
-  readonly merkleRoot: string;
-  readonly signatures: readonly BareSignature[];
-}
-
 export interface EpochResult {
   readonly votingRoundId: number;
   readonly medianData: MedianCalculationResult[];
@@ -94,26 +53,4 @@ export interface Feed {
    * int8 (solidity int8) the number of decimals in the price.
    */
   decimals: number; 
-}
-
-/**
- * Median merkle tree items.
- */
-
-/**
- * Feed item that goes into the merkle tree.
- */
-interface FeedTreeNode {
-  votingRoundId: number;
-  feed: Feed;
-  value: number; // 32-bit signed integer (solidity int32)
-  turnoutBIPS: number;
-}
-
-/**
- * Random item that goes into the merkle tree.
- */
-interface RandomTreeNode {
-  votingRoundId: number;
-  random: bigint;  
 }

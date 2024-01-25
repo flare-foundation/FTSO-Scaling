@@ -149,3 +149,18 @@ const burnAddress = () => {
 }
 
 export const BURN_ADDRESS = burnAddress();
+
+/**
+ * The number of additional voting rounds for performing queries for signature and finalization data.
+ * If value is 0, then for votingRoundId the original window is from the end of reveals to the end 
+ * of the voting epoch votingRoundId. If value is bigger, it extends to ends of the next epochs accordingly.
+ */
+const additionalRewardFinalizationWindows = () => {
+   switch (process.env.NETWORK) {
+      case "local-test":
+      default:
+         return 0;
+   }
+}
+
+export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinalizationWindows();
