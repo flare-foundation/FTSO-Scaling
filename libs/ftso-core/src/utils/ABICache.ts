@@ -1,6 +1,4 @@
 import { readFileSync } from "fs";
-import { AbiCoder } from "web3-eth-abi";
-import { AbiInput, AbiItem } from "web3-utils/types";
 import { CONTRACTS } from "../configs/networks";
 import {
   InflationRewardsOffered,
@@ -12,6 +10,10 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "../events";
+import { AbiEventFragment, AbiFunctionFragment, AbiInput } from "web3";
+import { encodeFunctionSignature, encodeEventSignature } from 'web3-eth-abi';
+
+type AbiItem = AbiFunctionFragment | AbiEventFragment;
 
 export enum AbiType {
   Function,
@@ -35,7 +37,7 @@ export class ABICache {
   // contractName|functionName => abi
   readonly contractAndNameToAbiData = new Map<string, AbiData>();
 
-  constructor(private readonly coder: AbiCoder) {
+  constructor() {
     // Cache the following ABIs
     const cachedABIs: [string, string | undefined, string | undefined][] = [
       [CONTRACTS.Submission.name, "submit1", undefined],
@@ -43,7 +45,7 @@ export class ABICache {
       [CONTRACTS.Submission.name, "submit3", undefined],
       [CONTRACTS.Submission.name, "submitSignatures", undefined],
       [CONTRACTS.FlareSystemManager.name, undefined, VotePowerBlockSelected.eventName],
-      [CONTRACTS.FlareSystemManager.name, undefined, RandomAcquisitionStarted.eventName], 
+      [CONTRACTS.FlareSystemManager.name, undefined, RandomAcquisitionStarted.eventName],
       [CONTRACTS.FlareSystemManager.name, undefined, RewardEpochStarted.eventName],
       [CONTRACTS.VoterRegistry.name, undefined, VoterRegistered.eventName],
       [CONTRACTS.FlareSystemCalculator.name, undefined, VoterRegistrationInfo.eventName],
@@ -96,8 +98,8 @@ export class ABICache {
     abiData = {
       abi: item,
       isEvent: !!eventName,
-      signature: functionName ? this.coder.encodeFunctionSignature(item) : this.coder.encodeEventSignature(item),
-    } as AbiData;
+      signature: functionName ? encodeFunctionSignature(item) : encodeEventSignature(item),
+    };
     this.contractAndNameToAbiData.set(key, abiData);
     return abiData;
   }

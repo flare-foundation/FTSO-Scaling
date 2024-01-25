@@ -276,7 +276,7 @@ function generateRandomBytes20(): string {
 }
 
 export function generateRandomAddress(): string {
-  const account = web3.eth.accounts.create(random.nextString());
+  const account = web3.eth.accounts.create();
   return account.address.toLowerCase();
 }
 

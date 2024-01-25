@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import Web3 from "web3";
 
 /**
@@ -32,7 +31,7 @@ const web3 = new Web3();
  * @param padToBytes size to pad to
  * @returns padded hex value
  */
-function toHex(x: string | number | BN, padToBytes: number) {
+function toHex(x: string | number | bigint, padToBytes: number) {
   return Web3.utils.leftPad(Web3.utils.toHex(x), padToBytes! * 2);
 }
 
@@ -92,11 +91,11 @@ export class MerkleTree {
   }
 
   /**
-   * Merkle root as a BN (big number from BN.js)
+   * Merkle root as a bigint
    */
-  get rootBN() {
+  get rootBigint() {
     const rt = this.root;
-    return rt ? web3.utils.toBN(rt) : web3.utils.toBN(0);
+    return rt ? web3.utils.toBigInt(rt) : web3.utils.toBigInt(0);
   }
 
   /**

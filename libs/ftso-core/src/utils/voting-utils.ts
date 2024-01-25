@@ -1,28 +1,6 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
-import BN from "bn.js";
-import coder from "web3-eth-abi";
-import utils from "web3-utils";
-import { RewardClaim } from "../voting-types";
-import { Bytes32 } from "./sol-types";
-import { EncodingUtils } from "./EncodingUtils";
+import Web3 from "web3";
 
-
-/**
- * Converts a given number to BN.
- */
-export function toBN(x: BN | number | string): BN {
-  if (x instanceof BN) return x;
-  return utils.toBN(x);
-}
-
-
-// /**
-//  * Hashing {@link RewardClaim} struct.
-//  */
-// export function hashRewardClaim(data: RewardClaim): string {
-//   const rewardClaimAbi: any = EncodingUtils.instance.abiInputForName("rewardClaimDefinition")!;
-//   return utils.soliditySha3(defaultAbiCoder.encode([rewardClaimAbi], [hexlifyBN(data)]))!;
-// }
+const utils = Web3.utils;
 
 /**
  * Converts text representation of a symbol to bytes4.
@@ -62,41 +40,11 @@ export function prefix0xSigned(tx: string) {
  * @param padToBytes places to (left) pad to (optional)
  * @returns (padded) hex valu
  */
-export function toHex(x: string | number | BN, padToBytes?: number) {
+export function toHex(x: string | number, padToBytes?: number) {
   if ((padToBytes as any) > 0) {
     return utils.leftPad(utils.toHex(x), padToBytes! * 2);
   }
   return utils.toHex(x);
-}
-
-/**
- * Converts fields of an object to Hex values
- * Note: negative values are hexlified with '-0x'.
- * This is compatible with web3.eth.encodeParameters
- * @param obj input object
- * @returns object with matching fields to input object but instead having various number types (number, BN)
- * converted to hex values ('0x'-prefixed).
- */
-export function hexlifyBN(obj: any): any {
-  const isHexReqex = /^[0-9A-Fa-f]+$/;
-  if (BN.isBN(obj)) {
-    return prefix0xSigned(toHex(obj));
-  }
-  if (Array.isArray(obj)) {
-    return (obj as any[]).map(item => hexlifyBN(item));
-  }
-  if (typeof obj === "object") {
-    const res = {} as any;
-    for (const key of Object.keys(obj)) {
-      const value = obj[key];
-      res[key] = hexlifyBN(value);
-    }
-    return res;
-  }
-  if (typeof obj === "string" && obj.match(isHexReqex)) {
-    return prefix0xSigned(obj);
-  }
-  return obj;
 }
 
 export function hashBytes(hexString: string): string {

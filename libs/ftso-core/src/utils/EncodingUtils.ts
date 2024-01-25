@@ -1,12 +1,10 @@
-import Web3 from "web3";
 import { TLPEvents, TLPTransaction } from "../orm/entities";
 import { IPayloadMessage, PayloadMessage } from "../../../fsp-utils/src/PayloadMessage";
 import { ABICache, AbiData, AbiDataInput } from "./ABICache";
-
-const coder = new Web3().eth.abi;
+import { decodeLog } from "web3-eth-abi";
 
 export class EncodingUtils {
-  private readonly abiCache = new ABICache(coder);
+  private readonly abiCache = new ABICache();
 
   private static _instance: EncodingUtils | undefined = undefined;
   public static get instance(): EncodingUtils {
@@ -18,9 +16,9 @@ export class EncodingUtils {
 
   /**
    * Returns ABI definition for a given smart contract name and function name
-   * @param contractName 
-   * @param functionName 
-   * @returns 
+   * @param contractName
+   * @param functionName
+   * @returns
    */
   getFunctionAbiData(contractName: string, functionName: string): AbiData {
     return this.abiCache.getAbi(contractName, functionName);
@@ -28,9 +26,9 @@ export class EncodingUtils {
 
   /**
    * Returns ABI definition for a given smart contract name and event name
-   * @param contractName 
-   * @param eventName 
-   * @returns 
+   * @param contractName
+   * @param eventName
+   * @returns
    */
   getEventAbiData(contractName: string, eventName: string): AbiData {
     return this.abiCache.getAbi(contractName, undefined, eventName);
@@ -38,10 +36,10 @@ export class EncodingUtils {
 
   /**
    * Returns ABI input definition for a given smart contract name, function name and function argument id
-   * @param contractName 
-   * @param functionName 
-   * @param functionArgumentId 
-   * @returns 
+   * @param contractName
+   * @param functionName
+   * @param functionArgumentId
+   * @returns
    */
   getFunctionInputAbiData(contractName: string, functionName: string, functionArgumentId): AbiDataInput {
     return this.abiCache.getAbiInput(contractName, functionName, functionArgumentId);
@@ -49,9 +47,9 @@ export class EncodingUtils {
 
   /**
    * Returns function signature for a given smart contract name and function name
-   * @param smartContractName 
-   * @param functionName 
-   * @returns 
+   * @param smartContractName
+   * @param functionName
+   * @returns
    */
   getFunctionSignature(smartContractName: string, functionName: string): string {
     return this.getFunctionAbiData(smartContractName, functionName).signature;
@@ -59,9 +57,9 @@ export class EncodingUtils {
 
   /**
    * Returns event signature for a given smart contract name and event name
-   * @param smartContractName 
-   * @param eventName 
-   * @returns 
+   * @param smartContractName
+   * @param eventName
+   * @returns
    */
   getEventSignature(smartContractName: string, eventName: string): string {
     return this.getEventAbiData(smartContractName, eventName).signature;
@@ -84,8 +82,8 @@ export function decodeEvent<T>(
     return x.startsWith("0x") ? x : "0x" + x;
   }
   return transform(
-    coder.decodeLog(
-      abiData.abi!.inputs!,
+    decodeLog(
+      [...abiData.abi!.inputs!],
       prefix0x(data.data),
       // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
       [data.topic0, data.topic1, data.topic2, data.topic3].filter(x => x).map(x => prefix0x(x))
@@ -103,5 +101,5 @@ export function decodePayloadMessageCalldata(tx: TLPTransaction): IPayloadMessag
 }
 
 export function unPrefix0x(str: string) {
-   return str.startsWith("0x") ? str.slice(2) : str
+  return str.startsWith("0x") ? str.slice(2) : str;
 }
