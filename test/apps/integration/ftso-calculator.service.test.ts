@@ -5,9 +5,8 @@ import {
   generateVoters,
   generateRewardEpochEvents,
   TestVoter,
-  generateRandomAddress,
   generateTx,
-  curretTimeSec,
+  currentTimeSec,
 } from "../../utils/generators";
 import { MockIndexerDB } from "../../utils/db";
 import { expect } from "chai";
@@ -21,6 +20,7 @@ import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import { generateRandomAddress } from "../../utils/testRandom";
 
 describe("ftso-calculator.service", () => {
   const feeds: Feed[] = [
@@ -110,7 +110,7 @@ describe("ftso-calculator.service", () => {
         CONTRACTS.Submission.address,
         sigCommit,
         1,
-        curretTimeSec(),
+        currentTimeSec(),
         comimtPayload
       );
       await db.addTransaction([commitTx]);
@@ -126,7 +126,7 @@ describe("ftso-calculator.service", () => {
         CONTRACTS.Submission.address,
         sigReveal,
         2,
-        curretTimeSec(),
+        currentTimeSec(),
         revealPayload
       );
       await db.addTransaction([revealTx]);
@@ -134,7 +134,7 @@ describe("ftso-calculator.service", () => {
 
     clock.tick(epochSettings.revealDeadlineSeconds * 1000 + 1);
 
-    await db.emptyBlock();
+    await db.syncTimeToNow();
 
     const mRoots = new Set<string>();
     for (let i = 0; i < voters.length; i++) {
@@ -148,18 +148,12 @@ describe("ftso-calculator.service", () => {
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
-    const epochEvents = await generateRewardEpochEvents(
-      epochSettings,
-      feeds,
-      offerCount,
-      rewardEpochId,
-      voters
-    );
+    const epochEvents = await generateRewardEpochEvents(epochSettings, feeds, offerCount, rewardEpochId, voters);
 
     await db.addEvent(epochEvents);
 
     clock.setSystemTime(epochSettings.expectedRewardEpochStartTimeSec(rewardEpochId) * 1000 + 1);
 
-    await db.emptyBlock();
+    await db.syncTimeToNow();
   }
 });

@@ -1,7 +1,7 @@
 import { DataSource, EntityManager } from "typeorm";
 import { TLPTransaction, TLPEvents, TLPState } from "../../libs/ftso-core/src/orm/entities";
 import { FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
-import { curretTimeSec, generateState } from "./generators";
+import { currentTimeSec, generateState } from "./generators";
 
 const sqliteDatabase = `:memory:`;
 
@@ -43,8 +43,8 @@ export class MockIndexerDB {
   }
 
   /** Increases the last seen block timestamp in the database. */
-  async emptyBlock() {
-    this.upperState.block_timestamp = curretTimeSec();
+  async syncTimeToNow() {
+    this.upperState.block_timestamp = currentTimeSec();
     await this.em.save(this.upperState);
   }
 
