@@ -19,14 +19,14 @@ export namespace RevealData {
     return revealData.random + unPrefix0x(revealData.encodedValues);
   }
 
-  export function decode(encoded: string, feeds?: Feed[]): IRevealData {
+  export function decode(encoded: string, feeds: Feed[]): IRevealData {
     if (!/^0x[0-9a-f]*$/i.test(encoded) || encoded.length % 2 !== 0) {
       throw Error(`Invalid encoding format: ${encoded}`);
     }
     return {
       random: encoded.slice(0, 66),
       feeds,
-      pricesWithDecimals: feeds ? FeedValueEncoder.decode("0x" + encoded.slice(66), feeds) : undefined,
+      pricesWithDecimals: FeedValueEncoder.decode("0x" + encoded.slice(66), feeds),
       encodedValues: "0x" + encoded.slice(66).padEnd(8 * feeds.length, "0"),
     };
   }

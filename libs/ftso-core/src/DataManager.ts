@@ -123,7 +123,8 @@ export class DataManager {
       votingRoundId,
       mappingsResponse.data.votingRoundIdToCommits,
       mappingsResponse.data.votingRoundIdToReveals,
-      randomGenerationBenchingWindow
+      randomGenerationBenchingWindow,
+      this.rewardEpochManager
     );
     return {
       status: mappingsResponse.status,
@@ -533,7 +534,8 @@ export class DataManager {
     votingRoundId: number,
     votingRoundIdToCommits: Map<number, SubmissionData[]>,
     votingRoundIdToReveals: Map<number, SubmissionData[]>,
-    randomGenerationBenchingWindow: number
+    randomGenerationBenchingWindow: number,
+    rewardEpochManager: RewardEpochManager
   ) {
     const randomOffenders = new Set<Address>();
     for (let i = votingRoundId - randomGenerationBenchingWindow; i < votingRoundId; i++) {
@@ -542,7 +544,8 @@ export class DataManager {
       if (!commits || commits.length === 0) {
         continue;
       }
-      const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals);
+      const feedOrder = (await rewardEpochManager.getRewardEpoch(i)).canonicalFeedOrder;
+      const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals, feedOrder);
       const revealOffenders = this.getRevealOffenders(commitsAndReveals.commits, commitsAndReveals.reveals);
       for (const offender of revealOffenders) {
         randomOffenders.add(offender);
@@ -572,7 +575,7 @@ export class DataManager {
     votingRoundId: number,
     commitSubmissions: SubmissionData[],
     revealSubmissions: SubmissionData[],
-    feedOrder?: Feed[]
+    feedOrder: Feed[]
   ): CommitsAndReveals {
     const commits = this.getVoterToLastCommitMap(commitSubmissions);
     const reveals = this.getVoterToLastRevealMap(revealSubmissions, feedOrder);
@@ -619,10 +622,7 @@ export class DataManager {
    * @param feedOrder
    * @returns
    */
-  private getVoterToLastRevealMap(
-    submissionDataArray: SubmissionData[],
-    feedOrder?: Feed[]
-  ): Map<Address, IRevealData> {
+  private getVoterToLastRevealMap(submissionDataArray: SubmissionData[], feedOrder: Feed[]): Map<Address, IRevealData> {
     const voterToLastReveal = new Map<Address, IRevealData>();
     for (const submission of submissionDataArray) {
       for (const message of submission.messages) {
