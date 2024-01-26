@@ -4,7 +4,6 @@ import { IRevealData } from "./utils/RevealData";
 import { ISignaturePayload } from "../../fsp-utils/src/SignaturePayload";
 import { Address, Feed, MessageHash } from "./voting-types";
 
-
 export interface DataForCalculationsPartial {
   // voting round id
   votingRoundId: number;

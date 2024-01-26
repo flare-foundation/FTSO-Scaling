@@ -2,16 +2,15 @@ import { CONTRACTS } from "../configs/networks";
 import { decodeEvent, unPrefix0x } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
-
 /**
- * Inflation rewards offer as obtained from an event of 
+ * Inflation rewards offer as obtained from an event of
  * InflationRewardsOffered from the FtsoRewardOfferManager smart contract
  */
 export class InflationRewardsOffered extends RawEventConstructible {
   static eventName = "InflationRewardsOffered";
 
   constructor(data: any) {
-    super()
+    super();
     let unPrefixed = unPrefix0x(data.feedNames);
     if (unPrefixed.length % 16 !== 0) {
       throw new Error("Feed names must be multiple of 8 bytes");
@@ -28,7 +27,7 @@ export class InflationRewardsOffered extends RawEventConstructible {
     }
     this.rewardEpochId = Number(data.rewardEpochId);
 
-    const unprefixedDecimals = unPrefix0x(data.decimals)
+    const unprefixedDecimals = unPrefix0x(data.decimals);
     if (unprefixedDecimals.length % 2 !== 0) {
       throw new Error("Decimals must be multiple of 1 byte");
     }
@@ -45,7 +44,12 @@ export class InflationRewardsOffered extends RawEventConstructible {
   }
 
   static fromRawEvent(event: any): InflationRewardsOffered {
-    return decodeEvent<InflationRewardsOffered>(CONTRACTS.FtsoRewardOffersManager.name, InflationRewardsOffered.eventName, event, (data: any) => new InflationRewardsOffered(data))
+    return decodeEvent<InflationRewardsOffered>(
+      CONTRACTS.FtsoRewardOffersManager.name,
+      InflationRewardsOffered.eventName,
+      event,
+      (data: any) => new InflationRewardsOffered(data)
+    );
   }
 
   // reward epoch id
@@ -64,5 +68,4 @@ export class InflationRewardsOffered extends RawEventConstructible {
   secondaryBandWidthPPMs: number[];
   // rewards split mode (0 means equally, 1 means random,...)
   mode: number;
-
 }

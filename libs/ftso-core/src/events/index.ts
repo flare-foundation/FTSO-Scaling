@@ -22,6 +22,6 @@ export interface RewardOffers {
 }
 
 export interface FullVoterRegistrationInfo {
-   voterRegistrationInfo: VoterRegistrationInfo;
-   voterRegistered: VoterRegistered;
+  voterRegistrationInfo: VoterRegistrationInfo;
+  voterRegistered: VoterRegistered;
 }

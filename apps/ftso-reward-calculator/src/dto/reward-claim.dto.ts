@@ -14,5 +14,4 @@ export class RewardClaimUnit {
     unit.rewardEpochId = claim.rewardEpochId;
     return unit;
   }
-
 }

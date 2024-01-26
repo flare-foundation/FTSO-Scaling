@@ -15,7 +15,9 @@ export interface SplitRewardOffer {
  * Creates partial reward offers for feeds from inflation reward offer.
  * Currently only equally distributed inflation reward offers are supported (mode === 0)
  */
-export function distributeInflationRewardOfferToFeeds(inflationRewardOffer: InflationRewardsOffered): IPartialRewardOffer[] {
+export function distributeInflationRewardOfferToFeeds(
+  inflationRewardOffer: InflationRewardsOffered
+): IPartialRewardOffer[] {
   if (inflationRewardOffer.mode === 0) {
     return PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer);
   }
@@ -34,13 +36,16 @@ export function granulatedPartialOfferMap(
   rewardOffers: RewardOffers
 ): Map<number, Map<string, IPartialRewardOffer[]>> {
   const rewardOfferMap = new Map<number, Map<string, IPartialRewardOffer[]>>();
-  const allRewardOffers = rewardOffers.rewardOffers.map(rewardOffer => PartialRewardOffer.fromRewardOffered(rewardOffer));
+  const allRewardOffers = rewardOffers.rewardOffers.map(rewardOffer =>
+    PartialRewardOffer.fromRewardOffered(rewardOffer)
+  );
   for (const inflationRewardOffer of rewardOffers.inflationOffers) {
     allRewardOffers.push(...PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer));
   }
   for (const rewardOffer of allRewardOffers) {
     const votingEpochRewardOffers = PartialRewardOffer.splitToVotingRoundsEqually(
-      startVotingRoundId, endVotingRoundId,
+      startVotingRoundId,
+      endVotingRoundId,
       rewardOffer
     );
     for (const votingEpochRewardOffer of votingEpochRewardOffers) {
@@ -56,10 +61,9 @@ export function granulatedPartialOfferMap(
   return rewardOfferMap;
 }
 
-
 /**
  * Splits a partial reward offer into three parts: median, signing and finalization.
- * These split offers are used as inputs into reward calculation for specific types 
+ * These split offers are used as inputs into reward calculation for specific types
  * of rewards.
  */
 export function splitRewardOfferByTypes(offer: IPartialRewardOffer): SplitRewardOffer {
@@ -78,7 +82,7 @@ export function splitRewardOfferByTypes(offer: IPartialRewardOffer): SplitReward
     finalizationRewardOffer: {
       ...offer,
       amount: forFinalization,
-    }
+    },
   };
   return result;
 }

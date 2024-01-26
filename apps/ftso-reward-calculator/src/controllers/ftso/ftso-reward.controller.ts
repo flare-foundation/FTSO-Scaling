@@ -11,7 +11,7 @@ export class FtsoRewardController extends BaseRewardingController {
   constructor(private readonly rewardingService: FtsoRewardingService) {
     super();
   }
-  
+
   @Get("calculate-rewards-for-epoch/:rewardEpochId")
   getClaimsForRewardEpoch(@Param("rewardEpochId", ParseIntPipe) rewardEpochId: number): Promise<RewardClaimUnit[]> {
     return this.rewardingService.calculateRewardsForEpoch(rewardEpochId);

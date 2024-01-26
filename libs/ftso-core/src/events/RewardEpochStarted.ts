@@ -13,18 +13,23 @@ export class RewardEpochStarted extends RawEventConstructible {
     super();
     this.rewardEpochId = Number(data.rewardEpochId);
     this.startVotingRoundId = Number(data.startVotingRoundId);
-    this.timestamp = Number(data.timestamp)
+    this.timestamp = Number(data.timestamp);
   }
   static fromRawEvent(event: any): RewardEpochStarted {
-    return decodeEvent<RewardEpochStarted>(CONTRACTS.FlareSystemManager.name, RewardEpochStarted.eventName, event, (data: any) => new RewardEpochStarted(data))
+    return decodeEvent<RewardEpochStarted>(
+      CONTRACTS.FlareSystemManager.name,
+      RewardEpochStarted.eventName,
+      event,
+      (data: any) => new RewardEpochStarted(data)
+    );
   }
 
   // Reward epoch id
-  rewardEpochId: number
+  rewardEpochId: number;
 
   // First voting round id of validity
-  startVotingRoundId: number
+  startVotingRoundId: number;
 
   // Timestamp when this happened
-  timestamp: number
+  timestamp: number;
 }

@@ -1,4 +1,11 @@
-import { BlockAssuranceResult, FinalizationData, GenericSubmissionData, IndexerClient, ParsedFinalizationData, SubmissionData } from "./IndexerClient";
+import {
+  BlockAssuranceResult,
+  FinalizationData,
+  GenericSubmissionData,
+  IndexerClient,
+  ParsedFinalizationData,
+  SubmissionData,
+} from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
@@ -10,8 +17,11 @@ import { IRevealData, RevealData } from "./utils/RevealData";
 import { ISignaturePayload, SignaturePayload } from "../../fsp-utils/src/SignaturePayload";
 import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
 import { Address, Feed, MessageHash } from "./voting-types";
-import { DataForCalculations, DataForRewardCalculation, DataForCalculationsPartial } from "./data-calculation-interfaces";
-
+import {
+  DataForCalculations,
+  DataForRewardCalculation,
+  DataForCalculationsPartial,
+} from "./data-calculation-interfaces";
 
 /**
  * Data availability status for data manager responses.
@@ -63,12 +73,12 @@ interface SignAndFinalizeSubmissionData {
  * It uses EPOCH_SETTINGS to get manage timestamp to voting round id conversions
  */
 export class DataManager {
-  constructor(private indexerClient: IndexerClient, private rewardEpochManager: RewardEpochManager) { }
+  constructor(private indexerClient: IndexerClient, private rewardEpochManager: RewardEpochManager) {}
 
   /**
    * Prepare data for median calculation and rewarding given the voting round id and the random generation benching window.
    *  - queries relevant commits and reveals from chain indexer database
-   *  - filters out leaving valid and matching commits and reveals pairs 
+   *  - filters out leaving valid and matching commits and reveals pairs
    *  - filters out leaving commits and reveals by eligible voters in the current reward epoch
    *  - calculates reveal offenders in the voting round id
    *  - calculates all reveal offenders in the random generation benching window (@param votingRoundId - @param randomGenerationBenchingWindow, @param votingRoundId - 1)
@@ -130,14 +140,14 @@ export class DataManager {
    * Provides the data for reward calculation given the voting round id and the random generation benching window.
    * Since calculation of rewards takes place when all the data is surely on the blockchain, no timeout queries are relevant here.
    * The data for reward calculation is composed of:
-   * - data for median calculation 
+   * - data for median calculation
    * - signatures for the given voting round id in given rewarding window
    * - finalizations for the given voting round id in given rewarding window
    * Data for median calculation is used to calculate the median feed value for each feed in the rewarding boundaries.
    * The data also contains the RewardEpoch objects, which contains all reward offers.
-   * Signatures and finalizations are used to calculate the rewards for signature deposition and finalizations. 
+   * Signatures and finalizations are used to calculate the rewards for signature deposition and finalizations.
    * Each finalization is checked if it is valid and finalizable. Note that only one such finalization is fully executed on chain, while
-   * others are reverted. Nevertheless, all finalizations in rewarded window are considered for the reward calculation, since a certain 
+   * others are reverted. Nevertheless, all finalizations in rewarded window are considered for the reward calculation, since a certain
    * subset is eligible for a reward if submitted in due time.
    */
   public async getDataForRewardCalculation(
@@ -145,7 +155,10 @@ export class DataManager {
     randomGenerationBenchingWindow: number,
     rewardEpoch: RewardEpoch
   ): Promise<DataMangerResponse<DataForRewardCalculation>> {
-    const dataForCalculationsResponse = await this.getDataForCalculations(votingRoundId, randomGenerationBenchingWindow);
+    const dataForCalculationsResponse = await this.getDataForCalculations(
+      votingRoundId,
+      randomGenerationBenchingWindow
+    );
     if (dataForCalculationsResponse.status !== DataAvailabilityStatus.OK) {
       return {
         status: dataForCalculationsResponse.status,
@@ -157,8 +170,18 @@ export class DataManager {
         status: signaturesResponse.status,
       };
     }
-    const signatures = this.extractSignatures(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.signatures, FTSO2_PROTOCOL_ID);
-    const finalizations = this.extractFinalizations(votingRoundId, dataForCalculationsResponse.data.rewardEpoch, signaturesResponse.data.finalizations, FTSO2_PROTOCOL_ID);
+    const signatures = this.extractSignatures(
+      votingRoundId,
+      dataForCalculationsResponse.data.rewardEpoch,
+      signaturesResponse.data.signatures,
+      FTSO2_PROTOCOL_ID
+    );
+    const finalizations = this.extractFinalizations(
+      votingRoundId,
+      dataForCalculationsResponse.data.rewardEpoch,
+      signaturesResponse.data.finalizations,
+      FTSO2_PROTOCOL_ID
+    );
     const voterWeights = rewardEpoch.getVoterWeights();
     const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
     return {
@@ -241,19 +264,19 @@ export class DataManager {
 
   /**
    * Extract signatures and finalizations for the given voting round id from indexer database.
-   * This function is used for reward calculation, which is executed at the time when all the data 
-   * is surely on the blockchain. Nevertheless the data availability is checked. Timeout queries are 
-   * not relevant here. The transactions are taken from the rewarded window for each 
+   * This function is used for reward calculation, which is executed at the time when all the data
+   * is surely on the blockchain. Nevertheless the data availability is checked. Timeout queries are
+   * not relevant here. The transactions are taken from the rewarded window for each
    * voting round. The rewarded window starts at the reveal deadline which is in votingEpochId = votingRoundId + 1.
-   * The end of the rewarded window is the end of voting epoch with 
+   * The end of the rewarded window is the end of voting epoch with
    * votingEpochId = votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS.
-   * Rewarding will consider submissions are finalizations only in the rewarding window and this function 
+   * Rewarding will consider submissions are finalizations only in the rewarding window and this function
    * queries exactly those.
-   * @param votingRoundId 
-   * @returns 
+   * @param votingRoundId
+   * @returns
    */
   private async getSignAndFinalizeSubmissionDataForVotingRound(
-    votingRoundId: number,
+    votingRoundId: number
   ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
     const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
       "submitSignatures",
@@ -290,17 +313,17 @@ export class DataManager {
 
   /**
    * Extract signature payloads for the given voting round id from the given submissions.
-   * Each signature is filtered out for the correct voting round id, protocol id and eligible signer. 
+   * Each signature is filtered out for the correct voting round id, protocol id and eligible signer.
    * Signatures are returned in the form of a map
    * from message hash to a list of signatures to submission data containing parsed signature payload.
    * The last signed message for a specific message hash is considered.
    * ASSUMPTION: all signature submissions for voting round id, hence contained ,
-   * between reveal deadline for votingRoundId (hence in voting epoch votingRoundId + 1) and 
+   * between reveal deadline for votingRoundId (hence in voting epoch votingRoundId + 1) and
    * the end of the voting epoch votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS
-   * @param votingRoundId 
+   * @param votingRoundId
    * @param rewardEpoch
-   * @param submissions 
-   * @returns 
+   * @param submissions
+   * @returns
    */
   private extractSignatures(
     votingRoundId: number,
@@ -312,7 +335,10 @@ export class DataManager {
     for (const submission of submissions) {
       for (const message of submission.messages) {
         const signaturePayload = SignaturePayload.decode(message.payload);
-        if (signaturePayload.message.votingRoundId === votingRoundId && signaturePayload.message.protocolId === protocolId) {
+        if (
+          signaturePayload.message.votingRoundId === votingRoundId &&
+          signaturePayload.message.protocolId === protocolId
+        ) {
           const messageHash = ProtocolMessageMerkleRoot.hash(signaturePayload.message);
           signaturePayload.messageHash = messageHash;
           const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
@@ -322,11 +348,18 @@ export class DataManager {
           signaturePayload.signer = signer;
           signaturePayload.weight = rewardEpoch.signerToSigningWeight(signer);
           signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(signer);
-          if (signaturePayload.weight === undefined || signaturePayload.signer === undefined || signaturePayload.index === undefined) {
+          if (
+            signaturePayload.weight === undefined ||
+            signaturePayload.signer === undefined ||
+            signaturePayload.index === undefined
+          ) {
             // assert: this should never happen
-            throw new Error(`Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`);
+            throw new Error(
+              `Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`
+            );
           }
-          let signatures = signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
+          const signatures =
+            signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
           const submissionData: GenericSubmissionData<ISignaturePayload> = {
             ...submission,
             messages: signaturePayload,
@@ -346,15 +379,20 @@ export class DataManager {
   }
 
   /**
-   * Given submissions of finalizations eligible for voting round @param votingRoundId and matching reward epoch @param rewardEpoch to the 
+   * Given submissions of finalizations eligible for voting round @param votingRoundId and matching reward epoch @param rewardEpoch to the
    * voting round id, extract finalizations which match voting round id, given protocol id and are parsable and finalizeable (would cause finalisation)
-   * @param votingRoundId 
-   * @param rewardEpoch 
-   * @param submissions 
-   * @param protocolId 
-   * @returns 
+   * @param votingRoundId
+   * @param rewardEpoch
+   * @param submissions
+   * @param protocolId
+   * @returns
    */
-  private extractFinalizations(votingRoundId: number, rewardEpoch: RewardEpoch, submissions: FinalizationData[], protocolId = FTSO2_PROTOCOL_ID): ParsedFinalizationData[] {
+  private extractFinalizations(
+    votingRoundId: number,
+    rewardEpoch: RewardEpoch,
+    submissions: FinalizationData[],
+    protocolId = FTSO2_PROTOCOL_ID
+  ): ParsedFinalizationData[] {
     const finalizations: ParsedFinalizationData[] = [];
     for (const submission of submissions) {
       try {
@@ -364,7 +402,8 @@ export class DataManager {
         }
         const relayMessage = RelayMessage.decode(calldata.slice(10));
         // ignore irrelevant messages
-        if (!relayMessage.protocolMessageMerkleRoot ||
+        if (
+          !relayMessage.protocolMessageMerkleRoot ||
           relayMessage.protocolMessageMerkleRoot.protocolId !== protocolId ||
           relayMessage.protocolMessageMerkleRoot.votingRoundId !== votingRoundId ||
           relayMessage.signingPolicy.rewardEpochId !== rewardEpoch.rewardEpochId
@@ -375,12 +414,14 @@ export class DataManager {
         const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
         const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
         if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
-          throw new Error(`Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`);
+          throw new Error(
+            `Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`
+          );
         }
         const finalization: ParsedFinalizationData = {
           ...submission,
           messages: relayMessage,
-        }
+        };
         // Verify the relay message by trying to encode it with verification.
         // If it excepts it is non-finalisable
         RelayMessage.encode(relayMessage, true);

@@ -49,7 +49,7 @@ export class MockIndexerDB {
   }
 
   async close() {
-    this.ds.destroy();
+    await this.ds.destroy();
   }
   static async create(startTimeSec: number = 0) {
     const ds = await getDataSource(false);

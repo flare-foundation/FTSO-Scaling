@@ -11,7 +11,7 @@ import {
   VoterRegistrationInfo,
 } from "../events";
 import { AbiEventFragment, AbiFunctionFragment, AbiInput } from "web3";
-import { encodeFunctionSignature, encodeEventSignature } from 'web3-eth-abi';
+import { encodeFunctionSignature, encodeEventSignature } from "web3-eth-abi";
 
 type AbiItem = AbiFunctionFragment | AbiEventFragment;
 
@@ -75,7 +75,7 @@ export class ABICache {
     if ((!functionName && !eventName) || (functionName && eventName)) {
       throw new Error("Must specify either functionName or eventName");
     }
-    let key = this.keyForAbiData(smartContractName, functionName, eventName);
+    const key = this.keyForAbiData(smartContractName, functionName, eventName);
     let abiData = this.contractAndNameToAbiData.get(key);
     if (abiData) return abiData;
     let contractAbi = this.contractNameToAbi.get(smartContractName);
@@ -89,7 +89,7 @@ export class ABICache {
     }
 
     const searchName = functionName ? functionName : eventName!;
-    let item = contractAbi.find((x: AbiItem) => x.name === searchName)!;
+    const item = contractAbi.find((x: AbiItem) => x.name === searchName)!;
     if (!item) {
       throw new Error(
         `Could not find ABI for '${smartContractName}' ${functionName ? "function" : "event"} '${searchName}'`
@@ -105,7 +105,7 @@ export class ABICache {
   }
 
   getAbiInput(smartContractName: string, functionName: string, functionArgumentId: number): AbiDataInput {
-    let abiData = this.getAbi(smartContractName, functionName);
+    const abiData = this.getAbi(smartContractName, functionName);
     const abiDataInput: AbiDataInput = {
       abi: abiData.abi.inputs[functionArgumentId],
       signature: abiData.signature,

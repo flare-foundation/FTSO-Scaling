@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  InternalServerErrorException,
-  Logger,
-  Param,
-  ParseIntPipe,
-} from "@nestjs/common";
+import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
@@ -26,7 +19,6 @@ export class FtsoDataProviderController {
     private readonly configService: ConfigService
   ) {}
 
-
   // Protocol Data Provider APIs
 
   @ApiTags(ApiTagsEnum.PDP)
@@ -39,10 +31,10 @@ export class FtsoDataProviderController {
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
     const data = await this.ftsoDataProviderService.getCommitData(votingRoundId, submitAddress);
-    let encodedData = data ? encodeCommitPayloadMessage(data) : undefined;
+    const encodedData = data ? encodeCommitPayloadMessage(data) : undefined;
     return {
       status: encodedData ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
-      data: encodedData
+      data: encodedData,
     };
   }
 
@@ -56,7 +48,7 @@ export class FtsoDataProviderController {
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
     const data = await this.ftsoDataProviderService.getRevealData(votingRoundId);
-    let encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
+    const encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
     return {
       status: encodedData ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
@@ -73,7 +65,7 @@ export class FtsoDataProviderController {
       `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: submitSignaturesAddress ${submitSignaturesAddress}`
     );
     const data = await this.ftsoDataProviderService.getResultData(votingRoundId);
-    let encodedData = data ? ProtocolMessageMerkleRoot.encode(data) : undefined;
+    const encodedData = data ? ProtocolMessageMerkleRoot.encode(data) : undefined;
     return {
       status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,

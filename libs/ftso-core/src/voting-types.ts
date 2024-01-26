@@ -7,7 +7,6 @@ export type VotingEpochId = number;
 export type RewardEpochId = number;
 export type MessageHash = string;
 
-
 export interface EpochResult {
   readonly votingRoundId: number;
   readonly medianData: MedianCalculationResult[];
@@ -33,7 +32,7 @@ export interface MedianCalculationResult {
  */
 export interface RandomCalculationResult {
   readonly votingRoundId: number;
-  readonly random: bigint
+  readonly random: bigint;
   readonly isSecure: boolean;
 }
 
@@ -58,5 +57,5 @@ export interface Feed {
   /**
    * int8 (solidity int8) the number of decimals in the price.
    */
-  decimals: number; 
+  decimals: number;
 }

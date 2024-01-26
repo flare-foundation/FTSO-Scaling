@@ -1,10 +1,6 @@
 import { DataForCalculations } from "../data-calculation-interfaces";
 import { FeedValueEncoder, ValueWithDecimals } from "../utils/FeedValueEncoder";
-import {
-  Address, Feed,
-  MedianCalculationResult,
-  MedianCalculationSummary
-} from "../voting-types";
+import { Address, Feed, MedianCalculationResult, MedianCalculationSummary } from "../voting-types";
 
 /**
  * Data for a single vote.
@@ -44,7 +40,8 @@ export async function calculateMedianResults(data: DataForCalculations): Promise
   }
 
   // trigger calculations for all feed
-  return data.feedOrder.map((feed, feedIndex) => calculateResultForFeed(data.votingRoundId, voters, feedValues.get(feedIndex), weights, feed, totalVotingWeight)
+  return data.feedOrder.map((feed, feedIndex) =>
+    calculateResultForFeed(data.votingRoundId, voters, feedValues.get(feedIndex), weights, feed, totalVotingWeight)
   );
 }
 
@@ -101,8 +98,8 @@ export function calculateMedian(
     return emptyResult;
   }
   // assert decimal values are matching
-  for(const feedValue of feedValues) {
-    if(feedValue.decimals !== decimals) {
+  for (const feedValue of feedValues) {
+    if (feedValue.decimals !== decimals) {
       throw new Error("Critical error: Feed value decimals do not match feed decimals");
     }
   }

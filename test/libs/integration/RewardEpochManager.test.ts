@@ -35,7 +35,7 @@ describe("RewardEpochManager", () => {
   });
 
   afterEach(async () => {
-    ds.destroy();
+    await ds.destroy();
     clock.uninstall();
   });
 

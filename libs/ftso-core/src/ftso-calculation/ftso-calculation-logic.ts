@@ -1,11 +1,7 @@
 import { DataForCalculations } from "../data-calculation-interfaces";
 import { MerkleTree } from "../utils/MerkleTree";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
-import {
-  EpochResult,
-  MedianCalculationResult,
-  RandomCalculationResult,
-} from "../voting-types";
+import { EpochResult, MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 import { calculateMedianResults } from "./ftso-median";
 import { calculateRandom } from "./ftso-random";
 
@@ -41,5 +37,3 @@ export function prepareResultsForVotingRound(
   };
   return epochResult;
 }
-
-

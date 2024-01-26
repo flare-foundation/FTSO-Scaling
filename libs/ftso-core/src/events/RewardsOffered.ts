@@ -22,7 +22,12 @@ export class RewardsOffered extends RawEventConstructible {
   }
 
   static fromRawEvent(event: any): RewardsOffered {
-    return decodeEvent<RewardsOffered>(CONTRACTS.FtsoRewardOffersManager.name, RewardsOffered.eventName, event, (data: any) => new RewardsOffered(data))
+    return decodeEvent<RewardsOffered>(
+      CONTRACTS.FtsoRewardOffersManager.name,
+      RewardsOffered.eventName,
+      event,
+      (data: any) => new RewardsOffered(data)
+    );
   }
 
   // reward epoch id

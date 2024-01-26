@@ -8,7 +8,7 @@ import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/Revea
 export function encodeCommitPayloadMessage(data: IPayloadMessage<ICommitData>): string {
   const msg: IPayloadMessage<string> = {
     ...data,
-    payload: CommitData.encode(data.payload)
+    payload: CommitData.encode(data.payload),
   };
   return PayloadMessage.encode(msg);
 }
@@ -19,7 +19,7 @@ export function encodeCommitPayloadMessage(data: IPayloadMessage<ICommitData>): 
 export function encodeRevealPayloadMessage(data: IPayloadMessage<IRevealData>): string {
   const msg: IPayloadMessage<string> = {
     ...data,
-    payload: RevealData.encode(data.payload)
+    payload: RevealData.encode(data.payload),
   };
   return PayloadMessage.encode(msg);
 }

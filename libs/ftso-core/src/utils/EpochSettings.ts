@@ -4,8 +4,8 @@ export class EpochSettings {
     readonly votingEpochDurationSeconds: number,
     readonly firstRewardEpochStartVotingRoundId: number,
     readonly rewardEpochDurationInVotingEpochs: number,
-    readonly revealDeadlineSeconds: number,
-  ) { }
+    readonly revealDeadlineSeconds: number
+  ) {}
 
   votingEpochForTimeSec(unixSeconds: number): number {
     return Math.floor((unixSeconds - this.firstVotingRoundStartTs) / this.votingEpochDurationSeconds);
@@ -30,9 +30,9 @@ export class EpochSettings {
   }
 
   votingEpochEndSec(votingEpochId: number): number {
-    // The interval is semi open [startTime, endTime = startTime (for next epoch)) 
-    // Start time is included, but end time is not, so this is actual closed interval 
-    return this.votingEpochStartSec(votingEpochId + 1) - 1
+    // The interval is semi open [startTime, endTime = startTime (for next epoch))
+    // Start time is included, but end time is not, so this is actual closed interval
+    return this.votingEpochStartSec(votingEpochId + 1) - 1;
   }
 
   revealDeadlineSec(votingEpochId: number): number {
@@ -55,8 +55,12 @@ export class EpochSettings {
 
   expectedRewardEpochForVotingEpoch(votingEpochId: number) {
     if (votingEpochId < this.firstRewardEpochStartVotingRoundId) {
-      throw new Error(`votingEpochId ${votingEpochId} is before firstRewardEpochStartVotingRoundId ${this.firstRewardEpochStartVotingRoundId}`);
+      throw new Error(
+        `votingEpochId ${votingEpochId} is before firstRewardEpochStartVotingRoundId ${this.firstRewardEpochStartVotingRoundId}`
+      );
     }
-    return Math.floor((votingEpochId - this.firstRewardEpochStartVotingRoundId) / this.rewardEpochDurationInVotingEpochs)
+    return Math.floor(
+      (votingEpochId - this.firstRewardEpochStartVotingRoundId) / this.rewardEpochDurationInVotingEpochs
+    );
   }
 }

@@ -41,19 +41,19 @@ export interface GenericSubmissionData<T> {
 /**
  * Submission data for messages sent to function 'submit1', ..., 'submit3' of contract Submission.
  */
-export interface SubmissionData extends GenericSubmissionData<IPayloadMessage<string>[]> { };
+export type SubmissionData = GenericSubmissionData<IPayloadMessage<string>[]>;
 /**
  * Unparsed finalization data from finalization calls (relay()) on Relay contract.
  */
 export interface FinalizationData extends GenericSubmissionData<string> {
   successfulOnChain: boolean;
-};
+}
 /**
  * Parsed finalization data from finalization calls (relay()) on Relay contract.
  */
 export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMessage> {
   successfulOnChain: boolean;
-};
+}
 
 /**
  * Indexer query response wrapper.
@@ -66,8 +66,8 @@ export interface IndexerResponse<T> {
 /**
  * Prepares hex byte value for querying the indexer database.
  * In the indexer database all hex values are strings without '0x' prefix, lowercase.
- * @param address 
- * @returns 
+ * @param address
+ * @returns
  */
 export function queryBytesFormat(address: string): string {
   return (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
@@ -131,7 +131,7 @@ export enum BlockAssuranceResult {
  * the protocol data provider to function properly.
  */
 export class IndexerClient {
-  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) { }
+  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) {}
 
   private readonly encoding = EncodingUtils.instance;
 
@@ -388,7 +388,7 @@ export class IndexerClient {
 
   /**
    * Assuming that the indexer has indexed all the events in the given timestamp range,
-   * it extracts all the 'VoterRegistered' (VoterRegistry contract) and  
+   * it extracts all the 'VoterRegistered' (VoterRegistry contract) and
    * VoterRegistrationInfo (FlareSystemCalculator contract) events in the given timestamp range.
    * Timestamp range are obtained from timestamps of relevant events VotePowerBlockSelectedEvent and SigningPolicyInitialized.
    * The function checks the availability of block range in the indexer database.
@@ -441,7 +441,7 @@ export class IndexerClient {
       }
       return 0;
     });
-    let results: FullVoterRegistrationInfo[] = [];
+    const results: FullVoterRegistrationInfo[] = [];
     for (let i = 0; i < voterRegistered.length; i++) {
       if (voterRegistered[i].voter !== voterRegistrationInfo[i].voter) {
         throw new Error(
@@ -503,7 +503,7 @@ export class IndexerClient {
    */
   public async getFinalizationDataInRange(
     startTime: number,
-    endTime: number,
+    endTime: number
   ): Promise<IndexerResponse<FinalizationData[]>> {
     const ensureRange = await this.ensureEventRange(startTime, endTime);
     if (ensureRange !== BlockAssuranceResult.OK) {
@@ -533,5 +533,4 @@ export class IndexerClient {
       data: finalizations,
     };
   }
-
 }
