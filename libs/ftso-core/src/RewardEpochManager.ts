@@ -1,7 +1,7 @@
 import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
-import { EPOCH_SETTINGS } from "./configs/networks";
-import { SigningPolicyInitialized } from "./events";
+import { EPOCH_SETTINGS, GENESIS_REWARD_EPOCH_START_EVENT } from "./configs/networks";
+import { RewardEpochStarted, SigningPolicyInitialized } from "./events";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
 
 export interface RewardEpochDuration {
@@ -83,17 +83,8 @@ export class RewardEpochManager {
       throw new Error("Critical error: Signing policy must be provided.");
     }
     const rewardEpochId = signingPolicyInitializedEvent.rewardEpochId;
-    const previousRewardEpochStartedEventResponse = await this.indexerClient.getStartOfRewardEpochEvent(
-      rewardEpochId - 1
-    );
-    if (
-      previousRewardEpochStartedEventResponse.status !== BlockAssuranceResult.OK ||
-      !previousRewardEpochStartedEventResponse.data
-    ) {
-      throw new Error(
-        "Critical error: Previous reward epoch RewardEpochStarted event not found - most likely the indexer has too short history"
-      );
-    }
+    const previousRewardEpochStartedEventResponseData = await this.getPreviousRewardEpochStartedEvent(rewardEpochId);
+
     const randomAcquisitionStartedEventResponse = await this.indexerClient.getRandomAcquisitionStarted(rewardEpochId);
     if (
       randomAcquisitionStartedEventResponse.status !== BlockAssuranceResult.OK ||
@@ -104,7 +95,7 @@ export class RewardEpochManager {
       );
     }
     const rewardOffersResponse = await this.indexerClient.getRewardOffers(
-      previousRewardEpochStartedEventResponse.data.timestamp,
+      previousRewardEpochStartedEventResponseData.timestamp,
       randomAcquisitionStartedEventResponse.data.timestamp
     );
 
@@ -139,7 +130,7 @@ export class RewardEpochManager {
     }
 
     const rewardEpoch = new RewardEpoch(
-      previousRewardEpochStartedEventResponse.data,
+      previousRewardEpochStartedEventResponseData,
       randomAcquisitionStartedEventResponse.data,
       rewardOffersResponse.data,
       votePowerBlockSelectedEventResponse.data,
@@ -149,6 +140,28 @@ export class RewardEpochManager {
 
     this.rewardEpochsCache.set(rewardEpochId, rewardEpoch);
     return rewardEpoch;
+  }
+
+  private async getPreviousRewardEpochStartedEvent(rewardEpochId: number): Promise<RewardEpochStarted> {
+    if (rewardEpochId === 1) {
+      return GENESIS_REWARD_EPOCH_START_EVENT;
+    } else {
+      const previousRewardEpochStartedEventResponse = await this.indexerClient.getStartOfRewardEpochEvent(
+        rewardEpochId - 1
+      );
+
+      if (
+        previousRewardEpochStartedEventResponse.status !== BlockAssuranceResult.OK ||
+        !previousRewardEpochStartedEventResponse.data
+      ) {
+        throw new Error(
+          `Critical error: Previous reward epoch ${
+            rewardEpochId - 1
+          } RewardEpochStarted event not found - most likely the indexer has too short history`
+        );
+      }
+      return previousRewardEpochStartedEventResponse.data;
+    }
   }
 
   /**

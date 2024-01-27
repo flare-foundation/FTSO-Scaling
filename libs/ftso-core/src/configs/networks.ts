@@ -1,3 +1,4 @@
+import { RewardEpochStarted } from "../events";
 import { EpochSettings } from "../utils/EpochSettings";
 import { Address } from "../voting-types";
 
@@ -161,3 +162,9 @@ const additionalRewardFinalizationWindows = () => {
 };
 
 export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinalizationWindows();
+
+export const GENESIS_REWARD_EPOCH_START_EVENT: RewardEpochStarted = {
+  rewardEpochId: 0,
+  timestamp: EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(0),
+  startVotingRoundId: 0,
+};
