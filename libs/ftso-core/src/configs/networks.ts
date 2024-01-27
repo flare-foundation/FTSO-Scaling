@@ -142,7 +142,6 @@ const configs = () => {
       };
       return CONTRACT_CONFIG;
     }
-
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
@@ -172,7 +171,17 @@ const ftso2ProtocolId = () => {
 export const FTSO2_PROTOCOL_ID = ftso2ProtocolId();
 
 const epochSettings = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+      return new EpochSettings(
+        Number(process.env.ES_FIRST_VOTING_ROUND_START_TS),
+        Number(process.env.ES_VOTING_EPOCH_DURATION_SECONDS),
+        Number(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID),
+        Number(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS),
+        Number(process.env.FTSO_REVEAL_DEADLINE_SECONDS)
+      );
+    case "coston2":
     case "local-test":
     default:
       return new EpochSettings(
