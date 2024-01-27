@@ -166,5 +166,5 @@ export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinaliza
 export const GENESIS_REWARD_EPOCH_START_EVENT: RewardEpochStarted = {
   rewardEpochId: 0,
   timestamp: EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(0),
-  startVotingRoundId: 0,
+  startVotingRoundId: EPOCH_SETTINGS.expectedFirstVotingRoundForRewardEpoch(0),
 };

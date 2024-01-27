@@ -144,6 +144,7 @@ export class RewardEpochManager {
 
   private async getPreviousRewardEpochStartedEvent(rewardEpochId: number): Promise<RewardEpochStarted> {
     if (rewardEpochId === 1) {
+      // Reward epoch start event does not exist for epoch 0
       return GENESIS_REWARD_EPOCH_START_EVENT;
     } else {
       const previousRewardEpochStartedEventResponse = await this.indexerClient.getStartOfRewardEpochEvent(
