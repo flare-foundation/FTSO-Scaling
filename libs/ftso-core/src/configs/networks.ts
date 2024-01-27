@@ -1,5 +1,6 @@
 import { RewardEpochStarted } from "../events";
 import { EpochSettings } from "../utils/EpochSettings";
+import { isValidContractAddress } from "../utils/voting-utils";
 import { Address } from "../voting-types";
 
 interface FlareSystemManagerDefinition {
@@ -81,13 +82,71 @@ const TEST_CONFIG: NetworkContractAddresses = {
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
 
-type networks = "local-test" | "coston2";
+type networks = "local-test" | "from-env" | "coston2";
 
 const configs = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "local-test":
-    default:
+    case "coston2":
       return TEST_CONFIG;
+    case "from-env": {
+      console.log(
+        `Loading contract addresses from environment variables, as specified in .env NETWORK: ${process.env.NETWORK}`
+      );
+      if (
+        !process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS ||
+        isValidContractAddress(process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS)
+      )
+        throw new Error("FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS ||
+        isValidContractAddress(process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS)
+      )
+        throw new Error("FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_REWARD_MANAGER_ADDRESS ||
+        isValidContractAddress(process.env.FTSO_CA_REWARD_MANAGER_ADDRESS)
+      )
+        throw new Error("FTSO_CA_REWARD_MANAGER_ADDRESS value is not valid contract address");
+      if (!process.env.FTSO_CA_SUBMISSION_ADDRESS || isValidContractAddress(process.env.FTSO_CA_SUBMISSION_ADDRESS))
+        throw new Error("FTSO_CA_SUBMISSION_ADDRESS value is not valid contract address");
+      if (!process.env.FTSO_CA_RELAY_ADDRESS || isValidContractAddress(process.env.FTSO_CA_RELAY_ADDRESS))
+        throw new Error("FTSO_CA_RELAY_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS ||
+        isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS)
+      )
+        throw new Error("FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS ||
+        isValidContractAddress(process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS)
+      )
+        throw new Error("FTSO_CA_VOTER_REGISTRY_ADDRESS value is not valid contract address");
+      const CONTRACT_CONFIG: NetworkContractAddresses = {
+        FlareSystemManager: { name: "FlareSystemManager", address: process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS },
+        FtsoRewardOffersManager: {
+          name: "FtsoRewardOffersManager",
+          address: process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS,
+        },
+        RewardManager: { name: "RewardManager", address: process.env.FTSO_CA_REWARD_MANAGER_ADDRESS },
+        Submission: { name: "Submission", address: process.env.FTSO_CA_SUBMISSION_ADDRESS },
+        Relay: { name: "Relay", address: process.env.FTSO_CA_RELAY_ADDRESS },
+        FlareSystemCalculator: {
+          name: "FlareSystemCalculator",
+          address: process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS,
+        },
+        VoterRegistry: { name: "VoterRegistry", address: process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS },
+        FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
+        ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+      };
+      return CONTRACT_CONFIG;
+    }
+
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -121,7 +180,7 @@ const epochSettings = () => {
         20, //ES_VOTING_EPOCH_DURATION_SECONDS
         1000, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
         5, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
-        10
+        10 //FTSO_REVEAL_DEADLINE_SECONDS
       );
   }
 };
