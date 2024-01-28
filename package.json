@@ -113,7 +113,7 @@
   "eslintConfig": {
     "root": true,
     "env": {
-      "2022": true,
+      "es2022": true,
       "browser": false
     },
     "extends": [

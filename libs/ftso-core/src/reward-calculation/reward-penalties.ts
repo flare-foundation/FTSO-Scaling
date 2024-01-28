@@ -15,7 +15,7 @@ export function calculateRevealWithdrawalPenalties(
 ): IPartialRewardClaim[] {
   return [...data.dataForCalculations.revealOffenders].map(submitAddress => {
     const voterWeight = rewardDistributionWeight(data.voterWeights.get(submitAddress)!);
-    const penalty = -(voterWeight * fullOffer.amount) / totalRewardedWeight * PENALTY_FACTOR;
+    const penalty = (-(voterWeight * fullOffer.amount) / totalRewardedWeight) * PENALTY_FACTOR;
     const penaltyClaim: IPartialRewardClaim = {
       beneficiary: submitAddress.toLowerCase(),
       amount: penalty,

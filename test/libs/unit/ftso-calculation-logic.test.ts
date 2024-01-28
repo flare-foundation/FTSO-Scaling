@@ -1,6 +1,10 @@
 import { expect } from "chai";
 import { RewardOffers } from "../../../libs/ftso-core/src/events";
-import { FeedWithTypeAndValue, rewardEpochFeedSequence, sortFeedWithValuesToCanonicalOrder } from "../../../libs/ftso-core/src/ftso-calculation/feed-ordering";
+import {
+  FeedWithTypeAndValue,
+  rewardEpochFeedSequence,
+  sortFeedWithValuesToCanonicalOrder,
+} from "../../../libs/ftso-core/src/ftso-calculation/feed-ordering";
 import { calculateMedian } from "../../../libs/ftso-core/src/ftso-calculation/ftso-median";
 import { ValueWithDecimals } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
@@ -603,15 +607,14 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
             primaryBandRewardSharePPM: 500000,
             secondaryBandWidthPPM: 100000,
             claimBackAddress: "offer4",
-          }, 
-        ]
-      }
+          },
+        ],
+      };
 
       const feedSequence = rewardEpochFeedSequence(rewardOffers);
       expect(feedSequence.length).to.equal(2);
       expect(feedSequence[0].name).to.equal("0x464c520055534454");
       expect(feedSequence[1].name).to.equal("0x5347420055534454");
-
-    })
+    });
   });
 });

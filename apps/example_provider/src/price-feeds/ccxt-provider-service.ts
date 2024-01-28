@@ -1,5 +1,4 @@
 import { Logger } from "@nestjs/common";
-import { Feed } from "../../../../libs/ftso-core/src/voting-types";
 import { FeedPriceData } from "../dto/provider-requests.dto";
 import ccxt, { Exchange, Trade } from "ccxt";
 import { BaseDataFeed } from "./base-feed";
@@ -14,8 +13,6 @@ export class CcxtFeed implements BaseDataFeed {
   private readonly logger = new Logger(CcxtFeed.name);
   protected initialized = false;
   private client: Exchange;
-
-  constructor() {}
 
   async initialize() {
     this.client = new (ccxt as any)[DEFAULT_EXCHANGE]();
@@ -37,7 +34,7 @@ export class CcxtFeed implements BaseDataFeed {
       //   console.log(key);
       // }
       // console.dir(this.client.markets);
-      
+
       marketId = this.client.markets[symbol].id;
     } catch (e) {
       this.logger.warn(`No market found for ${symbol} on ${DEFAULT_EXCHANGE}: ${e}`);
@@ -104,8 +101,8 @@ function unPrefix0x(tx: string) {
 }
 
 function fromHex(h) {
-  var s = "";
-  for (var i = 0; i < h.length; i += 2) {
+  let s = "";
+  for (let i = 0; i < h.length; i += 2) {
     const charCode = parseInt(h.substr(i, 2), 16);
     if (charCode === 0 || charCode > 112) {
       continue;

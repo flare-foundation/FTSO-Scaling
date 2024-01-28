@@ -3,7 +3,6 @@ import { decodeEvent } from "../utils/EncodingUtils";
 import { Address } from "../voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
 
-
 /**
  * VoterRegistration object obtained from the VotingRegistry smart contract
  * as an event VoterRegistered.
@@ -22,7 +21,12 @@ export class VoterRegistered extends RawEventConstructible {
   }
 
   static fromRawEvent(event: any): VoterRegistered {
-    return decodeEvent<VoterRegistered>(CONTRACTS.VoterRegistry.name, VoterRegistered.eventName, event, (data: any) => new VoterRegistered(data))
+    return decodeEvent<VoterRegistered>(
+      CONTRACTS.VoterRegistry.name,
+      VoterRegistered.eventName,
+      event,
+      (data: any) => new VoterRegistered(data)
+    );
   }
 
   voter: Address;

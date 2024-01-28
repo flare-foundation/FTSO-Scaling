@@ -32,8 +32,9 @@ export function calculateFinalizationRewardClaims(
     };
     return [backClaim];
   }
-  const gracePeriodFinalizations = data.finalizations
-    .filter(finalization => isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization));
+  const gracePeriodFinalizations = data.finalizations.filter(finalization =>
+    isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
+  );
   if (gracePeriodFinalizations.length === 0) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
@@ -57,7 +58,9 @@ export function calculateFinalizationRewardClaims(
     const amount = (weight * offer.amount) / undistributedSigningRewardWeight;
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
-    resultClaims.push(...generateFinalizationRewardClaimsForVoter(amount, signingAddress, data.dataForCalculations.rewardEpoch));
+    resultClaims.push(
+      ...generateFinalizationRewardClaimsForVoter(amount, signingAddress, data.dataForCalculations.rewardEpoch)
+    );
   }
   return resultClaims;
 }
@@ -66,12 +69,17 @@ export function calculateFinalizationRewardClaims(
  * Given an amount of a reward it produces specific partial reward claims for finalizations according to here defined split of the reward amount.
  * This includes split to fees and participation rewards.
  */
-export function generateFinalizationRewardClaimsForVoter(amount: bigint, signerAddress: Address, rewardEpoch: RewardEpoch): IPartialRewardClaim[] {
+export function generateFinalizationRewardClaimsForVoter(
+  amount: bigint,
+  signerAddress: Address,
+  rewardEpoch: RewardEpoch
+): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];
   const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
-  const stakingAmount = amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE / TOTAL_BIPS;
+  const stakingAmount = (amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE) / TOTAL_BIPS;
   const delegationAmount = amount - stakingAmount;
-  const delegationFee = (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
+  const delegationFee =
+    (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
   const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase();
   rewardClaims.push({
     beneficiary: delegationBeneficiary,
@@ -106,7 +114,7 @@ export function generateFinalizationRewardClaimsForVoter(amount: bigint, signerA
       claimType: ClaimType.MIRROR,
     });
   }
-  // assert 
+  // assert
   if (undistributedStakedAmount !== 0n) {
     throw new Error("Critical error: Undistributed staked amount is not zero");
   }

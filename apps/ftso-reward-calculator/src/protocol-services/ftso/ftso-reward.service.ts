@@ -33,8 +33,8 @@ export class FtsoRewardingService extends BaseRewardingService {
   /**
    * Returns a list of all (merged) reward claims for the given reward epoch.
    * Calculation can be quite intensive.
-   * @param rewardEpochId 
-   * @returns 
+   * @param rewardEpochId
+   * @returns
    */
   async calculateRewardsForEpoch(rewardEpochId: number): Promise<RewardClaimUnit[]> {
     const mergedClaims = await rewardClaimsForRewardEpoch(
@@ -42,8 +42,7 @@ export class FtsoRewardingService extends BaseRewardingService {
       RANDOM_GENERATION_BENCHING_WINDOW,
       this.dataManager,
       this.rewardEpochManger
-    )
+    );
     return mergedClaims.map(claim => RewardClaimUnit.from(claim));
   }
-
 }

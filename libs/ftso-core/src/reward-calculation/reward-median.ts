@@ -3,10 +3,7 @@ import utils from "web3-utils";
 import { VoterWeights } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
-import {
-  Address,
-  MedianCalculationResult
-} from "../voting-types";
+import { Address, MedianCalculationResult } from "../voting-types";
 import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
 import { rewardDistributionWeight } from "./reward-utils";
 
@@ -19,7 +16,6 @@ export function calculateMedianRewardClaims(
   calculationResult: MedianCalculationResult,
   voterWeights: Map<Address, VoterWeights>
 ): IPartialRewardClaim[] {
-
   interface VoterRewarding {
     readonly voterAddress: string;
     weight: bigint;
@@ -40,9 +36,15 @@ export function calculateMedianRewardClaims(
   // Randomization for border cases
   // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
   function randomSelect(feedName: string, votingRoundId: number, voterAddress: Address): boolean {
-    return BigInt(
-      utils.soliditySha3(coder.encodeParameters(["bytes8", "uint256", "address"], [feedName, votingRoundId, voterAddress]))!
-    ) % 2n === 1n;
+    return (
+      BigInt(
+        utils.soliditySha3(
+          coder.encodeParameters(["bytes8", "uint256", "address"], [feedName, votingRoundId, voterAddress])
+        )!
+      ) %
+        2n ===
+      1n
+    );
   }
 
   if (calculationResult.data.finalMedianPrice.isEmpty) {
@@ -77,10 +79,11 @@ export function calculateMedianRewardClaims(
       voterAddress,
       weight: rewardDistributionWeight(voterWeights.get(voterAddress)!),
       originalWeight: calculationResult.weights![i],
-      iqr: (value > lowIQR && value < highIQR) ||
+      iqr:
+        (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, voterAddress)),
       pct: value > lowPCT && value < highPCT,
-      eligible: true
+      eligible: true,
     };
     voterRecords.push(record);
   }
@@ -183,4 +186,3 @@ export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights:
   result.push(rewardClaim);
   return result;
 }
-

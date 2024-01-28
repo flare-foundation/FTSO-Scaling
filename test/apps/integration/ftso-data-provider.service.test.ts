@@ -14,14 +14,14 @@ import { ConfigService } from "@nestjs/config";
 import { FtsoDataProviderService } from "../../../apps/ftso-data-provider/src/ftso-data-provider.service";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
-import { RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
-import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { generateRandomAddress } from "../../utils/testRandom";
-import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../../apps/ftso-data-provider/src/response-encoders";
+import {
+  encodeCommitPayloadMessage,
+  encodeRevealPayloadMessage,
+} from "../../../apps/ftso-data-provider/src/response-encoders";
 
 describe("ftso-data-provider.service", () => {
   const feeds: Feed[] = [
@@ -57,7 +57,7 @@ describe("ftso-data-provider.service", () => {
   });
 
   afterEach(async () => {
-    db.close();
+    await db.close();
     clock.uninstall();
     mock.restore();
   });
@@ -102,7 +102,9 @@ describe("ftso-data-provider.service", () => {
     clock.tick(1000);
 
     for (let i = 0; i < voters.length; i++) {
-      const encodedCommit = encodeCommitPayloadMessage(await services[i].getCommitData(votingRound, voters[i].submitAddress));
+      const encodedCommit = encodeCommitPayloadMessage(
+        await services[i].getCommitData(votingRound, voters[i].submitAddress)
+      );
       const comimtPayload = sigCommit + unPrefix0x(encodedCommit);
       const commitTx = generateTx(
         voters[i].submitAddress,

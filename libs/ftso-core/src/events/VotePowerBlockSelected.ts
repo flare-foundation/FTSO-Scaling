@@ -11,20 +11,25 @@ export class VotePowerBlockSelected extends RawEventConstructible {
   constructor(data: any) {
     super();
     this.rewardEpochId = Number(data.rewardEpochId);
-    this.votePowerBlock = Number(data.votePowerBlock)
-    this.timestamp = Number(data.timestamp)
+    this.votePowerBlock = Number(data.votePowerBlock);
+    this.timestamp = Number(data.timestamp);
   }
 
   static fromRawEvent(event: any): VotePowerBlockSelected {
-    return decodeEvent<VotePowerBlockSelected>(CONTRACTS.FlareSystemManager.name, VotePowerBlockSelected.eventName, event, (data: any) => new VotePowerBlockSelected(data))
+    return decodeEvent<VotePowerBlockSelected>(
+      CONTRACTS.FlareSystemManager.name,
+      VotePowerBlockSelected.eventName,
+      event,
+      (data: any) => new VotePowerBlockSelected(data)
+    );
   }
 
   // Reward epoch id
-  rewardEpochId: number
+  rewardEpochId: number;
 
   // Vote power block for given reward epoch
-  votePowerBlock: number
+  votePowerBlock: number;
 
   // Timestamp when this happened
-  timestamp: number
+  timestamp: number;
 }

@@ -7,7 +7,11 @@ import { EPOCH_SETTINGS } from "../configs/networks";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
-import { MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS, SIGNING_REWARD_SPLIT_BIPS_TO_STAKE, TOTAL_BIPS } from "./reward-constants";
+import {
+  MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
+  SIGNING_REWARD_SPLIT_BIPS_TO_STAKE,
+  TOTAL_BIPS,
+} from "./reward-constants";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
 
 /**
@@ -27,7 +31,12 @@ export function calculateSigningRewards(
   let rewardEligibleSignatures: GenericSubmissionData<ISignaturePayload>[] = [];
   if (!data.firstSuccessfulFinalization) {
     const deadlineTimestamp = EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1);
-    const signatures = mostFrequentHashSignaturesBeforeDeadline(votingRoundId, data.signatures, data.dataForCalculations.rewardEpoch.totalSigningWeight, deadlineTimestamp);
+    const signatures = mostFrequentHashSignaturesBeforeDeadline(
+      votingRoundId,
+      data.signatures,
+      data.dataForCalculations.rewardEpoch.totalSigningWeight,
+      deadlineTimestamp
+    );
     if (signatures.length === 0) {
       const backClaim: IPartialRewardClaim = {
         beneficiary: offer.claimBackAddress.toLowerCase(),
@@ -37,17 +46,23 @@ export function calculateSigningRewards(
       return [backClaim];
     }
   } else {
-    const finalizedHash = ProtocolMessageMerkleRoot.hash(data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot);
+    const finalizedHash = ProtocolMessageMerkleRoot.hash(
+      data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
+    );
     const signatures = data.signatures.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
     // rewarded:
     // - all signatures in grace period (no matter of finalization timestamp)
-    // - signatures outside grace period but before timestamp of first successful finalization, if the timestamp is still within before the 
+    // - signatures outside grace period but before timestamp of first successful finalization, if the timestamp is still within before the
     //   end of the voting epoch id = votingRoundId + 1
-    const deadlineTimestamp = Math.min(data.firstSuccessfulFinalization.timestamp, EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1));
-    rewardEligibleSignatures = signatures
-      .filter(signature => isSignatureInGracePeriod(votingRoundId, signature) ||
+    const deadlineTimestamp = Math.min(
+      data.firstSuccessfulFinalization.timestamp,
+      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1)
+    );
+    rewardEligibleSignatures = signatures.filter(
+      signature =>
+        isSignatureInGracePeriod(votingRoundId, signature) ||
         isSignatureBeforeTimestamp(votingRoundId, signature, deadlineTimestamp)
-      );
+    );
   }
   let undistributedSigningRewardWeight = 0n;
   for (const signature of rewardEligibleSignatures) {
@@ -69,7 +84,9 @@ export function calculateSigningRewards(
     const amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
-    resultClaims.push(...generateSigningRewardClaimsForVoter(amount, signature.messages.signer!, data.dataForCalculations.rewardEpoch));
+    resultClaims.push(
+      ...generateSigningRewardClaimsForVoter(amount, signature.messages.signer!, data.dataForCalculations.rewardEpoch)
+    );
   }
   // assert check for undistributed amount
   if (undistributedAmount !== 0n) {
@@ -91,12 +108,17 @@ export function calculateSigningRewards(
  * Given an amount of a reward it produces specific partial reward claims according to here defined split of the reward amount.
  * This includes split to fees and participation rewards.
  */
-export function generateSigningRewardClaimsForVoter(amount: bigint, signerAddress: Address, rewardEpoch: RewardEpoch): IPartialRewardClaim[] {
+export function generateSigningRewardClaimsForVoter(
+  amount: bigint,
+  signerAddress: Address,
+  rewardEpoch: RewardEpoch
+): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];
   const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
-  const stakingAmount = amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE / TOTAL_BIPS;
+  const stakingAmount = (amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE) / TOTAL_BIPS;
   const delegationAmount = amount - stakingAmount;
-  const delegationFee = (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
+  const delegationFee =
+    (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
   const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase();
   rewardClaims.push({
     beneficiary: delegationBeneficiary,
@@ -131,7 +153,7 @@ export function generateSigningRewardClaimsForVoter(amount: bigint, signerAddres
       claimType: ClaimType.MIRROR,
     });
   }
-  // assert 
+  // assert
   if (undistributedStakedAmount !== 0n) {
     throw new Error("Critical error: Undistributed staked amount is not zero");
   }
@@ -139,13 +161,13 @@ export function generateSigningRewardClaimsForVoter(amount: bigint, signerAddres
 }
 
 /**
- * Calculates most list of signature payload submissions for the most frequent 
+ * Calculates most list of signature payload submissions for the most frequent
  * hash of the protocol message merkle root.
- * @param votingRoundId 
- * @param signatures 
- * @param totalSigningWeight 
- * @param deadlineTimestamp 
- * @returns 
+ * @param votingRoundId
+ * @param signatures
+ * @param totalSigningWeight
+ * @param deadlineTimestamp
+ * @returns
  */
 export function mostFrequentHashSignaturesBeforeDeadline(
   votingRoundId: number,
@@ -158,8 +180,9 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   const hashToWeight = new Map<string, number>();
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     let weightSum = 0;
-    const filteredSubmissions = signatureSubmissions
-      .filter(signatureSubmission => isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp));
+    const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
+      isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
+    );
     for (const signatureSubmission of filteredSubmissions) {
       weightSum += signatureSubmission.messages.weight!;
     }
@@ -168,16 +191,16 @@ export function mostFrequentHashSignaturesBeforeDeadline(
       maxWeight = weightSum;
     }
   }
-  const minimalWeightThreshold = (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS) / Number(TOTAL_BIPS);
+  const minimalWeightThreshold =
+    (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS) / Number(TOTAL_BIPS);
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     const weightSum = hashToWeight.get(hash)!;
     if (weightSum >= minimalWeightThreshold) {
-      const filteredSubmissions = signatureSubmissions
-        .filter(signatureSubmission => isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp));
+      const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
+        isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
+      );
       result.push(...filteredSubmissions);
     }
   }
   return result;
 }
-
-

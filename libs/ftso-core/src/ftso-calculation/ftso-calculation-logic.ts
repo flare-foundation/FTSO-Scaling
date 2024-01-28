@@ -1,11 +1,7 @@
 import { DataForCalculations } from "../data-calculation-interfaces";
 import { MerkleTree } from "../utils/MerkleTree";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
-import {
-  EpochResult,
-  MedianCalculationResult,
-  RandomCalculationResult,
-} from "../voting-types";
+import { EpochResult, MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 import { calculateMedianResults } from "./ftso-median";
 import { calculateRandom } from "./ftso-random";
 
@@ -13,6 +9,9 @@ import { calculateRandom } from "./ftso-random";
  * The main entrypoint for calculating the results of a voting round.
  */
 export async function calculateResultsForVotingRound(data: DataForCalculations): Promise<EpochResult> {
+  if (data.validEligibleReveals.size === 0) {
+    throw Error(`No valid reveals found, unable to calculate results for voting round ${data.votingRoundId}`);
+  }
   const results: MedianCalculationResult[] = await calculateMedianResults(data);
   const random = await calculateRandom(data);
   return prepareResultsForVotingRound(data.votingRoundId, results, random);
@@ -41,5 +40,3 @@ export function prepareResultsForVotingRound(
   };
   return epochResult;
 }
-
-

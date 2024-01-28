@@ -73,8 +73,8 @@ export namespace FeedValueEncoder {
       decimals,
     };
   }
+}
 
-  function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
-    return Object.assign(new Array(minLength).fill(fillValue), array);
-  }
+function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
+  return Object.assign(new Array(minLength).fill(fillValue), array);
 }

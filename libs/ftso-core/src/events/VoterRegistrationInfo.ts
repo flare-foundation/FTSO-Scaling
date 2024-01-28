@@ -8,7 +8,7 @@ import { RawEventConstructible } from "./RawEventConstructible";
  * as an event VoterRegistrationInfo.
  */
 export class VoterRegistrationInfo extends RawEventConstructible {
-  static eventName = "VoterRegistrationInfo"
+  static eventName = "VoterRegistrationInfo";
   constructor(data: any) {
     super();
     this.voter = data.voter.toLowerCase();
@@ -21,7 +21,12 @@ export class VoterRegistrationInfo extends RawEventConstructible {
   }
 
   static fromRawEvent(event: any): VoterRegistrationInfo {
-    return decodeEvent<VoterRegistrationInfo>(CONTRACTS.FlareSystemCalculator.name, VoterRegistrationInfo.eventName, event, (data: any) => new VoterRegistrationInfo(data))
+    return decodeEvent<VoterRegistrationInfo>(
+      CONTRACTS.FlareSystemCalculator.name,
+      VoterRegistrationInfo.eventName,
+      event,
+      (data: any) => new VoterRegistrationInfo(data)
+    );
   }
 
   voter: Address;

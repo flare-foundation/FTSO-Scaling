@@ -5,9 +5,7 @@ import { FTSO2_PROTOCOL_ID } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
-import {
-  MedianCalculationResult
-} from "../voting-types";
+import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
 import { FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS } from "./reward-constants";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
@@ -34,7 +32,11 @@ export async function rewardClaimsForRewardEpoch(
 
   // Partial offer generation from reward offers
   // votingRoundId => feedName => partialOffer
-  const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(startVotingRoundId, endVotingRoundId, rewardEpoch.rewardOffers);
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(
+    startVotingRoundId,
+    endVotingRoundId,
+    rewardEpoch.rewardOffers
+  );
 
   // Reward claim calculation
   let allRewardClaims: IPartialRewardClaim[] = [];
@@ -69,7 +71,11 @@ export async function partialRewardClaimsForVotingRound(
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
   // Obtain data for reward calculation
-  const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(votingRoundId, randomGenerationBenchingWindow, rewardEpoch);
+  const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
+    votingRoundId,
+    randomGenerationBenchingWindow,
+    rewardEpoch
+  );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
@@ -80,7 +86,9 @@ export async function partialRewardClaimsForVotingRound(
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
   // Calculate feed medians
-  const medianResults: MedianCalculationResult[] = await calculateMedianResults(rewardDataForCalculations.dataForCalculations);
+  const medianResults: MedianCalculationResult[] = await calculateMedianResults(
+    rewardDataForCalculations.dataForCalculations
+  );
   // feedName => medianResult
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of medianResults) {
@@ -92,9 +100,17 @@ export async function partialRewardClaimsForVotingRound(
   }
 
   // Select eligible voters for finalization rewards
-  const randomVoterSelector = new RandomVoterSelector(rewardEpoch.signingPolicy.voters, rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)))
+  const randomVoterSelector = new RandomVoterSelector(
+    rewardEpoch.signingPolicy.voters,
+    rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight))
+  );
   const initialHash = RandomVoterSelector.initialHashSeed(FTSO2_PROTOCOL_ID, votingRoundId);
-  const eligibleFinalizationRewardVotersInGracePeriod = new Set(...randomVoterSelector.randomSelectThresholdWeightVoters(initialHash, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS));
+  const eligibleFinalizationRewardVotersInGracePeriod = new Set(
+    ...randomVoterSelector.randomSelectThresholdWeightVoters(
+      initialHash,
+      FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS
+    )
+  );
 
   // Calculate reward claims for each feed offer
   for (const [feedName, offers] of feedOffers.entries()) {
@@ -108,19 +124,28 @@ export async function partialRewardClaimsForVotingRound(
       // First each offer is split into three parts: median, signing and finalization
       const splitOffers = splitRewardOfferByTypes(offer);
       // From each partial offer in split calculate reward claims
-      const medianRewardClaims = calculateMedianRewardClaims(splitOffers.medianRewardOffer, medianResult, rewardDataForCalculations.voterWeights);
+      const medianRewardClaims = calculateMedianRewardClaims(
+        splitOffers.medianRewardOffer,
+        medianResult,
+        rewardDataForCalculations.voterWeights
+      );
       const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations);
-      const finalizationRewardClaims = calculateFinalizationRewardClaims(splitOffers.finalizationRewardOffer, rewardDataForCalculations, eligibleFinalizationRewardVotersInGracePeriod);
+      const finalizationRewardClaims = calculateFinalizationRewardClaims(
+        splitOffers.finalizationRewardOffer,
+        rewardDataForCalculations,
+        eligibleFinalizationRewardVotersInGracePeriod
+      );
       // Calculate penalties for reveal withdrawal offenders
       const penalties = calculateRevealWithdrawalPenalties(offer, totalRewardedWeight, rewardDataForCalculations);
       // Merge all reward claims into a single array
-      allRewardClaims = RewardClaim.merge([...allRewardClaims, ...medianRewardClaims, ...signingRewardClaims, ...finalizationRewardClaims, ...penalties]);
+      allRewardClaims = RewardClaim.merge([
+        ...allRewardClaims,
+        ...medianRewardClaims,
+        ...signingRewardClaims,
+        ...finalizationRewardClaims,
+        ...penalties,
+      ]);
     }
   }
   return allRewardClaims;
 }
-
-
-
-
-

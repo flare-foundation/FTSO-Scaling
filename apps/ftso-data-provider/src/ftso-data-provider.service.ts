@@ -32,10 +32,7 @@ export class FtsoDataProviderService {
   // Indexer top timeout margin
   private indexer_top_timeout: number;
 
-  constructor(
-    manager: EntityManager,
-    configService: ConfigService
-  ) {
+  constructor(manager: EntityManager, configService: ConfigService) {
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     this.indexerClient = new IndexerClient(manager, required_history_sec);
@@ -46,7 +43,10 @@ export class FtsoDataProviderService {
 
   // Entry point methods for the protocol data provider
 
-  async getCommitData(votingRoundId: number, submissionAddress: string): Promise<IPayloadMessage<ICommitData> | undefined> {
+  async getCommitData(
+    votingRoundId: number,
+    submissionAddress: string
+  ): Promise<IPayloadMessage<ICommitData> | undefined> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
@@ -83,7 +83,11 @@ export class FtsoDataProviderService {
   }
 
   async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {
-    const dataResponse = await this.dataManager.getDataForCalculations(votingRoundId, RANDOM_GENERATION_BENCHING_WINDOW, this.indexer_top_timeout);
+    const dataResponse = await this.dataManager.getDataForCalculations(
+      votingRoundId,
+      RANDOM_GENERATION_BENCHING_WINDOW,
+      this.indexer_top_timeout
+    );
     if (dataResponse.status !== DataAvailabilityStatus.OK) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
       return undefined;
@@ -107,12 +111,10 @@ export class FtsoDataProviderService {
   // Internal methods
 
   private async getPricesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
-
     // TODO: do some retries here
-    const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(
-      votingRoundId,
-      { feeds: supportedFeeds.map(feed => feed.name) },
-    );
+    const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(votingRoundId, {
+      feeds: supportedFeeds.map(feed => feed.name),
+    });
 
     // This should just be a warning
     if (pricesRes.status < 200 || pricesRes.status >= 300) {

@@ -42,5 +42,3 @@ interface ExternalResponseNotAvailable {
 }
 
 export type ExternalResponse = ExternalResponseOk | ExternalResponseTooEarly | ExternalResponseNotAvailable;
-
-
