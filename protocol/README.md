@@ -1,0 +1,5 @@
+# FTSO Scaling protocol
+
+Flare Time Series Oracle (FTSO) Scaling protocol is the next generation of FTSO protocol (here referred to as FTSOv1). The first version of FTSO protocol was based on smart contracts. Data providers (participants in the FTSOv1 protocol, who were sending price feeds) were sending commit and reveal transactions every 3 mins. Since feed values were stored onto chain and smart contracts took care of calculation both of median prices and rewards, the gas usage in the protocol was significant. This limited the number of price feeds as well as frequency of updates. FTSO Scaling protocol was designed to address those shortcomings. In FTSO Scaling protocol blockchain is used for message synchronization and publishing of short proofs of prices obtained by consensus and proofs of reward claims.
+All calculations (price medians, random numbers, reward claims) are done off-chain by data providers. The results are put in relevant Merkle trees, whose Merkle roots are signed by data providers and deposited on chain. The a special Relay contract is used for publishing 
+Merkle roots, if sufficient weight of signatures is provided to it. 
