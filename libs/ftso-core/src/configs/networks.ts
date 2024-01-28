@@ -96,31 +96,31 @@ const configs = () => {
       );
       if (
         !process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS ||
-        isValidContractAddress(process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS)
+        !isValidContractAddress(process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS)
       )
         throw new Error("FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS ||
-        isValidContractAddress(process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS)
+        !isValidContractAddress(process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS)
       )
         throw new Error("FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_REWARD_MANAGER_ADDRESS ||
-        isValidContractAddress(process.env.FTSO_CA_REWARD_MANAGER_ADDRESS)
+        !isValidContractAddress(process.env.FTSO_CA_REWARD_MANAGER_ADDRESS)
       )
         throw new Error("FTSO_CA_REWARD_MANAGER_ADDRESS value is not valid contract address");
-      if (!process.env.FTSO_CA_SUBMISSION_ADDRESS || isValidContractAddress(process.env.FTSO_CA_SUBMISSION_ADDRESS))
+      if (!process.env.FTSO_CA_SUBMISSION_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_SUBMISSION_ADDRESS))
         throw new Error("FTSO_CA_SUBMISSION_ADDRESS value is not valid contract address");
-      if (!process.env.FTSO_CA_RELAY_ADDRESS || isValidContractAddress(process.env.FTSO_CA_RELAY_ADDRESS))
+      if (!process.env.FTSO_CA_RELAY_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_RELAY_ADDRESS))
         throw new Error("FTSO_CA_RELAY_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS ||
-        isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS)
+        !isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS)
       )
         throw new Error("FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS ||
-        isValidContractAddress(process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS)
+        !isValidContractAddress(process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS)
       )
         throw new Error("FTSO_CA_VOTER_REGISTRY_ADDRESS value is not valid contract address");
       const CONTRACT_CONFIG: NetworkContractAddresses = {
