@@ -6,7 +6,7 @@ import { defaultTestSigningPolicy } from "./coding-helpers";
 import exp from "constants";
 
 const web3 = new Web3("https://dummy");
-describe.only(`SigningPolicy`, async () => {
+describe(`SigningPolicy`, async () => {
   
   const accountPrivateKeys = JSON.parse(readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")).map((x: any) => x.privateKey);
   const accountAddresses = accountPrivateKeys.map((x: any) => web3.eth.accounts.privateKeyToAccount(x).address);
@@ -89,7 +89,7 @@ describe.only(`SigningPolicy`, async () => {
     expect(() => SigningPolicy.encode(signingPolicyData2)).to.throw("Invalid signer address format");
     signingPolicyData2 = {...signingPolicyData, weights: [...signingPolicyData.weights, 100], voters: [...signingPolicyData.voters, "00"]};
     expect(() => SigningPolicy.encode(signingPolicyData2)).to.throw("Invalid signer address format");
-    signingPolicyData2 = {...signingPolicyData, weights: [...signingPolicyData.weights, 100], voters: [...signingPolicyData.voters, "00"]};
+    signingPolicyData2 = {...signingPolicyData, weights: [...signingPolicyData.weights, 100], voters: [...signingPolicyData.voters, "0xc783df8a850f42e7f7e57013759c285caa701ebY"]};
     expect(() => SigningPolicy.encode(signingPolicyData2)).to.throw("Invalid signer address format");
 
   });
