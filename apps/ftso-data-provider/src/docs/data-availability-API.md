@@ -17,7 +17,7 @@ Where ObjectDefinition is as follows:
 ```json
 {
 	abiName: string,
-  data: any
+	data: any
 }
 ```
 
