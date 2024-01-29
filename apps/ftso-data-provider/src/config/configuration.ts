@@ -1,8 +1,9 @@
+import { throwError } from "../../../../libs/ftso-core/src/utils/error";
+
 export interface IConfig {
   // server port (PORT)
   port: number;
-  // comma separated list of API keys (API_KEYS)
-  api_keys: string[];
+
   // DB credentials
   db_host: string;
   db_port: number;
@@ -17,24 +18,24 @@ export interface IConfig {
 }
 
 export default () => {
-  // First go over env variables that are required
-  if (process.env.PRICE_PROVIDER_BASE_URL == undefined) {
-    throw Error("Must provide a private key in PRICE_PROVIDER_BASE_URL env variable.");
-  }
-
-  const api_keys = process.env.API_KEYS?.split(",") || [""];
-
   const config: IConfig = {
-    port: parseInt(process.env.PORT || "3000"),
-    api_keys,
-    db_host: process.env.DB_HOST || "localhost",
-    db_port: parseInt(process.env.DB_PORT!) || 3306,
-    db_user: process.env.DB_USERNAME || "root",
-    db_pass: process.env.DB_PASSWORD || "root",
-    db_name: process.env.DB_NAME || "flare_top_level_indexer",
-    price_provider_url: process.env.PRICE_PROVIDER_BASE_URL,
-    required_indexer_history_time_sec: parseInt(process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC) || 14 * 24 * 60 * 60, // 14 days
-    indexer_top_timeout: parseInt(process.env.INDEXER_TOP_TIMEOUT) || 5,
+    port: parseInt(
+      process.env.DATA_PROVIDER_CLIENT_PORT ?? throwError("DATA_PROVIDER_CLIENT_PORT env variable not set")
+    ),
+    db_host: process.env.DB_HOST ?? throwError("DB_HOST env variable not set"),
+    db_port: parseInt(process.env.DB_PORT ?? throwError("DB_PORT env variable not set")),
+    db_user: process.env.DB_USERNAME ?? throwError("DB_USERNAME env variable not set"),
+    db_pass: process.env.DB_PASSWORD ?? throwError("DB_PASSWORD env variable not set"),
+    db_name: process.env.DB_NAME ?? throwError("DB_NAME env variable not set"),
+    price_provider_url:
+      process.env.PRICE_PROVIDER_BASE_URL ?? throwError("PRICE_PROVIDER_BASE_URL env variable not set"),
+    required_indexer_history_time_sec: parseInt(
+      process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC ??
+        throwError("DB_REQUIRED_INDEXER_HISTORY_TIME_SEC env variable not set")
+    ),
+    indexer_top_timeout: parseInt(
+      process.env.INDEXER_TOP_TIMEOUT ?? throwError("INDEXER_TOP_TIMEOUT env variable not set")
+    ),
   };
   return config;
 };

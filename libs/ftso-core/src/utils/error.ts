@@ -16,3 +16,7 @@ export function errorString(error: unknown) {
     return `Caught a non-error objet: ${JSON.stringify(error)}`;
   }
 }
+
+export function throwError(msg: string): never {
+  throw new Error(msg);
+}

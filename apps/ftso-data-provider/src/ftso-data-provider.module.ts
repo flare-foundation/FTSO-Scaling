@@ -14,12 +14,6 @@ const IMPORTS_ARRAY = [
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: async (configService: ConfigService<IConfig>) => {
-      // return {
-      //   type: 'sqlite',
-      //   database: '/Users/work/Code/flare-smart-contracts-v2/db/indexer.db',
-      //   entities: [TLPTransaction, TLPEvents, TLPState],
-      //   synchronize: false,
-      // };
       return {
         type: "mysql",
         host: configService.getOrThrow("db_host"),

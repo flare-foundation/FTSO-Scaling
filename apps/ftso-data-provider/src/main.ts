@@ -6,7 +6,6 @@ import helmet from "helmet";
 async function bootstrap() {
   const app = await NestFactory.create(FtsoDataProviderModule);
   app.use(helmet());
-  // TODO: consider adding cors protectors + some sort of api key protection
   const basePath = process.env.DATA_PROVIDER_CLIENT_BASE_PATH ?? "";
 
   const config = new DocumentBuilder()
@@ -15,7 +14,6 @@ async function bootstrap() {
       "This server is used by the Flare Protocol client and therefore implements the default api endpoints to facilitate Flare Time Series Oracle (FTSO) protocol. It also adds the support for querying the finalized median merkle trees"
     )
     .setBasePath(basePath)
-    // .addApiKey({ type: 'apiKey', name: 'X-API-KEY', in: 'header' }, 'X-API-KEY')
     .setVersion("1.0")
     .build();
   const document = SwaggerModule.createDocument(app, config);
