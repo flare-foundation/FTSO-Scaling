@@ -2,7 +2,6 @@ import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntP
 import { ApiTags } from "@nestjs/swagger";
 import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
-import { ConfigService } from "@nestjs/config";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
 
@@ -14,10 +13,7 @@ enum ApiTagsEnum {
 @Controller("")
 export class FtsoDataProviderController {
   private readonly logger = new Logger(FtsoDataProviderController.name);
-  constructor(
-    private readonly ftsoDataProviderService: FtsoDataProviderService,
-    private readonly configService: ConfigService
-  ) {}
+  constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}
 
   // Protocol Data Provider APIs
 
