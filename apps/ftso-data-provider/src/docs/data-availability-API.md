@@ -10,10 +10,10 @@ The response should be of the form:
 }
 ```
 Where ObjectDefinition is as follows:
-```
+```json
 {
 	abiName: string,
-   data: any
+  data: any
 }
 ```
 The order of objects in the objects list is matching the order of how they are put into the Merkle tree. The `abiName` field refers to an ABI definition that must be included in the list abis provided on `data-abis` route.
