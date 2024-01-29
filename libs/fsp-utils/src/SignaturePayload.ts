@@ -13,7 +13,7 @@ import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "./Protoco
 import { ISigningPolicy } from "./SigningPolicy";
 import { ECDSASignatureWithIndex, IECDSASignatureWithIndex } from "./ECDSASignatureWithIndex";
 
-
+const web3 = new Web3("https://dummy");
 export interface ISignaturePayload {
   type: string;
   message: IProtocolMessageMerkleRoot;
@@ -39,12 +39,19 @@ export namespace SignaturePayload {
   export function encode(signaturePayload: ISignaturePayload): string {
     const message = ProtocolMessageMerkleRoot.encode(signaturePayload.message);
     const signature = ECDSASignature.encode(signaturePayload.signature);
+    if (!/^0x[0-9a-f]{2}$/.test(signaturePayload.type)) {
+      throw Error(`Invalid type format: ${signaturePayload.type}`);
+    }
+    if (signaturePayload.unsignedMessage && (!/^0x[0-9a-f]*$/.test(signaturePayload.unsignedMessage) || signaturePayload.unsignedMessage.length % 2 !== 0)) {
+      throw Error(`Invalid unsigned message format: ${signaturePayload.unsignedMessage}`);
+    }
+
     return (
       "0x" +
       signaturePayload.type.slice(2) +
       message.slice(2) +
       signature.slice(2) +
-      signaturePayload.unsignedMessage.slice(2)
+      (signaturePayload.unsignedMessage ?? "").slice(2)
     ).toLowerCase();
   }
 
@@ -76,7 +83,7 @@ export namespace SignaturePayload {
   }
 
   /**
-   * Decodes properly formated signature calldata into array of payloads with signatures
+   * Decodes properly formatted signature calldata into array of payloads with signatures
    * @param calldata
    */
   export function decodeCalldata(calldata: string): IPayloadMessage<ISignaturePayload>[] {
@@ -115,7 +122,6 @@ export namespace SignaturePayload {
     if (signatures.length === 0) {
       return false;
     }
-    const web3 = new Web3();
     const weightMap: Map<string, number> = new Map<string, number>();
     const signerIndex: Map<string, number> = new Map<string, number>();
     for (let i = 0; i < signingPolicy.voters.length; i++) {
@@ -144,7 +150,7 @@ export namespace SignaturePayload {
         throw Error(`Invalid signer: ${signer}. Not in signing policy`);
       }
       totalWeight += weight;
-      if (totalWeight >= signingPolicy.threshold) {
+      if (totalWeight > signingPolicy.threshold) {
         return true;
       }
     }
@@ -166,7 +172,6 @@ export namespace SignaturePayload {
     if (signaturePayloads.length === 0) {
       return false;
     }
-    const web3 = new Web3();
     const message: IProtocolMessageMerkleRoot = signaturePayloads[0].payload.message;
     const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(message));
     const signatures: IECDSASignature[] = [];
@@ -189,8 +194,7 @@ export namespace SignaturePayload {
   export function augment(
     signaturePayload: ISignaturePayload,
     signerIndices: Map<string, number>
-  ) {
-    const web3 = new Web3();
+  ) {    
     const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(signaturePayload.message));
     const signer = web3.eth.accounts.recover(
       messageHash,
@@ -207,6 +211,14 @@ export namespace SignaturePayload {
     }
   }
 
+  /**
+   * Inserts signature payload into sorted list of signature payloads.
+   * The order is by signer index. If signer index is not defined or 
+   * already exists in the list, the payload is not inserted.
+   * @param signaturePayloads 
+   * @param entry 
+   * @returns 
+   */
   export function insertInSigningPolicySortedList(
     signaturePayloads: ISignaturePayload[],
     entry: ISignaturePayload
@@ -272,85 +284,4 @@ export namespace SignaturePayload {
     return signatures;
   }
 
-  /**
-   * Sorts signature payloads according to signing policy.
-   * It assumes signature payloads have the same message.
-   * If not, throws error.
-   * It also removes the duplicates.
-   * @param signaturePayloads
-   * @param signingPolicy
-   */
-  export function sortedSignaturePayloadsBySigner(
-    signaturePayloads: IPayloadMessage<ISignaturePayload>[],
-    signingPolicy: ISigningPolicy
-  ) {
-    const signerIndex: Map<string, number> = new Map<string, number>();
-    const web3 = new Web3();
-
-    for (let i = 0; i < signingPolicy.voters.length; i++) {
-      signerIndex.set(signingPolicy.voters[i].toLowerCase(), i);
-    }
-    if (signaturePayloads.length === 0) {
-      return [];
-    }
-
-    for (let payload of signaturePayloads) {
-      if (!ProtocolMessageMerkleRoot.equals(payload.payload.message, signaturePayloads[0].payload.message)) {
-        throw Error(`Invalid payload message`);
-      }
-    }
-    const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(signaturePayloads[0].payload.message));
-    let newSignaturePayloads = signaturePayloads.map((value) => {
-      const signer = web3.eth.accounts.recover(
-        messageHash,
-        "0x" + value.payload.signature.v.toString(16),
-        value.payload.signature.r,
-        value.payload.signature.s
-      ).toLowerCase();
-      if (signer === undefined) {
-        throw Error(`Undefined signer.`);
-      }
-      const index = signerIndex.get(signer);
-      if (index === undefined) {
-        throw Error(`Invalid signer: ${signer}. Not in signing policy`);
-      }
-      return {
-        ...value,
-        signer,
-        index
-      }
-    });
-    newSignaturePayloads = newSignaturePayloads.sort((a, b) => { return a.index - b.index });
-
-    return newSignaturePayloads.filter((value, index) => {
-      if (index === 0) { // take first one if no second or different from second
-        return newSignaturePayloads.length === 1 || value.index !== newSignaturePayloads[1].index;
-      } else { // always take the first appearance of the signer
-        return value.index !== newSignaturePayloads[index - 1].index;
-      }
-    })
-  }
-
-  /**
-   * 
-   * @param signaturePayloads 
-   * @returns 
-   */
-  export function sortSignaturePayloads(
-    signaturePayloads: ISignaturePayload[],
-  ): Map<number, Map<number, ISignaturePayload[]>> {
-    // votingRoundId => protocolId => SignaturePayload[]
-    const result = new Map<number, Map<number, ISignaturePayload[]>>();
-    for (let payload of signaturePayloads) {
-      if (!result.has(payload.message.votingRoundId)) {
-        result.set(payload.message.votingRoundId, new Map<number, ISignaturePayload[]>());
-      }
-      const protocolMap = result.get(payload.message.votingRoundId);
-      if (!protocolMap?.has(payload.message.protocolId)) {
-        protocolMap?.set(payload.message.protocolId, []);
-      }
-      protocolMap?.get(payload.message.protocolId)?.push(payload);
-    }
-    return result;
-  }
 }

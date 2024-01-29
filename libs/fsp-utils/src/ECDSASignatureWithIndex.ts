@@ -15,7 +15,7 @@ export interface IECDSASignatureWithIndex {
   index: number;
 }
 
-const web3 = new Web3();
+const web3 = new Web3("https://dummy");
 export namespace ECDSASignatureWithIndex {
   //////////////////////////////////////////////////////////////////////////////
   // Signature with index structure

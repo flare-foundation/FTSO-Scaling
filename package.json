@@ -92,7 +92,8 @@
       "apps/**/main.ts",
       "apps/**/*.module.ts",
       "apps/ftso-data-provider/src/price-provider-api/**/*",
-      "apps/**/configuration.ts"
+      "apps/**/configuration.ts",
+      "libs/ftso-core/src/reward-calculation/**/*"
     ],
     "reporter": [
       "html",

@@ -13,7 +13,7 @@ export interface IECDSASignature {
   v: number;
 }
 
-const web3 = new Web3();
+const web3 = new Web3("https://dummy");
 export namespace ECDSASignature {
   /**
    * Encodes ECDSA signature into 0x-prefixed hex string representing byte encoding
@@ -70,7 +70,6 @@ export namespace ECDSASignature {
     if (!/^0x[0-9a-f]{64}$/i.test(messageHash)) {
       throw Error(`Invalid message hash format: ${messageHash}`);
     }
-    const web3 = new Web3();
     let signatureObject = web3.eth.accounts.sign(messageHash, privateKey);
     return {
       v: parseInt(signatureObject.v.slice(2), 16),

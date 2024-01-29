@@ -23,7 +23,7 @@ import Web3 from "web3";
  * Importants: all input strings should represent bytes32, hence should be 32-byte padded hex strings.
  */
 
-const web3 = new Web3();
+const web3 = new Web3("https://dummy");
 
 /**
  * Conversion function to Hex value with left padding
