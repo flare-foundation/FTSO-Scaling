@@ -58,6 +58,24 @@ export type ContractDefinitions =
   | VoterRegistryDefinition
   | ProtocolMerkleStructsDefinition;
 
+export enum ContractMethodNames {
+  submit1 = "submit1",
+  submit2 = "submit2",
+  submit3 = "submit3",
+  submitSignatures = "submitSignatures",
+  relay = "relay",
+
+  // Struct definitions helper methods (to extract abis)
+  // FTSO merkle tree node definitions
+  feedStruct = "feedStruct",
+  randomStruct = "randomStruct",
+  feedWithProofStruct = "feedWithProofStruct",
+
+  // Rewarding definitions
+  rewardClaimStruct = "rewardClaimStruct",
+  rewardClaimWithProofStruct = "rewardClaimWithProofStruct",
+}
+
 export interface NetworkContractAddresses {
   FlareSystemManager: FlareSystemManagerDefinition;
   FtsoRewardOffersManager: FtsoRewardOffersManagerDefinition;
