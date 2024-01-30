@@ -22,8 +22,9 @@ import {
   encodeCommitPayloadMessage,
   encodeRevealPayloadMessage,
 } from "../../../apps/ftso-data-provider/src/response-encoders";
+import { getTestFile } from "../../utils/getTestFile";
 
-describe("ftso-data-provider.service", () => {
+describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const feeds: Feed[] = [
     { name: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
     { name: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
@@ -43,7 +44,7 @@ describe("ftso-data-provider.service", () => {
     epochSettings: epochSettings,
     required_indexer_history_time_sec: indexerHistorySec,
     indexer_top_timeout: 1000,
-    voting_epoch_history_size: 10000,
+    voting_round_history_size: 10000,
     price_provider_url: "http://localhost:3000",
   });
 
