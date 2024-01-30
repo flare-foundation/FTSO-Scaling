@@ -216,6 +216,20 @@ export const EPOCH_SETTINGS = epochSettings();
 
 const randomGenerationBenchingWindow = () => {
   switch (process.env.NETWORK) {
+    case "from-env": {
+      if (!process.env.RANDOM_GENERATION_BENCHING_WINDOW) {
+        throw new Error("RANDOM_GENERATION_BENCHING_WINDOW value is not provided");
+      }
+      try {
+        const num = parseInt(process.env.RANDOM_GENERATION_BENCHING_WINDOW);
+        if (num >= 0) {
+          return num;
+        }
+        throw new Error("RANDOM_GENERATION_BENCHING_WINDOW must be a non negative integer");
+      } catch {
+        throw new Error("RANDOM_GENERATION_BENCHING_WINDOW must be an integer");
+      }
+    }
     case "local-test":
     default:
       return 100;
