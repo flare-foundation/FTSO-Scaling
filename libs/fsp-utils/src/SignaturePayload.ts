@@ -9,7 +9,7 @@ export interface ISignaturePayload {
   type: string;
   message: IProtocolMessageMerkleRoot;
   signature: IECDSASignature;
-  unsignedMessage: string;
+  unsignedMessage?: string;
   signer?: string;
   index?: number;
   messageHash?: string;
@@ -64,11 +64,11 @@ export namespace SignaturePayload {
     const message = "0x" + encodedSignaturePayloadInternal.slice(2, 2 + 38 * 2);
     const signature = "0x" + encodedSignaturePayloadInternal.slice(2 + 38 * 2, 2 + 38 * 2 + 65 * 2);
     const unsignedMessage = encodedSignaturePayloadInternal.slice(2 + 38 * 2 + 65 * 2);
-    const result = {
+    const result: ISignaturePayload = {
       type,
       message: ProtocolMessageMerkleRoot.decode(message),
       signature: ECDSASignature.decode(signature),
-    } as ISignaturePayload;
+    };
     if (unsignedMessage.length > 0) {
       result.unsignedMessage = "0x" + unsignedMessage;
     }
