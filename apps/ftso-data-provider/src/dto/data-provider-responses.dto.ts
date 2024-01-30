@@ -1,6 +1,7 @@
 // PDP (Protocol Data Provider) Response
 
-import { Feed } from "../../../../libs/ftso-core/src/voting-types";
+import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
+import { Feed, MedianCalculationResult, RandomCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
 
 export enum PDPResponseStatusEnum {
   OK = "OK",
@@ -21,16 +22,12 @@ export enum ExternalResponseStatusEnum {
   NOT_AVAILABLE = "NOT_AVAILABLE",
 }
 
-export interface TreeNode extends Feed {
-  id: number;
-}
-
 interface ExternalResponseOk {
   status: ExternalResponseStatusEnum.OK;
   votingRoundId: number;
   merkleRoot: string;
-  randomQualityScore: number;
-  tree: TreeNode[];
+  isSecureRandom: boolean;
+  tree: (RandomCalculationResult | MedianCalculationResult)[];
 }
 
 interface ExternalResponseTooEarly {
@@ -42,3 +39,19 @@ interface ExternalResponseNotAvailable {
 }
 
 export type ExternalResponse = ExternalResponseOk | ExternalResponseTooEarly | ExternalResponseNotAvailable;
+
+export interface JSONAbiDefinition {
+  abiName: string;
+  data: AbiDataInput;
+}
+
+interface AbiDefinitionsResponseOk {
+  status: ExternalResponseStatusEnum.OK;
+  data: JSONAbiDefinition[];
+}
+
+interface AbiDefinitionsResponseNotAvailable {
+  status: ExternalResponseStatusEnum.NOT_AVAILABLE;
+}
+
+export type AbiDefinitionsResponse = AbiDefinitionsResponseOk | AbiDefinitionsResponseNotAvailable;

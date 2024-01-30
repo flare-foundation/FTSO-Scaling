@@ -2,18 +2,28 @@ import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common
 import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
 import { IPayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
-import { IProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import {
+  IProtocolMessageMerkleData,
+  IProtocolMessageMerkleRoot,
+} from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
+import {
+  CONTRACTS,
+  ContractMethodNames,
+  FTSO2_PROTOCOL_ID,
+  RANDOM_GENERATION_BENCHING_WINDOW,
+} from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
+import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
-import { Feed } from "../../../libs/ftso-core/src/voting-types";
+import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
+import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
 
 @Injectable()
@@ -31,6 +41,8 @@ export class FtsoDataProviderService {
 
   // Indexer top timeout margin
   private indexer_top_timeout: number;
+
+  private readonly encodingUtils = EncodingUtils.instance;
 
   constructor(manager: EntityManager, configService: ConfigService) {
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
@@ -65,8 +77,7 @@ export class FtsoDataProviderService {
 
   async getRevealData(votingRoundId: number): Promise<IPayloadMessage<IRevealData> | undefined> {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
-
-    const revealData = this.votingRoundToRevealData.get(votingRoundId)!;
+    const revealData = this.votingRoundToRevealData.get(votingRoundId);
     if (revealData === undefined) {
       // we do not have reveal data. Either we committed and restarted the client, hence lost the reveal data irreversibly
       // or we did not commit at all.
@@ -83,6 +94,38 @@ export class FtsoDataProviderService {
   }
 
   async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {
+    const result = await this.prepareCalculationResultData(votingRoundId);
+    if (result === undefined) {
+      return undefined;
+    }
+    const merkleRoot = result.merkleTree.root;
+    const message: IProtocolMessageMerkleRoot = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId,
+      isSecureRandom: result.randomData.isSecure,
+      merkleRoot,
+    };
+    return message;
+  }
+
+  async getFullMerkleTree(votingRoundId: number): Promise<IProtocolMessageMerkleData | undefined> {
+    const result = await this.prepareCalculationResultData(votingRoundId);
+    if (result === undefined) {
+      return undefined;
+    }
+    const merkleRoot = result.merkleTree.root;
+    const treeNodes = [result.randomData, ...result.medianData];
+    const response: IProtocolMessageMerkleData = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId,
+      merkleRoot,
+      isSecureRandom: result.randomData.isSecure,
+      tree: treeNodes,
+    };
+    return response;
+  }
+
+  private async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(
       votingRoundId,
       RANDOM_GENERATION_BENCHING_WINDOW,
@@ -93,19 +136,40 @@ export class FtsoDataProviderService {
       return undefined;
     }
     try {
-      const result = await calculateResultsForVotingRound(dataResponse.data);
-      const merkleRoot = result.merkleTree.root;
-      const message: IProtocolMessageMerkleRoot = {
-        protocolId: FTSO2_PROTOCOL_ID,
-        votingRoundId,
-        isSecureRandom: result.randomData.isSecure,
-        merkleRoot,
-      };
-      return message;
+      return calculateResultsForVotingRound(dataResponse.data);
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
+  }
+
+  getAbiDefinitions(): JSONAbiDefinition[] {
+    const randomDef = this.encodingUtils.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.randomStruct,
+      0
+    );
+    const feedDef = this.encodingUtils.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.feedStruct,
+      0
+    );
+    const feedWithProof = this.encodingUtils.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.feedWithProofStruct,
+      0
+    );
+    return [
+      { abiName: ContractMethodNames.randomStruct, data: randomDef },
+      {
+        abiName: ContractMethodNames.feedStruct,
+        data: feedDef,
+      },
+      {
+        abiName: ContractMethodNames.feedWithProofStruct,
+        data: feedWithProof,
+      },
+    ];
   }
 
   // Internal methods

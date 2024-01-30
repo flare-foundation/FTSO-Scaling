@@ -1,3 +1,8 @@
+import { ECDSASignature } from "../../fsp-utils/src/ECDSASignature";
+import { ProtocolMessageMerkleRoot } from "../../fsp-utils/src/ProtocolMessageMerkleRoot";
+import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
+import { ISignaturePayload, SignaturePayload } from "../../fsp-utils/src/SignaturePayload";
+import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
 import {
   BlockAssuranceResult,
   FinalizationData,
@@ -8,20 +13,20 @@ import {
 } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
-import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
-import { CommitData, ICommitData } from "./utils/CommitData";
-import { ECDSASignature } from "../../fsp-utils/src/ECDSASignature";
-import { ProtocolMessageMerkleRoot } from "../../fsp-utils/src/ProtocolMessageMerkleRoot";
-import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
-import { IRevealData, RevealData } from "./utils/RevealData";
-import { ISignaturePayload, SignaturePayload } from "../../fsp-utils/src/SignaturePayload";
-import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
-import { Address, Feed, MessageHash } from "./voting-types";
+import {
+  ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
+  ContractMethodNames,
+  EPOCH_SETTINGS,
+  FTSO2_PROTOCOL_ID,
+} from "./configs/networks";
 import {
   DataForCalculations,
-  DataForRewardCalculation,
   DataForCalculationsPartial,
+  DataForRewardCalculation,
 } from "./data-calculation-interfaces";
+import { CommitData, ICommitData } from "./utils/CommitData";
+import { IRevealData, RevealData } from "./utils/RevealData";
+import { Address, Feed, MessageHash } from "./voting-types";
 
 /**
  * Data availability status for data manager responses.
@@ -216,7 +221,7 @@ export class DataManager {
     endTimeout?: number
   ): Promise<DataMangerResponse<CommitAndRevealSubmissionsMappingsForRange>> {
     const commitSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      "submit1",
+      ContractMethodNames.submit1,
       EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId),
       EPOCH_SETTINGS.votingEpochEndSec(endVotingRoundId)
     );
@@ -227,7 +232,7 @@ export class DataManager {
       };
     }
     const revealSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      "submit2",
+      ContractMethodNames.submit2,
       EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId + 1),
       EPOCH_SETTINGS.revealDeadlineSec(endVotingRoundId + 1),
       endTimeout
@@ -280,7 +285,7 @@ export class DataManager {
     votingRoundId: number
   ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
     const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      "submitSignatures",
+      ContractMethodNames.submitSignatures,
       EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
       EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
     );

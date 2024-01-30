@@ -4,6 +4,7 @@ Reward calculation service is a service is used to calculate FTSO scaling reward
 
 The service provides API routes that [Flare System Client](https://gitlab.com/flarenetwork/flare-system-client) queries to obtain data about reward epoch rewards, in the form of a reward claims. Since FTSO Scaling is only one sub protocol under Flare Systems Protocol, the reward claims from Reward calculation service are collected and merged with reward claims in other subprotocols, yielding fully merged claims from which a Reward claims Merkle tree is built.
 Reward calculation service depends on:
+
 - [Flare System C-chain Indexer](https://gitlab.com/flarenetwork/flare-system-c-chain-indexer)
 
 Reward calculation service does not directly communicate with blockchain. Instead read access to blockchain is provided through queries into indexer database while calculated information is then picked up by Flare System Client who manages sending data onto chain.

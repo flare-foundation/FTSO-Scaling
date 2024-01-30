@@ -13,6 +13,7 @@ export { RewardsOffered } from "./RewardsOffered";
 export { VotePowerBlockSelected } from "./VotePowerBlockSelected";
 export { VoterRegistered } from "./VoterRegistered";
 export { VoterRegistrationInfo } from "./VoterRegistrationInfo";
+export { SigningPolicySigned } from "./SigningPolicySigned";
 
 // Helpers
 

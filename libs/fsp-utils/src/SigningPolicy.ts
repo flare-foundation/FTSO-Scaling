@@ -1,5 +1,4 @@
 import { ethers } from "ethers";
-
 export interface ISigningPolicy {
   rewardEpochId: number;
   startVotingRoundId: number;
@@ -156,13 +155,13 @@ export namespace SigningPolicy {
     signingPolicy.voters = signingPolicy.voters.map(x => x.toLowerCase());
     return signingPolicy;
   }
+
   /**
    * Calculates signing policy hash from signing policy object
    */
   export function hash(signingPolicy: ISigningPolicy) {
     return SigningPolicy.hashEncoded(SigningPolicy.encode(signingPolicy));
   }
-
   /**
    * Checks if two signing policies are equal as objects. Essentially checks if all properties are equal,
    * except the encodedLength property.
@@ -175,7 +174,7 @@ export namespace SigningPolicy {
       signingPolicy1.seed === signingPolicy2.seed;
     if (!test) {
       return false;
-    }
+    } 
     if (signingPolicy1.voters.length !== signingPolicy2.voters.length) {
       return false;
     }

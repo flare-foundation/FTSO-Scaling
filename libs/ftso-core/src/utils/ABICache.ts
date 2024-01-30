@@ -1,11 +1,12 @@
 import { readFileSync } from "fs";
-import { CONTRACTS } from "../configs/networks";
+import { CONTRACTS, ContractMethodNames } from "../configs/networks";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
   RewardsOffered,
   SigningPolicyInitialized,
+  SigningPolicySigned,
   VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo,
@@ -39,26 +40,27 @@ export class ABICache {
 
   constructor() {
     // Cache the following ABIs
-    const cachedABIs: [string, string | undefined, string | undefined][] = [
-      [CONTRACTS.Submission.name, "submit1", undefined],
-      [CONTRACTS.Submission.name, "submit2", undefined],
-      [CONTRACTS.Submission.name, "submit3", undefined],
-      [CONTRACTS.Submission.name, "submitSignatures", undefined],
+    // TODO: LUKA extract first parameter from ContractDefinitions union type
+    const cachedABIs: [string, ContractMethodNames | undefined, string | undefined][] = [
+      [CONTRACTS.Submission.name, ContractMethodNames.submit1, undefined],
+      [CONTRACTS.Submission.name, ContractMethodNames.submit2, undefined],
+      [CONTRACTS.Submission.name, ContractMethodNames.submit3, undefined],
+      [CONTRACTS.Submission.name, ContractMethodNames.submitSignatures, undefined],
       [CONTRACTS.FlareSystemManager.name, undefined, VotePowerBlockSelected.eventName],
       [CONTRACTS.FlareSystemManager.name, undefined, RandomAcquisitionStarted.eventName],
       [CONTRACTS.FlareSystemManager.name, undefined, RewardEpochStarted.eventName],
       [CONTRACTS.VoterRegistry.name, undefined, VoterRegistered.eventName],
       [CONTRACTS.FlareSystemCalculator.name, undefined, VoterRegistrationInfo.eventName],
       [CONTRACTS.Relay.name, undefined, SigningPolicyInitialized.eventName],
-      [CONTRACTS.Relay.name, "relay", undefined],
-      [CONTRACTS.FlareSystemManager.name, undefined, "SigningPolicySigned"],
+      [CONTRACTS.Relay.name, ContractMethodNames.relay, undefined],
+      [CONTRACTS.FlareSystemManager.name, undefined, SigningPolicySigned.eventName],
       [CONTRACTS.FtsoRewardOffersManager.name, undefined, InflationRewardsOffered.eventName],
       [CONTRACTS.FtsoRewardOffersManager.name, undefined, RewardsOffered.eventName],
-      [CONTRACTS.FtsoMerkleStructs.name, "feedStruct", undefined],
-      [CONTRACTS.FtsoMerkleStructs.name, "randomStruct", undefined],
-      [CONTRACTS.FtsoMerkleStructs.name, "feedWithProofStruct", undefined],
-      [CONTRACTS.ProtocolMerkleStructs.name, "rewardClaimStruct", undefined],
-      [CONTRACTS.ProtocolMerkleStructs.name, "rewardClaimWithProofStruct", undefined],
+      [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedStruct, undefined],
+      [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.randomStruct, undefined],
+      [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedWithProofStruct, undefined],
+      [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimStruct, undefined],
+      [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimWithProofStruct, undefined],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {

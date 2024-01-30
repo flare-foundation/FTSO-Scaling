@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { MedianCalculationResult, RandomCalculationResult } from "../../ftso-core/src/voting-types";
 
 export interface IProtocolMessageMerkleRoot {
   protocolId: number;
@@ -6,6 +7,10 @@ export interface IProtocolMessageMerkleRoot {
   isSecureRandom: boolean;
   merkleRoot: string;
   encodedLength?: number; // used only as a parsing result when parsing signing policy encoded into Relay message
+}
+
+export interface IProtocolMessageMerkleData extends IProtocolMessageMerkleRoot {
+  tree: (RandomCalculationResult | MedianCalculationResult)[];
 }
 
 export namespace ProtocolMessageMerkleRoot {

@@ -38,3 +38,11 @@ export function hashBytes(hexString: string): string {
   if (!hexString.startsWith("0x")) toHash = "0x" + hexString;
   return utils.soliditySha3({ type: "bytes", value: toHash })!;
 }
+
+export function isValidHexString(str: string): boolean {
+  return /^0x[0-9a-f]*$/i.test(str);
+}
+
+export function isValidContractAddress(address: string): boolean {
+  return isValidHexString(address) && address.length === 42;
+}

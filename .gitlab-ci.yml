@@ -20,7 +20,7 @@ workflow:
 test-all:
   extends: .test
   script:
-    - yarn test
+    - yarn test:all
 
 # TODO: enable coverage reports
 # test-coverage:

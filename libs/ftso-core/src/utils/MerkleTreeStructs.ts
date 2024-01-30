@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import { EncodingUtils } from "./EncodingUtils";
-import { CONTRACTS } from "../configs/networks";
+import { CONTRACTS, ContractMethodNames } from "../configs/networks";
 import { MedianCalculationResult, RandomCalculationResult } from "../voting-types";
+import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 export interface FeedResult {
@@ -20,7 +20,11 @@ export interface RandomResult {
 
 export namespace MerkleTreeStructs {
   export function hashPriceFeedResult(feedResult: FeedResult): string {
-    const abiInput = EncodingUtils.instance.getFunctionInputAbiData(CONTRACTS.FtsoMerkleStructs.name, "feedStruct", 0);
+    const abiInput = EncodingUtils.instance.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.feedStruct,
+      0
+    );
     const abiEncoded = coder.encode([abiInput.abi as any], [feedResult]);
     return ethers.keccak256(abiEncoded);
   }
@@ -28,7 +32,7 @@ export namespace MerkleTreeStructs {
   export function hashRandomResult(randomResult: RandomResult): string {
     const abiInput = EncodingUtils.instance.getFunctionInputAbiData(
       CONTRACTS.FtsoMerkleStructs.name,
-      "randomStruct",
+      ContractMethodNames.randomStruct,
       0
     );
     const abiEncoded = coder.encode([abiInput.abi as any], [randomResult]);
