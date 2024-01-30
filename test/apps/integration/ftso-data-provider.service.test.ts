@@ -1,4 +1,4 @@
-import { CONTRACTS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { CONTRACTS, ContractMethodNames, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
 
 import FakeTimers from "@sinonjs/fake-timers";
 import {
@@ -36,8 +36,8 @@ describe("ftso-data-provider.service", () => {
   const indexerHistorySec = 1000;
   const enc = EncodingUtils.instance;
 
-  const sigCommit = enc.getFunctionSignature(CONTRACTS.Submission.name, "submit1");
-  const sigReveal = enc.getFunctionSignature(CONTRACTS.Submission.name, "submit2");
+  const sigCommit = enc.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
+  const sigReveal = enc.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);
 
   const configService = new ConfigService({
     epochSettings: epochSettings,
