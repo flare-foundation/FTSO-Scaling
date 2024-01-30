@@ -1,10 +1,8 @@
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This file is copied from the Flare Smart Contract V2 repository.
 // DO NOT CHANGE!
 // See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 import { ethers } from "ethers";
 
@@ -13,11 +11,10 @@ export interface IProtocolMessageMerkleRoot {
   votingRoundId: number;
   isSecureRandom: boolean;
   merkleRoot: string;
-  encodedLength?: number;  // used only as a parsing result when parsing signing policy encoded into Relay message
+  encodedLength?: number; // used only as a parsing result when parsing signing policy encoded into Relay message
 }
 
 export namespace ProtocolMessageMerkleRoot {
-
   //////////////////////////////////////////////////////////////////////////////
   // Protocol message merkle root structure
   // 1 byte - protocolId
@@ -75,7 +72,7 @@ export namespace ProtocolMessageMerkleRoot {
     }
     let encodedLengthEntry = {};
     if (!exactEncoding) {
-      encodedLengthEntry = {encodedLength: 76};
+      encodedLengthEntry = { encodedLength: 76 };
     }
     const protocolId = parseInt(encodedMessageInternal.slice(0, 2), 16);
     const votingRoundId = parseInt(encodedMessageInternal.slice(2, 10), 16);
@@ -94,7 +91,7 @@ export namespace ProtocolMessageMerkleRoot {
       votingRoundId,
       isSecureRandom,
       merkleRoot,
-      ...encodedLengthEntry
+      ...encodedLengthEntry,
     };
   }
 
@@ -113,17 +110,16 @@ export namespace ProtocolMessageMerkleRoot {
     );
   }
 
-
   export function hash(message: IProtocolMessageMerkleRoot): string {
     return ethers.keccak256(encode(message));
   }
   /**
-   * Provides string representation of protocol message merkle root. 
+   * Provides string representation of protocol message merkle root.
    * Can be used for e.g. logging.
-   * @param message 
-   * @returns 
+   * @param message
+   * @returns
    */
   export function print(message: IProtocolMessageMerkleRoot) {
-    return `(${message.protocolId}, ${message.votingRoundId}, ${message.isSecureRandom}, ${message.merkleRoot})`
+    return `(${message.protocolId}, ${message.votingRoundId}, ${message.isSecureRandom}, ${message.merkleRoot})`;
   }
 }

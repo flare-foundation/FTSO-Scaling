@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { EncodingUtils } from "./EncodingUtils";
-import { CONTRACTS } from "../configs/networks";
+import { CONTRACTS, ContractMethodNames } from "../configs/networks";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 export enum ClaimType {
@@ -54,7 +54,7 @@ export namespace RewardClaim {
   export function hashRewardClaim(rewardClaim: IRewardClaim): string {
     const abiInput = EncodingUtils.instance.getFunctionInputAbiData(
       CONTRACTS.ProtocolMerkleStructs.name,
-      "rewardClaimStruct",
+      ContractMethodNames.rewardClaimStruct,
       0
     );
     const abiEncoded = coder.encode([abiInput.abi as any], [rewardClaim]);

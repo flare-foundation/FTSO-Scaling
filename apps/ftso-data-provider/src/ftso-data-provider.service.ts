@@ -32,6 +32,8 @@ export class FtsoDataProviderService {
   // Indexer top timeout margin
   private indexer_top_timeout: number;
 
+  private readonly encodingUtils = EncodingUtils.instance;
+
   constructor(manager: EntityManager, configService: ConfigService) {
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
@@ -106,6 +108,35 @@ export class FtsoDataProviderService {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
     }
+  }
+
+  getAbiDefinitions(): JSONAbiDefinition[] {
+    const randomDef = this.encodingUtils.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.randomStruct,
+      0
+    );
+    const feedDef = this.encodingUtils.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.feedStruct,
+      0
+    );
+    const feedWithProof = this.encodingUtils.getFunctionInputAbiData(
+      CONTRACTS.FtsoMerkleStructs.name,
+      ContractMethodNames.feedWithProofStruct,
+      0
+    );
+    return [
+      { abiName: ContractMethodNames.randomStruct, data: randomDef },
+      {
+        abiName: ContractMethodNames.feedStruct,
+        data: feedDef,
+      },
+      {
+        abiName: ContractMethodNames.feedWithProofStruct,
+        data: feedWithProof,
+      },
+    ];
   }
 
   // Internal methods

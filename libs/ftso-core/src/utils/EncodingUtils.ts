@@ -2,6 +2,7 @@ import { TLPEvents, TLPTransaction } from "../orm/entities";
 import { IPayloadMessage, PayloadMessage } from "../../../fsp-utils/src/PayloadMessage";
 import { ABICache, AbiData, AbiDataInput } from "./ABICache";
 import { decodeLog } from "web3-eth-abi";
+import { ContractMethodNames } from "../configs/networks";
 
 export class EncodingUtils {
   private readonly abiCache = new ABICache();
@@ -20,7 +21,7 @@ export class EncodingUtils {
    * @param functionName
    * @returns
    */
-  getFunctionAbiData(contractName: string, functionName: string): AbiData {
+  getFunctionAbiData(contractName: string, functionName: ContractMethodNames): AbiData {
     return this.abiCache.getAbi(contractName, functionName);
   }
 
@@ -41,7 +42,7 @@ export class EncodingUtils {
    * @param functionArgumentId
    * @returns
    */
-  getFunctionInputAbiData(contractName: string, functionName: string, functionArgumentId): AbiDataInput {
+  getFunctionInputAbiData(contractName: string, functionName: ContractMethodNames, functionArgumentId): AbiDataInput {
     return this.abiCache.getAbiInput(contractName, functionName, functionArgumentId);
   }
 
@@ -51,7 +52,7 @@ export class EncodingUtils {
    * @param functionName
    * @returns
    */
-  getFunctionSignature(smartContractName: string, functionName: string): string {
+  getFunctionSignature(smartContractName: string, functionName: ContractMethodNames): string {
     return this.getFunctionAbiData(smartContractName, functionName).signature;
   }
 
