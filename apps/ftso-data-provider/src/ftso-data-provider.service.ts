@@ -51,7 +51,7 @@ export class FtsoDataProviderService {
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
     this.votingRoundToRevealData = new LRUCache({
-      max: configService.get<number>("voting_epoch_history_size"),
+      max: configService.get<number>("voting_round_history_size"),
     });
   }
 
