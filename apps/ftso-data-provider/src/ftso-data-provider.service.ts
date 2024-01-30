@@ -25,6 +25,7 @@ import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
+import { LRUCache } from "lru-cache";
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -33,16 +34,14 @@ export class FtsoDataProviderService {
   // connections to the indexer and price provider
   private readonly indexerClient: IndexerClient;
   private readonly priceProviderClient: Api<unknown>;
-  // TODO: Need to clean up old epoch data so the map doesn't grow indefinitely
-  private readonly votingRoundToRevealData = new Map<number, IRevealData>();
+  private readonly votingRoundToRevealData: LRUCache<number, IRevealData>;
 
-  private rewardEpochManger: RewardEpochManager;
-  private dataManager: DataManager;
+  private readonly rewardEpochManger: RewardEpochManager;
+  private readonly dataManager: DataManager;
+  private readonly encodingUtils = EncodingUtils.instance;
 
   // Indexer top timeout margin
-  private indexer_top_timeout: number;
-
-  private readonly encodingUtils = EncodingUtils.instance;
+  private readonly indexer_top_timeout: number;
 
   constructor(manager: EntityManager, configService: ConfigService) {
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
@@ -50,7 +49,10 @@ export class FtsoDataProviderService {
     this.indexerClient = new IndexerClient(manager, required_history_sec);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
-    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger);
+    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
+    this.votingRoundToRevealData = new LRUCache({
+      max: configService.get<number>("voting_epoch_history_size"),
+    });
   }
 
   // Entry point methods for the protocol data provider
@@ -77,6 +79,7 @@ export class FtsoDataProviderService {
 
   async getRevealData(votingRoundId: number): Promise<IPayloadMessage<IRevealData> | undefined> {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
+
     const revealData = this.votingRoundToRevealData.get(votingRoundId);
     if (revealData === undefined) {
       // we do not have reveal data. Either we committed and restarted the client, hence lost the reveal data irreversibly

@@ -15,12 +15,8 @@ export interface RewardEpochDuration {
  * 2. Keeps a cache of reward epochs
  */
 export class RewardEpochManager {
-  indexerClient: IndexerClient;
-  rewardEpochsCache: Map<RewardEpochId, RewardEpoch>;
-  constructor(indexerClient: IndexerClient) {
-    this.indexerClient = indexerClient;
-    this.rewardEpochsCache = new Map<RewardEpochId, RewardEpoch>();
-  }
+  private readonly rewardEpochsCache = new Map<RewardEpochId, RewardEpoch>();
+  constructor(private readonly indexerClient: IndexerClient) {}
 
   /**
    * Returns a matching reward epoch for the given voting epoch.
@@ -33,7 +29,7 @@ export class RewardEpochManager {
    * @param votingEpochId
    * @returns
    */
-  async getRewardEpoch(votingEpochId: VotingEpochId, partial = false): Promise<RewardEpoch | undefined> {
+  async getRewardEpoch(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
     const currentVotingEpochId = EPOCH_SETTINGS.votingEpochForTime(Date.now());
     if (votingEpochId > currentVotingEpochId) {
       return undefined; // future voting epoch
