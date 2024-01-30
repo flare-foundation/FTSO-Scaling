@@ -8,8 +8,9 @@ Protocol data providers provide the following GET routes called with the paramet
 - `GET submit3/:votingRoundId/:submitAddress`
 
 The routes return the following responses
+
 ```json
-{	
+{
 	status: "OK",
 	data: “0x12344…”,
 	additionalData: “0x2345…”

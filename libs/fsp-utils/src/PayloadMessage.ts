@@ -1,11 +1,8 @@
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This file is copied from the Flare Smart Contract V2 repository.
 // DO NOT CHANGE!
 // See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 
 export interface IPayloadMessage<T> {
   protocolId: number;
@@ -81,8 +78,8 @@ export namespace PayloadMessage {
   /**
    * Concatenates hex strings into one hex string.
    * In the process it checks if each string is a valid hex string.
-   * @param hexStrings 
-   * @returns 
+   * @param hexStrings
+   * @returns
    */
   export function concatenateHexStrings(hexStrings: string[]): string {
     let result = "0x";
@@ -94,5 +91,4 @@ export namespace PayloadMessage {
     }
     return result;
   }
-
 }

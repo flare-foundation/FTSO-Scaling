@@ -1,10 +1,8 @@
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This file is copied from the Flare Smart Contract V2 repository.
 // DO NOT CHANGE!
 // See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 import Web3 from "web3";
 import { ECDSASignature, IECDSASignature } from "./ECDSASignature";
@@ -12,7 +10,6 @@ import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "./ProtocolMessageMerkleRoot";
 import { ISigningPolicy } from "./SigningPolicy";
 import { ECDSASignatureWithIndex, IECDSASignatureWithIndex } from "./ECDSASignatureWithIndex";
-
 
 export interface ISignaturePayload {
   type: string;
@@ -125,12 +122,9 @@ export namespace SignaturePayload {
     let totalWeight = 0;
     let nextAllowedSignerIndex = 0;
     for (let signature of signatures) {
-      const signer = web3.eth.accounts.recover(
-        messageHash,
-        "0x" + signature.v.toString(16),
-        signature.r,
-        signature.s
-      ).toLowerCase();
+      const signer = web3.eth.accounts
+        .recover(messageHash, "0x" + signature.v.toString(16), signature.r, signature.s)
+        .toLowerCase();
       const index = signerIndex.get(signer);
       if (index === undefined) {
         throw Error(`Invalid signer: ${signer}. Not in signing policy`);
@@ -140,7 +134,8 @@ export namespace SignaturePayload {
       }
       nextAllowedSignerIndex = index + 1;
       const weight = weightMap.get(signer);
-      if (weight === undefined) { // This should not happen
+      if (weight === undefined) {
+        // This should not happen
         throw Error(`Invalid signer: ${signer}. Not in signing policy`);
       }
       totalWeight += weight;
@@ -182,29 +177,28 @@ export namespace SignaturePayload {
   /**
    * Augments signature payload with signer and index from signerIndices map.
    * Also adds message hash.
-   * @param signaturePayload 
-   * @param signerIndices 
-   * @returns 
+   * @param signaturePayload
+   * @param signerIndices
+   * @returns
    */
-  export function augment(
-    signaturePayload: ISignaturePayload,
-    signerIndices: Map<string, number>
-  ) {
+  export function augment(signaturePayload: ISignaturePayload, signerIndices: Map<string, number>) {
     const web3 = new Web3();
     const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(signaturePayload.message));
-    const signer = web3.eth.accounts.recover(
-      messageHash,
-      "0x" + signaturePayload.signature.v.toString(16),
-      signaturePayload.signature.r,
-      signaturePayload.signature.s
-    ).toLowerCase();
+    const signer = web3.eth.accounts
+      .recover(
+        messageHash,
+        "0x" + signaturePayload.signature.v.toString(16),
+        signaturePayload.signature.r,
+        signaturePayload.signature.s
+      )
+      .toLowerCase();
     const index = signerIndices.get(signer);
     return {
       ...signaturePayload,
       signer,
       index,
-      messageHash
-    }
+      messageHash,
+    };
   }
 
   export function insertInSigningPolicySortedList(
@@ -245,26 +239,26 @@ export namespace SignaturePayload {
 
   /**
    * Encodes signature payloads into 0x-prefixed hex string representing byte encoding
-   * in which first 2 bytes are represent the number of signatures N while the rest is 
+   * in which first 2 bytes are represent the number of signatures N while the rest is
    * N * (1 + 32 + 32 + 2) bytes representing byte encoded signatures with index.
-   * @param signaturePayloads 
-   * @returns 
+   * @param signaturePayloads
+   * @returns
    */
   export function encodeForRelay(signaturePayloads: ISignaturePayload[]): string {
     let signatures = "0x" + signaturePayloads.length.toString(16).padStart(4, "0");
     let lastIndex = -1;
     for (const payload of signaturePayloads) {
       if (payload.index === undefined) {
-        throw new Error(`Payload ${payload} does not have index.`)
+        throw new Error(`Payload ${payload} does not have index.`);
       }
       if (payload.index <= lastIndex) {
-        throw new Error(`Payloads are not strictly monotonic sorted by index.`)
+        throw new Error(`Payloads are not strictly monotonic sorted by index.`);
       }
       const signatureWithIndex = {
         r: payload.signature.r,
         s: payload.signature.s,
         v: payload.signature.v,
-        index: payload.index!
+        index: payload.index!,
       } as IECDSASignatureWithIndex;
       signatures += ECDSASignatureWithIndex.encode(signatureWithIndex).slice(2);
       lastIndex = payload.index;
@@ -300,13 +294,15 @@ export namespace SignaturePayload {
       }
     }
     const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(signaturePayloads[0].payload.message));
-    let newSignaturePayloads = signaturePayloads.map((value) => {
-      const signer = web3.eth.accounts.recover(
-        messageHash,
-        "0x" + value.payload.signature.v.toString(16),
-        value.payload.signature.r,
-        value.payload.signature.s
-      ).toLowerCase();
+    let newSignaturePayloads = signaturePayloads.map(value => {
+      const signer = web3.eth.accounts
+        .recover(
+          messageHash,
+          "0x" + value.payload.signature.v.toString(16),
+          value.payload.signature.r,
+          value.payload.signature.s
+        )
+        .toLowerCase();
       if (signer === undefined) {
         throw Error(`Undefined signer.`);
       }
@@ -317,27 +313,31 @@ export namespace SignaturePayload {
       return {
         ...value,
         signer,
-        index
-      }
+        index,
+      };
     });
-    newSignaturePayloads = newSignaturePayloads.sort((a, b) => { return a.index - b.index });
+    newSignaturePayloads = newSignaturePayloads.sort((a, b) => {
+      return a.index - b.index;
+    });
 
     return newSignaturePayloads.filter((value, index) => {
-      if (index === 0) { // take first one if no second or different from second
+      if (index === 0) {
+        // take first one if no second or different from second
         return newSignaturePayloads.length === 1 || value.index !== newSignaturePayloads[1].index;
-      } else { // always take the first appearance of the signer
+      } else {
+        // always take the first appearance of the signer
         return value.index !== newSignaturePayloads[index - 1].index;
       }
-    })
+    });
   }
 
   /**
-   * 
-   * @param signaturePayloads 
-   * @returns 
+   *
+   * @param signaturePayloads
+   * @returns
    */
   export function sortSignaturePayloads(
-    signaturePayloads: ISignaturePayload[],
+    signaturePayloads: ISignaturePayload[]
   ): Map<number, Map<number, ISignaturePayload[]>> {
     // votingRoundId => protocolId => SignaturePayload[]
     const result = new Map<number, Map<number, ISignaturePayload[]>>();

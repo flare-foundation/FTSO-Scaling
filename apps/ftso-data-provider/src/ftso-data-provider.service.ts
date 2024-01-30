@@ -2,7 +2,10 @@ import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common
 import { ConfigService } from "@nestjs/config";
 import { EntityManager } from "typeorm";
 import { IPayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
-import { IProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import {
+  IProtocolMessageMerkleData,
+  IProtocolMessageMerkleRoot,
+} from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
@@ -14,14 +17,14 @@ import {
 } from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
+import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
-import { Feed } from "../../../libs/ftso-core/src/voting-types";
+import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
+import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
-import { ExternalResponse, ExternalResponseStatusEnum, JSONAbiDefinition } from "./dto/data-provider-responses.dto";
-import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -91,6 +94,38 @@ export class FtsoDataProviderService {
   }
 
   async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {
+    const result = await this.prepareCalculationResultData(votingRoundId);
+    if (result === undefined) {
+      return undefined;
+    }
+    const merkleRoot = result.merkleTree.root;
+    const message: IProtocolMessageMerkleRoot = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId,
+      isSecureRandom: result.randomData.isSecure,
+      merkleRoot,
+    };
+    return message;
+  }
+
+  async getFullMerkleTree(votingRoundId: number): Promise<IProtocolMessageMerkleData | undefined> {
+    const result = await this.prepareCalculationResultData(votingRoundId);
+    if (result === undefined) {
+      return undefined;
+    }
+    const merkleRoot = result.merkleTree.root;
+    const treeNodes = [result.randomData, ...result.medianData];
+    const response: IProtocolMessageMerkleData = {
+      protocolId: FTSO2_PROTOCOL_ID,
+      votingRoundId,
+      merkleRoot,
+      isSecureRandom: result.randomData.isSecure,
+      tree: treeNodes,
+    };
+    return response;
+  }
+
+  private async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(
       votingRoundId,
       RANDOM_GENERATION_BENCHING_WINDOW,
@@ -101,45 +136,7 @@ export class FtsoDataProviderService {
       return undefined;
     }
     try {
-      const result = await calculateResultsForVotingRound(dataResponse.data);
-      const merkleRoot = result.merkleTree.root;
-      const message: IProtocolMessageMerkleRoot = {
-        protocolId: FTSO2_PROTOCOL_ID,
-        votingRoundId,
-        isSecureRandom: result.randomData.isSecure,
-        merkleRoot,
-      };
-      return message;
-    } catch (e) {
-      this.logger.error(`Error calculating result: ${errorString(e)}`);
-      throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
-    }
-  }
-
-  async getFullMerkleTree(votingRoundId: number): Promise<ExternalResponse> {
-    const dataResponse = await this.dataManager.getDataForCalculations(
-      votingRoundId,
-      RANDOM_GENERATION_BENCHING_WINDOW,
-      this.indexer_top_timeout
-    );
-    if (dataResponse.status !== DataAvailabilityStatus.OK) {
-      this.logger.error(`Data not available for epoch ${votingRoundId}`);
-      return {
-        status: ExternalResponseStatusEnum.NOT_AVAILABLE,
-      };
-    }
-    try {
-      const result = await calculateResultsForVotingRound(dataResponse.data);
-      const merkleRoot = result.merkleTree.root;
-      const treeNodes = [result.randomData, ...result.medianData];
-      const response: ExternalResponse = {
-        status: ExternalResponseStatusEnum.OK,
-        votingRoundId,
-        merkleRoot,
-        isSecureRandom: result.randomData.isSecure,
-        tree: treeNodes,
-      };
-      return response;
+      return calculateResultsForVotingRound(dataResponse.data);
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });

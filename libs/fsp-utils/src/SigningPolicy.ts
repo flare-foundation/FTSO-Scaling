@@ -1,12 +1,8 @@
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This file is copied from the Flare Smart Contract V2 repository.
 // DO NOT CHANGE!
 // See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 import { ethers } from "ethers";
 
@@ -17,11 +13,10 @@ export interface ISigningPolicy {
   seed: string;
   voters: string[];
   weights: number[];
-  encodedLength?: number;  // used only as a parsing result when parsing signing policy encoded into Relay message
+  encodedLength?: number; // used only as a parsing result when parsing signing policy encoded into Relay message
 }
 
 export namespace SigningPolicy {
-
   //////////////////////////////////////////////////////////////////////////////
   // Signing policy byte encoding structure
   // 2 bytes - size
@@ -54,11 +49,11 @@ export namespace SigningPolicy {
     if (size > 2 ** 16 - 1) {
       throw Error("Too many signers");
     }
-    for(let i = 0; i < size; i++) {
-      if(!/^0x[0-9a-f]{40}$/i.test(policy.voters[i])) {
+    for (let i = 0; i < size; i++) {
+      if (!/^0x[0-9a-f]{40}$/i.test(policy.voters[i])) {
         throw Error(`Invalid signer address format: ${policy.voters[i]}`);
       }
-      if(policy.weights[i] < 0 || policy.weights[i] > 2 ** 16 - 1 || policy.weights[i] % 1 !== 0) {
+      if (policy.weights[i] < 0 || policy.weights[i] > 2 ** 16 - 1 || policy.weights[i] % 1 !== 0) {
         throw Error(`Invalid signer weight: ${policy.weights[i]}`);
       }
     }
@@ -98,7 +93,9 @@ export namespace SigningPolicy {
    * @returns
    */
   export function decode(encodedPolicy: string, exactEncoding = true): ISigningPolicy {
-    const encodedPolicyInternal = (encodedPolicy.startsWith("0x") ? encodedPolicy.slice(2) : encodedPolicy).toLowerCase();
+    const encodedPolicyInternal = (
+      encodedPolicy.startsWith("0x") ? encodedPolicy.slice(2) : encodedPolicy
+    ).toLowerCase();
     if (!/^[0-9a-f]*$/.test(encodedPolicyInternal)) {
       throw Error(`Invalid format - not hex string: ${encodedPolicy}`);
     }
@@ -130,7 +127,7 @@ export namespace SigningPolicy {
     if (totalWeight > 2 ** 16 - 1) {
       throw Error(`Total weight exceeds 16-byte value: ${totalWeight}`);
     }
-    const encodedLengthEntry = exactEncoding ? {} : {encodedLength: expectedLength};
+    const encodedLengthEntry = exactEncoding ? {} : { encodedLength: expectedLength };
     return {
       rewardEpochId,
       startVotingRoundId: startingVotingRoundId,
@@ -161,8 +158,8 @@ export namespace SigningPolicy {
 
   /**
    * Normalizes addresses in signing policy by converting them to lower case.
-   * @param signingPolicy 
-   * @returns 
+   * @param signingPolicy
+   * @returns
    */
   export function normalizeAddresses(signingPolicy: ISigningPolicy) {
     signingPolicy.voters = signingPolicy.voters.map(x => x.toLowerCase());
@@ -170,8 +167,8 @@ export namespace SigningPolicy {
   }
   /**
    * Calculates signing policy hash from signing policy object
-   * @param signingPolicy 
-   * @returns 
+   * @param signingPolicy
+   * @returns
    */
   export function hash(signingPolicy: ISigningPolicy) {
     return SigningPolicy.hashEncoded(SigningPolicy.encode(signingPolicy));
@@ -180,27 +177,30 @@ export namespace SigningPolicy {
   /**
    * Checks if two signing policies are equal as objects. Essentially checks if all properties are equal,
    * except the encodedLength property.
-   * @param signingPolicy1 
-   * @param signingPolicy2 
-   * @returns 
+   * @param signingPolicy1
+   * @param signingPolicy2
+   * @returns
    */
   export function equals(signingPolicy1: ISigningPolicy, signingPolicy2: ISigningPolicy) {
-    const test = signingPolicy1.rewardEpochId === signingPolicy2.rewardEpochId &&
-        signingPolicy1.startVotingRoundId === signingPolicy2.startVotingRoundId &&
-        signingPolicy1.threshold === signingPolicy2.threshold &&
-        signingPolicy1.seed === signingPolicy2.seed;
-    if(!test) {
+    const test =
+      signingPolicy1.rewardEpochId === signingPolicy2.rewardEpochId &&
+      signingPolicy1.startVotingRoundId === signingPolicy2.startVotingRoundId &&
+      signingPolicy1.threshold === signingPolicy2.threshold &&
+      signingPolicy1.seed === signingPolicy2.seed;
+    if (!test) {
       return false;
     }
-    if(signingPolicy1.voters.length !== signingPolicy2.voters.length) {
+    if (signingPolicy1.voters.length !== signingPolicy2.voters.length) {
       return false;
     }
-    for(let i = 0; i < signingPolicy1.voters.length; i++) {
-      if(signingPolicy1.voters[i].toLowerCase() !== signingPolicy2.voters[i].toLowerCase() || signingPolicy1.weights[i] !== signingPolicy2.weights[i]) {
+    for (let i = 0; i < signingPolicy1.voters.length; i++) {
+      if (
+        signingPolicy1.voters[i].toLowerCase() !== signingPolicy2.voters[i].toLowerCase() ||
+        signingPolicy1.weights[i] !== signingPolicy2.weights[i]
+      ) {
         return false;
       }
-    }  
+    }
     return true;
   }
-
 }

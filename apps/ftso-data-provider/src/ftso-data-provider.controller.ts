@@ -92,7 +92,11 @@ export class FtsoDataProviderController {
   @Get("data/:votingRoundId")
   async merkleTree(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalResponse> {
     // TODO: handle to early response as it is more informative, for now we respond with not available for to early cases
-    return this.ftsoDataProviderService.getFullMerkleTree(votingRoundId);
+    const data = await this.ftsoDataProviderService.getFullMerkleTree(votingRoundId);
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      ...data,
+    };
   }
 
   @ApiTags(ApiTagsEnum.EXTERNAL)
