@@ -93,7 +93,11 @@
       "apps/**/*.module.ts",
       "apps/ftso-data-provider/src/price-provider-api/**/*",
       "apps/**/configuration.ts",
-      "libs/ftso-core/src/reward-calculation/**/*"
+      "libs/ftso-core/src/reward-calculation/**/*",
+      "libs/ftso-core/src/utils/RewardClaim.ts",
+      "libs/ftso-core/src/utils/PartialRewardOffer.ts",
+      "libs/ftso-core/src/utils/error.ts",
+      "libs/ftso-core/src/utils/voting-utils.ts"
     ],
     "reporter": [
       "html",

@@ -1,11 +1,8 @@
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This file is copied from the Flare Smart Contract V2 repository.
 // DO NOT CHANGE!
 // See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 
 export interface IPayloadMessage<T> {
   protocolId: number;
@@ -23,10 +20,18 @@ export namespace PayloadMessage {
    * @returns
    */
   export function encode(payloadMessage: IPayloadMessage<string>): string {
-    if (payloadMessage.protocolId < 0 || payloadMessage.protocolId > 2 ** 8 - 1) {
+    if (
+      payloadMessage.protocolId < 0 ||
+      payloadMessage.protocolId > 2 ** 8 - 1 ||
+      payloadMessage.protocolId % 1 !== 0
+    ) {
       throw Error(`Protocol id out of range: ${payloadMessage.protocolId}`);
     }
-    if (payloadMessage.votingRoundId < 0 || payloadMessage.votingRoundId > 2 ** 32 - 1) {
+    if (
+      payloadMessage.votingRoundId < 0 ||
+      payloadMessage.votingRoundId > 2 ** 32 - 1 ||
+      payloadMessage.votingRoundId % 1 !== 0
+    ) {
       throw Error(`Voting round id out of range: ${payloadMessage.votingRoundId}`);
     }
     if (!/^0x[0-9a-f]*$/i.test(payloadMessage.payload)) {
@@ -42,7 +47,8 @@ export namespace PayloadMessage {
   }
 
   /**
-   * Decodes data from concatenated byte sequence
+   * Decodes data from concatenated byte sequence.
+   * The function handles 0x-prefixed or pure hex strings as inputs.
    * @param message
    * @returns
    */
@@ -55,7 +61,7 @@ export namespace PayloadMessage {
       throw Error(`Invalid format - not even length: ${message.length}`);
     }
     let i = 0;
-    let result: IPayloadMessage<string>[] = [];
+    const result: IPayloadMessage<string>[] = [];
     while (i < messageInternal.length) {
       // 14 = 2 + 8 + 4
       if (messageInternal.length - i < 14) {
@@ -81,12 +87,12 @@ export namespace PayloadMessage {
   /**
    * Concatenates hex strings into one hex string.
    * In the process it checks if each string is a valid hex string.
-   * @param hexStrings 
-   * @returns 
+   * @param hexStrings
+   * @returns
    */
   export function concatenateHexStrings(hexStrings: string[]): string {
     let result = "0x";
-    for (let hexString of hexStrings) {
+    for (const hexString of hexStrings) {
       if (!/^0x([0-9a-f][0-9a-f])*$/i.test(hexString)) {
         throw Error(`Invalid hex string format: ${hexString}`);
       }
@@ -94,5 +100,4 @@ export namespace PayloadMessage {
     }
     return result;
   }
-
 }

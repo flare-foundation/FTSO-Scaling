@@ -2,16 +2,20 @@ import { expect } from "chai";
 import { readFileSync } from "fs";
 import Web3 from "web3";
 import { ECDSASignature } from "../../../../libs/fsp-utils/src/ECDSASignature";
-import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { ISignaturePayload, SignaturePayload } from "../../../../libs/fsp-utils/src/SignaturePayload";
 import { IPayloadMessage, PayloadMessage } from "../../../../libs/fsp-utils/src/PayloadMessage";
+import {
+  IProtocolMessageMerkleRoot,
+  ProtocolMessageMerkleRoot,
+} from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import { ISignaturePayload, SignaturePayload } from "../../../../libs/fsp-utils/src/SignaturePayload";
 import { ISigningPolicy } from "../../../../libs/fsp-utils/src/SigningPolicy";
 import { defaultTestSigningPolicy } from "./coding-helpers";
 
 const web3 = new Web3("http://dummy");
 describe(`SignaturePayload`, async () => {
-
-  const accountPrivateKeys = JSON.parse(readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")).map((x: any) => x.privateKey);
+  const accountPrivateKeys = JSON.parse(
+    readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")
+  ).map((x: any) => x.privateKey);
   const accountAddresses = accountPrivateKeys.map((x: any) => web3.eth.accounts.privateKeyToAccount(x).address);
 
   const N = 100;
@@ -24,11 +28,7 @@ describe(`SignaturePayload`, async () => {
   let newSigningPolicyData: ISigningPolicy;
 
   before(async () => {
-    signingPolicyData = defaultTestSigningPolicy(
-      accountAddresses,
-      N,
-      singleWeight
-    );
+    signingPolicyData = defaultTestSigningPolicy(accountAddresses, N, singleWeight);
     signingPolicyData.rewardEpochId = rewardEpochId;
     newSigningPolicyData = { ...signingPolicyData };
     newSigningPolicyData.rewardEpochId++;
@@ -44,16 +44,39 @@ describe(`SignaturePayload`, async () => {
     const messageHash = ProtocolMessageMerkleRoot.hash(message);
     const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
 
-    let payload = {
+    const payload = {
       type: "0x00",
       message,
       signature,
-      unsignedMessage: "0x1234567890"
-    }
+      unsignedMessage: "0x1234567890",
+    };
 
     const encoded = SignaturePayload.encode(payload);
     const decoded = SignaturePayload.decode(encoded);
     expect(decoded).to.deep.equal(payload);
+  });
+
+  it("Should encode with empty unsignedMessage", async () => {
+    const message = {
+      protocolId: 15,
+      votingRoundId: 1234,
+      isSecureRandom: true,
+      merkleRoot: "0x1122334455667788990011223344556677889900112233445566778899001122",
+    } as IProtocolMessageMerkleRoot;
+
+    const messageHash = ProtocolMessageMerkleRoot.hash(message);
+    const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
+
+    const payload = {
+      type: "0x00",
+      message,
+      signature,
+    } as ISignaturePayload;
+
+    expect(() => SignaturePayload.encode(payload)).not.to.throw;
+    const decoded = SignaturePayload.decode(SignaturePayload.encode(payload));
+    expect(decoded).to.deep.equal(payload);
+    expect(SignaturePayload.decode(SignaturePayload.encode(payload).slice(2))).to.deep.equal(payload);
   });
 
   it("Should fail to encode wrong data", async () => {
@@ -71,25 +94,33 @@ describe(`SignaturePayload`, async () => {
       type: "00",
       message,
       signature,
-      unsignedMessage: "0x1234567890"
-    }
+      unsignedMessage: "0x1234567890",
+    };
     expect(() => SignaturePayload.encode(payload)).to.throw("Invalid type format");
 
     payload = {
       type: "0x00",
       message,
       signature,
-      unsignedMessage: "1234567890"
-    }
+      unsignedMessage: "1234567890",
+    };
     expect(() => SignaturePayload.encode(payload)).to.throw("Invalid unsigned message format");
 
     payload = {
       type: "0x00",
       message,
       signature,
-      unsignedMessage: "0x123456789"
-    }
+      unsignedMessage: "0x123456789",
+    };
     expect(() => SignaturePayload.encode(payload)).to.throw("Invalid unsigned message format");
+  });
+
+  it("Should fail to decode due to Invalid format - not hex string", async () => {
+    expect(() => SignaturePayload.decode("0x1234567890yz")).to.throw("Invalid format - not hex string");
+  });
+
+  it("Should fail to decode due to Invalid format - too short", async () => {
+    expect(() => SignaturePayload.decode("0x1234567890")).to.throw("Invalid format - too short");
   });
 
   it("Should decode call data", async () => {
@@ -109,21 +140,31 @@ describe(`SignaturePayload`, async () => {
       const messageHash = ProtocolMessageMerkleRoot.hash(message);
       const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
 
-      let payload = {
+      const payload = {
         type: "0x00",
         message,
         signature,
-        unsignedMessage: "0x1234567890"
-      }
+        unsignedMessage: "0x1234567890",
+      };
       const payloadMessage = {
         protocolId,
         votingRoundId,
         payload,
-      } as IPayloadMessage<ISignaturePayload>
+      } as IPayloadMessage<ISignaturePayload>;
       beforeEncoding.push(payloadMessage);
       encoded += PayloadMessage.encode({ ...payloadMessage, payload: SignaturePayload.encode(payload) }).slice(2);
     }
     expect(SignaturePayload.decodeCalldata(encoded)).to.deep.equal(beforeEncoding);
+  });
+
+  it("Should fail to decode call data due to Invalid format - not byte sequence representing hex string", async () => {
+    expect(() => SignaturePayload.decodeCalldata("0x123456yz")).to.throw(
+      "Invalid format - not byte sequence representing hex string"
+    );
+  });
+
+  it("Should fail to decode call data due to Invalid format - too short", async () => {
+    expect(() => SignaturePayload.decodeCalldata("0x123456")).to.throw("Invalid format - too short");
   });
 
   it("Should verify signature payloads against signing policy", async () => {
@@ -142,17 +183,17 @@ describe(`SignaturePayload`, async () => {
       const messageHash = ProtocolMessageMerkleRoot.hash(message);
       const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
 
-      let payload = {
+      const payload = {
         type: "0x00",
         message,
         signature,
-        unsignedMessage: "0x1234567890"
-      }
+        unsignedMessage: "0x1234567890",
+      };
       const payloadMessage = {
         protocolId,
         votingRoundId,
         payload,
-      } as IPayloadMessage<ISignaturePayload>
+      } as IPayloadMessage<ISignaturePayload>;
       messages.push(payloadMessage);
     }
 
@@ -181,12 +222,12 @@ describe(`SignaturePayload`, async () => {
       messageHash = ProtocolMessageMerkleRoot.hash(message);
       const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
 
-      let payload = {
+      const payload = {
         type: "0x00",
         message,
         signature,
-        unsignedMessage: "0x1234567890"
-      }
+        unsignedMessage: "0x1234567890",
+      };
       messages.push(SignaturePayload.augment(payload, signerMap));
     }
     for (let i = 0; i < NN; i++) {
@@ -233,18 +274,22 @@ describe(`SignaturePayload`, async () => {
       messageHash = ProtocolMessageMerkleRoot.hash(message);
       const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[randomSignerIndex]);
 
-      let payload = {
+      const payload = {
         type: "0x00",
         message,
         signature,
-        unsignedMessage: "0x1234567890"
-      }
+        unsignedMessage: "0x1234567890",
+      };
 
-      const augmented = SignaturePayload.augment(payload, signerMap)
+      const augmented = SignaturePayload.augment(payload, signerMap);
       expect(augmented.index).to.equal(randomSignerIndex);
       SignaturePayload.insertInSigningPolicySortedList(sortedList, augmented);
       expect(checkIfSortedAndIndexIsInserted(sortedList, augmented.index)).to.equal(true);
     }
   });
 
+
+  it("Should correctly encode for relay", async () => {
+    
+  });
 });

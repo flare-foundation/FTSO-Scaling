@@ -1,4 +1,7 @@
-import { ECDSASignatureWithIndex, IECDSASignatureWithIndex } from "../../../../libs/fsp-utils/src/ECDSASignatureWithIndex";
+import {
+  ECDSASignatureWithIndex,
+  IECDSASignatureWithIndex,
+} from "../../../../libs/fsp-utils/src/ECDSASignatureWithIndex";
 import { ISigningPolicy, SigningPolicy } from "../../../../libs/fsp-utils/src/SigningPolicy";
 
 export function defaultTestSigningPolicy(accounts: string[], N: number, singleWeight: number): ISigningPolicy {
@@ -24,9 +27,10 @@ export async function generateSignaturesEncoded(
   count: number,
   indices?: number[]
 ): Promise<string> {
-  return ECDSASignatureWithIndex.encodeSignatureList(await generateSignatures(privateKeys, messageHash, count, indices)).slice(2)
+  return ECDSASignatureWithIndex.encodeSignatureList(
+    await generateSignatures(privateKeys, messageHash, count, indices)
+  ).slice(2);
 }
-
 
 export async function generateSignatures(
   privateKeys: string[],
@@ -34,7 +38,7 @@ export async function generateSignatures(
   count: number,
   indices?: number[]
 ): Promise<IECDSASignatureWithIndex[]> {
-  let signatures: IECDSASignatureWithIndex[] = [];
+  const signatures: IECDSASignatureWithIndex[] = [];
   if (indices) {
     for (const i of indices) {
       const signature = await ECDSASignatureWithIndex.signMessageHash(messageHash, privateKeys[i], i);
@@ -48,4 +52,3 @@ export async function generateSignatures(
   }
   return signatures;
 }
-

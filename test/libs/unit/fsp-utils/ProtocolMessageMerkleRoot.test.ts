@@ -1,8 +1,10 @@
 import { expect } from "chai";
-import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import {
+  IProtocolMessageMerkleRoot,
+  ProtocolMessageMerkleRoot,
+} from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 
 describe(`ProtocolMessageMerkleRoot`, async () => {
-
   it("Should encode and decode protocol message merkle root", async () => {
     const messageData = {
       protocolId: 15,
@@ -16,7 +18,6 @@ describe(`ProtocolMessageMerkleRoot`, async () => {
     const decoded2 = ProtocolMessageMerkleRoot.decode(encoded + "123456", false);
     expect(decoded2).to.deep.equal({ ...decoded, encodedLength: encoded.length - 2 });
   });
-
 
   it("Should equals work", async () => {
     const messageData = {
@@ -88,7 +89,7 @@ describe(`ProtocolMessageMerkleRoot`, async () => {
   });
 
   it("Should fail to wrong voting round id", async () => {
-    let messageData = {
+    const messageData = {
       protocolId: 15,
       votingRoundId: -3,
       isSecureRandom: true,
@@ -96,5 +97,4 @@ describe(`ProtocolMessageMerkleRoot`, async () => {
     } as IProtocolMessageMerkleRoot;
     expect(() => ProtocolMessageMerkleRoot.encode(messageData).length).to.throw("Voting round id out of range");
   });
-
 });

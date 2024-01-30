@@ -1,11 +1,3 @@
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-// This file is copied from the Flare Smart Contract V2 repository.
-// DO NOT CHANGE!
-// See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 import Web3 from "web3";
 export interface IECDSASignature {
   r: string;
@@ -21,12 +13,7 @@ export namespace ECDSASignature {
    * @returns
    */
   export function encode(signature: IECDSASignature): string {
-    return (
-      "0x" +
-      signature.v.toString(16).padStart(2, "0") +
-      signature.r.slice(2) +
-      signature.s.slice(2)
-    );
+    return "0x" + signature.v.toString(16).padStart(2, "0") + signature.r.slice(2) + signature.s.slice(2);
   }
 
   /**
@@ -55,37 +42,34 @@ export namespace ECDSASignature {
     };
   }
 
-
   /**
    * Signs message hash with ECDSA using private key
-   * @param messageHash 
-   * @param privateKey 
-   * @param index 
-   * @returns 
+   * @param messageHash
+   * @param privateKey
+   * @param index
+   * @returns
    */
-  export async function signMessageHash(
-    messageHash: string,
-    privateKey: string,
-  ): Promise<IECDSASignature> {
+  export async function signMessageHash(messageHash: string, privateKey: string): Promise<IECDSASignature> {
     if (!/^0x[0-9a-f]{64}$/i.test(messageHash)) {
       throw Error(`Invalid message hash format: ${messageHash}`);
     }
-    let signatureObject = web3.eth.accounts.sign(messageHash, privateKey);
+    const signatureObject = web3.eth.accounts.sign(messageHash, privateKey);
     return {
       v: parseInt(signatureObject.v.slice(2), 16),
       r: signatureObject.r,
-      s: signatureObject.s
+      s: signatureObject.s,
     } as IECDSASignature;
   }
 
   /**
    * Recovers signer address from message hash and signature
-   * @param messageHash 
-   * @param signature 
-   * @returns 
+   * @param messageHash
+   * @param signature
+   * @returns
    */
   export function recoverSigner(messageHash: string, signature: IECDSASignature): string {
-    return web3.eth.accounts.recover(messageHash, "0x" + signature.v.toString(16), signature.r, signature.s).toLowerCase();
+    return web3.eth.accounts
+      .recover(messageHash, "0x" + signature.v.toString(16), signature.r, signature.s)
+      .toLowerCase();
   }
-
 }
