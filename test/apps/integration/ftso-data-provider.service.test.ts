@@ -23,6 +23,7 @@ import {
   encodeRevealPayloadMessage,
 } from "../../../apps/ftso-data-provider/src/response-encoders";
 import { getTestFile } from "../../utils/getTestFile";
+import { IConfig } from "../../../apps/ftso-data-provider/src/config/configuration";
 
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const feeds: Feed[] = [
@@ -40,13 +41,20 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const sigCommit = enc.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
   const sigReveal = enc.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);
 
-  const configService = new ConfigService({
-    epochSettings: epochSettings,
+  const configValues: IConfig = {
     required_indexer_history_time_sec: indexerHistorySec,
     indexer_top_timeout: 1000,
     voting_round_history_size: 10000,
     price_provider_url: "http://localhost:3000",
-  });
+    port: -1,
+    db_host: "",
+    db_name: "",
+    db_user: "",
+    db_pass: "",
+    db_port: -1,
+  };
+
+  const configService = new ConfigService(configValues);
 
   let db: MockIndexerDB;
   let clock: FakeTimers.InstalledClock;
