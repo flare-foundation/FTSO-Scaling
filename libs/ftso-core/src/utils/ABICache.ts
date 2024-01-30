@@ -16,11 +16,6 @@ import { encodeFunctionSignature, encodeEventSignature } from "web3-eth-abi";
 
 type AbiItem = AbiFunctionFragment | AbiEventFragment;
 
-export enum AbiType {
-  Function,
-  Event,
-  Struct,
-}
 export interface AbiData {
   abi: AbiItem;
   signature: string;

@@ -11,6 +11,7 @@ export interface IConfig {
   db_pass: string;
   db_name: string;
   required_indexer_history_time_sec: number;
+  voting_round_history_size: number;
   indexer_top_timeout: number;
 
   // Price Provider url (PRICE_PROVIDER_URL)
@@ -32,6 +33,9 @@ export default () => {
     required_indexer_history_time_sec: parseInt(
       process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC ??
         throwError("DB_REQUIRED_INDEXER_HISTORY_TIME_SEC env variable not set")
+    ),
+    voting_round_history_size: parseInt(
+      process.env.VOTING_ROUND_HISTORY_SIZE ?? throwError("VOTING_ROUND_HISTORY_SIZE env variable not set")
     ),
     indexer_top_timeout: parseInt(
       process.env.INDEXER_TOP_TIMEOUT ?? throwError("INDEXER_TOP_TIMEOUT env variable not set")

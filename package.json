@@ -36,6 +36,7 @@
     "class-transformer": "^0.5.1",
     "ethers": "^6.6.0",
     "helmet": "^7.1.0",
+    "lru-cache": "^10.2.0",
     "mysql2": "^3.6.5",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",

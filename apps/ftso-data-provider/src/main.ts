@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { FtsoDataProviderModule } from "./ftso-data-provider.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
+import { Logger } from "@nestjs/common";
 
 async function bootstrap() {
   const app = await NestFactory.create(FtsoDataProviderModule);
@@ -22,8 +23,9 @@ async function bootstrap() {
   app.setGlobalPrefix(basePath);
 
   const PORT = process.env.DATA_PROVIDER_CLIENT_PORT ? parseInt(process.env.DATA_PROVIDER_CLIENT_PORT) : 3100;
-  console.log(`Your instance of FTSO protocol data provider is available on PORT: ${PORT}`);
-  console.log(`Open link: http://localhost:${PORT}/api-doc`);
+  const logger = new Logger();
+  logger.log(`Your instance of FTSO protocol data provider is available on PORT: ${PORT}`);
+  logger.log(`Open link: http://localhost:${PORT}/api-doc`);
   await app.listen(PORT);
 }
 bootstrap();

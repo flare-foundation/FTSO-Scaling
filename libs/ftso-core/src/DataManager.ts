@@ -25,7 +25,9 @@ import {
   DataForRewardCalculation,
 } from "./data-calculation-interfaces";
 import { CommitData, ICommitData } from "./utils/CommitData";
+import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./utils/RevealData";
+import { errorString } from "./utils/error";
 import { Address, Feed, MessageHash } from "./voting-types";
 
 /**
@@ -78,7 +80,11 @@ interface SignAndFinalizeSubmissionData {
  * It uses EPOCH_SETTINGS to get manage timestamp to voting round id conversions
  */
 export class DataManager {
-  constructor(private indexerClient: IndexerClient, private rewardEpochManager: RewardEpochManager) {}
+  constructor(
+    private readonly indexerClient: IndexerClient,
+    private readonly rewardEpochManager: RewardEpochManager,
+    private readonly logger: ILogger
+  ) {}
 
   /**
    * Prepare data for median calculation and rewarding given the voting round id and the random generation benching window.
@@ -434,9 +440,8 @@ export class DataManager {
         // The message is eligible for consideration.
         finalizations.push(finalization);
       } catch (e) {
-        // TODO: log properly
-        console.log(`Unparsable or non-finalisable finalization message: ${e}`);
         // ignore unparsable message
+        this.logger.warn(`Unparsable or non-finalisable finalization message: ${errorString(e)}`);
       }
     }
     return finalizations;
@@ -466,7 +471,6 @@ export class DataManager {
     const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
     const revealOffenders = this.getRevealOffenders(eligibleCommits, eligibleReveals);
     const voterMedianVotingWeights = new Map<Address, bigint>();
-    const voterRewardingWeights = new Map<Address, bigint>();
     const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmissionAddresses;
     for (const submitAddress of orderedVotersSubmissionAddresses) {
       voterMedianVotingWeights.set(submitAddress, rewardEpoch.ftsoMedianVotingWeight(submitAddress));
@@ -664,7 +668,6 @@ export class DataManager {
    * OPTION 2: if type is 'reveal', then the mapper maps voting round id to reveal submissions
    * @param submissionEpochArray
    * @param type: "commit" | "reveal"
-   * @returns
    */
   private remapSubmissionDataArrayToVotingRounds(submissionEpochArray: SubmissionData[], type: "commit" | "reveal") {
     const offset = type === "commit" ? 0 : 1;
@@ -674,7 +677,7 @@ export class DataManager {
       if (!votingRoundIdWithOffsetToSubmission.has(votingRoundId)) {
         votingRoundIdWithOffsetToSubmission.set(votingRoundId, []);
       }
-      votingRoundIdWithOffsetToSubmission.get(votingRoundId)!.push(submission);
+      votingRoundIdWithOffsetToSubmission.get(votingRoundId).push(submission);
     }
     for (const submissionList of votingRoundIdWithOffsetToSubmission.values()) {
       this.sortSubmissionDataArray(submissionList);

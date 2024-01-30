@@ -9,12 +9,12 @@ import {
 } from "../../libs/ftso-core/src/events";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
-import { toHex } from "../../libs/ftso-core/src/utils/voting-utils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
 import { encodeParameters } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
+import { utils } from "web3";
 
 const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
@@ -256,8 +256,8 @@ export function generateTx(
   tx.to_address = queryBytesFormat(to);
   tx.input = queryBytesFormat(payload);
   tx.status = 1;
-  tx.value = queryBytesFormat(toHex(1));
-  tx.gas_price = queryBytesFormat(toHex(1000));
+  tx.value = queryBytesFormat(utils.toHex(1));
+  tx.gas_price = queryBytesFormat(utils.toHex(1000));
   tx.gas = 10000;
   tx.timestamp = timestamp;
   tx.hash = queryBytesFormat(randomHash());

@@ -43,6 +43,7 @@ describe("ftso-data-provider.service", () => {
     epochSettings: epochSettings,
     required_indexer_history_time_sec: indexerHistorySec,
     indexer_top_timeout: 1000,
+    voting_epoch_history_size: 10000,
     price_provider_url: "http://localhost:3000",
   });
 
