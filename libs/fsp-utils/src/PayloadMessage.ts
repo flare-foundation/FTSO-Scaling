@@ -1,9 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-// This file is copied from the Flare Smart Contract V2 repository.
-// DO NOT CHANGE!
-// See: https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/tree/main/scripts/libs/protocol
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 export interface IPayloadMessage<T> {
   protocolId: number;
   votingRoundId: number;
@@ -14,10 +8,6 @@ export namespace PayloadMessage {
   /**
    * Encodes data in byte sequence that can be concatenated with other encoded data for use in submission functions in
    * Submission.sol contract
-   * @param protocolId
-   * @param votingRoundRoundId
-   * @param payload
-   * @returns
    */
   export function encode(payloadMessage: IPayloadMessage<string>): string {
     if (
@@ -49,8 +39,6 @@ export namespace PayloadMessage {
   /**
    * Decodes data from concatenated byte sequence.
    * The function handles 0x-prefixed or pure hex strings as inputs.
-   * @param message
-   * @returns
    */
   export function decode(message: string): IPayloadMessage<string>[] {
     const messageInternal = message.startsWith("0x") ? message.slice(2) : message;
@@ -87,8 +75,6 @@ export namespace PayloadMessage {
   /**
    * Concatenates hex strings into one hex string.
    * In the process it checks if each string is a valid hex string.
-   * @param hexStrings
-   * @returns
    */
   export function concatenateHexStrings(hexStrings: string[]): string {
     let result = "0x";

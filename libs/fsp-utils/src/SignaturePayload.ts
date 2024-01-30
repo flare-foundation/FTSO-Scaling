@@ -3,7 +3,6 @@ import { ECDSASignature, IECDSASignature } from "./ECDSASignature";
 import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "./ProtocolMessageMerkleRoot";
 import { ISigningPolicy } from "./SigningPolicy";
-import { ECDSASignatureWithIndex, IECDSASignatureWithIndex } from "./ECDSASignatureWithIndex";
 
 const web3 = new Web3("https://dummy");
 export interface ISignaturePayload {
@@ -25,8 +24,6 @@ export interface DepositSignatureData {
 export namespace SignaturePayload {
   /**
    * Endodes signature payload into byte encoding, represented by 0x-prefixed hex string
-   * @param signaturePayload
-   * @returns
    */
   export function encode(signaturePayload: ISignaturePayload): string {
     const message = ProtocolMessageMerkleRoot.encode(signaturePayload.message);
@@ -52,8 +49,6 @@ export namespace SignaturePayload {
 
   /**
    * Decodes signature payload from byte encoding, represented by 0x-prefixed hex string
-   * @param encodedSignaturePayload
-   * @returns
    */
   export function decode(encodedSignaturePayload: string): ISignaturePayload {
     const encodedSignaturePayloadInternal = encodedSignaturePayload.startsWith("0x")
@@ -82,7 +77,6 @@ export namespace SignaturePayload {
 
   /**
    * Decodes properly formatted signature calldata into array of payloads with signatures
-   * @param calldata
    */
   export function decodeCalldata(calldata: string): IPayloadMessage<ISignaturePayload>[] {
     const calldataInternal = calldata.startsWith("0x") ? calldata.slice(2) : calldata;
@@ -108,9 +102,6 @@ export namespace SignaturePayload {
   /**
    * Verifies signatures against message hash and signing policy.
    * The signatures have to be from signing policy and sorted according to signing policy.
-   * @param signaturePayloads
-   * @param signingPolicy
-   * @returns
    */
   export function verifySignatures(
     messageHash: string,
@@ -157,9 +148,6 @@ export namespace SignaturePayload {
    * Checks whether signature payloads satisfy signing policy threshold.
    * It is assumed that signature payloads have the same message and
    * are sorted according to signing policy.
-   * @param signaturePayloads
-   * @param signingPolicy
-   * @returns
    */
   export function verifySignaturePayloads(
     signaturePayloads: IPayloadMessage<ISignaturePayload>[],
@@ -183,9 +171,6 @@ export namespace SignaturePayload {
   /**
    * Augments signature payload with signer and index from signerIndices map.
    * Also adds message hash.
-   * @param signaturePayload
-   * @param signerIndices
-   * @returns
    */
   export function augment(signaturePayload: ISignaturePayload, signerIndices: Map<string, number>) {
     const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(signaturePayload.message));
@@ -210,9 +195,6 @@ export namespace SignaturePayload {
    * Inserts signature payload into sorted list of signature payloads.
    * The order is by signer index. If signer index is not defined or
    * already exists in the list, the payload is not inserted.
-   * @param signaturePayloads
-   * @param entry
-   * @returns
    */
   export function insertInSigningPolicySortedList(
     signaturePayloads: ISignaturePayload[],

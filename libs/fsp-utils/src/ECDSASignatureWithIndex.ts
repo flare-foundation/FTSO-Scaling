@@ -19,8 +19,6 @@ export namespace ECDSASignatureWithIndex {
   //////////////////////////////////////////////////////////////////////////////
   /**
    * Encodes ECDSA signature with index into 0x-prefixed hex string representing byte encoding
-   * @param signature
-   * @returns
    */
   export function encode(signature: IECDSASignatureWithIndex): string {
     return (
@@ -34,8 +32,6 @@ export namespace ECDSASignatureWithIndex {
 
   /**
    * Decodes ECDSA signature with index from hex string (can be 0x-prefixed or not).
-   * @param encodedSignature
-   * @returns
    */
   export function decode(encodedSignature: string): IECDSASignatureWithIndex {
     const encodedSignatureInternal = (
@@ -63,8 +59,6 @@ export namespace ECDSASignatureWithIndex {
   /**
    * Encodes list of signatures with indices into 0x-prefixed hex string representing byte encoding
    * First 2 bytes are number of signatures
-   * @param signatures
-   * @returns
    */
   export function encodeSignatureList(signatures: IECDSASignatureWithIndex[]): string {
     let encoded = "0x" + signatures.length.toString(16).padStart(4, "0");
@@ -76,8 +70,6 @@ export namespace ECDSASignatureWithIndex {
 
   /**
    * Decodes list of signatures with indices from hex string (can be 0x-prefixed or not).
-   * @param encoded
-   * @returns
    */
   export function decodeSignatureList(encoded: string): IECDSASignatureWithIndex[] {
     const encodedInternal = encoded.startsWith("0x") ? encoded.slice(2) : encoded;
@@ -101,10 +93,6 @@ export namespace ECDSASignatureWithIndex {
 
   /**
    * Signs message hash with ECDSA using private key
-   * @param messageHash
-   * @param privateKey
-   * @param index
-   * @returns
    */
   export async function signMessageHash(
     messageHash: string,
@@ -125,9 +113,6 @@ export namespace ECDSASignatureWithIndex {
 
   /**
    * Recovers signer address from message hash and signature
-   * @param messageHash
-   * @param signature
-   * @returns
    */
   export function recoverSigner(messageHash: string, signature: IECDSASignatureWithIndex): string {
     return web3.eth.accounts
@@ -137,9 +122,6 @@ export namespace ECDSASignatureWithIndex {
 
   /**
    * Compares two signatures with indices
-   * @param a
-   * @param b
-   * @returns
    */
   export function equals(a: IECDSASignatureWithIndex, b: IECDSASignatureWithIndex): boolean {
     return a.v === b.v && a.r === b.r && a.s === b.s && a.index === b.index;

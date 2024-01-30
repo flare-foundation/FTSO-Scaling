@@ -25,8 +25,6 @@ export namespace SigningPolicy {
   //////////////////////////////////////////////////////////////////////////////
   /**
    * Encodes signing policy into 0x-prefixed hex string representing byte encoding
-   * @param policy
-   * @returns
    */
   export function encode(policy: ISigningPolicy) {
     if (!policy) {
@@ -88,7 +86,6 @@ export namespace SigningPolicy {
    *                       if false, then encoded policy length must be at least that size and the excess bytes are ignored
    *                       (this is used when parsing signing policy encoded into Relay message).
    *                       In this case, encodedLength property of the result is set to the actual length of the encoded policy.
-   * @returns
    */
   export function decode(encodedPolicy: string, exactEncoding = true): ISigningPolicy {
     const encodedPolicyInternal = (
@@ -141,8 +138,6 @@ export namespace SigningPolicy {
    * Calculates signing policy hash from encoded signing policy
    * It is done by padding byte array with 0 bytes to a multiple of 32 and then
    * Sequentially hashing 32-byte chunks with keccak256
-   * @param signingPolicy
-   * @returns
    */
   export function hashEncoded(signingPolicy: string) {
     const signingPolicyInternal = signingPolicy.startsWith("0x") ? signingPolicy.slice(2) : signingPolicy;
@@ -156,8 +151,6 @@ export namespace SigningPolicy {
 
   /**
    * Normalizes addresses in signing policy by converting them to lower case.
-   * @param signingPolicy
-   * @returns
    */
   export function normalizeAddresses(signingPolicy: ISigningPolicy) {
     signingPolicy.voters = signingPolicy.voters.map(x => x.toLowerCase());
@@ -165,8 +158,6 @@ export namespace SigningPolicy {
   }
   /**
    * Calculates signing policy hash from signing policy object
-   * @param signingPolicy
-   * @returns
    */
   export function hash(signingPolicy: ISigningPolicy) {
     return SigningPolicy.hashEncoded(SigningPolicy.encode(signingPolicy));
@@ -175,9 +166,6 @@ export namespace SigningPolicy {
   /**
    * Checks if two signing policies are equal as objects. Essentially checks if all properties are equal,
    * except the encodedLength property.
-   * @param signingPolicy1
-   * @param signingPolicy2
-   * @returns
    */
   export function equals(signingPolicy1: ISigningPolicy, signingPolicy2: ISigningPolicy) {
     const test =

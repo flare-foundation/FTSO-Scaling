@@ -9,8 +9,6 @@ const web3 = new Web3("https://dummy");
 export namespace ECDSASignature {
   /**
    * Encodes ECDSA signature into 0x-prefixed hex string representing byte encoding
-   * @param signature
-   * @returns
    */
   export function encode(signature: IECDSASignature): string {
     return "0x" + signature.v.toString(16).padStart(2, "0") + signature.r.slice(2) + signature.s.slice(2);
@@ -18,8 +16,6 @@ export namespace ECDSASignature {
 
   /**
    * Decodes ECDSA signature with index from hex string (can be 0x-prefixed or not).
-   * @param encodedSignature
-   * @returns
    */
   export function decode(encodedSignature: string): IECDSASignature {
     const encodedSignatureInternal = (
@@ -44,10 +40,6 @@ export namespace ECDSASignature {
 
   /**
    * Signs message hash with ECDSA using private key
-   * @param messageHash
-   * @param privateKey
-   * @param index
-   * @returns
    */
   export async function signMessageHash(messageHash: string, privateKey: string): Promise<IECDSASignature> {
     if (!/^0x[0-9a-f]{64}$/i.test(messageHash)) {
@@ -63,9 +55,6 @@ export namespace ECDSASignature {
 
   /**
    * Recovers signer address from message hash and signature
-   * @param messageHash
-   * @param signature
-   * @returns
    */
   export function recoverSigner(messageHash: string, signature: IECDSASignature): string {
     return web3.eth.accounts

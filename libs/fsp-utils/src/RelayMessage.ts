@@ -23,9 +23,6 @@ export namespace RelayMessage {
    * - signatures are valid according to signing policy
    * - signatures are in ascending order by index in signing policy and indices of signatures match indices in signing policy
    * - threshold is met
-   * @param message
-   * @param verify
-   * @returns
    */
   export function encode(message: IRelayMessage, verify = false): string {
     if (!message) {
@@ -91,8 +88,6 @@ export namespace RelayMessage {
 
   /**
    * Decodes relay message from hex string (can be 0x-prefixed or not).
-   * @param encoded
-   * @returns
    */
   export function decode(encoded: string): IRelayMessage {
     const signingPolicy = SigningPolicy.decode(encoded, false);

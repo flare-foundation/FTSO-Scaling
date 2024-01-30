@@ -19,8 +19,6 @@ export namespace ProtocolMessageMerkleRoot {
   //////////////////////////////////////////////////////////////////////////////
   /**
    * Encode protocol message merkle root into 0x-prefixed hex string representing byte encoding
-   * @param message
-   * @returns
    */
   export function encode(message: IProtocolMessageMerkleRoot): string {
     if (!message) {
@@ -49,8 +47,6 @@ export namespace ProtocolMessageMerkleRoot {
 
   /**
    * Decodes signed message from hex string (can be 0x-prefixed or not).
-   * @param encodedMessage
-   * @returns
    */
   export function decode(encodedMessage: string, exactEncoding = true): IProtocolMessageMerkleRoot {
     const encodedMessageInternal = encodedMessage.startsWith("0x") ? encodedMessage.slice(2) : encodedMessage;
@@ -91,9 +87,6 @@ export namespace ProtocolMessageMerkleRoot {
 
   /**
    * Compares two protocol message merkle roots
-   * @param a
-   * @param b
-   * @returns
    */
   export function equals(a: IProtocolMessageMerkleRoot, b: IProtocolMessageMerkleRoot): boolean {
     return (
@@ -110,8 +103,6 @@ export namespace ProtocolMessageMerkleRoot {
   /**
    * Provides string representation of protocol message merkle root.
    * Can be used for e.g. logging.
-   * @param message
-   * @returns
    */
   export function print(message: IProtocolMessageMerkleRoot) {
     return `(${message.protocolId}, ${message.votingRoundId}, ${message.isSecureRandom}, ${message.merkleRoot})`;
