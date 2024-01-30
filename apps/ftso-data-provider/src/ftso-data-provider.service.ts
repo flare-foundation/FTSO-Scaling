@@ -138,10 +138,6 @@ export class FtsoDataProviderService {
         merkleRoot,
         isSecureRandom: result.randomData.isSecure,
         tree: treeNodes,
-        // protocolId: FTSO2_PROTOCOL_ID,
-        // votingRoundId,
-        // isSecureRandom: result.randomData.isSecure,
-        // merkleRoot,
       };
       return response;
     } catch (e) {
