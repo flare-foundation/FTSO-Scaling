@@ -6,7 +6,12 @@ import { IProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/Protocol
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
+import {
+  CONTRACTS,
+  ContractMethodNames,
+  FTSO2_PROTOCOL_ID,
+  RANDOM_GENERATION_BENCHING_WINDOW,
+} from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
@@ -15,6 +20,8 @@ import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { Api } from "./price-provider-api/generated/provider-api";
+import { ExternalResponse, ExternalResponseStatusEnum, JSONAbiDefinition } from "./dto/data-provider-responses.dto";
+import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -67,8 +74,7 @@ export class FtsoDataProviderService {
 
   async getRevealData(votingRoundId: number): Promise<IPayloadMessage<IRevealData> | undefined> {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
-
-    const revealData = this.votingRoundToRevealData.get(votingRoundId)!;
+    const revealData = this.votingRoundToRevealData.get(votingRoundId);
     if (revealData === undefined) {
       // we do not have reveal data. Either we committed and restarted the client, hence lost the reveal data irreversibly
       // or we did not commit at all.
@@ -104,6 +110,40 @@ export class FtsoDataProviderService {
         merkleRoot,
       };
       return message;
+    } catch (e) {
+      this.logger.error(`Error calculating result: ${errorString(e)}`);
+      throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
+    }
+  }
+
+  async getFullMerkleTree(votingRoundId: number): Promise<ExternalResponse> {
+    const dataResponse = await this.dataManager.getDataForCalculations(
+      votingRoundId,
+      RANDOM_GENERATION_BENCHING_WINDOW,
+      this.indexer_top_timeout
+    );
+    if (dataResponse.status !== DataAvailabilityStatus.OK) {
+      this.logger.error(`Data not available for epoch ${votingRoundId}`);
+      return {
+        status: ExternalResponseStatusEnum.NOT_AVAILABLE,
+      };
+    }
+    try {
+      const result = await calculateResultsForVotingRound(dataResponse.data);
+      const merkleRoot = result.merkleTree.root;
+      const treeNodes = [result.randomData, ...result.medianData];
+      const response: ExternalResponse = {
+        status: ExternalResponseStatusEnum.OK,
+        votingRoundId,
+        merkleRoot,
+        isSecureRandom: result.randomData.isSecure,
+        tree: treeNodes,
+        // protocolId: FTSO2_PROTOCOL_ID,
+        // votingRoundId,
+        // isSecureRandom: result.randomData.isSecure,
+        // merkleRoot,
+      };
+      return response;
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });

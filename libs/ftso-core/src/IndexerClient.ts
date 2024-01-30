@@ -8,6 +8,7 @@ import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
 import {
   CONTRACTS,
   ContractDefinitions,
+  ContractMethodNames,
   EPOCH_SETTINGS,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
@@ -161,7 +162,7 @@ export class IndexerClient {
    */
   private async queryTransactions(
     smartContract: ContractDefinitions,
-    functionName: string,
+    functionName: ContractMethodNames,
     startTime: number,
     endTime?: number
   ): Promise<TLPTransaction[]> {
@@ -463,7 +464,7 @@ export class IndexerClient {
    * Extracts all the submissions through function @param functionName in a given time range.
    */
   public async getSubmissionDataInRange(
-    functionName: "submit1" | "submit2" | "submit3" | "submitSignatures",
+    functionName: ContractMethodNames,
     startTime: number,
     endTime: number,
     endTimeout?: number
@@ -512,7 +513,12 @@ export class IndexerClient {
         data: [],
       };
     }
-    const transactionsResults = await this.queryTransactions(CONTRACTS.Relay, "relay", startTime, endTime);
+    const transactionsResults = await this.queryTransactions(
+      CONTRACTS.Relay,
+      ContractMethodNames.relay,
+      startTime,
+      endTime
+    );
     const finalizations: FinalizationData[] = transactionsResults.map(tx => {
       const timestamp = tx.timestamp;
       const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);

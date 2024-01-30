@@ -8,7 +8,10 @@ Each sub protocol produces a certain Merkle tree and votes by signing the Merkle
 ```json
 {
 	status: “OK”,
-	data: ObjectDefinition[]
+	votingRoundId: number,
+	merkleRoot: string,
+	isSecureRandom: boolean
+	tree: ObjectDefinition[]
 }
 ```
 

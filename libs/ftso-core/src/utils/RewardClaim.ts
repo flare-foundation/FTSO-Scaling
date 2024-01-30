@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
-import { EncodingUtils } from "./EncodingUtils";
 import { CONTRACTS, ContractMethodNames } from "../configs/networks";
+import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 export enum ClaimType {

@@ -1,6 +1,12 @@
 import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { ExternalResponse, PDPResponse, PDPResponseStatusEnum } from "./dto/data-provider-responses.dto";
+import {
+  AbiDefinitionsResponse,
+  ExternalResponse,
+  ExternalResponseStatusEnum,
+  PDPResponse,
+  PDPResponseStatusEnum,
+} from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
@@ -83,9 +89,19 @@ export class FtsoDataProviderController {
   // Additional standardized facing APIs
 
   @ApiTags(ApiTagsEnum.EXTERNAL)
-  @Get("signedMerkleTree/:votingRoundId")
-  async signedMerkleTree(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalResponse> {
-    this.logger.log(`Calling GET on signedMerkleTree with param: votingRoundId ${votingRoundId}`);
-    throw new InternalServerErrorException("Not used in FTSO protocol");
+  @Get("data/:votingRoundId")
+  async merkleTree(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalResponse> {
+    // TODO: handle to early response as it is more informative, for now we respond with not available for to early cases
+    return this.ftsoDataProviderService.getFullMerkleTree(votingRoundId);
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("data-abis")
+  async treeAbis(): Promise<AbiDefinitionsResponse> {
+    const data = this.ftsoDataProviderService.getAbiDefinitions();
+    return {
+      status: ExternalResponseStatusEnum.OK,
+      data,
+    };
   }
 }

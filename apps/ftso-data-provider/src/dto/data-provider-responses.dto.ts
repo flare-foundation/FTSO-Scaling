@@ -1,7 +1,7 @@
 // PDP (Protocol Data Provider) Response
 
 import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
-import { Feed } from "../../../../libs/ftso-core/src/voting-types";
+import { Feed, MedianCalculationResult, RandomCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
 
 export enum PDPResponseStatusEnum {
   OK = "OK",
@@ -22,16 +22,12 @@ export enum ExternalResponseStatusEnum {
   NOT_AVAILABLE = "NOT_AVAILABLE",
 }
 
-export interface TreeNode extends Feed {
-  id: number;
-}
-
 interface ExternalResponseOk {
   status: ExternalResponseStatusEnum.OK;
   votingRoundId: number;
   merkleRoot: string;
   isSecureRandom: boolean;
-  tree: TreeNode[];
+  tree: (RandomCalculationResult | MedianCalculationResult)[];
 }
 
 interface ExternalResponseTooEarly {
