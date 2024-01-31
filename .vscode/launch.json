@@ -8,14 +8,10 @@
       "type": "node",
       "request": "launch",
       "name": "Start FTSO protocol data provider",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "program": "${file}",
       // "preLaunchTask": "tsc: build - tsconfig.json",
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["start:debug"]
     },
@@ -26,14 +22,22 @@
       "name": "---TEST---",
       "runtimeExecutable": "echo",
       "runtimeArgs": ["BTC tests separator"]
-   },
+    },
 
-   {
+    {
       "type": "node",
       "request": "launch",
       "name": "Test FTSO reward logic",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["test", "test/libs/unit/ftso-calculation-logic.test.ts"]
-   },
+    },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test Integration",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["test:integration"]
+    }
   ]
 }

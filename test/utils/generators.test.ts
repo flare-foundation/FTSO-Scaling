@@ -24,7 +24,7 @@ describe("generators", () => {
    //       {
    //          "indexed": false,
    //          "internalType": "bool",
-   //          "name": "randomQualityScore",
+   //          "name": "isSecureRandom",
    //          "type": "bool"
    //       },
    //       {
@@ -36,13 +36,13 @@ describe("generators", () => {
    //    ],
    //    "name": "ProtocolMessageRelayed",
    //    "type": "event"
-   // };
+   // }
 
    it("should encode and decode event correctly", () => {
       const eventData = {
          protocolId: 1n,
          votingRoundId: 2n,
-         randomQualityScore: false,
+         isSecureRandom: false,
          merkleRoot: "0x" + "a".repeat(64)
       };
       let eventEntity = generateEvent(
@@ -59,7 +59,7 @@ describe("generators", () => {
       );
       expect(decoded.protocolId).to.be.equal(eventData.protocolId);
       expect(decoded.votingRoundId).to.be.equal(eventData.votingRoundId);
-      expect(decoded.randomQualityScore).to.be.equal(eventData.randomQualityScore);
+      expect(decoded.isSecureRandom).to.be.equal(eventData.isSecureRandom);
       expect(decoded.merkleRoot).to.be.equal(eventData.merkleRoot);
    });
 

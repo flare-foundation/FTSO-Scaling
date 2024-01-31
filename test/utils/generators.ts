@@ -11,7 +11,7 @@ import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
-import { encodeParameters } from "web3-eth-abi";
+import { encodeParameters, encodeParameter } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 import { utils } from "web3";
@@ -233,17 +233,14 @@ export function generateEvent(
   if (indexedTypes.length > 3) {
     throw new Error("Too many indexed types");
   }
-  const topic1 = indexedTypes.length > 0 ? encodeParameters([indexedTypes[0]], [indexedValues[0]]) : "";
-  const topic2 = indexedTypes.length > 1 ? encodeParameters([indexedTypes[1]], [indexedValues[1]]) : "";
-  const topic3 = indexedTypes.length > 2 ? encodeParameters([indexedTypes[2]], [indexedValues[2]]) : "";
 
   const e = new TLPEvents();
   e.address = queryBytesFormat(contract.address);
   e.data = queryBytesFormat(data);
   e.topic0 = queryBytesFormat(topic0);
-  e.topic1 = topic1;
-  e.topic2 = topic2;
-  e.topic3 = topic3;
+  e.topic1 = indexedValues.length >= 1 ? encodeParameter(indexedTypes[0], indexedValues[0]) : "NULL";
+  e.topic2 = indexedValues.length >= 2 ? encodeParameter(indexedTypes[1], indexedValues[1]) : "NULL";
+  e.topic3 = indexedValues.length >= 3 ? encodeParameter(indexedTypes[2], indexedValues[2]) : "NULL";
   e.log_index = 1;
   e.timestamp = timestamp;
   return e;
