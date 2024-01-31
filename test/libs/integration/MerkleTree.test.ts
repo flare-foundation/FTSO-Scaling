@@ -10,7 +10,7 @@ describe("MerkleTree", () => {
     const nodes: { object: TreeResult; hash: string; proof: string[] }[] = [];
     const randomResult: RandomCalculationResult = {
       votingRoundId: VOTING_ROUND_ID,
-      random: BigInt(Math.random() * 10000000000000000),
+      random: BigInt((Math.random() * 10000000000000000).toFixed(0)),
       isSecure: true,
     };
     nodes.push({
