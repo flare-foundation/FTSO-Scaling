@@ -142,12 +142,12 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
         "InflationRewardsOffered",
         {
           rewardEpochId,
-          feedNamesEncoded: "0x" + feeds.map(f => f.name).join(""),
+          feedNames: "0x" + feeds.map(f => f.name).join(""),
           decimals: "0x" + feeds.map(f => f.decimals.toString(16).padStart(2, "0")).join(""),
           amount: BigInt(1000),
           minRewardedTurnoutBIPS: 100,
           primaryBandRewardSharePPM: 10000,
-          secondaryBandWidthPPMsEncoded: "0x" + feeds.map(() => "002710").join(""), // 10_000
+          secondaryBandWidthPPMs: "0x" + feeds.map(() => "002710").join(""), // 10_000
           mode: 0,
         },
         timestamp
@@ -216,7 +216,7 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
   return events;
 }
 
-function generateEvent(
+export function generateEvent(
   contract: { name: string; address: string },
   eventName: string,
   eventData: any,
@@ -224,17 +224,26 @@ function generateEvent(
 ): TLPEvents {
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
-  const types = abi.abi.inputs.map(x => x.type);
-  const values = Object.getOwnPropertyNames(eventData).map(x => eventData[x]);
+  const types = abi.abi.inputs.filter(x => !x.indexed).map(x => x.type);
+  const values = abi.abi.inputs.filter(x => !x.indexed).map(x => eventData[x.name]);
+  const indexedTypes = abi.abi.inputs.filter(x => x.indexed).map(x => x.type);
+  const indexedValues = abi.abi.inputs.filter(x => x.indexed).map(x => eventData[x.name]);
   const data = encodeParameters(types, values);
+
+  if (indexedTypes.length > 3) {
+    throw new Error("Too many indexed types");
+  }
+  const topic1 = indexedTypes.length > 0 ? encodeParameters([indexedTypes[0]], [indexedValues[0]]) : "";
+  const topic2 = indexedTypes.length > 1 ? encodeParameters([indexedTypes[1]], [indexedValues[1]]) : "";
+  const topic3 = indexedTypes.length > 2 ? encodeParameters([indexedTypes[2]], [indexedValues[2]]) : "";
 
   const e = new TLPEvents();
   e.address = queryBytesFormat(contract.address);
   e.data = queryBytesFormat(data);
   e.topic0 = queryBytesFormat(topic0);
-  e.topic1 = "";
-  e.topic2 = "";
-  e.topic3 = "";
+  e.topic1 = topic1;
+  e.topic2 = topic2;
+  e.topic3 = topic3;
   e.log_index = 1;
   e.timestamp = timestamp;
   return e;
