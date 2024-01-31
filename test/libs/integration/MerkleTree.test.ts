@@ -50,10 +50,6 @@ describe("MerkleTree", () => {
       node.proof = merkleTree.getProof(node.hash);
     }
 
-    // console.log("Merkle tree root: ", merkleTree.root);
-    // console.log("Feed Proof: ");
-    // console.dir(nodes[1], { depth: null });
-
     expect(merkleTree.root).to.be.not.undefined;
 
     expect(nodes[1].proof).to.be.not.undefined;
