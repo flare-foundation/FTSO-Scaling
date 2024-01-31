@@ -83,16 +83,11 @@ export function decodeEvent<T>(
     return x.startsWith("0x") ? x : "0x" + x;
   }
   const inputs = [...abiData.abi!.inputs!];
+  // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
   const topics = [data.topic0, data.topic1, data.topic2, data.topic3]
     .filter(x => x && x != "NULL")
     .map(x => prefix0x(x));
-  const decoded = decodeLog(
-    inputs,
-    prefix0x(data.data),
-    // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
-    topics
-  );
-  // console.log("Decoded", JSON.stringify(decoded));
+  const decoded = decodeLog(inputs, prefix0x(data.data), topics);
   return transform(decoded);
 }
 
