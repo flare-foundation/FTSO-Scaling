@@ -29,7 +29,7 @@ export interface DepositSignatureData {
 
 export namespace SignaturePayload {
   /**
-   * Endodes signature payload into byte encoding, represented by 0x-prefixed hex string
+   * Encodes signature payload into byte encoding, represented by 0x-prefixed hex string
    * @param signaturePayload
    * @returns
    */
@@ -73,7 +73,7 @@ export namespace SignaturePayload {
   }
 
   /**
-   * Decodes properly formated signature calldata into array of payloads with signatures
+   * Decodes properly formatted signature calldata into array of payloads with signatures
    * @param calldata
    */
   export function decodeCalldata(calldata: string): IPayloadMessage<ISignaturePayload>[] {
