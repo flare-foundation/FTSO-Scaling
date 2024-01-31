@@ -38,6 +38,14 @@
       "name": "Test Integration",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["test:integration"]
+    },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test Merkle Structs",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["test", "test/libs/integration/MerkleTree.test.ts"]
     }
   ]
 }
