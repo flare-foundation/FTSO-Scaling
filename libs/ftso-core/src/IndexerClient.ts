@@ -347,29 +347,6 @@ export class IndexerClient {
   }
 
   /**
-   * Extracts SigningPolicyInitialized event on Relay contract for a specific @param rewardEpochId from the indexer database,
-   * if the event is already indexed. Otherwise returns undefined.
-   * This event is a high boundary event for the end of voter registration for rewardEpochId.
-   */
-  public async getSigningPolicyInitializedEvent(
-    rewardEpochId: number
-  ): Promise<IndexerResponse<SigningPolicyInitialized>> {
-    const eventName = SigningPolicyInitialized.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const status = await this.ensureLowerBlock(startTime);
-    let data: SigningPolicyInitialized | undefined;
-    if (status === BlockAssuranceResult.OK) {
-      const result = await this.queryEvents(CONTRACTS.Relay, eventName, startTime);
-      const events = result.map(event => SigningPolicyInitialized.fromRawEvent(event));
-      data = events.find(event => event.rewardEpochId === rewardEpochId);
-    }
-    return {
-      status,
-      data,
-    };
-  }
-
-  /**
    * Returns the all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
    * Events are sorted by timestamp, hence also by rewardEpochId.
    * The query result is returned even if the indexer database does not contain a block with timestamp strictly lower than fromStartTime.

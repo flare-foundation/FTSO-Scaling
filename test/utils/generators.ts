@@ -58,12 +58,12 @@ export function generateVoters(count: number): TestVoter[] {
   return voters;
 }
 
-export function generateState(name: string, id: number): TLPState {
+export function generateState(name: string, id: number, timestamp?: number): TLPState {
   const state = new TLPState();
   state.id = id;
   state.name = name;
   state.index = id;
-  state.block_timestamp = 0;
+  state.block_timestamp = timestamp ?? 0;
   state.updated = new Date("2024-01-01");
   return state;
 }
@@ -87,6 +87,7 @@ export async function generateRewardEpochEvents(
         startVotingRoundId: epochSettings.expectedFirstVotingRoundForRewardEpoch(previousRewardEpochId),
         timestamp: rewardEpochStartSec,
       }),
+      1,
       rewardEpochStartSec
     ),
 
@@ -99,6 +100,7 @@ export async function generateRewardEpochEvents(
         rewardEpochId: rewardEpochId,
         timestamp: rewardEpochStartSec + 20,
       }),
+      2,
       rewardEpochStartSec + 20
     ),
     generateEvent(
@@ -109,6 +111,7 @@ export async function generateRewardEpochEvents(
         votePowerBlock: 1, // TODO: set block numbers
         timestamp: rewardEpochStartSec + 30,
       }),
+      3,
       rewardEpochStartSec + 30
     ),
 
@@ -128,6 +131,7 @@ export async function generateRewardEpochEvents(
         signingPolicyBytes: "0x123",
         timestamp: rewardEpochStartSec + 50,
       }),
+      4,
       rewardEpochStartSec + 50
     ),
   ];
@@ -150,6 +154,7 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
           secondaryBandWidthPPMs: "0x" + feeds.map(() => "002710").join(""), // 10_000
           mode: 0,
         },
+        1,
         timestamp
       )
     );
@@ -169,6 +174,7 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
             secondaryBandWidthPPM: 10000,
             claimBackAddress: burnAddress,
           },
+          2,
           timestamp
         )
       );
@@ -193,6 +199,7 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
           nodeWeights: voter.nodeWeights,
           delegationFeeBIPS: voter.delegationFeeBIPS,
         }),
+        1,
         timestamp
       )
     );
@@ -209,6 +216,7 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
           submitSignaturesAddress: voter.submitSignaturesAddress,
           registrationWeight: voter.registrationWeight,
         }),
+        1,
         timestamp
       )
     );
@@ -220,6 +228,7 @@ export function generateEvent(
   contract: { name: string; address: string },
   eventName: string,
   eventData: any,
+  blockNumber: number,
   timestamp: number
 ): TLPEvents {
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
@@ -242,6 +251,7 @@ export function generateEvent(
   e.topic2 = indexedValues.length >= 2 ? encodeParameter(indexedTypes[1], indexedValues[1]) : "NULL";
   e.topic3 = indexedValues.length >= 3 ? encodeParameter(indexedTypes[2], indexedValues[2]) : "NULL";
   e.log_index = 1;
+  e.block_number = blockNumber;
   e.timestamp = timestamp;
   return e;
 }

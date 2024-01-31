@@ -81,6 +81,9 @@ export class TLPEvents {
   log_index: number;
 
   @Column()
+  block_number: number;
+
+  @Column()
   timestamp: number;
 }
 

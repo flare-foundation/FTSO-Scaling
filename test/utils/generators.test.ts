@@ -49,6 +49,7 @@ describe("generators", () => {
          CONTRACTS.Relay,
          "ProtocolMessageRelayed",
          eventData,
+         1,
          Math.floor(Date.now() / 1000)
       )
       const decoded = decodeEvent<any>(
