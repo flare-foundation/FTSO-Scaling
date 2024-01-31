@@ -11,7 +11,7 @@ import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
-import { encodeParameters } from "web3-eth-abi";
+import { encodeParameters, encodeParameter } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 import { utils } from "web3";
@@ -224,17 +224,34 @@ function generateEvent(
 ): TLPEvents {
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
-  const types = abi.abi.inputs.map(x => x.type);
-  const values = Object.getOwnPropertyNames(eventData).map(x => eventData[x]);
-  const data = encodeParameters(types, values);
+  const indexedTypes = [];
+  const indexedIndices = new Set();
+  const otherTypes = [];
+  let typeIndex = 0;
+  for (const typeDef of abi.abi.inputs) {
+    if (typeDef.indexed) {
+      indexedTypes.push(typeDef.type);
+      indexedIndices.add(typeIndex);
+    } else {
+      otherTypes.push(typeDef.type);
+    }
+    typeIndex++;
+  }
+  const indexedValues = Object.getOwnPropertyNames(eventData)
+    .filter((el, i) => indexedIndices.has(i))
+    .map(x => eventData[x]);
+  const otherValues = Object.getOwnPropertyNames(eventData)
+    .filter((el, i) => !indexedIndices.has(i))
+    .map(x => eventData[x]);
+  const data = encodeParameters(otherTypes, otherValues);
 
   const e = new TLPEvents();
   e.address = queryBytesFormat(contract.address);
   e.data = queryBytesFormat(data);
   e.topic0 = queryBytesFormat(topic0);
-  e.topic1 = "";
-  e.topic2 = "";
-  e.topic3 = "";
+  e.topic1 = indexedValues.length >= 1 ? encodeParameter(indexedTypes[0], indexedValues[0]) : "NULL";
+  e.topic2 = indexedValues.length >= 2 ? encodeParameter(indexedTypes[1], indexedValues[1]) : "NULL";
+  e.topic3 = indexedValues.length >= 3 ? encodeParameter(indexedTypes[2], indexedValues[2]) : "NULL";
   e.log_index = 1;
   e.timestamp = timestamp;
   return e;

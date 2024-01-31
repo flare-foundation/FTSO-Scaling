@@ -83,7 +83,9 @@ export function decodeEvent<T>(
     return x.startsWith("0x") ? x : "0x" + x;
   }
   const inputs = [...abiData.abi!.inputs!];
-  const topics = [data.topic0, data.topic1, data.topic2, data.topic3].filter(x => x != "NULL").map(x => prefix0x(x));
+  const topics = [data.topic0, data.topic1, data.topic2, data.topic3]
+    .filter(x => x && x != "NULL")
+    .map(x => prefix0x(x));
   const decoded = decodeLog(
     inputs,
     prefix0x(data.data),
