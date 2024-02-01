@@ -7,7 +7,7 @@ import { MAX_2_256, NON_BENCHED_RANDOM_VOTERS_MIN_COUNT } from "./ftso-constants
  * - all of the current round reveal offenders are already benched
  * - the number of non-benched offenders that successfully revealed is at least 2
  */
-export async function calculateRandom(data: DataForCalculations): Promise<RandomCalculationResult> {
+export function calculateRandom(data: DataForCalculations): RandomCalculationResult {
   const nonBenchedOffendersSize = [...data.revealOffenders].filter(
     voter => !data.benchingWindowRevealOffenders.has(voter.toLowerCase())
   ).length;
