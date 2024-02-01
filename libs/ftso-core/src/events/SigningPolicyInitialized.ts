@@ -17,7 +17,7 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
     this.threshold = Number(data.threshold);
     this.seed = data.seed;
     this.voters = data.voters.map((v: Address) => v.toLowerCase());
-    this.weights = data.weights.map((v: number) => Number(v));
+    this.weights = data.weights.map(v => Number(v));
     this.signingPolicyBytes = data.signingPolicyBytes;
     this.timestamp = Number(data.timestamp);
   }
@@ -44,7 +44,7 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
   threshold: number;
   // Random seed.
   seed: string;
-  // The list of eligible voters in the canonical order.
+  // The list of eligible voters in the canonical order. //FIND WHICH ADDRESS IS THIS!!!
   voters: string[];
   // The corresponding list of normalised signing weights of eligible voters.
   // Normalisation is done by compressing the weights from 32-byte values to 2 bytes,
