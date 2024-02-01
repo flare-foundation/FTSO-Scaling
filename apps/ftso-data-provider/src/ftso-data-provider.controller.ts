@@ -20,6 +20,7 @@ enum ApiTagsEnum {
 export class FtsoDataProviderController {
   private readonly logger = new Logger(FtsoDataProviderController.name);
   constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}
+  private submitAddress!: string;
 
   // Protocol Data Provider APIs
 
@@ -32,6 +33,7 @@ export class FtsoDataProviderController {
     this.logger.log(
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
+    this.checkSubmitAddress(submitAddress);
     const data = await this.ftsoDataProviderService.getCommitData(votingRoundId, submitAddress);
     const encodedData = data ? encodeCommitPayloadMessage(data) : undefined;
     return {
@@ -49,6 +51,7 @@ export class FtsoDataProviderController {
     this.logger.log(
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
+    this.checkSubmitAddress(submitAddress);
     const data = await this.ftsoDataProviderService.getRevealData(votingRoundId);
     const encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
     return {
@@ -107,5 +110,18 @@ export class FtsoDataProviderController {
       status: ExternalResponseStatusEnum.OK,
       data,
     };
+  }
+
+  private checkSubmitAddress(submitAddress: string) {
+    if (this.submitAddress === undefined) {
+      this.submitAddress = submitAddress;
+    } else {
+      if (this.submitAddress !== submitAddress) {
+        throw new InternalServerErrorException(
+          "Cannot use the data provider with multiple submit addresses for the same endpoint, existing: " +
+            this.submitAddress
+        );
+      }
+    }
   }
 }
