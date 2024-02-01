@@ -1,4 +1,7 @@
-import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
+import { utils } from "web3";
+import { encodeParameter, encodeParameters } from "web3-eth-abi";
+import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
+import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import {
   RandomAcquisitionStarted,
   RewardEpochStarted,
@@ -7,21 +10,19 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
-import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
+import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
-import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
-import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
-import { encodeParameters, encodeParameter } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
+import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
-import { utils } from "web3";
 
-const encodingUtils = EncodingUtils.instance;
+export const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
 
 export interface TestVoter {
   identityAddress: string;
   signingAddress: string;
+  signingPrivateKey: string;
   submitAddress: string;
   submitSignaturesAddress: string;
   delegationAddress: string;
@@ -38,6 +39,7 @@ export function generateVoter(): TestVoter {
   return {
     identityAddress: generateRandomAddress(),
     signingAddress: generateRandomAddress(),
+    signingPrivateKey: utils.randomHex(32),
     submitAddress: generateRandomAddress(),
     submitSignaturesAddress: generateRandomAddress(),
     delegationAddress: generateRandomAddress(),
