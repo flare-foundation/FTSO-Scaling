@@ -1,7 +1,10 @@
 import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
 import {
+  InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
+  RewardOffers,
+  RewardsOffered,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
   VoterRegistered,
@@ -14,7 +17,8 @@ import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
 import { encodeParameters, encodeParameter } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
-import { utils } from "web3";
+import Web3, { utils } from "web3";
+import { RewardEpoch } from "../../libs/ftso-core/src/RewardEpoch";
 
 const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
@@ -69,13 +73,13 @@ export function generateState(name: string, id: number): TLPState {
 }
 
 // TODO: fix event timings
-export async function generateRewardEpochEvents(
+export function generateRewardEpochEvents(
   epochSettings: EpochSettings,
   feeds: Feed[],
   offerCount: number,
   rewardEpochId: number,
   voters: TestVoter[]
-): Promise<TLPEvents[]> {
+): TLPEvents[] {
   const previousRewardEpochId = rewardEpochId - 1;
   const rewardEpochStartSec = epochSettings.expectedRewardEpochStartTimeSec(previousRewardEpochId);
   return [
@@ -273,4 +277,184 @@ export function generateTx(
 
 export function currentTimeSec(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+export function generateAddress(name: string) {
+  return Web3.utils.keccak256(name).slice(0, 42);
+}
+
+/**
+ * @param feed has to be a string of length 8
+ * @param rewardEpochId
+ * @param claimBack
+ * @returns
+ */
+export function generateRewardsOffer(feed: string, rewardEpochId: number, claimBack: string) {
+  feed = feed.slice(0, 7);
+
+  const rawRewardsOffered = {
+    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    feedName: Web3.utils.padRight(Web3.utils.utf8ToHex(feed), 16),
+    decimals: "0x12",
+    amount: "0x10000000000",
+    minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
+    primaryBandRewardSharePPM: Web3.utils.numberToHex(10000),
+    secondaryBandWidthPPM: Web3.utils.numberToHex(10000),
+    claimBackAddress: generateAddress(claimBack),
+  };
+
+  return new RewardsOffered(rawRewardsOffered);
+}
+
+/**
+ *
+ * @param feeds
+ * @param rewardEpochId
+ */
+export function generateInflationRewardOffer(feeds: string[], rewardEpochId: number) {
+  const unprefixedFeedsInHex = feeds.map(feed => Web3.utils.padRight(Web3.utils.utf8ToHex(feed), 16).slice(2, 18));
+
+  const rawInflationRewardOffer = {
+    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    feedNames: "0x" + unprefixedFeedsInHex.join(""),
+    decimals: "0x" + "12".repeat(feeds.length),
+    amount: "0x10000000001",
+    minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
+    primaryBandRewardSharePPM: Web3.utils.numberToHex(10000),
+    secondaryBandWidthPPMs: "0x" + "002710".repeat(feeds.length),
+    mode: "0x00",
+  };
+
+  return new InflationRewardsOffered(rawInflationRewardOffer);
+}
+
+export function generateRawFullVoter(name: string, rewardEpochId: number) {
+  return {
+    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    voter: generateAddress(name),
+    wNatWeight: BigInt(1000),
+    wNatCappedWeight: BigInt(1000),
+    nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
+    nodeWeights: [BigInt(1000), BigInt(1000)],
+    delegationFeeBIPS: 0,
+    signingPolicyAddress: generateAddress(name + "signing"),
+    delegationAddress: generateAddress(name + "delegation"),
+    submitAddress: generateAddress(name + "submit"),
+    submitSignaturesAddress: generateAddress(name + "submitSignatures"),
+    registrationWeight: BigInt(1000),
+  };
+}
+
+export function generateRawFullVoters(count: number, rewardEpochId: number) {
+  const rawFullVoters = [];
+  for (let j = 0; j < count; j++) {
+    rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId));
+  }
+
+  return rawFullVoters;
+}
+
+export function generateRewardEpoch() {
+  const rewardEpochId = 513;
+  const rewardEpochIdHex = (id: number) => Web3.utils.padLeft(Web3.utils.numberToHex(id), 6);
+
+  const epochSettings = new EpochSettings(10002, 90, 1, 3600, 30);
+
+  const feeds: Feed[] = [];
+
+  const feed1: Feed = {
+    name: "0xaaaaaaaaaaaaaaaa",
+    decimals: 18,
+  };
+  const feed2: Feed = {
+    name: "0xbbbbbbbbbbbbbbbb",
+    decimals: 18,
+  };
+
+  feeds.push(feed1, feed2);
+
+  const rawPreviousEpochStarted = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId - 1),
+    startVotingRoundId: "0x00100000",
+    timestamp: "0x1200000000000000",
+  };
+
+  const previousRewardEpochStartedEvent = new RewardEpochStarted(rawPreviousEpochStarted);
+
+  const rawRandomAcquisitionStarted = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId),
+    timestamp: "0x1200000000000014",
+  };
+
+  const randomAcquisitionStartedEvent = new RandomAcquisitionStarted(rawRandomAcquisitionStarted);
+
+  const rewardsOffered: RewardsOffered[] = [];
+
+  for (let j = 0; j < 10; j++) {
+    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`));
+    rewardsOffered.push(rewardOffered);
+  }
+
+  const inflationOffers: InflationRewardsOffered[] = [];
+
+  let feedNames: string[] = [];
+  for (let j = 0; j < 3; j++) {
+    feedNames.push(`USD C${j}`);
+  }
+
+  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+
+  feedNames = [];
+
+  for (let j = 3; j < 11; j++) {
+    feedNames.push(`USD C${j}`);
+  }
+
+  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+
+  const rewardOffers: RewardOffers = {
+    inflationOffers,
+    rewardOffers: rewardsOffered,
+  };
+
+  const rawVoterPowerBlockSelected = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId),
+    votePowerBlock: "0xa38424",
+    timestamp: "0x1200000000000000",
+  };
+
+  const voterPowerBlockSelected = new VotePowerBlockSelected(rawVoterPowerBlockSelected);
+
+  const voters = generateRawFullVoters(10, rewardEpochId);
+
+  const rawSigningPolicyInitialized = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId),
+    startVotingRoundId: Web3.utils.numberToHex(rewardEpochId * 3600),
+    threshold: Number(voters.map(v => v.registrationWeight).reduce((a, b) => a + b, 0n)) / 2,
+    seed: "0xaaaa",
+    signingPolicyBytes: "0x12",
+    timestamp: "0x1200000000000001",
+    voters: voters.map(voter => voter.signingPolicyAddress),
+    weights: voters.map(v => v.registrationWeight),
+  };
+
+  const signingPolicyInitialized = new SigningPolicyInitialized(rawSigningPolicyInitialized);
+
+  const fullVotersRegistrationInfo = voters.map(voter => {
+    return {
+      voterRegistrationInfo: new VoterRegistrationInfo(voter),
+      voterRegistered: new VoterRegistered(voter),
+    };
+  });
+
+  const rewardEpoch = new RewardEpoch(
+    previousRewardEpochStartedEvent,
+    randomAcquisitionStartedEvent,
+    rewardOffers,
+    voterPowerBlockSelected,
+    signingPolicyInitialized,
+    fullVotersRegistrationInfo
+  );
+
+  return rewardEpoch;
 }
