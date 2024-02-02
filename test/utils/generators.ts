@@ -328,27 +328,27 @@ export function generateInflationRewardOffer(feeds: string[], rewardEpochId: num
   return new InflationRewardsOffered(rawInflationRewardOffer);
 }
 
-export function generateRawFullVoter(name: string, rewardEpochId: number) {
+export function generateRawFullVoter(name: string, rewardEpochId: number, weight: number) {
   return {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
     voter: generateAddress(name),
-    wNatWeight: BigInt(1000),
-    wNatCappedWeight: BigInt(1000),
+    wNatWeight: BigInt(weight),
+    wNatCappedWeight: BigInt(weight),
     nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
-    nodeWeights: [BigInt(1000), BigInt(1000)],
+    nodeWeights: [BigInt(weight), BigInt(weight)],
     delegationFeeBIPS: 0,
     signingPolicyAddress: generateAddress(name + "signing"),
     delegationAddress: generateAddress(name + "delegation"),
     submitAddress: generateAddress(name + "submit"),
     submitSignaturesAddress: generateAddress(name + "submitSignatures"),
-    registrationWeight: BigInt(1000),
+    registrationWeight: BigInt(weight),
   };
 }
 
 export function generateRawFullVoters(count: number, rewardEpochId: number) {
   const rawFullVoters = [];
   for (let j = 0; j < count; j++) {
-    rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId));
+    rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId, (j * 1000) % 65536));
   }
 
   return rawFullVoters;
@@ -359,19 +359,6 @@ export function generateRewardEpoch() {
   const rewardEpochIdHex = (id: number) => Web3.utils.padLeft(Web3.utils.numberToHex(id), 6);
 
   const epochSettings = new EpochSettings(10002, 90, 1, 3600, 30);
-
-  const feeds: Feed[] = [];
-
-  const feed1: Feed = {
-    name: "0xaaaaaaaaaaaaaaaa",
-    decimals: 18,
-  };
-  const feed2: Feed = {
-    name: "0xbbbbbbbbbbbbbbbb",
-    decimals: 18,
-  };
-
-  feeds.push(feed1, feed2);
 
   const rawPreviousEpochStarted = {
     rewardEpochId: rewardEpochIdHex(rewardEpochId - 1),

@@ -179,6 +179,7 @@ export class RewardEpoch {
     return this.submissionAddressToCappedWeight.get(submissionAddress)!;
   }
 
+  //Currently unused
   public ftsoRewardingWeight(submissionAddress: Address): bigint {
     return this.ftsoMedianVotingWeight(submissionAddress);
   }
