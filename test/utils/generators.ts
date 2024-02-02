@@ -1,4 +1,4 @@
-import { utils } from "web3";
+import Web3, { utils } from "web3";
 import { encodeParameter, encodeParameters } from "web3-eth-abi";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
@@ -16,8 +16,9 @@ import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 
-export const encodingUtils = EncodingUtils.instance;
+const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
+const web3 = new Web3("https://dummy");
 
 export interface TestVoter {
   identityAddress: string;
@@ -36,10 +37,12 @@ export interface TestVoter {
 }
 
 export function generateVoter(): TestVoter {
+  const signingPrivateKey = utils.randomHex(32);
+  const signingAddress = web3.eth.accounts.privateKeyToAccount(signingPrivateKey).address.toLowerCase();
   return {
     identityAddress: generateRandomAddress(),
-    signingAddress: generateRandomAddress(),
-    signingPrivateKey: utils.randomHex(32),
+    signingAddress,
+    signingPrivateKey,
     submitAddress: generateRandomAddress(),
     submitSignaturesAddress: generateRandomAddress(),
     delegationAddress: generateRandomAddress(),

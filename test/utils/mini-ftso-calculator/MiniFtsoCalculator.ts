@@ -1,22 +1,21 @@
-import { Logger } from "@nestjs/common";
 import { EntityManager } from "typeorm";
-import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { DataAvailabilityStatus, DataManager } from "../../libs/ftso-core/src/DataManager";
-import { IndexerClient } from "../../libs/ftso-core/src/IndexerClient";
-import { RewardEpochManager } from "../../libs/ftso-core/src/RewardEpochManager";
-import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../libs/ftso-core/src/configs/networks";
-import { calculateResultsForVotingRound } from "../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
-import { errorString } from "../../libs/ftso-core/src/utils/error";
-import { EpochResult } from "../../libs/ftso-core/src/voting-types";
-import { ECDSASignature } from "../../libs/fsp-utils/src/ECDSASignature";
-import { ISignaturePayload, SignaturePayload } from "../../libs/fsp-utils/src/SignaturePayload";
-import { PayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
 import Web3 from "web3";
+import { ECDSASignature } from "../../../libs/fsp-utils/src/ECDSASignature";
+import { PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
+import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import { ISignaturePayload, SignaturePayload } from "../../../libs/fsp-utils/src/SignaturePayload";
+import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
+import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
+import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
+import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
+import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
+import { errorString } from "../../../libs/ftso-core/src/utils/error";
+import { EpochResult } from "../../../libs/ftso-core/src/voting-types";
+import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
 
 const web3 = new Web3("https://dummy");
 
 export class MiniFtsoCalculator {
-  logger = new Logger("mini-ftso-calculator");
   voterIndex: number;
   privateKey: string;
   // connections to the indexer and price provider
@@ -27,13 +26,16 @@ export class MiniFtsoCalculator {
 
   // Indexer top timeout margin
   private readonly indexer_top_timeout: number;
+  private logger: ILogger;
 
-  constructor(voterIndex: number, privateKey: string, manager: EntityManager) {
+  constructor(voterIndex: number, privateKey: string, manager: EntityManager, logger: ILogger) {
     this.voterIndex = voterIndex;
     this.privateKey = privateKey;
+    this.logger = logger;
     this.indexerClient = new IndexerClient(manager, 0);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
+
   }
 
   async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {

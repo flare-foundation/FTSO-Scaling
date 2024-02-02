@@ -12,8 +12,9 @@ export class RandomVoterSelector {
   totalWeight: bigint;
   voters: Address[];
   weights: bigint[];
+  defaultThresholdBIPS: number;
 
-  constructor(voters: Address[], weights: bigint[]) {
+  constructor(voters: Address[], weights: bigint[], defaultThresholdBIPS?: number) {
     if (voters.length !== weights.length) {
       throw new Error("voters and weights must have the same length");
     }
@@ -24,6 +25,13 @@ export class RandomVoterSelector {
     for (const weight of weights) {
       this.thresholds.push(this.totalWeight);
       this.totalWeight += weight;
+    }
+    this.defaultThresholdBIPS = defaultThresholdBIPS || 0;
+
+    // We limit the threshold to 5000 BIPS to avoid long running loops
+    // In practice it will be used with around 1000 BIPS or lower.
+    if (this.defaultThresholdBIPS <= 0 || this.defaultThresholdBIPS > 5000) {
+      throw new Error("Default threshold must be between 0 and 10000 BIPS");
     }
   }
 
@@ -74,11 +82,12 @@ export class RandomVoterSelector {
    * of total voter weight.
    * If the threshold is 0 it randomly selects on voter, with probability proportional to its weight.
    */
-  public randomSelectThresholdWeightVoters(randomSeed: string, thresholdBIPS: number): Address[] {
+  public randomSelectThresholdWeightVoters(randomSeed: string, providedThresholdBIPS?: number): Address[] {
     // We limit the threshold to 5000 BIPS to avoid long running loops
     // In practice it will be used with around 1000 BIPS or lower.
-    if (thresholdBIPS < 0 || thresholdBIPS > 5000) {
-      throw new Error("Threshold must be between 0 and 5000 BIPS");
+    const thresholdBIPS = providedThresholdBIPS ?? this.defaultThresholdBIPS;
+    if (!thresholdBIPS || thresholdBIPS <= 0 || thresholdBIPS > 5000) {
+      throw new Error("Threshold must be > 0 and <= 5000 BIPS");
     }
     let selectedWeight = 0n;
     const thresholdWeight = (this.totalWeight * BigInt(thresholdBIPS)) / 10000n;
@@ -115,5 +124,20 @@ export class RandomVoterSelector {
    */
   public static initialHashSeed(protocolId: number, votingRoundId: number): string {
     return Web3.utils.soliditySha3(encodeParameters(["uint256", "uint256"], [protocolId, votingRoundId]))!;
+  }
+
+  /**
+   * Given protocol ID, voting round ID and address, it checks if the address is in the selection set.
+   * If thresholdBIPS is not provided, the default threshold is used.
+   */
+  public inSelectionSet(protocolId: number, votingRoundId: number, address: string, thresholdBIPS?: number): boolean {
+    const initialSeed = RandomVoterSelector.initialHashSeed(protocolId, votingRoundId);
+    let result = this.randomSelectThresholdWeightVoters(initialSeed, thresholdBIPS);
+    for (const anAddress of result) {
+      if (anAddress.toLowerCase() === address.toLowerCase()) {
+        return true;
+      }
+    }
+    return false;
   }
 }

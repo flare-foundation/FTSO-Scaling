@@ -182,7 +182,7 @@ export class DataManager {
         status: signaturesResponse.status,
       };
     }
-    const signatures = this.extractSignatures(
+    const signatures = DataManager.extractSignatures(
       votingRoundId,
       dataForCalculationsResponse.data.rewardEpoch,
       signaturesResponse.data.signatures,
@@ -301,7 +301,7 @@ export class DataManager {
       };
     }
     const signatures = submitSignaturesSubmissionResponse.data;
-    this.sortSubmissionDataArray(signatures);
+    DataManager.sortSubmissionDataArray(signatures);
     // Finalization data only on the rewarded range
     const submitFinalizeSubmissionResponse = await this.indexerClient.getFinalizationDataInRange(
       EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
@@ -313,7 +313,7 @@ export class DataManager {
       };
     }
     const finalizations = submitFinalizeSubmissionResponse.data;
-    this.sortSubmissionDataArray(finalizations);
+    DataManager.sortSubmissionDataArray(finalizations);
     return {
       status: DataAvailabilityStatus.OK,
       data: {
@@ -337,7 +337,7 @@ export class DataManager {
    * @param submissions
    * @returns
    */
-  private extractSignatures(
+  public static extractSignatures(
     votingRoundId: number,
     rewardEpoch: RewardEpoch,
     submissions: SubmissionData[],
@@ -384,7 +384,7 @@ export class DataManager {
     const result = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
     for (const [hash, sigMap] of signatureMap.entries()) {
       const values = [...sigMap.values()];
-      this.sortSubmissionDataArray(values);
+      DataManager.sortSubmissionDataArray(values);
       result.set(hash, values);
     }
     return result;
@@ -651,7 +651,7 @@ export class DataManager {
    * Sorts submission data array in the blockchain chronological order.
    * @param submissionDataArray
    */
-  private sortSubmissionDataArray<T>(submissionDataArray: GenericSubmissionData<T>[]) {
+  public static sortSubmissionDataArray<T>(submissionDataArray: GenericSubmissionData<T>[]) {
     submissionDataArray.sort((a, b) => {
       const order = a.blockNumber - b.blockNumber;
       if (order !== 0) {
@@ -680,7 +680,7 @@ export class DataManager {
       votingRoundIdWithOffsetToSubmission.get(votingRoundId).push(submission);
     }
     for (const submissionList of votingRoundIdWithOffsetToSubmission.values()) {
-      this.sortSubmissionDataArray(submissionList);
+      DataManager.sortSubmissionDataArray(submissionList);
     }
     return votingRoundIdWithOffsetToSubmission;
   }
