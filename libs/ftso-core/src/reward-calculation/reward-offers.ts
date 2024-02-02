@@ -32,7 +32,7 @@ export function distributeInflationRewardOfferToFeeds(
  */
 export function granulatedPartialOfferMap(
   startVotingRoundId: number,
-  endVotingRoundId,
+  endVotingRoundId: number,
   rewardOffers: RewardOffers
 ): Map<number, Map<string, IPartialRewardOffer[]>> {
   const rewardOfferMap = new Map<number, Map<string, IPartialRewardOffer[]>>();

@@ -1,6 +1,6 @@
 import { expect, assert } from "chai";
-import { getTestFile } from "../utils/getTestFile";
-import { generateAddress, generateRewardEpoch } from "../utils/generators";
+import { getTestFile } from "../../utils/getTestFile";
+import { generateAddress, generateRewardEpoch } from "../../utils/generators";
 
 describe(`RewardEpoch, ${getTestFile(__filename)}`, function () {
   const rewardEpoch = generateRewardEpoch();
