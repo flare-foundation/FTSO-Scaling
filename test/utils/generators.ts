@@ -13,12 +13,19 @@ import {
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
-import { Bytes20, Feed } from "../../libs/ftso-core/src/voting-types";
+import {
+  Bytes20,
+  Feed,
+  MedianCalculationResult,
+  MedianCalculationSummary,
+} from "../../libs/ftso-core/src/voting-types";
 import { encodeParameters, encodeParameter } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 import Web3, { utils } from "web3";
 import { RewardEpoch } from "../../libs/ftso-core/src/RewardEpoch";
+import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { calculateMedian } from "../../libs/ftso-core/src/ftso-calculation/ftso-median";
 
 const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
@@ -283,6 +290,12 @@ export function generateAddress(name: string) {
   return Web3.utils.keccak256(name).slice(0, 42);
 }
 
+export function generateFeedName(name: string) {
+  name = name.slice(0, 7);
+
+  return Web3.utils.padRight(Web3.utils.utf8ToHex(name), 16);
+}
+
 /**
  * @param feed has to be a string of length 8
  * @param rewardEpochId
@@ -294,7 +307,7 @@ export function generateRewardsOffer(feed: string, rewardEpochId: number, claimB
 
   const rawRewardsOffered = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
-    feedName: Web3.utils.padRight(Web3.utils.utf8ToHex(feed), 16),
+    feedName: generateFeedName(feed),
     decimals: "0x12",
     amount: "0x10000000000",
     minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
@@ -312,7 +325,7 @@ export function generateRewardsOffer(feed: string, rewardEpochId: number, claimB
  * @param rewardEpochId
  */
 export function generateInflationRewardOffer(feeds: string[], rewardEpochId: number) {
-  const unprefixedFeedsInHex = feeds.map(feed => Web3.utils.padRight(Web3.utils.utf8ToHex(feed), 16).slice(2, 18));
+  const unprefixedFeedsInHex = feeds.map(feed => generateFeedName(feed).slice(2, 18));
 
   const rawInflationRewardOffer = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
@@ -444,4 +457,41 @@ export function generateRewardEpoch() {
   );
 
   return rewardEpoch;
+}
+
+export function generateMedianCalculationResult(numberOfVoters: number) {
+  const voters: string[] = [];
+  const feedValues: ValueWithDecimals[] = [];
+
+  const weights: bigint[] = [];
+
+  for (let j = 0; j < numberOfVoters; j++) {
+    const valueWithDecimal: ValueWithDecimals = {
+      isEmpty: !(j % 6),
+      value: 1000 + (j % 5),
+      decimals: 2,
+    };
+    voters.push(generateAddress(`${j}`));
+    feedValues.push(valueWithDecimal);
+    weights.push(100n + BigInt(j));
+  }
+
+  const data = calculateMedian(voters, feedValues, weights, 2);
+
+  const feed: Feed = {
+    name: generateFeedName("USD EUR"),
+    decimals: 2,
+  };
+
+  const medianCalculationResult: MedianCalculationResult = {
+    votingRoundId: 0,
+    feed,
+    voters,
+    feedValues,
+    data,
+    weights,
+    totalVotingWeight: weights.reduce((a, b) => a + b, 0n),
+  };
+
+  return medianCalculationResult;
 }
