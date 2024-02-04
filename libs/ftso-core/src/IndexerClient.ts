@@ -7,12 +7,14 @@ import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
 import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
 import {
   CONTRACTS,
-  ContractDefinitions,
-  ContractMethodNames,
   EPOCH_SETTINGS,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
 } from "./configs/networks";
+import {
+  ContractDefinitions,
+  ContractMethodNames
+} from "./configs/contracts";
 import {
   FullVoterRegistrationInfo,
   InflationRewardsOffered,
@@ -252,7 +254,7 @@ export class IndexerClient {
    */
   public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<IndexerResponse<RewardEpochStarted>> {
     const eventName = RewardEpochStarted.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId);
+    const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId);
     const status = await this.ensureLowerBlock(startTime);
     let data: RewardEpochStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
@@ -273,7 +275,7 @@ export class IndexerClient {
    */
   public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<IndexerResponse<RandomAcquisitionStarted>> {
     const eventName = RandomAcquisitionStarted.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
+    const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
     const status = await this.ensureLowerBlock(startTime);
     let data: RandomAcquisitionStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
@@ -332,7 +334,7 @@ export class IndexerClient {
    */
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
     const eventName = VotePowerBlockSelected.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
+    const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
     const status = await this.ensureLowerBlock(startTime);
     let data: VotePowerBlockSelected | undefined;
     if (status === BlockAssuranceResult.OK) {
@@ -456,11 +458,11 @@ export class IndexerClient {
     const transactionsResults = await this.queryTransactions(CONTRACTS.Submission, functionName, startTime, endTime);
     const submits: SubmissionData[] = transactionsResults.map(tx => {
       const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
+      const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
       const messages = decodePayloadMessageCalldata(tx);
       return {
         submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
+        relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
         votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
         timestamp,
@@ -498,10 +500,10 @@ export class IndexerClient {
     );
     const finalizations: FinalizationData[] = transactionsResults.map(tx => {
       const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
+      const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
       return {
         submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
+        relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
         votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
         timestamp,

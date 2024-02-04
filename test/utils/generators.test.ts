@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import { decodeEvent } from "../../libs/ftso-core/src/utils/EncodingUtils";
-import { generateEvent } from "./generators";
+import { generateEvent } from "./basic-generators";
 
 
 describe("generators", () => {

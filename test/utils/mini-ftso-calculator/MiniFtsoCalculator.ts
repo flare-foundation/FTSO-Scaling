@@ -56,7 +56,7 @@ export class MiniFtsoCalculator {
   private async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(
       votingRoundId,
-      RANDOM_GENERATION_BENCHING_WINDOW,
+      RANDOM_GENERATION_BENCHING_WINDOW(),
       this.indexer_top_timeout
     );
     if (dataResponse.status !== DataAvailabilityStatus.OK) {
@@ -73,6 +73,7 @@ export class MiniFtsoCalculator {
 
   public async getSignaturePayload(votingRoundId: number): Promise<string> {
     let result = await this.prepareCalculationResultData(votingRoundId);
+    console.dir(result)
     const merkleRoot = result.merkleTree.root;
     const message: IProtocolMessageMerkleRoot = {
       protocolId: FTSO2_PROTOCOL_ID,

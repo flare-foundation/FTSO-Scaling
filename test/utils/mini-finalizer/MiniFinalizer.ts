@@ -7,12 +7,14 @@ import { DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { CONTRACTS, ContractMethodNames, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
+import { CONTRACTS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
+
+import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
 import { TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
 import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
 import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
-import { TestVoter, generateTx } from "../generators";
+import { TestVoter, generateTx } from "../basic-generators";
 import { Queue } from "./Queue";
 
 const encodingUtils = EncodingUtils.instance;
@@ -85,8 +87,7 @@ export class MiniFinalizer {
         signatures,
         protocolMessageMerkleRoot: messageData,
       }
-      const randomSeed = RandomVoterSelector.initialHashSeed(messageData.protocolId, messageData.votingRoundId);
-      if (this.voterSelector.inSelectionSet(messageData.protocolId, messageData.votingRoundId, this.voter.submitAddress)) {
+      if (this.voterSelector.inSelectionSet(matchingSigningPolicy.seed, messageData.protocolId, messageData.votingRoundId, this.voter.submitAddress)) {
         return;
       }
 
@@ -117,7 +118,7 @@ export class MiniFinalizer {
   ) {
     const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
       ContractMethodNames.submitSignatures,
-      EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
+      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
       upToTime
     );
 

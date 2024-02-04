@@ -17,7 +17,7 @@ export interface IConfig {
 
 export default () => {
   const api_keys = process.env.API_KEYS?.split(",") || [""];
-  const epochs = process.env.EPOCH_SETTINGS.split(",").map(x => parseInt(x, 10));
+  const epochs = process.env.EPOCH_SETTINGS().split(",").map(x => parseInt(x, 10));
   const config: IConfig = {
     port: parseInt(process.env.PORT || "3000"),
     api_keys,

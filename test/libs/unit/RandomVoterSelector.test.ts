@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
 import { ethers } from "ethers";
-import e from "express";
+import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
+import Web3 from "web3";
 
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
@@ -18,8 +18,9 @@ describe("RandomVoterSelector", () => {
   it("Should calculate initial hashes like ethers", () => {
     const protocolId = 1;
     const votingRoundId = 2;
+    const rewardEpochSeed = Web3.utils.randomHex(32);
 
-    const selectorHash = RandomVoterSelector.initialHashSeed(protocolId, votingRoundId);
+    const selectorHash = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     const abiEncoded = coder.encode(["uint256", "uint256"], [protocolId, votingRoundId]);
     const ethersHash = ethers.keccak256(abiEncoded);
     expect(selectorHash).to.equal(ethersHash);
@@ -64,10 +65,11 @@ describe("RandomVoterSelector", () => {
   });
 
   it("Should selectVoterIndex return a valid index", () => {
+    const rewardEpochSeed = Web3.utils.randomHex(32);
     const randomVoterSelector = new RandomVoterSelector(voters, weights);
     for (let protocolId = 1; protocolId <= 5; protocolId++) {
       for (let votingRoundId = 0; votingRoundId <= 10; votingRoundId++) {
-        const initialSeed = RandomVoterSelector.initialHashSeed(protocolId, votingRoundId);
+        const initialSeed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
         const index = randomVoterSelector.selectVoterIndex(initialSeed);
         expect(index).to.be.greaterThanOrEqual(0);
         expect(index).to.be.lessThan(voters.length);
@@ -79,6 +81,7 @@ describe("RandomVoterSelector", () => {
     const randomVoterSelector = new RandomVoterSelector(voters, weights);
     const protocolId = 1;
     const votingRoundId = 1;
+    const rewardEpochSeed = Web3.utils.randomHex(32);
     const expected = [
       "0xcc69885fda6bcc1a4ace058b4a62bf5e179ea78fd58a1ccd71c22cc9b688792f",
       "0x66b32740ad8041bcc3b909c72d7e1afe60094ec55e3cde329b4b3a28501d826c",
@@ -86,7 +89,7 @@ describe("RandomVoterSelector", () => {
       "0x42e6195371582c144e54fb9b35f45bc228418970057066f7f1f7dcb763d81d17",
       "0xa742654b1bff4170fd0a35d8c7dc2e5a0dcf6591c7b0acfd2c9d245ad0ad40f5",
     ];
-    const seed = RandomVoterSelector.initialHashSeed(protocolId, votingRoundId);
+    const seed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     const randoms = randomVoterSelector.randomNumberSequence(seed, 5);
     expect(expected).to.deep.equal(randoms);
     expect(expected[0]).to.equal(seed);
@@ -102,7 +105,8 @@ describe("RandomVoterSelector", () => {
     }
     const protocolId = 1;
     const votingRoundId = 1;
-    const seed = RandomVoterSelector.initialHashSeed(protocolId, votingRoundId);
+    const rewardEpochSeed = Web3.utils.randomHex(32);
+    const seed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     const result = randomVoterSelector.randomSelectThresholdWeightVoters(seed, weightThresholdBIPS);
     let sum = 0n;
     for (const voter of result) {

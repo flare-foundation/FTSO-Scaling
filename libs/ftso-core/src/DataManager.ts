@@ -15,10 +15,10 @@ import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import {
   ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
-  ContractMethodNames,
   EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
 } from "./configs/networks";
+import { ContractMethodNames } from "./configs/contracts";
 import {
   DataForCalculations,
   DataForCalculationsPartial,
@@ -228,8 +228,8 @@ export class DataManager {
   ): Promise<DataMangerResponse<CommitAndRevealSubmissionsMappingsForRange>> {
     const commitSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
       ContractMethodNames.submit1,
-      EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId),
-      EPOCH_SETTINGS.votingEpochEndSec(endVotingRoundId)
+      EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId),
+      EPOCH_SETTINGS().votingEpochEndSec(endVotingRoundId)
     );
     // Timeout is only considered when querying the reveals data which come later
     if (commitSubmissionResponse.status !== BlockAssuranceResult.OK) {
@@ -239,8 +239,8 @@ export class DataManager {
     }
     const revealSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
       ContractMethodNames.submit2,
-      EPOCH_SETTINGS.votingEpochStartSec(startVotingRoundId + 1),
-      EPOCH_SETTINGS.revealDeadlineSec(endVotingRoundId + 1),
+      EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId + 1),
+      EPOCH_SETTINGS().revealDeadlineSec(endVotingRoundId + 1),
       endTimeout
     );
     if (revealSubmissionResponse.status === BlockAssuranceResult.NOT_OK) {
@@ -292,8 +292,8 @@ export class DataManager {
   ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
     const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
       ContractMethodNames.submitSignatures,
-      EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
-      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
+      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
+      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
     );
     if (submitSignaturesSubmissionResponse.status !== BlockAssuranceResult.OK) {
       return {
@@ -304,8 +304,8 @@ export class DataManager {
     DataManager.sortSubmissionDataArray(signatures);
     // Finalization data only on the rewarded range
     const submitFinalizeSubmissionResponse = await this.indexerClient.getFinalizationDataInRange(
-      EPOCH_SETTINGS.revealDeadlineSec(votingRoundId + 1) + 1,
-      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
+      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
+      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
     );
     if (submitFinalizeSubmissionResponse.status !== BlockAssuranceResult.OK) {
       return {
@@ -691,6 +691,6 @@ export class DataManager {
    * @returns
    */
   private filterRevealsByDeadlineTime(reveals: SubmissionData[]) {
-    return reveals.filter(reveal => reveal.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds);
+    return reveals.filter(reveal => reveal.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds);
   }
 }

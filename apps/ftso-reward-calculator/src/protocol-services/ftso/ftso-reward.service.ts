@@ -39,7 +39,7 @@ export class FtsoRewardingService extends BaseRewardingService {
   async calculateRewardsForEpoch(rewardEpochId: number): Promise<RewardClaimUnit[]> {
     const mergedClaims = await rewardClaimsForRewardEpoch(
       rewardEpochId,
-      RANDOM_GENERATION_BENCHING_WINDOW,
+      RANDOM_GENERATION_BENCHING_WINDOW(),
       this.dataManager,
       this.rewardEpochManger
     );

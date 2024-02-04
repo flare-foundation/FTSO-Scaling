@@ -1,7 +1,8 @@
 import { DataSource, EntityManager } from "typeorm";
 import { TLPTransaction, TLPEvents, TLPState } from "../../libs/ftso-core/src/orm/entities";
 import { FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
-import { currentTimeSec, generateState } from "./generators";
+import { currentTimeSec } from "./generators";
+import { generateState } from "./basic-generators";
 
 const sqliteDatabase = `:memory:`;
 
@@ -58,7 +59,9 @@ export class MockIndexerDB {
     const lowerState = generateState(FIRST_DATABASE_INDEX_STATE, 0);
     const upperState = generateState(LAST_DATABASE_INDEX_STATE, 1);
     lowerState.block_timestamp = startTimeSec;
+    lowerState.index = 0;
     upperState.block_timestamp = 0;
+    lowerState.index = 1;
 
     await em.save([lowerState, upperState]);
 

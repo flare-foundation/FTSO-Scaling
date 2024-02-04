@@ -30,7 +30,7 @@ export function calculateSigningRewards(
   const votingRoundId = data.dataForCalculations.votingRoundId;
   let rewardEligibleSignatures: GenericSubmissionData<ISignaturePayload>[] = [];
   if (!data.firstSuccessfulFinalization) {
-    const deadlineTimestamp = EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1);
+    const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
     const signatures = mostFrequentHashSignaturesBeforeDeadline(
       votingRoundId,
       data.signatures,
@@ -56,7 +56,7 @@ export function calculateSigningRewards(
     //   end of the voting epoch id = votingRoundId + 1
     const deadlineTimestamp = Math.min(
       data.firstSuccessfulFinalization.timestamp,
-      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1)
+      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1)
     );
     rewardEligibleSignatures = signatures.filter(
       signature =>

@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { LRUCache } from "lru-cache";
 import { EntityManager } from "typeorm";
 import { IPayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
 import {
@@ -9,9 +10,9 @@ import {
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
+import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
 import {
   CONTRACTS,
-  ContractMethodNames,
   FTSO2_PROTOCOL_ID,
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../libs/ftso-core/src/configs/networks";
@@ -25,7 +26,6 @@ import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
-import { LRUCache } from "lru-cache";
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -131,7 +131,7 @@ export class FtsoDataProviderService {
   private async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(
       votingRoundId,
-      RANDOM_GENERATION_BENCHING_WINDOW,
+      RANDOM_GENERATION_BENCHING_WINDOW(),
       this.indexer_top_timeout
     );
     if (dataResponse.status !== DataAvailabilityStatus.OK) {

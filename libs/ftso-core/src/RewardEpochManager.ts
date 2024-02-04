@@ -30,12 +30,12 @@ export class RewardEpochManager {
    * @returns
    */
   async getRewardEpoch(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
-    const currentVotingEpochId = EPOCH_SETTINGS.votingEpochForTime(Date.now());
+    const currentVotingEpochId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
     if (votingEpochId > currentVotingEpochId) {
       return undefined; // future voting epoch
     }
 
-    const expectedRewardEpochId = EPOCH_SETTINGS.expectedRewardEpochForVotingEpoch(votingEpochId);
+    const expectedRewardEpochId = EPOCH_SETTINGS().expectedRewardEpochForVotingEpoch(votingEpochId);
 
     // Try with expected reward epoch
     const rewardEpoch = this.rewardEpochsCache.get(expectedRewardEpochId);

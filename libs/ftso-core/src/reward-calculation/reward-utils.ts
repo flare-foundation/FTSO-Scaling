@@ -24,9 +24,9 @@ export function isSignatureInGracePeriod(
 ) {
   return (
     signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
-    signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds &&
+    signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     signatureSubmission.relativeTimestamp <
-      EPOCH_SETTINGS.revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC
+      EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC
   );
 }
 
@@ -40,7 +40,7 @@ export function isSignatureBeforeTimestamp(
 ) {
   return (
     signatureSubmission.votingEpochIdFromTimestamp >= votingRoundId + 1 &&
-    signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds &&
+    signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     signatureSubmission.timestamp <= timestamp
   );
 }
@@ -57,8 +57,8 @@ export function isFinalizationInGracePeriodAndEligible(
   return (
     eligibleVoters.has(finalization.submitAddress) &&
     finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
-    finalization.relativeTimestamp >= EPOCH_SETTINGS.revealDeadlineSeconds &&
-    finalization.relativeTimestamp < EPOCH_SETTINGS.revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC
+    finalization.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
+    finalization.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC
   );
 }
 
@@ -70,6 +70,6 @@ export function isFinalizationOutsideOfGracePeriod(votingRoundId: number, finali
     finalization.votingEpochIdFromTimestamp >= votingRoundId + 1 &&
     (finalization.votingEpochIdFromTimestamp > votingRoundId + 1 ||
       finalization.relativeTimestamp >=
-        EPOCH_SETTINGS.revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC)
+        EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC)
   );
 }

@@ -104,7 +104,7 @@ export async function partialRewardClaimsForVotingRound(
     rewardEpoch.signingPolicy.voters,
     rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight))
   );
-  const initialHash = RandomVoterSelector.initialHashSeed(FTSO2_PROTOCOL_ID, votingRoundId);
+  const initialHash = RandomVoterSelector.initialHashSeed(rewardEpoch.signingPolicy.seed, FTSO2_PROTOCOL_ID, votingRoundId);
   const eligibleFinalizationRewardVotersInGracePeriod = new Set(
     ...randomVoterSelector.randomSelectThresholdWeightVoters(
       initialHash,

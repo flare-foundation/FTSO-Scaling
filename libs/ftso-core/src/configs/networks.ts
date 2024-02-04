@@ -1,92 +1,7 @@
 import { RewardEpochStarted } from "../events";
 import { EpochSettings } from "../utils/EpochSettings";
 import { isValidContractAddress } from "../utils/voting-utils";
-import { Address } from "../voting-types";
-
-interface FlareSystemManagerDefinition {
-  name: "FlareSystemManager";
-  address: Address;
-}
-
-interface FtsoRewardOffersManagerDefinition {
-  name: "FtsoRewardOffersManager";
-  address: Address;
-}
-
-interface RewardManagerDefinition {
-  name: "RewardManager";
-  address: Address;
-}
-
-interface SubmissionDefinition {
-  name: "Submission";
-  address: Address;
-}
-
-interface RelayDefinition {
-  name: "Relay";
-  address: Address;
-}
-
-interface FlareSystemCalculatorDefinition {
-  name: "FlareSystemCalculator";
-  address: Address;
-}
-
-interface VoterRegistryDefinition {
-  name: "VoterRegistry";
-  address: Address;
-}
-
-interface FtsoMerkleStructsDefinition {
-  name: "FtsoMerkleStructs";
-  address: Address;
-}
-
-interface ProtocolMerkleStructsDefinition {
-  name: "ProtocolMerkleStructs";
-  address: Address;
-}
-
-export type ContractDefinitions =
-  | FlareSystemManagerDefinition
-  | FtsoRewardOffersManagerDefinition
-  | RewardManagerDefinition
-  | SubmissionDefinition
-  | RelayDefinition
-  | FlareSystemCalculatorDefinition
-  | VoterRegistryDefinition
-  | ProtocolMerkleStructsDefinition;
-
-export enum ContractMethodNames {
-  submit1 = "submit1",
-  submit2 = "submit2",
-  submit3 = "submit3",
-  submitSignatures = "submitSignatures",
-  relay = "relay",
-
-  // Struct definitions helper methods (to extract abis)
-  // FTSO merkle tree node definitions
-  feedStruct = "feedStruct",
-  randomStruct = "randomStruct",
-  feedWithProofStruct = "feedWithProofStruct",
-
-  // Rewarding definitions
-  rewardClaimStruct = "rewardClaimStruct",
-  rewardClaimWithProofStruct = "rewardClaimWithProofStruct",
-}
-
-export interface NetworkContractAddresses {
-  FlareSystemManager: FlareSystemManagerDefinition;
-  FtsoRewardOffersManager: FtsoRewardOffersManagerDefinition;
-  RewardManager: RewardManagerDefinition;
-  Submission: SubmissionDefinition;
-  Relay: RelayDefinition;
-  FlareSystemCalculator: FlareSystemCalculatorDefinition;
-  VoterRegistry: VoterRegistryDefinition;
-  FtsoMerkleStructs: FtsoMerkleStructsDefinition;
-  ProtocolMerkleStructs: ProtocolMerkleStructsDefinition;
-}
+import { NetworkContractAddresses } from "./contracts";
 
 const TEST_CONFIG: NetworkContractAddresses = {
   FlareSystemManager: { name: "FlareSystemManager", address: "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF" },
@@ -212,7 +127,14 @@ const epochSettings = () => {
   }
 };
 
-export const EPOCH_SETTINGS = epochSettings();
+const constantEpochSettings = epochSettings();
+export const EPOCH_SETTINGS = () => {
+  const network = process.env.NETWORK as networks;
+  if(network === "from-env") {
+    return epochSettings();
+  }
+  return constantEpochSettings;
+}
 
 const randomGenerationBenchingWindow = () => {
   switch (process.env.NETWORK) {
@@ -236,7 +158,14 @@ const randomGenerationBenchingWindow = () => {
   }
 };
 
-export const RANDOM_GENERATION_BENCHING_WINDOW = randomGenerationBenchingWindow();
+const constantRandomGenerationBenchingWindow = randomGenerationBenchingWindow();
+
+export const RANDOM_GENERATION_BENCHING_WINDOW = () => {
+  if(process.env.NETWORK === "from-env") {
+    return randomGenerationBenchingWindow();
+  }
+  return constantRandomGenerationBenchingWindow;
+}
 
 const burnAddress = () => {
   switch (process.env.NETWORK) {
@@ -265,6 +194,7 @@ export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinaliza
 
 export const GENESIS_REWARD_EPOCH_START_EVENT: RewardEpochStarted = {
   rewardEpochId: 0,
-  timestamp: EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(0),
-  startVotingRoundId: EPOCH_SETTINGS.expectedFirstVotingRoundForRewardEpoch(0),
+  timestamp: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0),
+  startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(0),
 };
+

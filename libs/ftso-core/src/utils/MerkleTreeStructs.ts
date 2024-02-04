@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { CONTRACTS, ContractMethodNames } from "../configs/networks";
+import { CONTRACTS } from "../configs/networks";
+import { ContractMethodNames } from "../configs/contracts";
 import { MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();

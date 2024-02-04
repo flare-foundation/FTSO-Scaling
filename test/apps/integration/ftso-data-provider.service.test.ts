@@ -1,29 +1,28 @@
-import { CONTRACTS, ContractMethodNames, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { CONTRACTS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
 
-import FakeTimers from "@sinonjs/fake-timers";
-import {
-  generateVoters,
-  generateRewardEpochEvents,
-  TestVoter,
-  generateTx,
-  currentTimeSec,
-} from "../../utils/generators";
-import { MockIndexerDB } from "../../utils/db";
-import { expect } from "chai";
 import { ConfigService } from "@nestjs/config";
-import { FtsoDataProviderService } from "../../../apps/ftso-data-provider/src/ftso-data-provider.service";
-import MockAdapter from "axios-mock-adapter";
+import FakeTimers from "@sinonjs/fake-timers";
 import axios from "axios";
-import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
-import { Feed } from "../../../libs/ftso-core/src/voting-types";
-import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
-import { generateRandomAddress } from "../../utils/testRandom";
+import MockAdapter from "axios-mock-adapter";
+import { expect } from "chai";
+import { IConfig } from "../../../apps/ftso-data-provider/src/config/configuration";
+import { FtsoDataProviderService } from "../../../apps/ftso-data-provider/src/ftso-data-provider.service";
 import {
   encodeCommitPayloadMessage,
   encodeRevealPayloadMessage,
 } from "../../../apps/ftso-data-provider/src/response-encoders";
+import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
+import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
+import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
+import { Feed } from "../../../libs/ftso-core/src/voting-types";
+import { TestVoter, generateTx, generateVoters } from "../../utils/basic-generators";
+import { MockIndexerDB } from "../../utils/db";
+import {
+  currentTimeSec,
+  generateRewardEpochEvents,
+} from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
-import { IConfig } from "../../../apps/ftso-data-provider/src/config/configuration";
+import { generateRandomAddress } from "../../utils/testRandom";
 
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const feeds: Feed[] = [
@@ -34,7 +33,6 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const samplePrices = [38573.26, 2175.12, 0.02042];
 
   const offerCount = 2;
-  const epochSettings = EPOCH_SETTINGS;
   const indexerHistorySec = 1000;
   const enc = EncodingUtils.instance;
 
@@ -62,7 +60,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
   beforeEach(async () => {
     db = await MockIndexerDB.create();
-    clock = FakeTimers.install({ now: epochSettings.expectedRewardEpochStartTimeSec(0) * 1000 });
+    clock = FakeTimers.install({ now: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0) * 1000 });
     mock = new MockAdapter(axios);
   });
 
@@ -85,7 +83,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     const service = new FtsoDataProviderService(db.em, configService);
 
     const submissionAddress = generateRandomAddress();
-    const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+    const votingRound = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
 
     const commit = (await service.getCommitData(votingRound, submissionAddress)).payload;
 
@@ -107,7 +105,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     });
 
     const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
-    const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+    const votingRound = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
 
     clock.tick(1000);
 
@@ -127,7 +125,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       await db.addTransaction([commitTx]);
     }
 
-    clock.tick(epochSettings.votingEpochDurationSeconds * 1000);
+    clock.tick(EPOCH_SETTINGS().votingEpochDurationSeconds * 1000);
 
     for (let i = 0; i < voters.length; i++) {
       const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound));
@@ -143,7 +141,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       await db.addTransaction([revealTx]);
     }
 
-    clock.tick(epochSettings.revealDeadlineSeconds * 1000 + 1);
+    clock.tick(EPOCH_SETTINGS().revealDeadlineSeconds * 1000 + 1);
 
     await db.syncTimeToNow();
 
@@ -158,11 +156,11 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
-    const epochEvents = await generateRewardEpochEvents(epochSettings, feeds, offerCount, rewardEpochId, voters);
+    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), feeds, offerCount, rewardEpochId, voters);
 
     await db.addEvent(epochEvents);
 
-    clock.setSystemTime(epochSettings.expectedRewardEpochStartTimeSec(rewardEpochId) * 1000 + 1);
+    clock.setSystemTime(EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId) * 1000 + 1);
 
     await db.syncTimeToNow();
   }
