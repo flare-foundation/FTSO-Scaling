@@ -82,6 +82,9 @@ export class TLPEvents {
 
   @Column()
   timestamp: number;
+
+  @Column()
+  block_number: number;
 }
 
 export type ITLPTransaction = new () => TLPTransaction;

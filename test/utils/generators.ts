@@ -243,6 +243,7 @@ export function generateEvent(
   e.topic3 = indexedValues.length >= 3 ? encodeParameter(indexedTypes[2], indexedValues[2]) : "NULL";
   e.log_index = 1;
   e.timestamp = timestamp;
+  e.block_number = timestamp;
   return e;
 }
 
