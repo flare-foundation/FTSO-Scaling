@@ -40,19 +40,19 @@ export const SIGNING_REWARD_SPLIT_BIPS_TO_STAKE = 5000n; // BIPS (percentage)
  */
 export const SIGNING_BIPS = 1000n;
 export const FINALIZATION_BIPS = 1000n;
+
 /**
  * BIPS and PPM total values.
  */
-
 export const TOTAL_BIPS = 10000n;
 export const TOTAL_PPM = 1000000n;
+
 /**
  * In case less then certain percentage of the total weight of the voting weight deposits signatures for a single hash,
  * in the signature rewarding window, the signatures are not rewarded.
  * In case that exactly the same weight is deposited in the signature rewarding window, for multiple hashes (e.g. 2 hashes),
  * both get reward.
  */
-
 export const MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS = 3000;
 /**
  * The share of weight that gets randomly selected for finalization reward.
