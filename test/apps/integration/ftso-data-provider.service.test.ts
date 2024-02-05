@@ -126,14 +126,14 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       const encodedCommit = encodeCommitPayloadMessage(
         await services[i].getCommitData(votingRound, voters[i].submitAddress)
       );
-      const comimtPayload = sigCommit + unPrefix0x(encodedCommit);
+      const commitPayload = sigCommit + unPrefix0x(encodedCommit);
       const commitTx = generateTx(
         voters[i].submitAddress,
         CONTRACTS.Submission.address,
         sigCommit,
         1,
         currentTimeSec(),
-        comimtPayload
+        commitPayload
       );
       await db.addTransaction([commitTx]);
     }
@@ -164,6 +164,10 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       expect(result.votingRoundId).to.be.equal(votingRound);
       expect(result.isSecureRandom).to.be.equal(true);
       mRoots.add(result.merkleRoot);
+
+      const fullMerkleTree = await services[i].getFullMerkleTree(votingRound);
+      expect(fullMerkleTree.merkleRoot).to.be.equal(result.merkleRoot);
+      expect(fullMerkleTree.isSecureRandom).to.be.equal(true);
     }
     expect(mRoots.size).to.be.equal(1);
   });
