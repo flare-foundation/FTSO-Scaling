@@ -3,7 +3,7 @@ import { Feed } from "../voting-types";
 export interface ValueWithDecimals {
   readonly isEmpty: boolean;
   readonly value: number; // Never a float
-  readonly decimals: number; //never actually used
+  readonly decimals: number;
 }
 
 const EMPTY_FEED_VALUE = "".padStart(8, "0");
@@ -68,7 +68,7 @@ export namespace FeedValueEncoder {
 
   export function feedForValue(value: number, decimals: number) {
     return {
-      isEmpty: true, //is this irrelevant??
+      isEmpty: false,
       value,
       decimals,
     };

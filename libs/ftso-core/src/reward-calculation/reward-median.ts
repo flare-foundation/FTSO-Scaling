@@ -1,11 +1,12 @@
-import coder from "web3-eth-abi";
-import utils from "web3-utils";
+import { encodeParameters } from "web3-eth-abi";
+import { soliditySha3 } from "web3-utils";
 import { VoterWeights } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
 import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
 import { rewardDistributionWeight } from "./reward-utils";
+import Web3 from "web3";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
@@ -38,8 +39,8 @@ export function calculateMedianRewardClaims(
   function randomSelect(feedName: string, votingRoundId: number, voterAddress: Address): boolean {
     return (
       BigInt(
-        utils.soliditySha3(
-          coder.encodeParameters(["bytes8", "uint256", "address"], [feedName, votingRoundId, voterAddress])
+        soliditySha3(
+          encodeParameters(["bytes8", "uint256", "address"], ["0x" + feedName, votingRoundId, voterAddress])
         )!
       ) %
         2n ===
@@ -85,13 +86,15 @@ export function calculateMedianRewardClaims(
       pct: value > lowPCT && value < highPCT,
       eligible: true,
     };
+
     voterRecords.push(record);
   }
 
   // calculate iqr and pct sums
   let iqrSum = 0n;
-  let pctSum: 0n;
+  let pctSum = 0n;
   for (const voterRecord of voterRecords) {
+    console.log(voterRecord);
     if (!voterRecord.eligible) {
       continue;
     }
@@ -153,8 +156,8 @@ export function calculateMedianRewardClaims(
 
     totalReward += reward;
 
-    const rewardClaims = generateMedianRewardClaimsForVoter(reward, voterWeights.get(voterRecord.voterAddress)!);
-    rewardClaims.push(...rewardClaims);
+    const rewardClaim = generateMedianRewardClaimsForVoter(reward, voterWeights.get(voterRecord.voterAddress)!);
+    rewardClaims.push(...rewardClaim);
   }
   // Assert
   if (totalReward !== offer.amount) {
