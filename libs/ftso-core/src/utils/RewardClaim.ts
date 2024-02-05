@@ -77,11 +77,13 @@ export namespace RewardClaim {
       let mergedClaim = beneficiaryClaimsByType.get(claim.claimType);
       if (!mergedClaim) {
         mergedClaim = { ...claim, beneficiary };
+        beneficiaryClaimsByType.set(claim.claimType, mergedClaim);
       } else {
         mergedClaim.amount += claim.amount;
       }
     }
     const mergedClaims: IPartialRewardClaim[] = [];
+
     for (const beneficiaryClaimsByType of claimsByBeneficiaryAndType.values()) {
       for (const mergedClaim of beneficiaryClaimsByType.values()) {
         mergedClaims.push(mergedClaim);
@@ -99,10 +101,8 @@ export namespace RewardClaim {
   export function convertToRewardClaims(rewardEpochId: number, claims: IPartialRewardClaim[]): IRewardClaim[] {
     return claims.map(claim => {
       return {
+        ...claim,
         rewardEpochId,
-        beneficiary: claim.beneficiary,
-        amount: claim.amount,
-        claimType: claim.claimType,
       };
     });
   }

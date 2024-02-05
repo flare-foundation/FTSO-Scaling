@@ -88,7 +88,7 @@ export namespace PartialRewardOffer {
       offers.push({
         ...rewardOffer,
         votingRoundId: i,
-        amount: sharePerOne + (i < remainder ? 1n : 0n),
+        amount: sharePerOne + (i - startVotingRoundId < remainder ? 1n : 0n),
       });
     }
     return offers;
