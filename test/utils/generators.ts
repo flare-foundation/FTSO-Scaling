@@ -1,4 +1,8 @@
-import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
+import Web3, { utils } from "web3";
+import { encodeParameter, encodeParameters } from "web3-eth-abi";
+import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
+import { RewardEpoch, VoterWeights } from "../../libs/ftso-core/src/RewardEpoch";
+import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -10,22 +14,13 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
-import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
-import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
-import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
-import {
-  Bytes20,
-  Feed,
-  MedianCalculationResult,
-  MedianCalculationSummary,
-} from "../../libs/ftso-core/src/voting-types";
-import { encodeParameters, encodeParameter } from "web3-eth-abi";
-import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
-import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
-import Web3, { utils } from "web3";
-import { RewardEpoch } from "../../libs/ftso-core/src/RewardEpoch";
-import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { calculateMedian } from "../../libs/ftso-core/src/ftso-calculation/ftso-median";
+import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
+import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
+import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
+import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { Bytes20, Feed, MedianCalculationResult } from "../../libs/ftso-core/src/voting-types";
+import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 
 const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
@@ -459,7 +454,27 @@ export function generateRewardEpoch() {
   return rewardEpoch;
 }
 
-export function generateMedianCalculationResult(numberOfVoters: number) {
+export function generateVotersWeights(numberOfVoters: number) {
+  const votersWeights = new Map<string, VoterWeights>();
+
+  for (let j = 0; j < numberOfVoters; j++) {
+    const voterWeight: VoterWeights = {
+      submitAddress: generateAddress(`${j}`),
+      delegationAddress: generateAddress(`${j}delegation`),
+      delegationWeight: BigInt(1000 + (j % 5)),
+      cappedDelegationWeight: BigInt(1000 + (j % 5)),
+      feeBIPS: 0,
+      nodeIDs: [unsafeRandomHex(20), unsafeRandomHex(20)],
+      nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
+    };
+
+    votersWeights.set(voterWeight.submitAddress, voterWeight);
+  }
+
+  return votersWeights;
+}
+
+export function generateMedianCalculationResult(numberOfVoters: number, feedName: string, votingRoundId: number) {
   const voters: string[] = [];
   const feedValues: ValueWithDecimals[] = [];
 
@@ -479,12 +494,12 @@ export function generateMedianCalculationResult(numberOfVoters: number) {
   const data = calculateMedian(voters, feedValues, weights, 2);
 
   const feed: Feed = {
-    name: generateFeedName("USD EUR"),
+    name: generateFeedName(feedName),
     decimals: 2,
   };
 
   const medianCalculationResult: MedianCalculationResult = {
-    votingRoundId: 0,
+    votingRoundId,
     feed,
     voters,
     feedValues,

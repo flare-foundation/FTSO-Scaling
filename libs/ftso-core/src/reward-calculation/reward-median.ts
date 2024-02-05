@@ -175,12 +175,15 @@ export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights:
   const fee = (reward * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
   const participationReward = reward - fee;
 
-  const feeClaim: IPartialRewardClaim = {
-    beneficiary: voterWeights.delegationAddress.toLowerCase(),
-    amount: fee,
-    claimType: ClaimType.WNAT,
-  };
-  result.push(feeClaim);
+  // No claims with zero amount
+  if (fee > 0n) {
+    const feeClaim: IPartialRewardClaim = {
+      beneficiary: voterWeights.delegationAddress.toLowerCase(),
+      amount: fee,
+      claimType: ClaimType.WNAT,
+    };
+    result.push(feeClaim);
+  }
 
   const rewardClaim: IPartialRewardClaim = {
     beneficiary: voterWeights.delegationAddress.toLowerCase(),
