@@ -94,7 +94,6 @@ export function calculateMedianRewardClaims(
   let iqrSum = 0n;
   let pctSum = 0n;
   for (const voterRecord of voterRecords) {
-    console.log(voterRecord);
     if (!voterRecord.eligible) {
       continue;
     }
@@ -175,12 +174,14 @@ export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights:
   const result: IPartialRewardClaim[] = [];
   const fee = (reward * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
   const participationReward = reward - fee;
+
   const feeClaim: IPartialRewardClaim = {
     beneficiary: voterWeights.delegationAddress.toLowerCase(),
-    amount: reward,
+    amount: fee,
     claimType: ClaimType.WNAT,
   };
   result.push(feeClaim);
+
   const rewardClaim: IPartialRewardClaim = {
     beneficiary: voterWeights.delegationAddress.toLowerCase(),
     amount: participationReward,
