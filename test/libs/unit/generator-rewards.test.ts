@@ -1,4 +1,5 @@
 import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEpochSettings, setupEpochSettings } from "../../utils/test-epoch-settings";
+import FakeTimers from "@sinonjs/fake-timers";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
@@ -22,7 +23,7 @@ describe("generator-rewards", () => {
     resetEpochSettings();
   })
 
-  it.only("should generate", async () => {
+  it("should generate", async () => {
     const numberOfVoters = 4;
     const feeds: Feed[] = [
       { name: "0x4254430055534454", decimals: 2 }, // BTC USDT 38,573.26

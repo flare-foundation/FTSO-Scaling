@@ -7,7 +7,7 @@ import { ISignaturePayload, SignaturePayload } from "../../../libs/fsp-utils/src
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { EpochResult } from "../../../libs/ftso-core/src/voting-types";
@@ -32,7 +32,8 @@ export class MiniFtsoCalculator {
     this.voterIndex = voterIndex;
     this.privateKey = privateKey;
     this.logger = logger;
-    this.indexerClient = new IndexerClient(manager, 0);
+    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    this.indexerClient = new IndexerClient(manager, requiredHistoryTimeSec);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
 
@@ -73,7 +74,6 @@ export class MiniFtsoCalculator {
 
   public async getSignaturePayload(votingRoundId: number): Promise<string> {
     let result = await this.prepareCalculationResultData(votingRoundId);
-    console.dir(result)
     const merkleRoot = result.merkleTree.root;
     const message: IProtocolMessageMerkleRoot = {
       protocolId: FTSO2_PROTOCOL_ID,

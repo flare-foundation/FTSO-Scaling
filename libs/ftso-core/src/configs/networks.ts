@@ -78,7 +78,7 @@ const configs = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -130,7 +130,7 @@ const epochSettings = () => {
 const constantEpochSettings = epochSettings();
 export const EPOCH_SETTINGS = () => {
   const network = process.env.NETWORK as networks;
-  if(network === "from-env") {
+  if (network === "from-env") {
     return epochSettings();
   }
   return constantEpochSettings;
@@ -161,7 +161,7 @@ const randomGenerationBenchingWindow = () => {
 const constantRandomGenerationBenchingWindow = randomGenerationBenchingWindow();
 
 export const RANDOM_GENERATION_BENCHING_WINDOW = () => {
-  if(process.env.NETWORK === "from-env") {
+  if (process.env.NETWORK === "from-env") {
     return randomGenerationBenchingWindow();
   }
   return constantRandomGenerationBenchingWindow;
@@ -192,9 +192,12 @@ const additionalRewardFinalizationWindows = () => {
 
 export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinalizationWindows();
 
-export const GENESIS_REWARD_EPOCH_START_EVENT: RewardEpochStarted = {
-  rewardEpochId: 0,
-  timestamp: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0),
-  startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(0),
+export const GENESIS_REWARD_EPOCH_START_EVENT = () => {
+  const result: RewardEpochStarted = {
+    rewardEpochId: 0,
+    timestamp: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0),
+    startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(0),
+  };
+  return result;
 };
 

@@ -446,10 +446,11 @@ export class IndexerClient {
     functionName: ContractMethodNames,
     startTime: number,
     endTime: number,
-    endTimeout?: number
+    endTimeout?: number,
+    queryResultsEvenIfRangeCheckFails?: boolean
   ): Promise<IndexerResponse<SubmissionData[]>> {
     const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
-    if (ensureRange === BlockAssuranceResult.NOT_OK) {
+    if (!queryResultsEvenIfRangeCheckFails && ensureRange === BlockAssuranceResult.NOT_OK) {
       return {
         status: ensureRange,
         data: [],

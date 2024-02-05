@@ -36,7 +36,8 @@ export class MiniFinalizer {
     public entityManager: EntityManager,
     public logger: ILogger
   ) {
-    this.indexerClient = new IndexerClient(entityManager, 0);
+    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    this.indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
   }
@@ -63,6 +64,24 @@ export class MiniFinalizer {
     this.queue.destroy()
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const matchingSigningPolicy = rewardEpoch.signingPolicy;
+    let voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId!);
+    if (!voterToIndexMap) {
+      voterToIndexMap = new Map<string, number>();
+      for (let i = 0; i < matchingSigningPolicy.voters.length; i++) {
+        const voter = matchingSigningPolicy.voters[i].toLowerCase();
+        voterToIndexMap.set(voter, i);
+      }
+      this.voterToIndexMaps.set(matchingSigningPolicy.rewardEpochId!, voterToIndexMap);
+    }
+    let voterToWeightMap = this.voterToWeightMaps.get(matchingSigningPolicy.rewardEpochId!);
+    if (!voterToWeightMap) {
+      voterToWeightMap = new Map<string, number>();
+      for (let i = 0; i < matchingSigningPolicy.voters.length; i++) {
+        const voter = matchingSigningPolicy.voters[i].toLowerCase();
+        voterToWeightMap.set(voter, matchingSigningPolicy.weights[i]);
+      }
+      this.voterToWeightMaps.set(matchingSigningPolicy.rewardEpochId!, voterToWeightMap);
+    }
     // process finalizations
     await this.getFinalizationAndProcessFinalizationSubmissions(votingRoundId, rewardEpoch, timestamp);
     // process queue
@@ -119,7 +138,9 @@ export class MiniFinalizer {
     const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
       ContractMethodNames.submitSignatures,
       EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
-      upToTime
+      upToTime,
+      undefined,
+      true  // query even if range check fails (it will fail)
     );
 
     if (!submitSignaturesSubmissionResponse.data) {

@@ -68,7 +68,7 @@ export namespace FeedValueEncoder {
 
   export function feedForValue(value: number, decimals: number) {
     return {
-      isEmpty: true,
+      isEmpty: false,
       value,
       decimals,
     };

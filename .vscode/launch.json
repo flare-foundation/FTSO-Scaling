@@ -29,7 +29,7 @@
       "request": "launch",
       "name": "Test FTSO reward logic",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["test", "test/libs/unit/ftso-calculation-logic.test.ts"]
+      "runtimeArgs": ["test", "test/libs/unit/generator-rewards.test.ts"]
     },
 
     {
