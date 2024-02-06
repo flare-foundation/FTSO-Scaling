@@ -33,7 +33,6 @@ describe(`Reward median, ${getTestFile(__filename)}`, function () {
       voterWeights
     );
 
-    console.log(claims);
-    expect(claims.length).to.be.eq(5);
+    expect(claims.length).to.be.eq(10);
   });
 });

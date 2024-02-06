@@ -463,7 +463,7 @@ export function generateVotersWeights(numberOfVoters: number) {
       delegationAddress: generateAddress(`${j}delegation`),
       delegationWeight: BigInt(1000 + (j % 5)),
       cappedDelegationWeight: BigInt(1000 + (j % 5)),
-      feeBIPS: 0,
+      feeBIPS: j % 20,
       nodeIDs: [unsafeRandomHex(20), unsafeRandomHex(20)],
       nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
     };
