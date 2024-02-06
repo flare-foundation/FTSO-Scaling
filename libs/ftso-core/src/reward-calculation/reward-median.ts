@@ -7,6 +7,7 @@ import { Address, MedianCalculationResult } from "../voting-types";
 import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
 import { rewardDistributionWeight } from "./reward-utils";
 import Web3 from "web3";
+import { calculateFinalizationRewardClaims } from "./reward-finalization";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
@@ -21,8 +22,8 @@ export function calculateMedianRewardClaims(
     readonly voterAddress: string;
     weight: bigint;
     readonly originalWeight: bigint;
-    readonly pct: boolean; // gets PCT reward
-    readonly iqr: boolean; // gets IQR reward
+    readonly pct: boolean; // gets PCT (percent) reward
+    readonly iqr: boolean; // gets IQR (interquartile range) reward
     readonly eligible: boolean; // is eligible for reward
   }
 
@@ -48,9 +49,20 @@ export function calculateMedianRewardClaims(
     );
   }
 
-  if (calculationResult.data.finalMedianPrice.isEmpty) {
-    return [];
+  // Turnout condition is not reached or no median is computed. Offer is returned to the provider.
+  if (
+    calculationResult.data.participatingWeight * TOTAL_BIPS <
+      calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
+    calculationResult.data.finalMedianPrice.isEmpty
+  ) {
+    const backClaim: IPartialRewardClaim = {
+      beneficiary: offer.claimBackAddress.toLowerCase(),
+      amount: offer.amount,
+      claimType: ClaimType.DIRECT,
+    };
+    return [backClaim];
   }
+
   // Use bigint for proper integer division
   const medianPrice = BigInt(calculationResult.data.finalMedianPrice.value);
 
@@ -90,7 +102,7 @@ export function calculateMedianRewardClaims(
     voterRecords.push(record);
   }
 
-  // calculate iqr and pct sums
+  // calculate the weight eligible for iqr reward and the weight for pct reward
   let iqrSum = 0n;
   let pctSum = 0n;
   for (const voterRecord of voterRecords) {
@@ -105,8 +117,8 @@ export function calculateMedianRewardClaims(
     }
   }
 
-  // calculate total rewarded weight
-  let totalRewardedWeight = 0n;
+  // calculate total normalized rewarded weight
+  let totalNormalizedRewardedWeight = 0n;
   for (const voterRecord of voterRecords) {
     if (!voterRecord.eligible) {
       voterRecord.weight = 0n;
@@ -122,14 +134,14 @@ export function calculateMedianRewardClaims(
         newWeight += BigInt(offer.primaryBandRewardSharePPM) * voterRecord.weight * pctSum;
       }
       if (voterRecord.pct) {
-        newWeight += BigInt(offer.secondaryBandWidthPPM) * voterRecord.weight * iqrSum;
+        newWeight += BigInt(1 - offer.primaryBandRewardSharePPM) * voterRecord.weight * iqrSum;
       }
     }
-    voterRecord.weight = newWeight;
-    totalRewardedWeight += newWeight;
+    voterRecord.weight = newWeight; // correct the weight according to the normalization
+    totalNormalizedRewardedWeight += newWeight;
   }
 
-  if (totalRewardedWeight === 0n) {
+  if (totalNormalizedRewardedWeight === 0n) {
     // claim back to reward issuer
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
@@ -142,7 +154,7 @@ export function calculateMedianRewardClaims(
   const rewardClaims: IPartialRewardClaim[] = [];
   let totalReward = 0n;
   let availableReward = offer.amount;
-  let availableWeight = totalRewardedWeight;
+  let availableWeight = totalNormalizedRewardedWeight;
 
   for (const voterRecord of voterRecords) {
     // double declining balance
