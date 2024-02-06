@@ -136,7 +136,12 @@ export async function partialRewardClaimsForVotingRound(
         eligibleFinalizationRewardVotersInGracePeriod
       );
       // Calculate penalties for reveal withdrawal offenders
-      const penalties = calculateRevealWithdrawalPenalties(offer, totalRewardedWeight, rewardDataForCalculations);
+      const penalties = calculateRevealWithdrawalPenalties(
+        offer,
+        totalRewardedWeight,
+        rewardDataForCalculations.dataForCalculations.revealOffenders,
+        rewardDataForCalculations.voterWeights
+      );
       // Merge all reward claims into a single array
       allRewardClaims = RewardClaim.merge([
         ...allRewardClaims,

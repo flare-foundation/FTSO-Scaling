@@ -1,6 +1,8 @@
+import { VoterWeights } from "../RewardEpoch";
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { Address } from "../voting-types";
 import { PENALTY_FACTOR } from "./reward-constants";
 import { rewardDistributionWeight } from "./reward-utils";
 
@@ -11,10 +13,11 @@ import { rewardDistributionWeight } from "./reward-utils";
 export function calculateRevealWithdrawalPenalties(
   fullOffer: IPartialRewardOffer,
   totalRewardedWeight: bigint,
-  data: DataForRewardCalculation
+  revealOffenders: Set<Address>,
+  voterWeights: Map<Address, VoterWeights>
 ): IPartialRewardClaim[] {
-  return [...data.dataForCalculations.revealOffenders].map(submitAddress => {
-    const voterWeight = rewardDistributionWeight(data.voterWeights.get(submitAddress)!);
+  return [...revealOffenders].map(submitAddress => {
+    const voterWeight = rewardDistributionWeight(voterWeights.get(submitAddress)!);
     const penalty = (-(voterWeight * fullOffer.amount) / totalRewardedWeight) * PENALTY_FACTOR;
     const penaltyClaim: IPartialRewardClaim = {
       beneficiary: submitAddress.toLowerCase(),
