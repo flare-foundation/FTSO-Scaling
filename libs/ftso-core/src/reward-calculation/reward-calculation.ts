@@ -79,9 +79,6 @@ export async function partialRewardClaimsForVotingRound(
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
-  const totalRewardedWeight = [...rewardDataForCalculationResponse.data.voterWeights.values()]
-    .map(voterWeight => rewardDistributionWeight(voterWeight))
-    .reduce((a, b) => a + b, 0n);
 
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
@@ -138,7 +135,6 @@ export async function partialRewardClaimsForVotingRound(
       // Calculate penalties for reveal withdrawal offenders
       const penalties = calculateRevealWithdrawalPenalties(
         offer,
-        totalRewardedWeight,
         rewardDataForCalculations.dataForCalculations.revealOffenders,
         rewardDataForCalculations.voterWeights
       );

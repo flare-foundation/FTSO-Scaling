@@ -11,14 +11,17 @@ import { rewardDistributionWeight } from "./reward-utils";
  * The penalty amount is proportional to the weight of the offender.
  */
 export function calculateRevealWithdrawalPenalties(
-  fullOffer: IPartialRewardOffer,
-  totalRewardedWeight: bigint,
+  offer: IPartialRewardOffer,
   revealOffenders: Set<Address>,
   voterWeights: Map<Address, VoterWeights>
 ): IPartialRewardClaim[] {
+  const totalWeight = [...voterWeights.values()]
+    .map(voterWeight => rewardDistributionWeight(voterWeight))
+    .reduce((a, b) => a + b, 0n);
+
   return [...revealOffenders].map(submitAddress => {
     const voterWeight = rewardDistributionWeight(voterWeights.get(submitAddress)!);
-    const penalty = (-(voterWeight * fullOffer.amount) / totalRewardedWeight) * PENALTY_FACTOR;
+    const penalty = (-(voterWeight * offer.amount) / totalWeight) * PENALTY_FACTOR;
     const penaltyClaim: IPartialRewardClaim = {
       beneficiary: submitAddress.toLowerCase(),
       amount: penalty,
