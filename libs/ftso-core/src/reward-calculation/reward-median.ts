@@ -70,6 +70,7 @@ export function calculateMedianRewardClaims(
   if (calculationResult.data.quartile1Price.isEmpty || calculationResult.data.quartile3Price.isEmpty) {
     throw new Error("Critical error: quartile prices are not available. This should never happen.");
   }
+
   const lowIQR = BigInt(calculationResult.data.quartile1Price.value);
   const highIQR = BigInt(calculationResult.data.quartile3Price.value);
 
@@ -134,7 +135,7 @@ export function calculateMedianRewardClaims(
         newWeight += BigInt(offer.primaryBandRewardSharePPM) * voterRecord.weight * pctSum;
       }
       if (voterRecord.pct) {
-        newWeight += BigInt(1_000_000 - offer.primaryBandRewardSharePPM) * voterRecord.weight * iqrSum;
+        newWeight += (TOTAL_PPM - BigInt(offer.primaryBandRewardSharePPM)) * voterRecord.weight * iqrSum;
       }
     }
     voterRecord.weight = newWeight; // correct the weight according to the normalization
