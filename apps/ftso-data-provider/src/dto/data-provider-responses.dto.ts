@@ -1,7 +1,7 @@
 // PDP (Protocol Data Provider) Response
 
 import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
-import { Feed, MedianCalculationResult, RandomCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
+import { TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 
 export enum PDPResponseStatusEnum {
   OK = "OK",
@@ -27,7 +27,7 @@ interface ExternalResponseOk {
   votingRoundId: number;
   merkleRoot: string;
   isSecureRandom: boolean;
-  tree: (RandomCalculationResult | MedianCalculationResult)[];
+  tree: TreeResult[];
 }
 
 interface ExternalResponseTooEarly {
