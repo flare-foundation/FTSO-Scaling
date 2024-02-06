@@ -192,7 +192,7 @@ export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights:
     const feeClaim: IPartialRewardClaim = {
       beneficiary: voterWeights.delegationAddress.toLowerCase(),
       amount: fee,
-      claimType: ClaimType.WNAT,
+      claimType: ClaimType.FEE,
     };
     result.push(feeClaim);
   }
