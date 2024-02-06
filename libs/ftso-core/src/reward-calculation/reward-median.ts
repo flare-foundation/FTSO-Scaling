@@ -134,7 +134,7 @@ export function calculateMedianRewardClaims(
         newWeight += BigInt(offer.primaryBandRewardSharePPM) * voterRecord.weight * pctSum;
       }
       if (voterRecord.pct) {
-        newWeight += BigInt(1 - offer.primaryBandRewardSharePPM) * voterRecord.weight * iqrSum;
+        newWeight += BigInt(1_000_000 - offer.primaryBandRewardSharePPM) * voterRecord.weight * iqrSum;
       }
     }
     voterRecord.weight = newWeight; // correct the weight according to the normalization
