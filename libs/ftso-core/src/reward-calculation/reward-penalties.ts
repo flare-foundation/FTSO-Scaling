@@ -1,5 +1,4 @@
 import { VoterWeights } from "../RewardEpoch";
-import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
@@ -21,7 +20,13 @@ export function calculateRevealWithdrawalPenalties(
 
   return [...revealOffenders].map(submitAddress => {
     const voterWeight = rewardDistributionWeight(voterWeights.get(submitAddress)!);
-    const penalty = (-(voterWeight * offer.amount) / totalWeight) * PENALTY_FACTOR;
+
+    //assert
+    if (voterWeight == undefined) {
+      throw new Error("Critical error: Offender cannot be without weight");
+    }
+
+    const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR) / totalWeight;
     const penaltyClaim: IPartialRewardClaim = {
       beneficiary: submitAddress.toLowerCase(),
       amount: penalty,
