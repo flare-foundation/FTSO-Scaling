@@ -29,6 +29,7 @@ import { MiniFinalizer } from "./mini-finalizer/MiniFinalizer";
 import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
 import { FSPSettings } from "./test-epoch-settings";
 import FakeTimers from "@sinonjs/fake-timers";
+import { last } from "rxjs";
 
 const encodingUtils = EncodingUtils.instance;
 const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
@@ -36,7 +37,7 @@ const sigReveal = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, 
 const sigSignature = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submitSignatures);
 const relaySignature = encodingUtils.getFunctionSignature(CONTRACTS.Relay.name, ContractMethodNames.relay);
 
-const FINALIZATION_VOTER_SELECTION_WEIGHT_THRESHOLD_BIPS = 500; // 5%
+const FINALIZATION_VOTER_SELECTION_WEIGHT_THRESHOLD_BIPS = 2000; // 20%
 export interface IndexerPosition<T> {
   block: number;
   timestamp: number;
@@ -409,8 +410,32 @@ export async function generateRewardEpochDataForRewardCalculation(
   console.log(`STARTING WITH: ${signingPolicy.startVotingRoundId}`)
   // move to the start of the reward epoch
 
-  for (let votingEpochId = signingPolicy.startVotingRoundId; votingEpochId <= signingPolicy.startVotingRoundId + EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs; votingEpochId++) {
-    1
+  const lastVotingEpochId = signingPolicy.startVotingRoundId + EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs - 1;
+  for (let votingEpochId = signingPolicy.startVotingRoundId; votingEpochId <= lastVotingEpochId + 1; votingEpochId++) {
+    if(votingEpochId === lastVotingEpochId) {
+      // emit signing policy for the next reward epoch (not proper, just to have it)
+      const nextRewaredEpochId = rewardEpochId + 1;
+      const nextSigningPolicy = generateSigningPolicy(voters, nextRewaredEpochId);
+      const event = generateEvent(
+        CONTRACTS.Relay,
+        SigningPolicyInitialized.eventName,
+        new SigningPolicyInitialized({
+          rewardEpochId: nextSigningPolicy.rewardEpochId,
+          startVotingRoundId: nextSigningPolicy.startVotingRoundId,
+          threshold: nextSigningPolicy.threshold,
+          seed: BigInt(nextSigningPolicy.seed),
+          voters: nextSigningPolicy.voters,
+          weights: nextSigningPolicy.weights,
+          signingPolicyBytes: SigningPolicy.encode(nextSigningPolicy),
+          timestamp,
+        }),
+        block,
+        timestamp
+      );
+      await entityManager.save([event]);
+      await updateUpperState();
+    }
+
     // start of voting round
     moveToVotingEpochOffset(votingEpochId, 1);
     await mineFakeTransaction();
@@ -668,24 +693,24 @@ export function parseTransactionSummary(tx: TLPTransaction, voterToIndexMap: Map
   const fromAddress = "0x" + tx.from_address.toLowerCase();
   if (toAddress === CONTRACTS.Submission.address.toLowerCase()) {
     if (tx.input.startsWith(sigCommit.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxCommit;voter: ${voterToIndexMap.get(fromAddress)}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxCommit;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
     if (tx.input.startsWith(sigReveal.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxReveal;voter: ${voterToIndexMap.get(fromAddress)}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxReveal;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
     if (tx.input.startsWith(sigSignature.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxSignature;voter: ${voterToIndexMap.get(fromAddress)}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxSignature;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
   }
   if (toAddress === CONTRACTS.Relay.address.toLowerCase()) {
     if (tx.input.startsWith(relaySignature.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxRelay;voter: ${voterToIndexMap.get(fromAddress)}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxRelay;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
   }
   if (toAddress === BURN_ADDRESS.toLowerCase() && fromAddress === BURN_ADDRESS.toLowerCase()) {
     return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxFake`;
   }
-  return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};Unknown TX;to address: ${toAddress}; input: ${tx.input}`;
+  return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};Unknown TX;to address: ${toAddress}; input: ${tx.input};status: ${tx.status}`;
 }
 
 export async function extractIndexerToCSV(entityManager: EntityManager, voters: TestVoter[], filename: string) {

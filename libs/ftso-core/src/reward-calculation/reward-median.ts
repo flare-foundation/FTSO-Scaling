@@ -1,12 +1,11 @@
-import coder from "web3-eth-abi";
-import utils from "web3-utils";
+import { encodeParameters } from "web3-eth-abi";
+import { soliditySha3 } from "web3-utils";
 import { VoterWeights } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
 import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
 import { rewardDistributionWeight } from "./reward-utils";
-
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
  * reward claims for the offer for all voters (with non-zero reward). For each voter all relevant partial claims are generated (including fees, participation rewards, etc).
@@ -38,8 +37,8 @@ export function calculateMedianRewardClaims(
   function randomSelect(feedName: string, votingRoundId: number, voterAddress: Address): boolean {
     return (
       BigInt(
-        utils.soliditySha3(
-          coder.encodeParameters(["bytes8", "uint256", "address"], [feedName, votingRoundId, voterAddress])
+        soliditySha3(
+          encodeParameters(["bytes8", "uint256", "address"], [feedName, votingRoundId, voterAddress])
         )!
       ) %
         2n ===

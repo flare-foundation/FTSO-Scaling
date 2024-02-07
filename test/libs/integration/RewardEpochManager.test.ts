@@ -45,7 +45,7 @@ describe("RewardEpochManager", () => {
 
     const epochManager = new RewardEpochManager(new IndexerClient(em, indexerHistorySec));
     const votingRound = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
-    const rewardEpoch = await epochManager.getRewardEpoch(votingRound);
+    const rewardEpoch = await epochManager.getRewardEpochForVotingEpochId(votingRound);
 
     expect(rewardEpoch.rewardEpochId).to.be.equal(rewardEpochId);
     expect(rewardEpoch.startVotingRoundId).to.be.equal(votingRound);

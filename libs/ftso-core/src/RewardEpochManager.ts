@@ -29,7 +29,7 @@ export class RewardEpochManager {
    * @param votingEpochId
    * @returns
    */
-  async getRewardEpoch(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
+  async getRewardEpochForVotingEpochId(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
     const currentVotingEpochId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
     if (votingEpochId > currentVotingEpochId) {
       return undefined; // future voting epoch
@@ -178,6 +178,7 @@ export class RewardEpochManager {
         "Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history"
       );
     }
+    console.dir(signingPolicyInitializedEventsResponse.data)
     for (let i = 0; i < signingPolicyInitializedEventsResponse.data!.length; i++) {
       const signingPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i];
       if (signingPolicyInitializedEvent.rewardEpochId === rewardEpochId) {

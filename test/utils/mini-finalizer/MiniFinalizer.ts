@@ -62,7 +62,7 @@ export class MiniFinalizer {
     timestamp: number
   ): Promise<TLPTransaction | undefined> {
     this.queue.destroy()
-    const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
+    const rewardEpoch = await this.rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
     const matchingSigningPolicy = rewardEpoch.signingPolicy;
     let voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId!);
     if (!voterToIndexMap) {
@@ -106,10 +106,10 @@ export class MiniFinalizer {
         signatures,
         protocolMessageMerkleRoot: messageData,
       }
-      if (this.voterSelector.inSelectionSet(matchingSigningPolicy.seed, messageData.protocolId, messageData.votingRoundId, this.voter.submitAddress)) {
+      const selectionIndex = this.voterSelector.inSelectionList(matchingSigningPolicy.voters.map(x => x.toLowerCase()), matchingSigningPolicy.seed, messageData.protocolId, messageData.votingRoundId, this.voter.signingAddress);
+      if(selectionIndex < 0) {
         return;
       }
-
       try {
         // reverts if not enough signature weight
         const fullData = RelayMessage.encode(relayMessage, true);
@@ -120,7 +120,8 @@ export class MiniFinalizer {
           sigRelay,
           block,
           timestamp,
-          sigRelay + fullData.slice(2)
+          sigRelay + fullData.slice(2),
+          selectionIndex === 0 ? 1 : 0
         );
       } catch (e) {
         // too little signatures, finalization cannot be done, skip

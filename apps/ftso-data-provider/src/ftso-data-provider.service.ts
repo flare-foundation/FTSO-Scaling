@@ -61,7 +61,7 @@ export class FtsoDataProviderService {
     votingRoundId: number,
     submissionAddress: string
   ): Promise<IPayloadMessage<ICommitData> | undefined> {
-    const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
+    const rewardEpoch = await this.rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
     const commitData: ICommitData = {

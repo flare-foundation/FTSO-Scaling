@@ -1,15 +1,18 @@
-import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEpochSettings, setupEpochSettings } from "../../utils/test-epoch-settings";
-import FakeTimers from "@sinonjs/fake-timers";
+import { DataManager } from "../../../libs/ftso-core/src/DataManager";
+import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
+import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
+import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
 import { extractIndexerToCSV, generateRewardEpochDataForRewardCalculation, voterFeedValue } from "../../utils/generators-rewards";
-import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEpochSettings, setupEpochSettings } from "../../utils/test-epoch-settings";
 
 // Ensure that the networks are not loaded
 
 
-describe("generator-rewards", () => {
+describe.only("generator-rewards", () => {
   before(() => {
     process.env.NETWORK = "from-env";
     setupEpochSettings(realtimeShorterEpochSettings);
@@ -37,7 +40,7 @@ describe("generator-rewards", () => {
     const offerAmount = BigInt(1000);
     const rewardEpochId = 1;
   
-    await generateRewardEpochDataForRewardCalculation(
+    const clock = await generateRewardEpochDataForRewardCalculation(
       entityManager,
       defaultSigningPolicyProtocolSettings,
       feeds,
@@ -49,6 +52,27 @@ describe("generator-rewards", () => {
     );
   
     await extractIndexerToCSV(entityManager, voters, "test.csv");
+    // const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
+    // this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
+    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const rewardEpochManger = new RewardEpochManager(indexerClient);
+    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+
+    const votingRoundId = 1020;
+    const benchingWindowRevealOffenders = 1;
+    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
+    const data = await dataManager.getDataForRewardCalculation(votingRoundId, benchingWindowRevealOffenders, rewardEpoch);
+    
+
+    const claims = await rewardClaimsForRewardEpoch(
+      rewardEpoch.rewardEpochId,
+      benchingWindowRevealOffenders,
+      dataManager,
+      rewardEpochManger
+    );
+
+    console.dir(claims, { depth: 10 });
   
   });
 

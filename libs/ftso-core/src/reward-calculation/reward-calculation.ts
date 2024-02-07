@@ -27,9 +27,9 @@ export async function rewardClaimsForRewardEpoch(
   rewardEpochManager: RewardEpochManager
 ): Promise<IRewardClaim[]> {
   // Reward epoch definitions
-  const rewardEpoch = await rewardEpochManager.getRewardEpoch(rewardEpochId);
+  
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
-
+  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
   // Partial offer generation from reward offers
   // votingRoundId => feedName => partialOffer
   const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(
@@ -102,7 +102,8 @@ export async function partialRewardClaimsForVotingRound(
   // Select eligible voters for finalization rewards
   const randomVoterSelector = new RandomVoterSelector(
     rewardEpoch.signingPolicy.voters,
-    rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight))
+    rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
+    FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS
   );
   const initialHash = RandomVoterSelector.initialHashSeed(rewardEpoch.signingPolicy.seed, FTSO2_PROTOCOL_ID, votingRoundId);
   const eligibleFinalizationRewardVotersInGracePeriod = new Set(

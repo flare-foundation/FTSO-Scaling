@@ -99,7 +99,8 @@ export function generateTx(
   functionSig: string,
   blockNo: number,
   timestamp: number,
-  payload: string
+  payload: string,
+  status = 1
 ) {
   const tx = new TLPTransaction();
   tx.block_number = blockNo;
@@ -108,7 +109,7 @@ export function generateTx(
   tx.from_address = queryBytesFormat(from);
   tx.to_address = queryBytesFormat(to);
   tx.input = queryBytesFormat(payload);
-  tx.status = 1;
+  tx.status = status;
   tx.value = queryBytesFormat(utils.toHex(1));
   tx.gas_price = queryBytesFormat(utils.toHex(1000));
   tx.gas = 10000;

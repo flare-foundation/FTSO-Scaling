@@ -130,14 +130,15 @@ export class RandomVoterSelector {
    * Given protocol ID, voting round ID and address, it checks if the address is in the selection set.
    * If thresholdBIPS is not provided, the default threshold is used.
    */
-  public inSelectionSet(rewardEpochSeed: string, protocolId: number, votingRoundId: number, address: string, thresholdBIPS?: number): boolean {
+  public inSelectionList(voters: string[], rewardEpochSeed: string, protocolId: number, votingRoundId: number, address: string, thresholdBIPS?: number): number {
     const initialSeed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
-    let result = this.randomSelectThresholdWeightVoters(initialSeed, thresholdBIPS);
-    for (const anAddress of result) {
-      if (anAddress.toLowerCase() === address.toLowerCase()) {
-        return true;
+    let selection = this.randomSelectThresholdWeightVoters(initialSeed, thresholdBIPS);
+    const result = voters.filter((voter) => selection.includes(voter));
+    for (let i = 0; i < result.length; i++) {
+      if (result[i].toLowerCase() === address.toLowerCase()) {
+        return i;
       }
     }
-    return false;
+    return -1;
   }
 }

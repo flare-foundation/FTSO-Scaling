@@ -117,7 +117,7 @@ export class DataManager {
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId);
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId);
 
-    const rewardEpoch = await this.rewardEpochManager.getRewardEpoch(votingRoundId);
+    const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
       return {
         status: DataAvailabilityStatus.NOT_OK,
@@ -553,7 +553,7 @@ export class DataManager {
       if (!commits || commits.length === 0) {
         continue;
       }
-      const feedOrder = (await rewardEpochManager.getRewardEpoch(i)).canonicalFeedOrder;
+      const feedOrder = (await rewardEpochManager.getRewardEpochForVotingEpochId(i)).canonicalFeedOrder;
       const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals, feedOrder);
       const revealOffenders = this.getRevealOffenders(commitsAndReveals.commits, commitsAndReveals.reveals);
       for (const offender of revealOffenders) {

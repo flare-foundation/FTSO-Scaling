@@ -6,7 +6,7 @@ import Web3 from "web3";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 const DEFAULT_BIPS = 1000;
 
-describe.only("RandomVoterSelector", () => {
+describe("RandomVoterSelector", () => {
   const voters = [
     "0xc783df8a850f42e7f7e57013759c285caa701eb6",
     "0xead9c93b79ae7c1591b1fb5323bd777e86e150d4",
