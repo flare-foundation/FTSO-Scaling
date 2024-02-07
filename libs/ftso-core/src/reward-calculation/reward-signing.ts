@@ -1,16 +1,15 @@
 import { ProtocolMessageMerkleRoot } from "../../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
-import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { GenericSubmissionData } from "../IndexerClient";
 import { RewardEpoch } from "../RewardEpoch";
 import { EPOCH_SETTINGS } from "../configs/networks";
+import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import {
   MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
-  SIGNING_REWARD_SPLIT_BIPS_TO_STAKE,
-  TOTAL_BIPS,
+  TOTAL_BIPS
 } from "./reward-constants";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
 
@@ -45,6 +44,8 @@ export function calculateSigningRewards(
       };
       return [backClaim];
     }
+    // TODO: what to do set rewardEligibleSignatures!!!
+    rewardEligibleSignatures = signatures;
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
       data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
@@ -68,6 +69,16 @@ export function calculateSigningRewards(
   for (const signature of rewardEligibleSignatures) {
     undistributedSigningRewardWeight += BigInt(signature.messages.weight!);
   }
+
+  if(undistributedSigningRewardWeight === 0n) {
+    const backClaim: IPartialRewardClaim = {
+      beneficiary: offer.claimBackAddress.toLowerCase(),
+      amount: offer.amount,
+      claimType: ClaimType.DIRECT,
+    };
+    return [backClaim];
+  }
+
   let undistributedAmount = offer.amount;
   const resultClaims: IPartialRewardClaim[] = [];
   // sort signatures according to signing policy order (index in signing policy)
@@ -92,7 +103,7 @@ export function calculateSigningRewards(
   if (undistributedAmount !== 0n) {
     throw new Error(`Critical error: Undistributed amount is not zero: ${undistributedAmount} of ${offer.amount}`);
   }
-  // burn everything
+  // claim back
   if (resultClaims.length === 0) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
@@ -115,14 +126,22 @@ export function generateSigningRewardClaimsForVoter(
 ): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];
   const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
-  const stakingAmount = (amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE) / TOTAL_BIPS;
+  let stakedWeight = 0n;
+  for(let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights.length; i++) {
+    stakedWeight += fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
+  }
+  const totalWeight = fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight + stakedWeight;
+  const stakingAmount = amount * stakedWeight / totalWeight;
+
   const delegationAmount = amount - stakingAmount;
   const delegationFee =
     (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
+  const stakingFee = (stakingAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
+
   const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase();
   rewardClaims.push({
     beneficiary: delegationBeneficiary,
-    amount: delegationFee,
+    amount: delegationFee + stakingFee,
     claimType: ClaimType.FEE,
   });
   const delegationCommunityReward = delegationAmount - delegationFee;
@@ -131,11 +150,8 @@ export function generateSigningRewardClaimsForVoter(
     amount: delegationCommunityReward,
     claimType: ClaimType.WNAT,
   });
-  let undistributedStakedWeight = 0n;
-  for (let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds.length; i++) {
-    undistributedStakedWeight += fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
-  }
-  let undistributedStakedAmount = stakingAmount;
+  let undistributedStakedWeight = stakedWeight;
+  let undistributedStakedAmount = stakingAmount - stakingFee;
 
   for (let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds.length; i++) {
     const nodeId = fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds[i].toLowerCase();
@@ -195,7 +211,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
     (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS) / Number(TOTAL_BIPS);
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     const weightSum = hashToWeight.get(hash)!;
-    if (weightSum >= minimalWeightThreshold) {
+    if (weightSum === maxWeight && weightSum >= minimalWeightThreshold) {
       const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
         isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
       );

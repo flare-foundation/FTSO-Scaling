@@ -6,8 +6,6 @@ import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
 import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
 import { rewardDistributionWeight } from "./reward-utils";
-import Web3 from "web3";
-import { calculateFinalizationRewardClaims } from "./reward-finalization";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
@@ -21,30 +19,30 @@ export function calculateMedianRewardClaims(
   interface VoterRewarding {
     readonly voterAddress: string;
     weight: bigint;
-    readonly originalWeight: bigint;
     readonly pct: boolean; // gets PCT (percent) reward
-    readonly iqr: boolean; // gets IQR (interquartile range) reward
-    readonly eligible: boolean; // is eligible for reward
+    readonly iqr: boolean; // gets IQR (inter quartile range) reward
   }
 
+  // sanity check
   if (offer.votingRoundId === undefined) {
-    throw new Error("Offer price epoch does not match the current price epoch");
+    throw new Error("Critical: voting round must be defined.");
   }
   const votingRoundId = offer.votingRoundId;
   if (calculationResult.votingRoundId !== votingRoundId) {
-    throw new Error("Calculation result voting round id does not match the offer voting round id");
+    throw new Error("Critical: Calculation result voting round id does not match the offer voting round id");
   }
 
   // Randomization for border cases
   // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
   function randomSelect(feedName: string, votingRoundId: number, voterAddress: Address): boolean {
+    const prefixedFeedName = feedName.startsWith("0x") ? feedName : "0x" + feedName;
     return (
       BigInt(
         soliditySha3(
-          encodeParameters(["bytes8", "uint256", "address"], ["0x" + feedName, votingRoundId, voterAddress])
+          encodeParameters(["bytes8", "uint256", "address"], [prefixedFeedName, votingRoundId, voterAddress])
         )!
       ) %
-        2n ===
+      2n ===
       1n
     );
   }
@@ -52,7 +50,7 @@ export function calculateMedianRewardClaims(
   // Turnout condition is not reached or no median is computed. Offer is returned to the provider.
   if (
     calculationResult.data.participatingWeight * TOTAL_BIPS <
-      calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
+    calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
     calculationResult.data.finalMedianPrice.isEmpty
   ) {
     const backClaim: IPartialRewardClaim = {
@@ -66,7 +64,7 @@ export function calculateMedianRewardClaims(
   // Use bigint for proper integer division
   const medianPrice = BigInt(calculationResult.data.finalMedianPrice.value);
 
-  // establish boundaries
+  // sanity check - establish boundaries
   if (calculationResult.data.quartile1Price.isEmpty || calculationResult.data.quartile3Price.isEmpty) {
     throw new Error("Critical error: quartile prices are not available. This should never happen.");
   }
@@ -76,10 +74,10 @@ export function calculateMedianRewardClaims(
 
   const voterRecords: VoterRewarding[] = [];
 
-  const elasticBandDiff = (medianPrice * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
+  const secondaryBandDiff = (medianPrice * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
 
-  const lowPCT = medianPrice - elasticBandDiff;
-  const highPCT = medianPrice + elasticBandDiff;
+  const lowPCT = medianPrice - secondaryBandDiff;
+  const highPCT = medianPrice + secondaryBandDiff;
 
   // assemble voter records
   for (let i = 0; i < calculationResult.voters!.length; i++) {
@@ -92,12 +90,10 @@ export function calculateMedianRewardClaims(
     const record: VoterRewarding = {
       voterAddress,
       weight: rewardDistributionWeight(voterWeights.get(voterAddress)!),
-      originalWeight: calculationResult.weights![i],
       iqr:
         (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, voterAddress)),
-      pct: value > lowPCT && value < highPCT,
-      eligible: true,
+      pct: value > lowPCT && value < highPCT
     };
 
     voterRecords.push(record);
@@ -107,9 +103,6 @@ export function calculateMedianRewardClaims(
   let iqrSum = 0n;
   let pctSum = 0n;
   for (const voterRecord of voterRecords) {
-    if (!voterRecord.eligible) {
-      continue;
-    }
     if (voterRecord.iqr) {
       iqrSum += voterRecord.weight;
     }
@@ -121,10 +114,6 @@ export function calculateMedianRewardClaims(
   // calculate total normalized rewarded weight
   let totalNormalizedRewardedWeight = 0n;
   for (const voterRecord of voterRecords) {
-    if (!voterRecord.eligible) {
-      voterRecord.weight = 0n;
-      continue;
-    }
     let newWeight = 0n;
     if (pctSum === 0n) {
       if (voterRecord.iqr) {
@@ -197,12 +186,13 @@ export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights:
     };
     result.push(feeClaim);
   }
-
-  const rewardClaim: IPartialRewardClaim = {
-    beneficiary: voterWeights.delegationAddress.toLowerCase(),
-    amount: participationReward,
-    claimType: ClaimType.WNAT,
-  };
-  result.push(rewardClaim);
+  if (participationReward > 0n) {
+    const rewardClaim: IPartialRewardClaim = {
+      beneficiary: voterWeights.delegationAddress.toLowerCase(),
+      amount: participationReward,
+      claimType: ClaimType.WNAT,
+    };
+    result.push(rewardClaim);
+  }
   return result;
 }

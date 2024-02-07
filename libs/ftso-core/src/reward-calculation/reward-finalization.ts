@@ -3,8 +3,8 @@ import { RewardEpoch } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
-import { TOTAL_BIPS, SIGNING_REWARD_SPLIT_BIPS_TO_STAKE } from "./reward-constants";
-import { isFinalizationOutsideOfGracePeriod, isFinalizationInGracePeriodAndEligible } from "./reward-utils";
+import { TOTAL_BIPS } from "./reward-constants";
+import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePeriod } from "./reward-utils";
 
 /**
  * Calculates partial finalization reward claims for the given offer.
@@ -76,7 +76,12 @@ export function generateFinalizationRewardClaimsForVoter(
 ): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];
   const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
-  const stakingAmount = (amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE) / TOTAL_BIPS;
+  let stakedWeight = 0n;
+  for(let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights.length; i++) {
+    stakedWeight += fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
+  }
+  const totalWeight = fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight + stakedWeight;
+  const stakingAmount = amount * stakedWeight / totalWeight;
   const delegationAmount = amount - stakingAmount;
   const delegationFee =
     (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;

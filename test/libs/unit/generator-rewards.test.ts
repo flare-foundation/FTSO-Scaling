@@ -63,9 +63,7 @@ describe.only("generator-rewards", () => {
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
-    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
-    const data = await dataManager.getDataForRewardCalculation(votingRoundId, benchingWindowRevealOffenders, rewardEpoch);
-    
+    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);    
 
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,

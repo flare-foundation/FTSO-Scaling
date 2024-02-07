@@ -13,7 +13,6 @@ import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
 import { calculateRevealWithdrawalPenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { rewardDistributionWeight } from "./reward-utils";
 
 /**
  * Calculates merged reward claims for the given reward epoch.

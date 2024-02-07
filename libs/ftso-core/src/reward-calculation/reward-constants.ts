@@ -4,7 +4,7 @@
  * Penalty factor for reveal withdrawal. Given a weight relative share of a partial reward offer's amount
  * the value is multiplied by this factor to get the penalty amount.
  */
-export const PENALTY_FACTOR = 10n; // voting rounds
+export const PENALTY_FACTOR = 30n; // voting rounds
 
 /**
  * Grace period for signature submission starts immediately after the reveal deadline and lasts for this duration.
@@ -20,16 +20,6 @@ export const GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC = 10; // seconds
  * See class RandomVoterSelector for more details.
  */
 export const GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC = 20; // seconds
-
-/**
- * Once the a voter gets attributed reward amount, partial claims of different types are generated.
- * These include fee and participation weight rewards. Participation weight includes staking
- * weight and WFLR delegation weight. Since both weights contribute to the voters weight
- * a part of the reward is distributed to the staking weight and a part to the delegation weight.
- * This constant defines the percentage of the reward that is distributed to the staking weight.
- * The rest is distributed to the delegation weight.
- */
-export const SIGNING_REWARD_SPLIT_BIPS_TO_STAKE = 5000n; // BIPS (percentage)
 
 /**
  * Price epoch reward offers are divided into three parts:
