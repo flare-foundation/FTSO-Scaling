@@ -6,7 +6,7 @@ import { rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-c
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
-import { extractIndexerToCSV, generateRewardEpochDataForRewardCalculation, voterFeedValue } from "../../utils/generators-rewards";
+import { claimSummary, extractIndexerToCSV, generateRewardEpochDataForRewardCalculation, offersSummary, voterFeedValue, votersSummary } from "../../utils/generators-rewards";
 import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEpochSettings, setupEpochSettings } from "../../utils/test-epoch-settings";
 
 // Ensure that the networks are not loaded
@@ -74,8 +74,9 @@ describe.only("generator-rewards", () => {
       rewardEpochManger
     );
 
-    console.dir(claims, { depth: 10 });
-  
+    offersSummary(rewardEpoch.rewardOffers);
+    votersSummary(voters);
+    claimSummary(voters, claims);
   });
 
 });

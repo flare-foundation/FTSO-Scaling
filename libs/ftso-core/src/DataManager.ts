@@ -408,11 +408,15 @@ export class DataManager {
     const finalizations: ParsedFinalizationData[] = [];
     for (const submission of submissions) {
       try {
-        const calldata = submission.messages;
+        let calldata = submission.messages;
+        if(calldata.startsWith("0x")) {
+          calldata = calldata.slice(2);
+        }
+
         if (calldata.length < 10) {
           continue;
         }
-        const relayMessage = RelayMessage.decode(calldata.slice(10));
+        const relayMessage = RelayMessage.decode(calldata.slice(8));
         // ignore irrelevant messages
         if (
           !relayMessage.protocolMessageMerkleRoot ||

@@ -178,7 +178,6 @@ export class RewardEpochManager {
         "Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history"
       );
     }
-    console.dir(signingPolicyInitializedEventsResponse.data)
     for (let i = 0; i < signingPolicyInitializedEventsResponse.data!.length; i++) {
       const signingPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i];
       if (signingPolicyInitializedEvent.rewardEpochId === rewardEpochId) {

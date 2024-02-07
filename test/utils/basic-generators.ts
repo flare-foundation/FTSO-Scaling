@@ -39,7 +39,7 @@ export function generateVoter(): TestVoter {
     wNatWeight: BigInt(1000),
     nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
     nodeWeights: [BigInt(1000), BigInt(1000)],
-    delegationFeeBIPS: 0,
+    delegationFeeBIPS: 2000,
   };
 }
 

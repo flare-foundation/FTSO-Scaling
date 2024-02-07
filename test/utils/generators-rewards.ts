@@ -10,6 +10,7 @@ import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
+  RewardOffers,
   RewardsOffered,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
@@ -30,6 +31,7 @@ import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
 import { FSPSettings } from "./test-epoch-settings";
 import FakeTimers from "@sinonjs/fake-timers";
 import { last } from "rxjs";
+import { ClaimType, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 
 const encodingUtils = EncodingUtils.instance;
 const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
@@ -412,7 +414,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
   const lastVotingEpochId = signingPolicy.startVotingRoundId + EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs - 1;
   for (let votingEpochId = signingPolicy.startVotingRoundId; votingEpochId <= lastVotingEpochId + 1; votingEpochId++) {
-    if(votingEpochId === lastVotingEpochId) {
+    if (votingEpochId === lastVotingEpochId) {
       // emit signing policy for the next reward epoch (not proper, just to have it)
       const nextRewaredEpochId = rewardEpochId + 1;
       const nextSigningPolicy = generateSigningPolicy(voters, nextRewaredEpochId);
@@ -599,6 +601,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       entities = [];
     }
   }
+  // Move beyond the last relevant voting epoch
+  moveToVotingEpochOffset(lastVotingEpochId + 2, 1);
+  mineFakeTransaction();
   return clock;
 }
 
@@ -766,17 +771,92 @@ export async function extractIndexerToCSV(entityManager: EntityManager, voters: 
   // writeFileSync(filename, text);
 }
 
+function claimListSummary(beneficiary: string, voterIndex: number, claims: IRewardClaim[], padding = 6) {
 
-// entityManager: EntityManager,
-// fspSettings: FSPSettings,
-// feeds: Feed[],
-// offerAmount: bigint,
-// rewardEpochId: number,
-// voters: TestVoter[],
-// valueFunction: (votingRoundId: number, voterIndex: number, feedSequence: Feed[]) => number[],
-// commitRevealSelectorFunction: (votingRoundId: number, voterIndex: number, allRevealData: IRevealData) => IRevealData[],
-// signatureSelection: (votingRoundId: number, voterIndex: number, allSignatureData: any) => any,
-// logger: ILogger,
+  const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
+  const fee = (feeClaim ? Number(feeClaim.amount) : 0).toString().padStart(padding);
+  const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
+  const wnat = (wnatClaim ? Number(wnatClaim.amount) : 0).toString().padStart(padding);
+  const mirrorClaim = claims.find(c => c.claimType === ClaimType.MIRROR);
+  const mirror = (mirrorClaim ? Number(mirrorClaim.amount) : 0).toString().padStart(padding);
+  const directClaim = claims.find(c => c.claimType === ClaimType.DIRECT);
+  const direct = (directClaim ? Number(directClaim.amount) : 0).toString().padStart(padding);
+  const cchainClaim = claims.find(c => c.claimType === ClaimType.CCHAIN);
+  const cchain = (cchainClaim ? Number(cchainClaim.amount) : 0).toString().padStart(padding);
+  const indexValue = voterIndex === -1 ? "-" : voterIndex.toString();
+  let addressText = beneficiary.slice(0, 10);
+  if(beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
+    addressText = "BURN ADDR ";
+  }
+  return `${indexValue.padStart(3)} ${addressText}: FEE: ${fee}|  WNAT: ${wnat}|  MIRROR: ${mirror}|  DIRECT: ${direct}|  CCHAIN: ${cchain}`
+}
+
+export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
+  const voterToClaimMap = new Map<string, IRewardClaim[]>();
+  let totalValue = 0n;
+  let burned = 0n;
+  for (const claim of claims) {
+    totalValue += claim.amount;
+    const beneficiary = claim.beneficiary.toLowerCase();
+    if (beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
+      burned += claim.amount;
+    }
+    const claimList = voterToClaimMap.get(beneficiary) || [];
+    claimList.push(claim);
+    voterToClaimMap.set(beneficiary, claimList);
+  }
+  const allVoters = new Set<string>();
+  for (const voter of voters) {
+    allVoters.add(voter.delegationAddress.toLowerCase());
+  }
+  const nonVoterAddresses = new Set<string>();
+  for (const claim of claims) {
+    const beneficiary = claim.beneficiary.toLowerCase();
+    if (!allVoters.has(beneficiary)) {
+      nonVoterAddresses.add(beneficiary);
+    }
+  }
+  console.log("CLAIM SUMMARY");
+  console.log("Total value: ", totalValue.toString());
+  console.log("Burned value:", burned.toString());
+  console.log("VOTERS:");
+  for (let i = 0; i < voters.length; i++) {
+    const voter = voters[i];
+    const claimList = voterToClaimMap.get(voter.delegationAddress.toLowerCase()) || [];
+    console.log(claimListSummary(voter.delegationAddress, i, claimList));
+  }
+  console.log("NON-VOTERS:")
+  for (const address of nonVoterAddresses) {
+    const claimList = voterToClaimMap.get(address) || [];
+    console.log(claimListSummary(address, -1, claimList));
+  }
+}
+
+function voterSummary(voterIndex: number, voter: TestVoter) {  
+  return `Voter: ${voterIndex} del: ${voter.delegationAddress.toLowerCase().slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress.toLowerCase().slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${voter.registrationWeight}`;
+}
+
+export function votersSummary(voters: TestVoter[]) {
+  console.log("VOTER SUMMARY:")
+  for (let i = 0; i < voters.length; i++) {
+    const voter = voters[i];
+    console.log(voterSummary(i, voter));
+  }
+}
+
+export function offersSummary(offers: RewardOffers) {
+  console.log("OFFERS SUMMARY:");
+  let totalOffers = 0n;
+  for(let offer of offers.rewardOffers) {
+    totalOffers += offer.amount;
+  }
+  let totalInflationOffers = 0n;
+  for(let offer of offers.inflationOffers) {
+    totalInflationOffers += offer.amount;
+  }
+  console.log(`Community offers: ${offers.rewardOffers.length}, total: ${totalOffers}`);
+  console.log(`Inflation offers: ${offers.inflationOffers.length}, total: ${totalInflationOffers}`);
+}
 
 
 
