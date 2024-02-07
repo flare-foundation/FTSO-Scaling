@@ -90,7 +90,7 @@ export function calculateSigningRewards(
   }
   // assert check for undistributed amount
   if (undistributedAmount !== 0n) {
-    throw new Error("Critical error: Undistributed amount is not zero");
+    throw new Error(`Critical error: Undistributed amount is not zero: ${undistributedAmount} of ${offer.amount}`);
   }
   // burn everything
   if (resultClaims.length === 0) {

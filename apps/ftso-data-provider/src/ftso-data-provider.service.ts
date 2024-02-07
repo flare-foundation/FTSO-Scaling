@@ -20,6 +20,7 @@ import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { MerkleTreeStructs } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
@@ -117,7 +118,10 @@ export class FtsoDataProviderService {
       return undefined;
     }
     const merkleRoot = result.merkleTree.root;
-    const treeNodes = [result.randomData, ...result.medianData];
+    const treeNodes = [
+      MerkleTreeStructs.fromRandomCalculationResult(result.randomData),
+      ...result.medianData.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+    ];
     const response: IProtocolMessageMerkleData = {
       protocolId: FTSO2_PROTOCOL_ID,
       votingRoundId,

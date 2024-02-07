@@ -19,6 +19,8 @@ export interface RandomResult {
   readonly isSecure: boolean;
 }
 
+export type TreeResult = FeedResult | RandomResult;
+
 export namespace MerkleTreeStructs {
   export function hashPriceFeedResult(feedResult: FeedResult): string {
     const abiInput = EncodingUtils.instance.getFunctionInputAbiData(

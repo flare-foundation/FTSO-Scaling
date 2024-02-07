@@ -87,7 +87,7 @@ export class RewardEpochManager {
       !randomAcquisitionStartedEventResponse.data
     ) {
       throw new Error(
-        "Critical error: AcquisitionStarted event not found - most likely the indexer has too short history"
+        "Critical error: RandomAcquisitionStarted event not found - most likely the indexer has too short history"
       );
     }
     const rewardOffersResponse = await this.indexerClient.getRewardOffers(

@@ -1,32 +1,38 @@
 import Web3 from "web3";
+import { RewardEpoch, VoterWeights } from "../../libs/ftso-core/src/RewardEpoch";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
 import {
+  InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
+  RewardOffers,
+  RewardsOffered,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
+import { calculateMedian } from "../../libs/ftso-core/src/ftso-calculation/ftso-median";
 import { TLPEvents } from "../../libs/ftso-core/src/orm/entities";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
-import { Feed } from "../../libs/ftso-core/src/voting-types";
-import { generateRandomAddress } from "./testRandom";
+import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { Feed, MedianCalculationResult } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent } from "./basic-generators";
+import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
 
 export const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
 export const web3 = new Web3("https://dummy");
 
 // TODO: fix event timings
-export async function generateRewardEpochEvents(
+export function generateRewardEpochEvents(
   epochSettings: EpochSettings,
   feeds: Feed[],
   offerCount: number,
   rewardEpochId: number,
   voters: TestVoter[]
-): Promise<TLPEvents[]> {
+): TLPEvents[] {
   const previousRewardEpochId = rewardEpochId - 1;
   const rewardEpochStartSec = epochSettings.expectedRewardEpochStartTimeSec(previousRewardEpochId);
   return [
@@ -76,7 +82,7 @@ export async function generateRewardEpochEvents(
         rewardEpochId: rewardEpochId,
         startVotingRoundId: epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId),
         threshold: 1,
-        seed: "0x123",
+        seed: BigInt("0x123"),
         voters: voters.map(v => v.signingAddress),
         weights: voters.map(v => v.registrationWeight),
         signingPolicyBytes: "0x123",
@@ -178,4 +184,234 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
 
 export function currentTimeSec(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+export function generateAddress(name: string) {
+  return Web3.utils.keccak256(name).slice(0, 42);
+}
+
+export function generateFeedName(name: string) {
+  name = name.slice(0, 7);
+
+  return Web3.utils.padRight(Web3.utils.utf8ToHex(name), 16);
+}
+
+/**
+ * @param feed has to be a string of length 8
+ * @param rewardEpochId
+ * @param claimBack
+ * @returns
+ */
+export function generateRewardsOffer(feed: string, rewardEpochId: number, claimBack: string) {
+  feed = feed.slice(0, 7);
+
+  const rawRewardsOffered = {
+    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    feedName: generateFeedName(feed),
+    decimals: "0x12",
+    amount: "0x10000000000",
+    minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
+    primaryBandRewardSharePPM: Web3.utils.numberToHex(10000),
+    secondaryBandWidthPPM: Web3.utils.numberToHex(10000),
+    claimBackAddress: generateAddress(claimBack),
+  };
+
+  return new RewardsOffered(rawRewardsOffered);
+}
+
+/**
+ *
+ * @param feeds
+ * @param rewardEpochId
+ */
+export function generateInflationRewardOffer(feeds: string[], rewardEpochId: number) {
+  const unprefixedFeedsInHex = feeds.map(feed => generateFeedName(feed).slice(2, 18));
+
+  const rawInflationRewardOffer = {
+    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    feedNames: "0x" + unprefixedFeedsInHex.join(""),
+    decimals: "0x" + "12".repeat(feeds.length),
+    amount: "0x10000000001",
+    minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
+    primaryBandRewardSharePPM: Web3.utils.numberToHex(10000),
+    secondaryBandWidthPPMs: "0x" + "002710".repeat(feeds.length),
+    mode: "0x00",
+  };
+
+  return new InflationRewardsOffered(rawInflationRewardOffer);
+}
+
+export function generateRawFullVoter(name: string, rewardEpochId: number, weight: number) {
+  return {
+    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    voter: generateAddress(name),
+    wNatWeight: BigInt(weight),
+    wNatCappedWeight: BigInt(weight),
+    nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
+    nodeWeights: [BigInt(weight), BigInt(weight)],
+    delegationFeeBIPS: 0,
+    signingPolicyAddress: generateAddress(name + "signing"),
+    delegationAddress: generateAddress(name + "delegation"),
+    submitAddress: generateAddress(name + "submit"),
+    submitSignaturesAddress: generateAddress(name + "submitSignatures"),
+    registrationWeight: BigInt(weight),
+  };
+}
+
+export function generateRawFullVoters(count: number, rewardEpochId: number) {
+  const rawFullVoters = [];
+  for (let j = 0; j < count; j++) {
+    rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId, (j * 1000) % 65536));
+  }
+
+  return rawFullVoters;
+}
+
+export function generateRewardEpoch() {
+  const rewardEpochId = 513;
+  const rewardEpochIdHex = (id: number) => Web3.utils.padLeft(Web3.utils.numberToHex(id), 6);
+
+  const epochSettings = new EpochSettings(10002, 90, 1, 3600, 30);
+
+  const rawPreviousEpochStarted = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId - 1),
+    startVotingRoundId: "0x00100000",
+    timestamp: "0x1200000000000000",
+  };
+
+  const previousRewardEpochStartedEvent = new RewardEpochStarted(rawPreviousEpochStarted);
+
+  const rawRandomAcquisitionStarted = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId),
+    timestamp: "0x1200000000000014",
+  };
+
+  const randomAcquisitionStartedEvent = new RandomAcquisitionStarted(rawRandomAcquisitionStarted);
+
+  const rewardsOffered: RewardsOffered[] = [];
+
+  for (let j = 0; j < 10; j++) {
+    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`));
+    rewardsOffered.push(rewardOffered);
+  }
+
+  const inflationOffers: InflationRewardsOffered[] = [];
+
+  let feedNames: string[] = [];
+  for (let j = 0; j < 3; j++) {
+    feedNames.push(`USD C${j}`);
+  }
+
+  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+
+  feedNames = [];
+
+  for (let j = 3; j < 11; j++) {
+    feedNames.push(`USD C${j}`);
+  }
+
+  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+
+  const rewardOffers: RewardOffers = {
+    inflationOffers,
+    rewardOffers: rewardsOffered,
+  };
+
+  const rawVoterPowerBlockSelected = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId),
+    votePowerBlock: "0xa38424",
+    timestamp: "0x1200000000000000",
+  };
+
+  const voterPowerBlockSelected = new VotePowerBlockSelected(rawVoterPowerBlockSelected);
+
+  const voters = generateRawFullVoters(10, rewardEpochId);
+
+  const rawSigningPolicyInitialized = {
+    rewardEpochId: rewardEpochIdHex(rewardEpochId),
+    startVotingRoundId: Web3.utils.numberToHex(rewardEpochId * 3600),
+    threshold: Number(voters.map(v => v.registrationWeight).reduce((a, b) => a + b, 0n)) / 2,
+    seed: "0xaaaa",
+    signingPolicyBytes: "0x12",
+    timestamp: "0x1200000000000001",
+    voters: voters.map(voter => voter.signingPolicyAddress),
+    weights: voters.map(v => v.registrationWeight),
+  };
+
+  const signingPolicyInitialized = new SigningPolicyInitialized(rawSigningPolicyInitialized);
+
+  const fullVotersRegistrationInfo = voters.map(voter => {
+    return {
+      voterRegistrationInfo: new VoterRegistrationInfo(voter),
+      voterRegistered: new VoterRegistered(voter),
+    };
+  });
+
+  const rewardEpoch = new RewardEpoch(
+    previousRewardEpochStartedEvent,
+    randomAcquisitionStartedEvent,
+    rewardOffers,
+    voterPowerBlockSelected,
+    signingPolicyInitialized,
+    fullVotersRegistrationInfo
+  );
+
+  return rewardEpoch;
+}
+
+export function generateVotersWeights(numberOfVoters: number) {
+  const votersWeights = new Map<string, VoterWeights>();
+
+  for (let j = 0; j < numberOfVoters; j++) {
+    const voterWeight: VoterWeights = {
+      submitAddress: generateAddress(`${j}`),
+      delegationAddress: generateAddress(`${j}delegation`),
+      delegationWeight: BigInt(1000 + (j % 5)),
+      cappedDelegationWeight: BigInt(1000 + (j % 5)),
+      feeBIPS: j % 20,
+      nodeIDs: [unsafeRandomHex(20), unsafeRandomHex(20)],
+      nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
+    };
+
+    votersWeights.set(voterWeight.submitAddress, voterWeight);
+  }
+
+  return votersWeights;
+}
+
+export function generateMedianCalculationResult(numberOfVoters: number, feedName: string, votingRoundId: number) {
+  const voters: string[] = [];
+  const feedValues: ValueWithDecimals[] = [];
+
+  const weights: bigint[] = [];
+
+  for (let j = 0; j < numberOfVoters; j++) {
+    const valueWithDecimal: ValueWithDecimals = {
+      isEmpty: !(j % 6),
+      value: 1000 + (j % 5),
+      decimals: 2,
+    };
+    voters.push(generateAddress(`${j}`));
+    feedValues.push(valueWithDecimal);
+    weights.push(100n + BigInt(j));
+  }
+
+  const data = calculateMedian(voters, feedValues, weights, 2);
+
+  const feed: Feed = {
+    name: generateFeedName(feedName),
+    decimals: 2,
+  };
+
+  const medianCalculationResult: MedianCalculationResult = {
+    votingRoundId,
+    feed,
+    voters,
+    feedValues,
+    data,
+    weights,
+    totalVotingWeight: weights.reduce((a, b) => a + b, 0n),
+  };
+
+  return medianCalculationResult;
 }

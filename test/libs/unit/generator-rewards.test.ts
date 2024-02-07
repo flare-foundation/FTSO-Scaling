@@ -55,11 +55,13 @@ describe.only("generator-rewards", () => {
     // const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     // this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const earliestTimestamp = Math.floor(clock.Date.now()/1000) - requiredHistoryTimeSec;
+    console.log("Earliest timestamp", earliestTimestamp);
     const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
-    const votingRoundId = 1020;
+    const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
     const data = await dataManager.getDataForRewardCalculation(votingRoundId, benchingWindowRevealOffenders, rewardEpoch);

@@ -64,6 +64,6 @@ export const realtimeShorterEpochSettings: EpochSettingsConfig = {
   firstVotingRoundStartTs: 1704250616,
   votingEpochDurationSeconds: 90,
   firstRewardEpochStartVotingRoundId: 1000,
-  rewardEpochDurationInVotingEpochs: 20,
+  rewardEpochDurationInVotingEpochs: 5,  //20
   revealDeadlineSeconds: 30,
 };
