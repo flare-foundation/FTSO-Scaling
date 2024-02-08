@@ -24,6 +24,7 @@ import {
 } from "../../../apps/ftso-data-provider/src/response-encoders";
 import { getTestFile } from "../../utils/getTestFile";
 import { IConfig } from "../../../apps/ftso-data-provider/src/config/configuration";
+import { Logger } from "@nestjs/common";
 
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const feeds: Feed[] = [
@@ -59,6 +60,16 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   let db: MockIndexerDB;
   let clock: FakeTimers.InstalledClock;
   let mock: MockAdapter;
+
+  before(async () => {
+    // Disable NestJS logging
+    Logger.overrideLogger(false);
+  });
+
+  after(async () => {
+    // Re-enable NestJS logging
+    Logger.overrideLogger(new Logger());
+  });
 
   beforeEach(async () => {
     db = await MockIndexerDB.create();
@@ -155,6 +166,123 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       mRoots.add(result.merkleRoot);
     }
     expect(mRoots.size).to.be.equal(1);
+  });
+
+  describe("benching", () => {
+    it("random should be secure with no missed reveals", async () => {
+      await runVotingRounds(10, 0, true);
+    });
+    it("random should be secure with minority benched revealers", async () => {
+      await runVotingRounds(10, 3, true);
+    });
+    it("random should not be secure with less than two non-benched revealers", async () => {
+      await runVotingRounds(5, 4, false);
+    });
+
+    async function runVotingRounds(votersCount: number, missedRevealers: number, expectedLastSecureRandom: boolean) {
+      const voters: TestVoter[] = generateVoters(votersCount);
+      const rewardEpochId = 1;
+      await setUpRewardEpoch(rewardEpochId, voters);
+
+      mock.onPost(/preparePriceFeeds/).reply(200, {
+        votingRoundId: 1,
+        feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
+      });
+      mock.onPost(/preparePriceFeeds/).reply(200, {
+        votingRoundId: 2,
+        feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
+      });
+
+      const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
+      const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+
+      clock.tick(1000);
+
+      for (let i = 0; i < voters.length; i++) {
+        const encodedCommit = encodeCommitPayloadMessage(
+          await services[i].getCommitData(votingRound, voters[i].submitAddress)
+        );
+        const commitPayload = sigCommit + unPrefix0x(encodedCommit);
+        const commitTx = generateTx(
+          voters[i].submitAddress,
+          CONTRACTS.Submission.address,
+          sigCommit,
+          1,
+          currentTimeSec(),
+          commitPayload
+        );
+        await db.addTransaction([commitTx]);
+      }
+
+      clock.tick(epochSettings.votingEpochDurationSeconds * 1000);
+
+      for (let i = 0; i < voters.length; i++) {
+        const encodedCommit = encodeCommitPayloadMessage(
+          await services[i].getCommitData(votingRound + 1, voters[i].submitAddress)
+        );
+        const commitPayload = sigCommit + unPrefix0x(encodedCommit);
+        const commitTx = generateTx(
+          voters[i].submitAddress,
+          CONTRACTS.Submission.address,
+          sigCommit,
+          1,
+          currentTimeSec(),
+          commitPayload
+        );
+        await db.addTransaction([commitTx]);
+      }
+
+      for (let i = 0; i < voters.length; i++) {
+        if (i < missedRevealers) continue;
+
+        const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound));
+        const revealPayload = sigReveal + unPrefix0x(encodedReveal);
+        const revealTx = generateTx(
+          voters[i].submitAddress,
+          CONTRACTS.Submission.address,
+          sigReveal,
+          2,
+          currentTimeSec(),
+          revealPayload
+        );
+        await db.addTransaction([revealTx]);
+      }
+
+      clock.tick(epochSettings.revealDeadlineSeconds * 1000 + 1);
+
+      await db.syncTimeToNow();
+
+      const secureRandom = missedRevealers === 0;
+      for (let i = 0; i < voters.length; i++) {
+        const result = await services[i].getResultData(votingRound);
+        expect(result.isSecureRandom).to.be.equal(secureRandom);
+      }
+
+      clock.tick(epochSettings.votingEpochStartMs(votingRound + 2) - clock.now + 1);
+
+      for (let i = 0; i < voters.length; i++) {
+        const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound + 1));
+        const revealPayload = sigReveal + unPrefix0x(encodedReveal);
+        const revealTx = generateTx(
+          voters[i].submitAddress,
+          CONTRACTS.Submission.address,
+          sigReveal,
+          2,
+          currentTimeSec(),
+          revealPayload
+        );
+        await db.addTransaction([revealTx]);
+      }
+
+      clock.tick(epochSettings.revealDeadlineSeconds * 1000 + 1);
+
+      await db.syncTimeToNow();
+
+      for (let i = 0; i < voters.length; i++) {
+        const result = await services[i].getResultData(votingRound + 1);
+        expect(result.isSecureRandom).to.be.equal(expectedLastSecureRandom);
+      }
+    }
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
