@@ -3,14 +3,14 @@ import { Feed } from "../voting-types";
 export interface ValueWithDecimals {
   readonly isEmpty: boolean;
   readonly value: number; // Never a float
-  readonly decimals: number; //
+  readonly decimals: number;
 }
 
 const EMPTY_FEED_VALUE = "".padStart(8, "0");
 
 export namespace FeedValueEncoder {
   /**
-   * Encodes price to a vector of 4-byte Excess-2^31 formated values combined in a single hex string.
+   * Encodes price to a vector of 4-byte Excess-2^31 formatted values combined in a single hex string.
    * @param prices Prices in number format (float or integer)
    * @returns
    */
@@ -67,8 +67,10 @@ export namespace FeedValueEncoder {
   }
 
   export function feedForValue(value: number, decimals: number) {
+    if (value == undefined) return emptyFeed(decimals);
+
     return {
-      isEmpty: true,
+      isEmpty: false,
       value,
       decimals,
     };

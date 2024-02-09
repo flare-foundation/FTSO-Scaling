@@ -79,14 +79,11 @@ export async function partialRewardClaimsForVotingRound(
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
-  const totalRewardedWeight = [...rewardDataForCalculationResponse.data.voterWeights.values()]
-    .map(voterWeight => rewardDistributionWeight(voterWeight))
-    .reduce((a, b) => a + b, 0n);
 
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
   // Calculate feed medians
-  const medianResults: MedianCalculationResult[] = await calculateMedianResults(
+  const medianResults: MedianCalculationResult[] = calculateMedianResults(
     rewardDataForCalculations.dataForCalculations
   );
   // feedName => medianResult
@@ -136,7 +133,11 @@ export async function partialRewardClaimsForVotingRound(
         eligibleFinalizationRewardVotersInGracePeriod
       );
       // Calculate penalties for reveal withdrawal offenders
-      const penalties = calculateRevealWithdrawalPenalties(offer, totalRewardedWeight, rewardDataForCalculations);
+      const penalties = calculateRevealWithdrawalPenalties(
+        offer,
+        rewardDataForCalculations.dataForCalculations.revealOffenders,
+        rewardDataForCalculations.voterWeights
+      );
       // Merge all reward claims into a single array
       allRewardClaims = RewardClaim.merge([
         ...allRewardClaims,

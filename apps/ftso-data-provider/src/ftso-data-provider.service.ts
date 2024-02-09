@@ -26,6 +26,7 @@ import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
 import { LRUCache } from "lru-cache";
+import { MerkleTreeStructs } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -117,7 +118,10 @@ export class FtsoDataProviderService {
       return undefined;
     }
     const merkleRoot = result.merkleTree.root;
-    const treeNodes = [result.randomData, ...result.medianData];
+    const treeNodes = [
+      MerkleTreeStructs.fromRandomCalculationResult(result.randomData),
+      ...result.medianData.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+    ];
     const response: IProtocolMessageMerkleData = {
       protocolId: FTSO2_PROTOCOL_ID,
       votingRoundId,

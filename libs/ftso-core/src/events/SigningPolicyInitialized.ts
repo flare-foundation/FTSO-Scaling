@@ -17,7 +17,7 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
     this.threshold = Number(data.threshold);
     this.seed = data.seed;
     this.voters = data.voters.map((v: Address) => v.toLowerCase());
-    this.weights = data.weights.map((v: number) => Number(v));
+    this.weights = data.weights.map(v => Number(v));
     this.signingPolicyBytes = data.signingPolicyBytes;
     this.timestamp = Number(data.timestamp);
   }

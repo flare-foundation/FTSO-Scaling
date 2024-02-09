@@ -24,7 +24,7 @@ export interface MedianCalculationResult {
   readonly feedValues: readonly ValueWithDecimals[];
   readonly data: MedianCalculationSummary;
   readonly weights: readonly bigint[];
-  readonly totalVotingWeight: bigint;
+  readonly totalVotingWeight: bigint; //sum of weights
 }
 
 /**

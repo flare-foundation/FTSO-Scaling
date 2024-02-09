@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { MedianCalculationResult, RandomCalculationResult } from "../../ftso-core/src/voting-types";
+import { TreeResult } from "../../ftso-core/src/utils/MerkleTreeStructs";
 
 export interface IProtocolMessageMerkleRoot {
   protocolId: number;
@@ -10,7 +10,7 @@ export interface IProtocolMessageMerkleRoot {
 }
 
 export interface IProtocolMessageMerkleData extends IProtocolMessageMerkleRoot {
-  tree: (RandomCalculationResult | MedianCalculationResult)[];
+  tree: TreeResult[];
 }
 
 export namespace ProtocolMessageMerkleRoot {
