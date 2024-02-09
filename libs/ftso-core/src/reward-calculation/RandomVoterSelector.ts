@@ -97,7 +97,7 @@ export class RandomVoterSelector {
     // If threshold weight is not too big, the loop should end quickly
     while (selectedWeight < thresholdWeight) {
       const index = this.selectVoterIndex(currentSeed);
-      const selectedAddress = this.voters[index];
+      const selectedAddress = this.voters[index].toLowerCase();
       if (!selectedVoters.has(selectedAddress)) {
         selectedVoters.add(selectedAddress);
         selectedWeight += this.weights[index];

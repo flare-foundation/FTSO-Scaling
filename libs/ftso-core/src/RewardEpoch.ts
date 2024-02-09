@@ -11,9 +11,11 @@ import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export interface VoterWeights {
   readonly submitAddress: string;
+  readonly signingAddress: string;
   readonly delegationAddress: string;
   readonly delegationWeight: bigint;
   readonly cappedDelegationWeight: bigint;
+  readonly signingWeight: number;
   readonly feeBIPS: number;
   readonly nodeIDs: string[];
   readonly nodeWeights: bigint[];
@@ -230,13 +232,15 @@ export class RewardEpoch {
    */
   public getVoterWeights(): Map<Address, VoterWeights> {
     const result = new Map<Address, VoterWeights>();
-    this.orderedVotersSubmissionAddresses.forEach(submissionAddress => {
+    this.orderedVotersSubmissionAddresses.forEach((submissionAddress, index) => {
       const voterRegistrationInfo = this.submissionAddressToVoterRegistrationInfo.get(submissionAddress.toLowerCase())!;
       const voterWeights: VoterWeights = {
         submitAddress: voterRegistrationInfo.voterRegistered.submitAddress,
+        signingAddress: voterRegistrationInfo.voterRegistered.signingPolicyAddress,
         delegationAddress: voterRegistrationInfo.voterRegistered.delegationAddress,
         delegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatWeight,
         cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
+        signingWeight: this.signingPolicy.weights[index],
         feeBIPS: voterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS,
         nodeIDs: voterRegistrationInfo.voterRegistrationInfo.nodeIds,
         nodeWeights: voterRegistrationInfo.voterRegistrationInfo.nodeWeights,

@@ -70,24 +70,30 @@ export namespace RewardClaim {
    * @returns
    */
   export function merge(claims: IPartialRewardClaim[]): IPartialRewardClaim[] {
-    const claimsByBeneficiaryAndType = new Map<string, Map<number, IPartialRewardClaim>>();
+    // beneficiary => claimType => sign => claim
+    const claimsByBeneficiaryTypeAndSign = new Map<string, Map<number, Map<Number, IPartialRewardClaim>>>();
     for (const claim of claims) {
       const beneficiary = claim.beneficiary.toLowerCase();
-      const beneficiaryClaimsByType = claimsByBeneficiaryAndType.get(beneficiary) || new Map<number, IRewardClaim>();
-      claimsByBeneficiaryAndType.set(claim.beneficiary, beneficiaryClaimsByType);
-      let mergedClaim = beneficiaryClaimsByType.get(claim.claimType);
+      const beneficiaryClaimsByTypeAndSign = claimsByBeneficiaryTypeAndSign.get(beneficiary) || new Map<number, Map<number, IRewardClaim>>();
+      claimsByBeneficiaryTypeAndSign.set(claim.beneficiary, beneficiaryClaimsByTypeAndSign);
+      const claimTypeBySign = beneficiaryClaimsByTypeAndSign.get(claim.claimType) || new Map<number, IRewardClaim>();
+      beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);
+      const sign = claim.amount < 0 ? -1 : 1;
+      let mergedClaim = claimTypeBySign.get(sign);
       if (!mergedClaim) {
         mergedClaim = { ...claim, beneficiary };
-        beneficiaryClaimsByType.set(claim.claimType, mergedClaim);
+        claimTypeBySign.set(sign, mergedClaim);
       } else {
         mergedClaim.amount += claim.amount;
       }
     }
     const mergedClaims: IPartialRewardClaim[] = [];
 
-    for (const beneficiaryClaimsByType of claimsByBeneficiaryAndType.values()) {
-      for (const mergedClaim of beneficiaryClaimsByType.values()) {
-        mergedClaims.push(mergedClaim);
+    for (const beneficiaryClaimsByType of claimsByBeneficiaryTypeAndSign.values()) {
+      for (const signToClaims of beneficiaryClaimsByType.values()) {
+        for (const mergedClaim of signToClaims.values()) {
+          mergedClaims.push(mergedClaim);
+        }
       }
     }
     return mergedClaims;

@@ -1,9 +1,10 @@
-import { VoterWeights } from "../RewardEpoch";
+import { RewardEpoch, VoterWeights } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import { PENALTY_FACTOR } from "./reward-constants";
-import { rewardDistributionWeight } from "./reward-utils";
+import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
+import { medianRewardDistributionWeight } from "./reward-utils";
 
 /**
  * Given a full reward offer, total rewarded weight and data for reward calculation it calculates penalty claims for reveal withdrawal offenders.
@@ -12,26 +13,23 @@ import { rewardDistributionWeight } from "./reward-utils";
 export function calculateRevealWithdrawalPenalties(
   offer: IPartialRewardOffer,
   revealOffenders: Set<Address>,
+  rewardEpoch: RewardEpoch,
   voterWeights: Map<Address, VoterWeights>
 ): IPartialRewardClaim[] {
   const totalWeight = [...voterWeights.values()]
-    .map(voterWeight => rewardDistributionWeight(voterWeight))
+    .map(voterWeight => medianRewardDistributionWeight(voterWeight))
     .reduce((a, b) => a + b, 0n);
 
-  return [...revealOffenders].map(submitAddress => {
-    const voterWeight = rewardDistributionWeight(voterWeights.get(submitAddress)!);
-
-    //assert
-    if (voterWeight == undefined) {
-      throw new Error("Critical error: Offender cannot be without weight");
+  const penaltyClaims: IPartialRewardClaim[] = [];
+  for (const submitAddress of revealOffenders) {
+    const voterData = voterWeights.get(submitAddress)!
+    if (!voterData) {
+      throw new Error("Critical error: Illegal offender");
     }
-
+    const voterWeight = medianRewardDistributionWeight(voterData);
     const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR) / totalWeight;
-    const penaltyClaim: IPartialRewardClaim = {
-      beneficiary: submitAddress.toLowerCase(),
-      amount: penalty,
-      claimType: ClaimType.DIRECT,
-    };
-    return penaltyClaim;
-  });
+    const signingAddress = voterData.signingAddress;
+    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch));
+  }
+  return penaltyClaims;
 }

@@ -366,8 +366,10 @@ export function generateVotersWeights(numberOfVoters: number) {
     const voterWeight: VoterWeights = {
       submitAddress: generateAddress(`${j}`),
       delegationAddress: generateAddress(`${j}delegation`),
+      signingAddress: generateAddress(`${j}signing`),
       delegationWeight: BigInt(1000 + (j % 5)),
       cappedDelegationWeight: BigInt(1000 + (j % 5)),
+      signingWeight: 1000 + (j % 5) + 3,
       feeBIPS: j % 20,
       nodeIDs: [unsafeRandomHex(20), unsafeRandomHex(20)],
       nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],

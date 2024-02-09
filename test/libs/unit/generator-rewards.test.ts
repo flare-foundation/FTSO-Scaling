@@ -12,7 +12,7 @@ import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, res
 // Ensure that the networks are not loaded
 
 
-describe.only("generator-rewards", () => {
+describe("generator-rewards", () => {
   before(() => {
     process.env.NETWORK = "from-env";
     setupEpochSettings(realtimeShorterEpochSettings);

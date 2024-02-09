@@ -8,10 +8,11 @@ import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardC
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
 import { FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS } from "./reward-constants";
+import { calculateDoubleSigningPenalties } from "./reward-double-signing-penalties";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
-import { calculateRevealWithdrawalPenalties } from "./reward-penalties";
+import { calculateRevealWithdrawalPenalties } from "./reward-reveal-withdrawal-penalties";
 import { calculateSigningRewards } from "./reward-signing";
 
 /**
@@ -26,7 +27,7 @@ export async function rewardClaimsForRewardEpoch(
   rewardEpochManager: RewardEpochManager
 ): Promise<IRewardClaim[]> {
   // Reward epoch definitions
-  
+
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
   // Partial offer generation from reward offers
@@ -101,12 +102,10 @@ export async function partialRewardClaimsForVotingRound(
     rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
     FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS
   );
+
   const initialHash = RandomVoterSelector.initialHashSeed(rewardEpoch.signingPolicy.seed, FTSO2_PROTOCOL_ID, votingRoundId);
   const eligibleFinalizationRewardVotersInGracePeriod = new Set(
-    ...randomVoterSelector.randomSelectThresholdWeightVoters(
-      initialHash,
-      FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS
-    )
+    ...randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
   );
 
   // Calculate reward claims for each feed offer
@@ -133,9 +132,17 @@ export async function partialRewardClaimsForVotingRound(
         eligibleFinalizationRewardVotersInGracePeriod
       );
       // Calculate penalties for reveal withdrawal offenders
-      const penalties = calculateRevealWithdrawalPenalties(
+      const revealWithdrawalPenalties = calculateRevealWithdrawalPenalties(
         offer,
         rewardDataForCalculations.dataForCalculations.revealOffenders,
+        rewardDataForCalculations.dataForCalculations.rewardEpoch,
+        rewardDataForCalculations.voterWeights
+      );
+
+      const doubleSigningPenalties = calculateDoubleSigningPenalties(
+        offer,
+        rewardDataForCalculations.signatures,
+        rewardDataForCalculations.dataForCalculations.rewardEpoch,
         rewardDataForCalculations.voterWeights
       );
       // Merge all reward claims into a single array
@@ -144,7 +151,8 @@ export async function partialRewardClaimsForVotingRound(
         ...medianRewardClaims,
         ...signingRewardClaims,
         ...finalizationRewardClaims,
-        ...penalties,
+        ...revealWithdrawalPenalties,
+        ...doubleSigningPenalties,
       ]);
     }
   }

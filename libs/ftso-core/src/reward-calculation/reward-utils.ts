@@ -11,7 +11,7 @@ import {
 /**
  * Returns reward distribution weight for the voter.
  */
-export function rewardDistributionWeight(voterWeights: VoterWeights): bigint {
+export function medianRewardDistributionWeight(voterWeights: VoterWeights): bigint {
   return voterWeights.cappedDelegationWeight;
 }
 

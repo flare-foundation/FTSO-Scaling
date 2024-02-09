@@ -5,7 +5,7 @@ import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
 import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
-import { rewardDistributionWeight } from "./reward-utils";
+import { medianRewardDistributionWeight } from "./reward-utils";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
@@ -89,7 +89,7 @@ export function calculateMedianRewardClaims(
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
       voterAddress,
-      weight: rewardDistributionWeight(voterWeights.get(voterAddress)!),
+      weight: medianRewardDistributionWeight(voterWeights.get(voterAddress)!),
       iqr:
         (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, voterAddress)),
@@ -172,10 +172,10 @@ export function calculateMedianRewardClaims(
  * Given assigned reward it generates reward claims for the voter.
  * Currently only a partial fee claim and capped wnat delegation participation weight claims are created.
  */
-export function generateMedianRewardClaimsForVoter(reward: bigint, voterWeights: VoterWeights) {
+export function generateMedianRewardClaimsForVoter(amount: bigint, voterWeights: VoterWeights) {
   const result: IPartialRewardClaim[] = [];
-  const fee = (reward * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
-  const participationReward = reward - fee;
+  const fee = (amount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
+  const participationReward = amount - fee;
 
   // No claims with zero amount
   if (fee > 0n) {

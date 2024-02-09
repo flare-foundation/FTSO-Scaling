@@ -771,8 +771,7 @@ export async function extractIndexerToCSV(entityManager: EntityManager, voters: 
   // writeFileSync(filename, text);
 }
 
-function claimListSummary(beneficiary: string, voterIndex: number, claims: IRewardClaim[], padding = 6) {
-
+function claimListSummary(beneficiary: string, voterIndex: number, isNodeId: boolean, claims: IRewardClaim[], padding = 6) {
   const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
   const fee = (feeClaim ? Number(feeClaim.amount) : 0).toString().padStart(padding);
   const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
@@ -783,9 +782,16 @@ function claimListSummary(beneficiary: string, voterIndex: number, claims: IRewa
   const direct = (directClaim ? Number(directClaim.amount) : 0).toString().padStart(padding);
   const cchainClaim = claims.find(c => c.claimType === ClaimType.CCHAIN);
   const cchain = (cchainClaim ? Number(cchainClaim.amount) : 0).toString().padStart(padding);
-  const indexValue = voterIndex === -1 ? "-" : voterIndex.toString();
+  const indexValue = (
+    voterIndex === undefined
+      ? "-"
+      : (
+        isNodeId
+          ? "n-" + voterIndex.toString()
+          : voterIndex.toString()
+      )).padStart(5);
   let addressText = beneficiary.slice(0, 10);
-  if(beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
+  if (beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
     addressText = "BURN ADDR ";
   }
   return `${indexValue.padStart(3)} ${addressText}: FEE: ${fee}|  WNAT: ${wnat}|  MIRROR: ${mirror}|  DIRECT: ${direct}|  CCHAIN: ${cchain}`
@@ -793,6 +799,13 @@ function claimListSummary(beneficiary: string, voterIndex: number, claims: IRewa
 
 export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
   const voterToClaimMap = new Map<string, IRewardClaim[]>();
+  const nodeIdToVoterIndex = new Map<string, number>();
+  for (let i = 0; i < voters.length; i++) {
+    const voter = voters[i];
+    for (const nodeId of voter.nodeIds) {
+      nodeIdToVoterIndex.set(nodeId, i);
+    }
+  }
   let totalValue = 0n;
   let burned = 0n;
   for (const claim of claims) {
@@ -823,16 +836,19 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
     const claimList = voterToClaimMap.get(voter.delegationAddress.toLowerCase()) || [];
-    console.log(claimListSummary(voter.delegationAddress, i, claimList));
+    console.log(claimListSummary(voter.delegationAddress, i, false, claimList));
   }
   console.log("NON-VOTERS:")
+
   for (const address of nonVoterAddresses) {
     const claimList = voterToClaimMap.get(address) || [];
-    console.log(claimListSummary(address, -1, claimList));
+    const voterIndex = nodeIdToVoterIndex.get(address);
+    let isNodeId = voterIndex !== undefined;
+    console.log(claimListSummary(address, voterIndex, isNodeId, claimList));
   }
 }
 
-function voterSummary(voterIndex: number, voter: TestVoter) {  
+function voterSummary(voterIndex: number, voter: TestVoter) {
   return `Voter: ${voterIndex} del: ${voter.delegationAddress.toLowerCase().slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress.toLowerCase().slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${voter.registrationWeight}`;
 }
 
@@ -847,11 +863,11 @@ export function votersSummary(voters: TestVoter[]) {
 export function offersSummary(offers: RewardOffers) {
   console.log("OFFERS SUMMARY:");
   let totalOffers = 0n;
-  for(let offer of offers.rewardOffers) {
+  for (let offer of offers.rewardOffers) {
     totalOffers += offer.amount;
   }
   let totalInflationOffers = 0n;
-  for(let offer of offers.inflationOffers) {
+  for (let offer of offers.inflationOffers) {
     totalInflationOffers += offer.amount;
   }
   console.log(`Community offers: ${offers.rewardOffers.length}, total: ${totalOffers}`);
