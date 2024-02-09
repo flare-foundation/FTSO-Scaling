@@ -1,6 +1,6 @@
 import { RewardEpoch, VoterWeights } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
-import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import { PENALTY_FACTOR } from "./reward-constants";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
