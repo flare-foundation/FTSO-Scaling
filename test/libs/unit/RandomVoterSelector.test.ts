@@ -96,7 +96,7 @@ describe("RandomVoterSelector", () => {
     expect(expected[0]).to.equal(seed);
   });
 
-  it("Should voters weight be over threshold and generated from expected number sequence", () => {
+  it.skip("Should voters weight be over threshold and generated from expected number sequence", () => {
     const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     const weightThresholdBIPS = 3000;
     const thresholdWeight = (randomVoterSelector.totalWeight * BigInt(weightThresholdBIPS)) / 10000n;

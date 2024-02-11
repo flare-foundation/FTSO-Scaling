@@ -291,7 +291,7 @@ export function generateRewardEpoch() {
   const rewardsOffered: RewardsOffered[] = [];
 
   for (let j = 0; j < 10; j++) {
-    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`offer${j}`));
+    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`));
     rewardsOffered.push(rewardOffered);
   }
 
@@ -364,7 +364,7 @@ export function generateVotersWeights(numberOfVoters: number) {
 
   for (let j = 0; j < numberOfVoters; j++) {
     const voterWeight: VoterWeights = {
-      submitAddress: generateAddress(`${j}submit`),
+      submitAddress: generateAddress(`${j}`),
       delegationAddress: generateAddress(`${j}delegation`),
       signingAddress: generateAddress(`${j}signing`),
       delegationWeight: BigInt(1000 + (j % 5)),

@@ -15,7 +15,7 @@ export class InflationRewardsOffered extends RawEventConstructible {
     if (unPrefixed.length % 16 !== 0) {
       throw new Error("Feed names must be multiple of 8 bytes");
     }
-    this.feedNames = unPrefixed.match(/.{1,16}/g);
+    this.feedNames = unPrefixed.match(/.{1,16}/g).map(x => "0x" + x);
 
     unPrefixed = unPrefix0x(data.secondaryBandWidthPPMs);
     if (unPrefixed.length % 6 !== 0) {

@@ -59,9 +59,9 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   });
 
   it("should have offers for each feed each round", function () {
-    const feedName3 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C3"), 16).slice(2, 18);
-    const feedName4 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C4"), 16).slice(2, 18);
-    const feedName10 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C10"), 16).slice(2, 18);
+    const feedName3 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C3"), 16).slice(0, 18);
+    const feedName4 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C4"), 16).slice(0, 18);
+    const feedName10 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C10"), 16).slice(0, 18);
 
     expect(granulatedPartialOffers.get(5893).get(feedName3).length).to.eq(3);
     expect(granulatedPartialOffers.get(5893).get(feedName4).length).to.eq(2);
