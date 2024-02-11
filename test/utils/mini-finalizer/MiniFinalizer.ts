@@ -106,8 +106,14 @@ export class MiniFinalizer {
         signatures,
         protocolMessageMerkleRoot: messageData,
       }
-      const selectionIndex = this.voterSelector.inSelectionList(matchingSigningPolicy.voters.map(x => x.toLowerCase()), matchingSigningPolicy.seed, messageData.protocolId, messageData.votingRoundId, this.voter.signingAddress);
-      if(selectionIndex < 0) {
+      const selectionIndex = this.voterSelector.inSelectionList(
+        matchingSigningPolicy.voters.map(x => x.toLowerCase()),
+        matchingSigningPolicy.seed,
+        messageData.protocolId,
+        messageData.votingRoundId,
+        this.voter.signingAddress
+      );
+      if (selectionIndex < 0) {
         return;
       }
       try {

@@ -14,7 +14,7 @@ export class RandomVoterSelector {
   weights: bigint[];
   defaultThresholdBIPS: number;
 
-  constructor(voters: Address[], weights: bigint[], defaultThresholdBIPS?: number) {
+  constructor(voters: Address[], weights: bigint[], defaultThresholdBIPS: number) {
     if (voters.length !== weights.length) {
       throw new Error("voters and weights must have the same length");
     }
@@ -26,7 +26,7 @@ export class RandomVoterSelector {
       this.thresholds.push(this.totalWeight);
       this.totalWeight += weight;
     }
-    this.defaultThresholdBIPS = defaultThresholdBIPS || 0;
+    this.defaultThresholdBIPS = defaultThresholdBIPS;
 
     // We limit the threshold to 5000 BIPS to avoid long running loops
     // In practice it will be used with around 1000 BIPS or lower.
@@ -82,15 +82,11 @@ export class RandomVoterSelector {
    * of total voter weight.
    * If the threshold is 0 it randomly selects on voter, with probability proportional to its weight.
    */
-  public randomSelectThresholdWeightVoters(randomSeed: string, providedThresholdBIPS?: number): Address[] {
+  public randomSelectThresholdWeightVoters(randomSeed: string): Address[] {
     // We limit the threshold to 5000 BIPS to avoid long running loops
     // In practice it will be used with around 1000 BIPS or lower.
-    const thresholdBIPS = providedThresholdBIPS ?? this.defaultThresholdBIPS;
-    if (!thresholdBIPS || thresholdBIPS <= 0 || thresholdBIPS > 5000) {
-      throw new Error("Threshold must be > 0 and <= 5000 BIPS");
-    }
     let selectedWeight = 0n;
-    const thresholdWeight = (this.totalWeight * BigInt(thresholdBIPS)) / 10000n;
+    const thresholdWeight = (this.totalWeight * BigInt(this.defaultThresholdBIPS)) / 10000n;
     let currentSeed = randomSeed;
     const selectedVoters = new Set<Address>();
 
@@ -128,11 +124,10 @@ export class RandomVoterSelector {
 
   /**
    * Given protocol ID, voting round ID and address, it checks if the address is in the selection set.
-   * If thresholdBIPS is not provided, the default threshold is used.
    */
-  public inSelectionList(voters: string[], rewardEpochSeed: string, protocolId: number, votingRoundId: number, address: string, thresholdBIPS?: number): number {
+  public inSelectionList(voters: string[], rewardEpochSeed: string, protocolId: number, votingRoundId: number, address: string): number {
     const initialSeed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
-    let selection = this.randomSelectThresholdWeightVoters(initialSeed, thresholdBIPS);
+    let selection = this.randomSelectThresholdWeightVoters(initialSeed);
     const result = voters.filter((voter) => selection.includes(voter));
     for (let i = 0; i < result.length; i++) {
       if (result[i].toLowerCase() === address.toLowerCase()) {

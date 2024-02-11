@@ -3,7 +3,7 @@ import Web3 from "web3";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../apps/ftso-data-provider/src/response-encoders";
 import { IPayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
 import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningPolicy";
-import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
+import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
 
 import FakeTimers from "@sinonjs/fake-timers";
 import { writeFileSync } from "fs";
@@ -39,7 +39,6 @@ const sigReveal = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, 
 const sigSignature = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submitSignatures);
 const relaySignature = encodingUtils.getFunctionSignature(CONTRACTS.Relay.name, ContractMethodNames.relay);
 
-const FINALIZATION_VOTER_SELECTION_WEIGHT_THRESHOLD_BIPS = 2000; // 20%
 export interface IndexerPosition<T> {
   block: number;
   timestamp: number;
@@ -397,7 +396,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   const voterSelector = new RandomVoterSelector(
     signingPolicy.voters,
     signingPolicy.weights.map(n => BigInt(n)),
-    FINALIZATION_VOTER_SELECTION_WEIGHT_THRESHOLD_BIPS
+    FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
   );
 
   const voterIndexToMiniFTSOCalculator = new Map<number, MiniFtsoCalculator>();
@@ -899,7 +898,4 @@ export function offersSummary(offers: RewardOffers) {
   console.log(`Community offers: ${offers.rewardOffers.length}, total: ${totalOffers}`);
   console.log(`Inflation offers: ${offers.inflationOffers.length}, total: ${totalInflationOffers}`);
 }
-
-
-
 

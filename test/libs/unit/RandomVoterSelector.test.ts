@@ -4,7 +4,7 @@ import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculat
 import Web3 from "web3";
 
 const coder = ethers.AbiCoder.defaultAbiCoder();
-const DEFAULT_BIPS = 1000;
+const DEFAULT_THRESHOLD_BIPS = 1000;
 
 describe("RandomVoterSelector", () => {
   const voters = [
@@ -28,7 +28,7 @@ describe("RandomVoterSelector", () => {
   });
 
   it("Should correctly initialize", () => {
-    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_BIPS);
+    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     expect(randomVoterSelector.thresholds).to.deep.equal([0n, 100n, 300n, 600n, 1000n]);
     expect(randomVoterSelector.totalWeight).to.equal(1500n);
     expect(randomVoterSelector.voters).to.deep.equal(voters);
@@ -36,12 +36,12 @@ describe("RandomVoterSelector", () => {
   });
 
   it("Should binary search work correctly", () => {
-    const randomVoterSelector1 = new RandomVoterSelector(["0xc783df8a850f42e7f7e57013759c285caa701eb6"], [100n], DEFAULT_BIPS);
+    const randomVoterSelector1 = new RandomVoterSelector(["0xc783df8a850f42e7f7e57013759c285caa701eb6"], [100n], DEFAULT_THRESHOLD_BIPS);
     expect(randomVoterSelector1.binarySearch(0n)).to.equal(0);
     expect(randomVoterSelector1.binarySearch(1n)).to.equal(0);
     expect(randomVoterSelector1.binarySearch(99n)).to.equal(0);
     expect(randomVoterSelector1.binarySearch(100n)).to.equal(0);
-    const randomVoterSelector5 = new RandomVoterSelector(voters, weights, DEFAULT_BIPS);
+    const randomVoterSelector5 = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     expect(randomVoterSelector5.binarySearch(0n)).to.equal(0);
     expect(randomVoterSelector5.binarySearch(1n)).to.equal(0);
     expect(randomVoterSelector5.binarySearch(99n)).to.equal(0);
@@ -67,7 +67,7 @@ describe("RandomVoterSelector", () => {
 
   it("Should selectVoterIndex return a valid index", () => {
     const rewardEpochSeed = Web3.utils.randomHex(32);
-    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_BIPS);
+    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     for (let protocolId = 1; protocolId <= 5; protocolId++) {
       for (let votingRoundId = 0; votingRoundId <= 10; votingRoundId++) {
         const initialSeed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
@@ -79,7 +79,7 @@ describe("RandomVoterSelector", () => {
   });
 
   it("Should random generation from a predetermined seed return expected values", () => {
-    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_BIPS);
+    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     const protocolId = 1;
     const votingRoundId = 1;
     const rewardEpochSeed = "0xd95b7ddc4e3de476e066fcc8f98a0a9049d1a9f7babf759ab2ddf64931194018";
@@ -97,7 +97,7 @@ describe("RandomVoterSelector", () => {
   });
 
   it("Should voters weight be over threshold and generated from expected number sequence", () => {
-    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_BIPS);
+    const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     const weightThresholdBIPS = 3000;
     const thresholdWeight = (randomVoterSelector.totalWeight * BigInt(weightThresholdBIPS)) / 10000n;
     const voterWeightMap = new Map<string, bigint>();
@@ -108,7 +108,7 @@ describe("RandomVoterSelector", () => {
     const votingRoundId = 1;
     const rewardEpochSeed = Web3.utils.randomHex(32);
     const seed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
-    const result = randomVoterSelector.randomSelectThresholdWeightVoters(seed, weightThresholdBIPS);
+    const result = randomVoterSelector.randomSelectThresholdWeightVoters(seed);
     let sum = 0n;
     for (const voter of result) {
       sum += voterWeightMap.get(voter)!;

@@ -12,7 +12,7 @@ export class RewardsOffered extends RawEventConstructible {
   constructor(data: any) {
     super();
     this.rewardEpochId = Number(data.rewardEpochId);
-    this.feedName = unPrefix0x(data.feedName);
+    this.feedName = data.feedName.startsWith("0x") ? data.feedName : "0x" + data.feedName;
     this.decimals = Number(data.decimals);
     this.amount = BigInt(data.amount);
     this.minRewardedTurnoutBIPS = Number(data.minRewardedTurnoutBIPS);

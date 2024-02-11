@@ -54,7 +54,7 @@ export function isFinalizationInGracePeriodAndEligible(
     eligibleVoters.has(finalization.submitAddress) &&
     finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
     finalization.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
-    finalization.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC()
+    finalization.relativeTimestamp <= EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC()
   );
 }
 

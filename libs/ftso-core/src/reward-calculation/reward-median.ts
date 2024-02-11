@@ -74,7 +74,8 @@ export function calculateMedianRewardClaims(
 
   const voterRecords: VoterRewarding[] = [];
 
-  const secondaryBandDiff = (medianPrice * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
+  const abs = (n) => (n < 0n) ? -n : n;
+  const secondaryBandDiff = (abs(medianPrice) * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
 
   const lowPCT = medianPrice - secondaryBandDiff;
   const highPCT = medianPrice + secondaryBandDiff;

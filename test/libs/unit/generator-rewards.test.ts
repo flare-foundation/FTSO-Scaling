@@ -31,7 +31,7 @@ describe.only("generator-rewards", () => {
   })
 
   it("should generate", async () => {
-    const numberOfVoters = 4;
+    const numberOfVoters = 10;
     const feeds: Feed[] = [
       { name: "0x4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
       { name: "0x4554480055534454", decimals: 2 }, // ETH USDT 2,175.12

@@ -29,7 +29,7 @@ export namespace PartialRewardOffer {
   export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOffer {
     return {
       rewardEpochId: rewardOffer.rewardEpochId,
-      feedName: rewardOffer.feedName,
+      feedName: rewardOffer.feedName.startsWith("0x") ? rewardOffer.feedName : "0x" + rewardOffer.feedName,
       decimals: rewardOffer.decimals,
       amount: rewardOffer.amount,
       minRewardedTurnoutBIPS: rewardOffer.minRewardedTurnoutBIPS,
