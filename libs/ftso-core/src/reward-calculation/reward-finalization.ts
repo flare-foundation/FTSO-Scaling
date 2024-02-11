@@ -24,23 +24,23 @@ export function calculateFinalizationRewardClaims(
   const votingRoundId = data.dataForCalculations.votingRoundId;
   // No voter provided finalization in grace period. Whoever finalizes gets the full reward.
   if (isFinalizationOutsideOfGracePeriod(votingRoundId, data.firstSuccessfulFinalization!)) {
-    const backClaim: IPartialRewardClaim = {
+    const otherFinalizerClaim: IPartialRewardClaim = {
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
     };
-    return [backClaim];
+    return [otherFinalizerClaim];
   }
   const gracePeriodFinalizations = data.finalizations.filter(finalization =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
   if (gracePeriodFinalizations.length === 0) {
-    const backClaim: IPartialRewardClaim = {
+    const otherFinalizerClaim: IPartialRewardClaim = {
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
     };
-    return [backClaim];
+    return [otherFinalizerClaim];
   }
   const rewardEpoch = data.dataForCalculations.rewardEpoch;
   let undistributedAmount = offer.amount;

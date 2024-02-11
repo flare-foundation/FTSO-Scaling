@@ -4,8 +4,8 @@ import { VoterWeights } from "../RewardEpoch";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
-import { TOTAL_BIPS, TOTAL_PPM } from "./reward-constants";
 import { medianRewardDistributionWeight } from "./reward-utils";
+import { TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial

@@ -1,11 +1,10 @@
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData } from "../IndexerClient";
 import { RewardEpoch, VoterWeights } from "../RewardEpoch";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../configs/networks";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, PENALTY_FACTOR } from "../configs/networks";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MessageHash } from "../voting-types";
-import { PENALTY_FACTOR } from "./reward-constants";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 
 /**
@@ -77,7 +76,7 @@ export function calculateDoubleSigningPenalties(
       throw new Error("Critical error: Illegal offender");
     }
     const voterWeight = BigInt(voterData.signingWeight);
-    const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR) / totalWeight;
+    const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR()) / totalWeight;
     const signingAddress = voterData.signingAddress;
     penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch));
   }

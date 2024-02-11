@@ -6,13 +6,13 @@ import { rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-c
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
-import { claimSummary, extractIndexerToCSV, generateRewardEpochDataForRewardCalculation, offersSummary, voterFeedValue, votersSummary } from "../../utils/generators-rewards";
-import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEpochSettings, setupEpochSettings } from "../../utils/test-epoch-settings";
+import { claimSummary, printSummary, generateRewardEpochDataForRewardCalculation, offersSummary, voterFeedValue, votersSummary } from "../../utils/generators-rewards";
+import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEnvVariables, resetEpochSettings, rewardSettingsForRealtimeShorterEpochSettings, setupEnvVariables, setupEpochSettings } from "../../utils/test-epoch-settings";
 
 // Ensure that the networks are not loaded
 
 
-describe("generator-rewards", () => {
+describe.only("generator-rewards", () => {
   before(() => {
     process.env.NETWORK = "from-env";
     setupEpochSettings(realtimeShorterEpochSettings);
@@ -20,10 +20,14 @@ describe("generator-rewards", () => {
     console.dir(EPOCH_SETTINGS());
     process.env.RANDOM_GENERATION_BENCHING_WINDOW = "1";
     console.log(`RANDOM_GENERATION_BENCHING_WINDOW = ${process.env.RANDOM_GENERATION_BENCHING_WINDOW }`);
+    setupEnvVariables(rewardSettingsForRealtimeShorterEpochSettings);
+    console.log("Reward settings used");
+    console.dir(rewardSettingsForRealtimeShorterEpochSettings);
   })
 
   after(() => {
     resetEpochSettings();
+    resetEnvVariables();
   })
 
   it("should generate", async () => {
@@ -51,7 +55,7 @@ describe("generator-rewards", () => {
       console
     );
   
-    await extractIndexerToCSV(entityManager, voters, "test.csv");
+    await printSummary(entityManager, voters);
     // const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     // this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;

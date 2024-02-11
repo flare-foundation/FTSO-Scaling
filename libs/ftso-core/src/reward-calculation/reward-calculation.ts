@@ -1,13 +1,12 @@
 import { DataAvailabilityStatus, DataManager } from "../DataManager";
 import { RewardEpoch } from "../RewardEpoch";
 import { RewardEpochManager } from "../RewardEpochManager";
-import { FTSO2_PROTOCOL_ID } from "../configs/networks";
+import { FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FTSO2_PROTOCOL_ID } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
-import { FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS } from "./reward-constants";
 import { calculateDoubleSigningPenalties } from "./reward-double-signing-penalties";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
@@ -100,13 +99,11 @@ export async function partialRewardClaimsForVotingRound(
   const randomVoterSelector = new RandomVoterSelector(
     rewardEpoch.signingPolicy.voters,
     rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
-    FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS
+    FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
   );
 
   const initialHash = RandomVoterSelector.initialHashSeed(rewardEpoch.signingPolicy.seed, FTSO2_PROTOCOL_ID, votingRoundId);
-  const eligibleFinalizationRewardVotersInGracePeriod = new Set(
-    ...randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
-  );
+  const eligibleFinalizationRewardVotersInGracePeriod = new Set(randomVoterSelector.randomSelectThresholdWeightVoters(initialHash));
 
   // Calculate reward claims for each feed offer
   for (const [feedName, offers] of feedOffers.entries()) {

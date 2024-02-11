@@ -1,14 +1,10 @@
 import { ProtocolMessageMerkleRoot } from "../../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData } from "../IndexerClient";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../configs/networks";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
-import {
-  MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
-  TOTAL_BIPS
-} from "./reward-constants";
 import { calculateDoubleSigners } from "./reward-double-signing-penalties";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
@@ -154,7 +150,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
     }
   }
   const minimalWeightThreshold =
-    (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS) / Number(TOTAL_BIPS);
+    (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS()) / Number(TOTAL_BIPS);
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     const weightSum = hashToWeight.get(hash)!;
     if (weightSum === maxWeight && weightSum >= minimalWeightThreshold) {

@@ -1,7 +1,7 @@
 import { RewardEpoch } from "../RewardEpoch";
+import { TOTAL_BIPS } from "../configs/networks";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
-import { TOTAL_BIPS } from "./reward-constants";
 
 /**
  * Given an amount of a reward it produces specific partial reward claims split based when reward amount is assigned to 

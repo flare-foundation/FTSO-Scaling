@@ -1,8 +1,8 @@
 import { RewardEpoch, VoterWeights } from "../RewardEpoch";
+import { PENALTY_FACTOR } from "../configs/networks";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
-import { PENALTY_FACTOR } from "./reward-constants";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { medianRewardDistributionWeight } from "./reward-utils";
 
@@ -27,7 +27,7 @@ export function calculateRevealWithdrawalPenalties(
       throw new Error("Critical error: Illegal offender");
     }
     const voterWeight = medianRewardDistributionWeight(voterData);
-    const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR) / totalWeight;
+    const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR()) / totalWeight;
     const signingAddress = voterData.signingAddress;
     penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch));
   }

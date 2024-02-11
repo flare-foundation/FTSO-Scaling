@@ -1,6 +1,6 @@
+import { FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered, RewardOffers } from "../events";
 import { IPartialRewardOffer, PartialRewardOffer } from "../utils/PartialRewardOffer";
-import { SIGNING_BIPS, TOTAL_BIPS, FINALIZATION_BIPS } from "./reward-constants";
 
 /**
  * A split of partial reward offer into three parts:
@@ -67,8 +67,8 @@ export function granulatedPartialOfferMap(
  * of rewards.
  */
 export function splitRewardOfferByTypes(offer: IPartialRewardOffer): SplitRewardOffer {
-  const forSigning = (offer.amount * SIGNING_BIPS) / TOTAL_BIPS;
-  const forFinalization = (offer.amount * FINALIZATION_BIPS) / TOTAL_BIPS;
+  const forSigning = (offer.amount * SIGNING_BIPS()) / TOTAL_BIPS;
+  const forFinalization = (offer.amount * FINALIZATION_BIPS()) / TOTAL_BIPS;
   const forMedian = offer.amount - forSigning - forFinalization;
   const result: SplitRewardOffer = {
     medianRewardOffer: {

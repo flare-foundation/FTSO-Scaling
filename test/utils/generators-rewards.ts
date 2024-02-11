@@ -3,8 +3,10 @@ import Web3 from "web3";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../apps/ftso-data-provider/src/response-encoders";
 import { IPayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
 import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningPolicy";
-import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
+import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
 
+import FakeTimers from "@sinonjs/fake-timers";
+import { writeFileSync } from "fs";
 import { ContractMethodNames } from "../../libs/ftso-core/src/configs/contracts";
 import {
   InflationRewardsOffered,
@@ -24,14 +26,12 @@ import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { ILogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { IRevealData } from "../../libs/ftso-core/src/utils/RevealData";
+import { ClaimType, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 import { Feed } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent, generateState, generateTx } from "./basic-generators";
 import { MiniFinalizer } from "./mini-finalizer/MiniFinalizer";
 import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
 import { FSPSettings } from "./test-epoch-settings";
-import FakeTimers from "@sinonjs/fake-timers";
-import { last } from "rxjs";
-import { ClaimType, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 
 const encodingUtils = EncodingUtils.instance;
 const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
@@ -446,8 +446,10 @@ export async function generateRewardEpochDataForRewardCalculation(
     const startTime = timestamp;
     const commitStartOffset = Math.floor(EPOCH_SETTINGS().votingEpochDurationSeconds * 0.5);
     const signatureStartOffset = EPOCH_SETTINGS().revealDeadlineSeconds + 1;
-    const signatureDuration = Math.floor(EPOCH_SETTINGS().votingEpochDurationSeconds * 0.2);
-    const finalizationStartOffset = signatureStartOffset + signatureDuration;
+
+    // const signatureDuration = Math.floor(EPOCH_SETTINGS().votingEpochDurationSeconds * 0.2);
+    const finalizationStartOffset = EPOCH_SETTINGS().revealDeadlineSeconds + 1 + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
+    const finalizationStartDeadline = EPOCH_SETTINGS().votingEpochStartSec(votingEpochId) + finalizationStartOffset;
 
     // REVEALS
     if (votingEpochId > signingPolicy.startVotingRoundId) {
@@ -509,7 +511,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         );
         entities.push(signatureTx);
         // Increase block and timestamp, but if near the end, pack all of them into one block
-        if (timestamp < finalizationStartOffset - 1) {
+        if (timestamp < finalizationStartDeadline - 1) {
           mineBlock();
         }
       }
@@ -623,102 +625,112 @@ export function getVoterToIndexMap(voters: TestVoter[]): Map<string, number> {
   return voterToIndexMap;
 }
 
-export function parseEventSummary(event: TLPEvents, voterToIndexMap: Map<string, number>): string {
-  function votingEpoch(event) {
-    return EPOCH_SETTINGS().votingEpochForTimeSec(event.timestamp);
+function votingEpoch(timestamp: number) {
+  return EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
+}
+function rewardEpoch(timestamp: number) {
+  try {
+    return EPOCH_SETTINGS().rewardEpochForTimeSec(timestamp)
+  } catch (e) {
+    return "-";
   }
-  function rewardEpoch(event) {
-    try {
-      return EPOCH_SETTINGS().rewardEpochForTimeSec(event.timestamp)
-    } catch (e) {
-      return "-";
-    }
-  }
+}
 
+// String of form (and meaning)
+// - Rev - reveal
+// - GS - grace period for signatures
+// - GF - grace period for finalization
+// - C  - beyond grace period for finalization
+function votingEpochPosition(timestamp: number) {
+  const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
+  const offset = timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId);
+  if (offset <= EPOCH_SETTINGS().revealDeadlineSeconds) {
+    return `Rev`;
+  }
+  if (offset <= EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()) {
+    return `GS`;
+  }
+  if (offset <= EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC() + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()) {
+    return `GF`;
+  }
+  return `C`;
+}
+
+export function parseEventSummary(event: TLPEvents, voterToIndexMap: Map<string, number>): string {
   const eventAddress = "0x" + event.address.toLowerCase();
   if (eventAddress === CONTRACTS.FlareSystemManager.address.toLowerCase()) {
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemManager.name, RandomAcquisitionStarted.eventName)) {
       const parsedEvent = RandomAcquisitionStarted.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};RandomAcquisitionStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RandomAcquisitionStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemManager.name, VotePowerBlockSelected.eventName)) {
       const parsedEvent = VotePowerBlockSelected.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};VotePowerBlockSelected;rewardEpochId: ${parsedEvent.rewardEpochId}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VotePowerBlockSelected;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
 
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemManager.name, RewardEpochStarted.eventName)) {
       const parsedEvent = RewardEpochStarted.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};RewardEpochStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RewardEpochStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
   }
   if (eventAddress === CONTRACTS.VoterRegistry.address.toLowerCase()) {
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.VoterRegistry.name, VoterRegistered.eventName)) {
       const parsedEvent = VoterRegistered.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};VoterRegistered;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VoterRegistered;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
     }
   }
   if (eventAddress === CONTRACTS.FlareSystemCalculator.address.toLowerCase()) {
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemCalculator.name, VoterRegistrationInfo.eventName)) {
       const parsedEvent = VoterRegistrationInfo.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};VoterRegistrationInfo;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VoterRegistrationInfo;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
     }
   }
   if (eventAddress === CONTRACTS.Relay.address.toLowerCase()) {
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.Relay.name, SigningPolicyInitialized.eventName)) {
       const parsedEvent = SigningPolicyInitialized.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};SigningPolicyInitialized;rewardEpochId: ${parsedEvent.rewardEpochId}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};SigningPolicyInitialized;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
   }
   if (eventAddress === CONTRACTS.FtsoRewardOffersManager.address.toLowerCase()) {
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FtsoRewardOffersManager.name, RewardsOffered.eventName)) {
       const parsedEvent = RewardsOffered.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};RewardsOffered;rewardEpochId: ${parsedEvent.rewardEpochId}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RewardsOffered;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
     if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FtsoRewardOffersManager.name, InflationRewardsOffered.eventName)) {
       const parsedEvent = InflationRewardsOffered.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};InflationRewardsOffered;rewardEpochId: ${parsedEvent.rewardEpochId}`;
+      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};InflationRewardsOffered;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
 
   }
-  return `${event.timestamp};${event.block_number};${votingEpoch(event)};${rewardEpoch(event)};Unknown Event;${eventAddress} ${event.topic0}`;
+  return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};Unknown Event;${eventAddress} ${event.topic0}`;
 }
 
 export function parseTransactionSummary(tx: TLPTransaction, voterToIndexMap: Map<string, number>) {
-  function votingEpoch(tx) {
-    return EPOCH_SETTINGS().votingEpochForTimeSec(tx.timestamp);
-  }
-  function rewardEpoch(tx) {
-    try {
-      return EPOCH_SETTINGS().rewardEpochForTimeSec(tx.timestamp)
-    } catch (e) {
-      return "-";
-    }
-  }
   const toAddress = "0x" + tx.to_address.toLowerCase();
   const fromAddress = "0x" + tx.from_address.toLowerCase();
   if (toAddress === CONTRACTS.Submission.address.toLowerCase()) {
     if (tx.input.startsWith(sigCommit.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxCommit;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxCommit;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
     if (tx.input.startsWith(sigReveal.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxReveal;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxReveal;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
     if (tx.input.startsWith(sigSignature.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxSignature;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxSignature;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
   }
   if (toAddress === CONTRACTS.Relay.address.toLowerCase()) {
     if (tx.input.startsWith(relaySignature.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxRelay;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxRelay;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
   }
   if (toAddress === BURN_ADDRESS.toLowerCase() && fromAddress === BURN_ADDRESS.toLowerCase()) {
-    return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};TxFake`;
+    return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxFake`;
   }
-  return `${tx.timestamp};${tx.block_number};${votingEpoch(tx)};${rewardEpoch(tx)};Unknown TX;to address: ${toAddress}; input: ${tx.input};status: ${tx.status}`;
+  return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};Unknown TX;to address: ${toAddress}; input: ${tx.input};status: ${tx.status}`;
 }
 
-export async function extractIndexerToCSV(entityManager: EntityManager, voters: TestVoter[], filename: string) {
+export async function printSummary(entityManager: EntityManager, voters: TestVoter[], filename?: string) {
   const voterToIndexMap = getVoterToIndexMap(voters)
   const state = await entityManager.getRepository(TLPState)
     .createQueryBuilder("state")
@@ -767,11 +779,15 @@ export async function extractIndexerToCSV(entityManager: EntityManager, voters: 
       return parseTransactionSummary(entity, voterToIndexMap);
     }
   }).join("\n")
-  console.log(text);
-  // writeFileSync(filename, text);
+
+  if (filename) {
+    writeFileSync(filename, text);
+  } else {
+    console.log(text);
+  }
 }
 
-function claimListSummary(beneficiary: string, voterIndex: number, isNodeId: boolean, claims: IRewardClaim[], padding = 6) {
+function claimListSummary(beneficiary: string, voterIndex: number, isNodeId: boolean, isSigningAddress: boolean, claims: IRewardClaim[], padding = 6) {
   const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
   const fee = (feeClaim ? Number(feeClaim.amount) : 0).toString().padStart(padding);
   const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
@@ -788,7 +804,10 @@ function claimListSummary(beneficiary: string, voterIndex: number, isNodeId: boo
       : (
         isNodeId
           ? "n-" + voterIndex.toString()
-          : voterIndex.toString()
+          : (isSigningAddress
+            ? "s-" + voterIndex.toString()
+            : voterIndex.toString()
+          )
       )).padStart(5);
   let addressText = beneficiary.slice(0, 10);
   if (beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
@@ -800,11 +819,13 @@ function claimListSummary(beneficiary: string, voterIndex: number, isNodeId: boo
 export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
   const voterToClaimMap = new Map<string, IRewardClaim[]>();
   const nodeIdToVoterIndex = new Map<string, number>();
+  const signingAddressToVoterIndex = new Map<string, number>();
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
     for (const nodeId of voter.nodeIds) {
       nodeIdToVoterIndex.set(nodeId, i);
     }
+    signingAddressToVoterIndex.set(voter.signingAddress.toLowerCase(), i);
   }
   let totalValue = 0n;
   let burned = 0n;
@@ -836,15 +857,20 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
     const claimList = voterToClaimMap.get(voter.delegationAddress.toLowerCase()) || [];
-    console.log(claimListSummary(voter.delegationAddress, i, false, claimList));
+    console.log(claimListSummary(voter.delegationAddress, i, false, false, claimList));
   }
-  console.log("NON-VOTERS:")
+  console.log("NON-VOTERS: (s-N is signing address, n-N is node id)")
 
   for (const address of nonVoterAddresses) {
     const claimList = voterToClaimMap.get(address) || [];
-    const voterIndex = nodeIdToVoterIndex.get(address);
+    let voterIndex = nodeIdToVoterIndex.get(address);
     let isNodeId = voterIndex !== undefined;
-    console.log(claimListSummary(address, voterIndex, isNodeId, claimList));
+    let isSigningAddress = false;
+    if (!isNodeId) {
+      voterIndex = signingAddressToVoterIndex.get(address);
+      isSigningAddress = voterIndex !== undefined;
+    }
+    console.log(claimListSummary(address, voterIndex, isNodeId, isSigningAddress, claimList));
   }
 }
 

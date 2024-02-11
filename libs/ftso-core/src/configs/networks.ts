@@ -154,7 +154,7 @@ const randomGenerationBenchingWindow = () => {
     }
     case "local-test":
     default:
-      return 100;
+      return 50;
   }
 };
 
@@ -201,3 +201,171 @@ export const GENESIS_REWARD_EPOCH_START_EVENT = () => {
   return result;
 };
 
+
+/////////////// REWARDING CONSTANTS ////////////////////
+
+function extractIntegerNonNegativeValueFromEnv(envVar: string): number {
+  if (!process.env[envVar]) {
+    throw new Error(`${envVar} value is not provided`);
+  }
+  try {
+    const num = parseInt(process.env[envVar]);
+    if (num >= 0) {
+      return num;
+    }
+    throw new Error(`${envVar} must be a non negative integer`);
+  } catch {
+    throw new Error(`${envVar} must be an integer`);
+  }
+}
+
+function extractBigIntNonNegativeValueFromEnv(envVar: string): bigint {
+  if (!process.env[envVar]) {
+    throw new Error(`${envVar} value is not provided`);
+  }
+  try {
+    const num = BigInt(process.env[envVar]);
+    if (num >= 0) {
+      return num;
+    }
+    throw new Error(`${envVar} must be a non negative integer`);
+  } catch {
+    throw new Error(`${envVar} must be an integer`);
+  }
+}
+
+/**
+ * Penalty factor for reveal withdrawal. Given a weight relative share of a partial reward offer's amount
+ * the value is multiplied by this factor to get the penalty amount.
+ */
+const penaltyFactor = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": 
+      return extractBigIntNonNegativeValueFromEnv("PENALTY_FACTOR");
+    case "local-test":
+    default:
+      return 30n;
+  }
+};
+
+const constantPenaltyFactor = penaltyFactor();
+
+export const PENALTY_FACTOR = () => {
+  if (process.env.NETWORK === "from-env") {
+    return penaltyFactor();
+  }
+  return constantPenaltyFactor;
+}
+
+/**
+ * Grace period for signature submission starts immediately after the reveal deadline and lasts for this duration.
+ * In this period signatures by voters are rewarded even if finalization comes earlier. Namely,
+ * the signatures are rewarded if they are deposited before the timestamp of the first successful finalization.
+ */
+const gracePeriodForSignaturesDurationSec = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": 
+      return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC");
+    case "local-test":
+    default:
+      return 10; // 10 seconds
+  }
+};
+
+const constantGracePeriodForSignaturesDurationSec = gracePeriodForSignaturesDurationSec();
+
+export const GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC = () => {
+  if (process.env.NETWORK === "from-env") {
+    return gracePeriodForSignaturesDurationSec();
+  }
+  return constantGracePeriodForSignaturesDurationSec;
+}
+
+/**
+ * Grace period for finalization submission starts immediately after the reveal deadline and lasts for this duration.
+ * If selected voters submit or try to submit a correct finalization in this period, they are rewarded.
+ * Selection of voters is done pseudo-randomly based on the hash of the voting round id and the protocol id.
+ * See class RandomVoterSelector for more details.
+ */
+
+const gracePeriodForFinalizationDurationSec = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": 
+      return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC");
+    case "local-test":
+    default:
+      return 20; // seconds
+  }
+};
+
+const constantGracePeriodForFinalizationDurationSec = gracePeriodForFinalizationDurationSec();
+
+export const GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC = () => {
+  if (process.env.NETWORK === "from-env") {
+    return gracePeriodForFinalizationDurationSec();
+  }
+  return constantGracePeriodForFinalizationDurationSec;
+}
+
+/**
+ * Price epoch reward offers are divided into three parts:
+ * - 10% for finalizers
+ * - 10% for signers
+ * - 80%  + remainder for the median calculation results.
+ * The constants below define the percentage of the reward that is distributed to the finalizers and signers.
+ */
+export const SIGNING_BIPS = () => 1000n;
+export const FINALIZATION_BIPS = () => 1000n;
+
+/**
+ * BIPS and PPM total values.
+ */
+export const TOTAL_BIPS = 10000n;
+export const TOTAL_PPM = 1000000n;
+
+/**
+ * In case less then certain percentage of the total weight of the voting weight deposits signatures for a single hash,
+ * in the signature rewarding window, the signatures are not rewarded.
+ * In case that exactly the same weight is deposited in the signature rewarding window, for multiple hashes (e.g. 2 hashes),
+ * both get reward.
+ */
+const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": 
+      return extractIntegerNonNegativeValueFromEnv("MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS");
+    case "local-test":
+    default:
+      return 3000;
+  }
+};
+
+const constantMinimalRewardedNonConsensusDepositedSignaturesPerHashBips = minimalRewardedNonConsensusDepositedSignaturesPerHashBips();
+
+export const MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS = () => {
+  if (process.env.NETWORK === "from-env") {
+    return minimalRewardedNonConsensusDepositedSignaturesPerHashBips();
+  }
+  return constantMinimalRewardedNonConsensusDepositedSignaturesPerHashBips;
+}
+
+/**
+ * The share of weight that gets randomly selected for finalization reward.
+ */
+const finalizationVoterSelectionThresholdWeightBips = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": 
+      return extractIntegerNonNegativeValueFromEnv("FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS");
+    case "local-test":
+    default:
+      return 500;
+  }
+};
+
+const constantFinalizationVoterSelectionThresholdWeightBips = finalizationVoterSelectionThresholdWeightBips();
+
+export const FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS = () => {
+  if (process.env.NETWORK === "from-env") {
+    return finalizationVoterSelectionThresholdWeightBips();
+  }
+  return constantFinalizationVoterSelectionThresholdWeightBips;
+}
