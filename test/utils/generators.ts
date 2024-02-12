@@ -262,7 +262,6 @@ export function generateRawFullVoters(count: number, rewardEpochId: number) {
   for (let j = 0; j < count; j++) {
     rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId, (j * 1000) % 65536, j * 10));
   }
-
   return rawFullVoters;
 }
 
