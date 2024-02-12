@@ -176,6 +176,7 @@ export function calculateMedianRewardClaims(
 export function generateMedianRewardClaimsForVoter(amount: bigint, voterWeights: VoterWeights) {
   const result: IPartialRewardClaim[] = [];
   const fee = (amount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
+
   const participationReward = amount - fee;
 
   // No claims with zero amount

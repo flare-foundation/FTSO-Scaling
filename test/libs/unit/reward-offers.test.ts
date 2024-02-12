@@ -18,7 +18,7 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   const rewardsOffered: RewardsOffered[] = [];
 
   for (let j = 0; j < 10; j++) {
-    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`));
+    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`), j * 100000);
     rewardsOffered.push(rewardOffered);
   }
 
@@ -69,7 +69,7 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   });
 
   it("should split reward by types", function () {
-    const rewardOffered = generateRewardsOffer(`USD C7`, rewardEpochId, generateAddress(`7`));
+    const rewardOffered = generateRewardsOffer(`USD C7`, rewardEpochId, generateAddress(`7`), 10000000);
 
     const partialRewardOffer = PartialRewardOffer.fromRewardOffered(rewardOffered);
 
@@ -80,7 +80,7 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
     const median = splitRewardOffers.medianRewardOffer;
 
     const total = finalization.amount + signing.amount + median.amount;
-    expect(total).to.eq(BigInt("0x10000000000"));
+    expect(total).to.eq(BigInt(10000000));
   });
 
   it("should split reward by types inflation", function () {

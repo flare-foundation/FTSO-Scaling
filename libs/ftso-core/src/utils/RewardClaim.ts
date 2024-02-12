@@ -29,13 +29,13 @@ export interface IRewardClaim {
   rewardEpochId: number;
   beneficiary: string;
   amount: bigint;
-  claimType: number;
+  claimType: ClaimType;
 }
 
 export interface IPartialRewardClaim {
   beneficiary: string;
   amount: bigint;
-  claimType: number;
+  claimType: ClaimType;
 }
 
 /**

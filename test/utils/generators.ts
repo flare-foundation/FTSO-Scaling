@@ -181,7 +181,6 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
   return events;
 }
 
-
 export function currentTimeSec(): number {
   return Math.floor(Date.now() / 1000);
 }
@@ -202,17 +201,17 @@ export function generateFeedName(name: string) {
  * @param claimBack
  * @returns
  */
-export function generateRewardsOffer(feed: string, rewardEpochId: number, claimBack: string) {
+export function generateRewardsOffer(feed: string, rewardEpochId: number, claimBack: string, value: number) {
   feed = feed.slice(0, 7);
 
   const rawRewardsOffered = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
     feedName: generateFeedName(feed),
-    decimals: "0x12",
-    amount: "0x10000000000",
+    decimals: "0x02",
+    amount: Web3.utils.numberToHex(value),
     minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
-    primaryBandRewardSharePPM: Web3.utils.numberToHex(10000),
-    secondaryBandWidthPPM: Web3.utils.numberToHex(10000),
+    primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
+    secondaryBandWidthPPM: Web3.utils.numberToHex(2000),
     claimBackAddress: generateAddress(claimBack),
   };
 
@@ -230,18 +229,18 @@ export function generateInflationRewardOffer(feeds: string[], rewardEpochId: num
   const rawInflationRewardOffer = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
     feedNames: "0x" + unprefixedFeedsInHex.join(""),
-    decimals: "0x" + "12".repeat(feeds.length),
+    decimals: "0x" + "02".repeat(feeds.length),
     amount: "0x10000000001",
     minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
-    primaryBandRewardSharePPM: Web3.utils.numberToHex(10000),
-    secondaryBandWidthPPMs: "0x" + "002710".repeat(feeds.length),
+    primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
+    secondaryBandWidthPPMs: "0x" + "0007d0".repeat(feeds.length),
     mode: "0x00",
   };
 
   return new InflationRewardsOffered(rawInflationRewardOffer);
 }
 
-export function generateRawFullVoter(name: string, rewardEpochId: number, weight: number) {
+export function generateRawFullVoter(name: string, rewardEpochId: number, weight: number, delegationFee: number) {
   return {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
     voter: generateAddress(name),
@@ -249,7 +248,7 @@ export function generateRawFullVoter(name: string, rewardEpochId: number, weight
     wNatCappedWeight: BigInt(weight),
     nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
     nodeWeights: [BigInt(weight), BigInt(weight)],
-    delegationFeeBIPS: 0,
+    delegationFeeBIPS: delegationFee,
     signingPolicyAddress: generateAddress(name + "signing"),
     delegationAddress: generateAddress(name + "delegation"),
     submitAddress: generateAddress(name + "submit"),
@@ -261,7 +260,7 @@ export function generateRawFullVoter(name: string, rewardEpochId: number, weight
 export function generateRawFullVoters(count: number, rewardEpochId: number) {
   const rawFullVoters = [];
   for (let j = 0; j < count; j++) {
-    rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId, (j * 1000) % 65536));
+    rawFullVoters.push(generateRawFullVoter(`${j}`, rewardEpochId, (j * 1000) % 65536, j * 10));
   }
 
   return rawFullVoters;
@@ -291,7 +290,7 @@ export function generateRewardEpoch() {
   const rewardsOffered: RewardsOffered[] = [];
 
   for (let j = 0; j < 10; j++) {
-    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`));
+    const rewardOffered = generateRewardsOffer(`USD C${j}`, rewardEpochId, generateAddress(`${j}`), j * 1000000);
     rewardsOffered.push(rewardOffered);
   }
 
@@ -325,7 +324,7 @@ export function generateRewardEpoch() {
 
   const voterPowerBlockSelected = new VotePowerBlockSelected(rawVoterPowerBlockSelected);
 
-  const voters = generateRawFullVoters(10, rewardEpochId);
+  const voters = generateRawFullVoters(50, rewardEpochId);
 
   const rawSigningPolicyInitialized = {
     rewardEpochId: rewardEpochIdHex(rewardEpochId),
@@ -370,7 +369,7 @@ export function generateVotersWeights(numberOfVoters: number) {
       delegationWeight: BigInt(1000 + (j % 5)),
       cappedDelegationWeight: BigInt(1000 + (j % 5)),
       signingWeight: 1000 + (j % 5) + 3,
-      feeBIPS: j % 20,
+      feeBIPS: j * 10,
       nodeIDs: [unsafeRandomHex(20), unsafeRandomHex(20)],
       nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
     };
@@ -389,8 +388,8 @@ export function generateMedianCalculationResult(numberOfVoters: number, feedName
 
   for (let j = 0; j < numberOfVoters; j++) {
     const valueWithDecimal: ValueWithDecimals = {
-      isEmpty: !(j % 6),
-      value: 1000 + (j % 5),
+      isEmpty: !(j % 13),
+      value: 1000 + (j % 50),
       decimals: 2,
     };
     voters.push(generateAddress(`${j}`));
