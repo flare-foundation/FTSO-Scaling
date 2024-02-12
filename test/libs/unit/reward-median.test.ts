@@ -2,17 +2,19 @@ import Web3 from "web3";
 import { calculateMedianRewardClaims } from "../../../libs/ftso-core/src/reward-calculation/reward-median";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import {
+  generateAddress,
   generateInflationRewardOffer,
   generateMedianCalculationResult,
+  generateRewardsOffer,
   generateVotersWeights,
 } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { expect } from "chai";
 
 describe(`Reward median, ${getTestFile(__filename)}`, function () {
-  const medianCalculationResult = generateMedianCalculationResult(7, "USD EUR", 10);
+  const medianCalculationResult = generateMedianCalculationResult(70, "USD EUR", 10);
 
-  const voterWeights = generateVotersWeights(7);
+  const voterWeights = generateVotersWeights(70);
 
   const inflationReward = generateInflationRewardOffer(["USD EUR"], 508);
 
@@ -24,15 +26,25 @@ describe(`Reward median, ${getTestFile(__filename)}`, function () {
     partialRewardOfferInflation[0]
   );
 
-  it("should calculate rewards", function () {
-    console.log(splitPartialRewardOfferInflation[0]);
+  const offeredReward = generateRewardsOffer("USD EUR", 508, generateAddress("claimBack"), 10000000);
 
+  const partialOfferedReward = PartialRewardOffer.fromRewardOffered(offeredReward);
+
+  const splitPartialOfferedReward = PartialRewardOffer.splitToVotingRoundsEqually(10, 100, partialOfferedReward);
+
+  it("should calculate rewards inflation", function () {
     const claims = calculateMedianRewardClaims(
       splitPartialRewardOfferInflation[0],
       medianCalculationResult,
       voterWeights
     );
 
-    expect(claims.length).to.be.eq(10);
+    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
+  });
+
+  it("should calculate rewards offer", function () {
+    const claims = calculateMedianRewardClaims(splitPartialOfferedReward[0], medianCalculationResult, voterWeights);
+
+    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedReward[0].amount);
   });
 });

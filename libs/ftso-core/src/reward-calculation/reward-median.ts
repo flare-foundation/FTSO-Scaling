@@ -42,7 +42,7 @@ export function calculateMedianRewardClaims(
           encodeParameters(["bytes8", "uint256", "address"], [prefixedFeedName, votingRoundId, voterAddress])
         )!
       ) %
-      2n ===
+        2n ===
       1n
     );
   }
@@ -50,7 +50,7 @@ export function calculateMedianRewardClaims(
   // Turnout condition is not reached or no median is computed. Offer is returned to the provider.
   if (
     calculationResult.data.participatingWeight * TOTAL_BIPS <
-    calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
+      calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
     calculationResult.data.finalMedianPrice.isEmpty
   ) {
     const backClaim: IPartialRewardClaim = {
@@ -74,7 +74,7 @@ export function calculateMedianRewardClaims(
 
   const voterRecords: VoterRewarding[] = [];
 
-  const abs = (n) => (n < 0n) ? -n : n;
+  const abs = n => (n < 0n ? -n : n);
   const secondaryBandDiff = (abs(medianPrice) * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
 
   const lowPCT = medianPrice - secondaryBandDiff;
@@ -94,7 +94,7 @@ export function calculateMedianRewardClaims(
       iqr:
         (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, voterAddress)),
-      pct: value > lowPCT && value < highPCT
+      pct: value > lowPCT && value < highPCT,
     };
 
     voterRecords.push(record);
@@ -176,6 +176,7 @@ export function calculateMedianRewardClaims(
 export function generateMedianRewardClaimsForVoter(amount: bigint, voterWeights: VoterWeights) {
   const result: IPartialRewardClaim[] = [];
   const fee = (amount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
+
   const participationReward = amount - fee;
 
   // No claims with zero amount
