@@ -92,7 +92,7 @@ describe(`RewardEpoch, ${getTestFile(__filename)}`, function () {
 
   it("should get voter weights", function () {
     const weights = rewardEpoch.getVoterWeights();
-    expect(weights.size).to.eq(10);
+    expect(weights.size).to.eq(50);
   });
 
   it("should get feed order", function () {

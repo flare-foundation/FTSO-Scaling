@@ -14,9 +14,9 @@ describe.skip(`Reward penalties, ${getTestFile(__filename)}`, function () {
     revealOffenders.add(generateAddress(`${j}`));
   }
 
-  const offerFull = generateRewardsOffer("USD EUR", 13, generateAddress("claim"));
+  // const offerFull = generateRewardsOffer("USD EUR", 13, generateAddress("claim"));
 
-  const offerPartial = PartialRewardOffer.fromRewardOffered(offerFull);
+  // const offerPartial = PartialRewardOffer.fromRewardOffered(offerFull);
 
   // const penaltyClaims = calculateRevealWithdrawalPenalties(offerPartial, revealOffenders, voterWeights);
 
