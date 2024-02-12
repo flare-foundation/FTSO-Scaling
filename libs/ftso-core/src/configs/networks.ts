@@ -78,7 +78,7 @@ const configs = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(network);
+      ((_: never): void => {})(network);
   }
 };
 
@@ -134,7 +134,7 @@ export const EPOCH_SETTINGS = () => {
     return epochSettings();
   }
   return constantEpochSettings;
-}
+};
 
 const randomGenerationBenchingWindow = () => {
   switch (process.env.NETWORK) {
@@ -165,7 +165,7 @@ export const RANDOM_GENERATION_BENCHING_WINDOW = () => {
     return randomGenerationBenchingWindow();
   }
   return constantRandomGenerationBenchingWindow;
-}
+};
 
 const burnAddress = () => {
   switch (process.env.NETWORK) {
@@ -200,7 +200,6 @@ export const GENESIS_REWARD_EPOCH_START_EVENT = () => {
   };
   return result;
 };
-
 
 /////////////// REWARDING CONSTANTS ////////////////////
 
@@ -240,7 +239,7 @@ function extractBigIntNonNegativeValueFromEnv(envVar: string): bigint {
  */
 const penaltyFactor = () => {
   switch (process.env.NETWORK) {
-    case "from-env": 
+    case "from-env":
       return extractBigIntNonNegativeValueFromEnv("PENALTY_FACTOR");
     case "local-test":
     default:
@@ -255,7 +254,7 @@ export const PENALTY_FACTOR = () => {
     return penaltyFactor();
   }
   return constantPenaltyFactor;
-}
+};
 
 /**
  * Grace period for signature submission starts immediately after the reveal deadline and lasts for this duration.
@@ -264,7 +263,7 @@ export const PENALTY_FACTOR = () => {
  */
 const gracePeriodForSignaturesDurationSec = () => {
   switch (process.env.NETWORK) {
-    case "from-env": 
+    case "from-env":
       return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC");
     case "local-test":
     default:
@@ -279,7 +278,7 @@ export const GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC = () => {
     return gracePeriodForSignaturesDurationSec();
   }
   return constantGracePeriodForSignaturesDurationSec;
-}
+};
 
 /**
  * Grace period for finalization submission starts immediately after the reveal deadline and lasts for this duration.
@@ -290,7 +289,7 @@ export const GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC = () => {
 
 const gracePeriodForFinalizationDurationSec = () => {
   switch (process.env.NETWORK) {
-    case "from-env": 
+    case "from-env":
       return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC");
     case "local-test":
     default:
@@ -305,7 +304,7 @@ export const GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC = () => {
     return gracePeriodForFinalizationDurationSec();
   }
   return constantGracePeriodForFinalizationDurationSec;
-}
+};
 
 /**
  * Price epoch reward offers are divided into three parts:
@@ -331,7 +330,7 @@ export const TOTAL_PPM = 1000000n;
  */
 const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
   switch (process.env.NETWORK) {
-    case "from-env": 
+    case "from-env":
       return extractIntegerNonNegativeValueFromEnv("MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS");
     case "local-test":
     default:
@@ -339,21 +338,22 @@ const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
   }
 };
 
-const constantMinimalRewardedNonConsensusDepositedSignaturesPerHashBips = minimalRewardedNonConsensusDepositedSignaturesPerHashBips();
+const constantMinimalRewardedNonConsensusDepositedSignaturesPerHashBips =
+  minimalRewardedNonConsensusDepositedSignaturesPerHashBips();
 
 export const MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS = () => {
   if (process.env.NETWORK === "from-env") {
     return minimalRewardedNonConsensusDepositedSignaturesPerHashBips();
   }
   return constantMinimalRewardedNonConsensusDepositedSignaturesPerHashBips;
-}
+};
 
 /**
  * The share of weight that gets randomly selected for finalization reward.
  */
 const finalizationVoterSelectionThresholdWeightBips = () => {
   switch (process.env.NETWORK) {
-    case "from-env": 
+    case "from-env":
       return extractIntegerNonNegativeValueFromEnv("FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS");
     case "local-test":
     default:
@@ -368,4 +368,4 @@ export const FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS = () => {
     return finalizationVoterSelectionThresholdWeightBips();
   }
   return constantFinalizationVoterSelectionThresholdWeightBips;
-}
+};

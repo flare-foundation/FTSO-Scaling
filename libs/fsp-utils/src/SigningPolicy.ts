@@ -174,7 +174,7 @@ export namespace SigningPolicy {
       signingPolicy1.seed === signingPolicy2.seed;
     if (!test) {
       return false;
-    } 
+    }
     if (signingPolicy1.voters.length !== signingPolicy2.voters.length) {
       return false;
     }

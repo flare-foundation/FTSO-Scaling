@@ -57,21 +57,21 @@ export function calculateDoubleSigningPenalties(
   voterWeights: Map<Address, VoterWeights>,
   protocolId = FTSO2_PROTOCOL_ID
 ): IPartialRewardClaim[] {
-  // Address 
+  // Address
   const signerCounter = new Map<Address, string>();
-  
+
   const votingRoundId = offer.votingRoundId;
   const doubleSigners = calculateDoubleSigners(votingRoundId, protocolId, signatures);
   if (doubleSigners.size === 0) {
     return [];
   }
-  const totalWeight = BigInt([...voterWeights.values()]
-    .map(voterWeight => voterWeight.signingWeight)
-    .reduce((a, b) => a + b, 0));
+  const totalWeight = BigInt(
+    [...voterWeights.values()].map(voterWeight => voterWeight.signingWeight).reduce((a, b) => a + b, 0)
+  );
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of doubleSigners) {
-    const voterData = voterWeights.get(submitAddress)!
+    const voterData = voterWeights.get(submitAddress)!;
     if (!voterData) {
       throw new Error("Critical error: Illegal offender");
     }

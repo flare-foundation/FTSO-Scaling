@@ -534,9 +534,19 @@ export async function generateRewardEpochDataForRewardCalculation(
       // if (votingEpochId > signingPolicy.startVotingRoundId) {
       //   await extractIndexerToCSV(entityManager, voters, `test-${votingEpochId}.csv`);
       // }
-
       for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
         const finalizer = voterIndexToMiniFinalizer.get(voterIndex);
+
+        const selectionIndex = voterSelector.inSelectionList(
+          signingPolicy.voters.map(x => x.toLowerCase()),
+          signingPolicy.seed,
+          FTSO2_PROTOCOL_ID,
+          votingEpochId - 1,
+          finalizer.voter.signingAddress
+        );
+        if (selectionIndex < 0) {
+          continue;
+        }
         const tx = await finalizer.processFinalization(votingEpochId - 1, block, timestamp);
         if (tx) {
           entities.push(tx);
@@ -819,6 +829,10 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
   const voterToClaimMap = new Map<string, IRewardClaim[]>();
   const nodeIdToVoterIndex = new Map<string, number>();
   const signingAddressToVoterIndex = new Map<string, number>();
+  const delegationAddressToVoterIndex = new Map<string, number>();
+  const voterIndexToFees = new Map<number, bigint>();
+  const voterIndexToParticipationRewards = new Map<number, bigint>();
+
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
     for (const nodeId of voter.nodeIds) {
@@ -855,6 +869,7 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
   console.log("VOTERS:");
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
+    delegationAddressToVoterIndex.set(voter.delegationAddress.toLowerCase(), i);
     const claimList = voterToClaimMap.get(voter.delegationAddress.toLowerCase()) || [];
     console.log(claimListSummary(voter.delegationAddress, i, false, false, claimList));
   }
@@ -871,10 +886,50 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
     }
     console.log(claimListSummary(address, voterIndex, isNodeId, isSigningAddress, claimList));
   }
+
+  for (const claim of claims) {
+    if (claim.claimType === ClaimType.DIRECT) {
+      continue;
+    }
+    if (claim.claimType === ClaimType.CCHAIN) {
+      throw new Error(`Unsupported claim type: ${claim.claimType}`);
+    }
+    let voterIndex: number | undefined;
+    if (delegationAddressToVoterIndex.get(claim.beneficiary) !== undefined) {
+      voterIndex = delegationAddressToVoterIndex.get(claim.beneficiary);
+    } else if (nodeIdToVoterIndex.get(claim.beneficiary) !== undefined) {
+      voterIndex = nodeIdToVoterIndex.get(claim.beneficiary);
+    } else if (signingAddressToVoterIndex.get(claim.beneficiary)) {
+      voterIndex = signingAddressToVoterIndex.get(claim.beneficiary);
+    } else {
+      if (claim.beneficiary !== BURN_ADDRESS) {
+        throw new Error(`Strange beneficiary: ${claim.beneficiary}`)
+      }
+    }
+    if (claim.claimType === ClaimType.FEE) {
+      let currentAmount = voterIndexToFees.get(voterIndex) || 0n;
+      voterIndexToFees.set(voterIndex, currentAmount + claim.amount);
+    }
+    if (claim.claimType === ClaimType.WNAT) {
+      let currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
+      voterIndexToParticipationRewards.set(voterIndex, currentAmount + claim.amount);
+    }
+    if (claim.claimType === ClaimType.MIRROR) {
+      let currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
+      voterIndexToParticipationRewards.set(voterIndex, currentAmount + claim.amount);
+    }
+  }
+  console.log("VOTER FEE PERCENTAGES:");
+  for (let i = 0; i < voters.length; i++) {
+    const feeVal = voterIndexToFees.get(i) || 0n;
+    const partVal = voterIndexToParticipationRewards.get(i) || 0n;
+    const percentage = Number(feeVal * 10000n / (feeVal + partVal)) / 100;
+    console.log(`Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${feeVal}, part: ${partVal}, pct: ${percentage}`);
+  }
 }
 
 function voterSummary(voterIndex: number, voter: TestVoter) {
-  return `Voter: ${voterIndex} del: ${voter.delegationAddress.toLowerCase().slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress.toLowerCase().slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${voter.registrationWeight}`;
+  return `Voter: ${voterIndex} fee: ${voter.delegationFeeBIPS} del: ${voter.delegationAddress.toLowerCase().slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress.toLowerCase().slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${voter.registrationWeight}`;
 }
 
 export function votersSummary(voters: TestVoter[]) {

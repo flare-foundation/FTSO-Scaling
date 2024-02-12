@@ -102,8 +102,14 @@ export async function partialRewardClaimsForVotingRound(
     FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
   );
 
-  const initialHash = RandomVoterSelector.initialHashSeed(rewardEpoch.signingPolicy.seed, FTSO2_PROTOCOL_ID, votingRoundId);
-  const eligibleFinalizationRewardVotersInGracePeriod = new Set(randomVoterSelector.randomSelectThresholdWeightVoters(initialHash));
+  const initialHash = RandomVoterSelector.initialHashSeed(
+    rewardEpoch.signingPolicy.seed,
+    FTSO2_PROTOCOL_ID,
+    votingRoundId
+  );
+  const eligibleFinalizationRewardVotersInGracePeriod = new Set(
+    randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
+  );
 
   // Calculate reward claims for each feed offer
   for (const [feedName, offers] of feedOffers.entries()) {

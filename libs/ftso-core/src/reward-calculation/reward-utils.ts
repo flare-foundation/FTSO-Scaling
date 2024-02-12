@@ -1,7 +1,11 @@
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../IndexerClient";
 import { VoterWeights } from "../RewardEpoch";
-import { EPOCH_SETTINGS, GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC } from "../configs/networks";
+import {
+  EPOCH_SETTINGS,
+  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
+  GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC,
+} from "../configs/networks";
 import { Address } from "../voting-types";
 
 /**
@@ -22,7 +26,7 @@ export function isSignatureInGracePeriod(
     signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
     signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     signatureSubmission.relativeTimestamp <
-    EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()
+      EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()
   );
 }
 
@@ -54,7 +58,8 @@ export function isFinalizationInGracePeriodAndEligible(
     eligibleVoters.has(finalization.submitAddress) &&
     finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
     finalization.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
-    finalization.relativeTimestamp <= EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC()
+    finalization.relativeTimestamp <=
+      EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC()
   );
 }
 

@@ -13,11 +13,7 @@ import {
 } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
-import {
-  ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
-  EPOCH_SETTINGS,
-  FTSO2_PROTOCOL_ID,
-} from "./configs/networks";
+import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
 import { ContractMethodNames } from "./configs/contracts";
 import {
   DataForCalculations,
@@ -409,7 +405,7 @@ export class DataManager {
     for (const submission of submissions) {
       try {
         let calldata = submission.messages;
-        if(calldata.startsWith("0x")) {
+        if (calldata.startsWith("0x")) {
           calldata = calldata.slice(2);
         }
 

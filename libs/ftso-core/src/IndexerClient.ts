@@ -5,16 +5,8 @@ import { Address, VotingEpochId } from "./voting-types";
 
 import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
 import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
-import {
-  CONTRACTS,
-  EPOCH_SETTINGS,
-  FIRST_DATABASE_INDEX_STATE,
-  LAST_DATABASE_INDEX_STATE,
-} from "./configs/networks";
-import {
-  ContractDefinitions,
-  ContractMethodNames
-} from "./configs/contracts";
+import { CONTRACTS, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./configs/networks";
+import { ContractDefinitions, ContractMethodNames } from "./configs/contracts";
 import {
   FullVoterRegistrationInfo,
   InflationRewardsOffered,

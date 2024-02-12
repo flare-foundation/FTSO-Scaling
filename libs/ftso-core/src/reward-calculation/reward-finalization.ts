@@ -1,3 +1,4 @@
+import { sign } from "crypto";
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
@@ -47,15 +48,19 @@ export function calculateFinalizationRewardClaims(
   let undistributedSigningRewardWeight = 0n;
 
   for (const signingAddress of eligibleFinalizationRewardVotersInGracePeriod) {
-    undistributedSigningRewardWeight += BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
+    const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
+    undistributedSigningRewardWeight += weight;
   }
-
   const resultClaims: IPartialRewardClaim[] = [];
   for (const finalization of gracePeriodFinalizations) {
+    if (!eligibleFinalizationRewardVotersInGracePeriod.has(finalization.submitAddress.toLowerCase())) {
+      throw new Error("Critical: finalization submit address must be eligible");
+    }
     // submitAddress === signing address for the finalizations in grace period
     const signingAddress = finalization.submitAddress.toLowerCase();
     const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
-    const amount = (weight * offer.amount) / undistributedSigningRewardWeight;
+    const amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
     resultClaims.push(
@@ -63,6 +68,9 @@ export function calculateFinalizationRewardClaims(
     );
   }
 
+  if (undistributedAmount < 0n) {
+    throw new Error("Critical: undistributed amount must be positive");
+  }
   // claim back for undistributed rewards
   if (undistributedAmount !== 0n) {
     resultClaims.push({
@@ -73,4 +81,3 @@ export function calculateFinalizationRewardClaims(
   }
   return resultClaims;
 }
-

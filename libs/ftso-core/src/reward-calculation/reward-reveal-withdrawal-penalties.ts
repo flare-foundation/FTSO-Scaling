@@ -22,7 +22,7 @@ export function calculateRevealWithdrawalPenalties(
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of revealOffenders) {
-    const voterData = voterWeights.get(submitAddress)!
+    const voterData = voterWeights.get(submitAddress)!;
     if (!voterData) {
       throw new Error("Critical error: Illegal offender");
     }

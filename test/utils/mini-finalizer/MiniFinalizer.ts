@@ -61,7 +61,7 @@ export class MiniFinalizer {
     block: number,
     timestamp: number
   ): Promise<TLPTransaction | undefined> {
-    this.queue.destroy()
+    this.queue.destroy();
     const rewardEpoch = await this.rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
     const matchingSigningPolicy = rewardEpoch.signingPolicy;
     let voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId!);

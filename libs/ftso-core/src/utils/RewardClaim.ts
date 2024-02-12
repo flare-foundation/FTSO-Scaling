@@ -74,7 +74,8 @@ export namespace RewardClaim {
     const claimsByBeneficiaryTypeAndSign = new Map<string, Map<number, Map<Number, IPartialRewardClaim>>>();
     for (const claim of claims) {
       const beneficiary = claim.beneficiary.toLowerCase();
-      const beneficiaryClaimsByTypeAndSign = claimsByBeneficiaryTypeAndSign.get(beneficiary) || new Map<number, Map<number, IRewardClaim>>();
+      const beneficiaryClaimsByTypeAndSign =
+        claimsByBeneficiaryTypeAndSign.get(beneficiary) || new Map<number, Map<number, IRewardClaim>>();
       claimsByBeneficiaryTypeAndSign.set(claim.beneficiary, beneficiaryClaimsByTypeAndSign);
       const claimTypeBySign = beneficiaryClaimsByTypeAndSign.get(claim.claimType) || new Map<number, IRewardClaim>();
       beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);

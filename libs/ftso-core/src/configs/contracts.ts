@@ -1,5 +1,3 @@
-
-
 export type ContractAddress = string;
 
 interface FlareSystemManagerDefinition {
@@ -39,14 +37,15 @@ interface ProtocolMerkleStructsDefinition {
   address: ContractAddress;
 }
 
-export type ContractDefinitions = FlareSystemManagerDefinition |
-  FtsoRewardOffersManagerDefinition |
-  RewardManagerDefinition |
-  SubmissionDefinition |
-  RelayDefinition |
-  FlareSystemCalculatorDefinition |
-  VoterRegistryDefinition |
-  ProtocolMerkleStructsDefinition;
+export type ContractDefinitions =
+  | FlareSystemManagerDefinition
+  | FtsoRewardOffersManagerDefinition
+  | RewardManagerDefinition
+  | SubmissionDefinition
+  | RelayDefinition
+  | FlareSystemCalculatorDefinition
+  | VoterRegistryDefinition
+  | ProtocolMerkleStructsDefinition;
 
 export enum ContractMethodNames {
   submit1 = "submit1",
@@ -63,7 +62,7 @@ export enum ContractMethodNames {
 
   // Rewarding definitions
   rewardClaimStruct = "rewardClaimStruct",
-  rewardClaimWithProofStruct = "rewardClaimWithProofStruct"
+  rewardClaimWithProofStruct = "rewardClaimWithProofStruct",
 }
 
 export interface NetworkContractAddresses {

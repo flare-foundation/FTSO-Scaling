@@ -1,7 +1,12 @@
 import { ProtocolMessageMerkleRoot } from "../../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData } from "../IndexerClient";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS, TOTAL_BIPS } from "../configs/networks";
+import {
+  EPOCH_SETTINGS,
+  FTSO2_PROTOCOL_ID,
+  MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
+  TOTAL_BIPS,
+} from "../configs/networks";
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
@@ -20,11 +25,15 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
  */
 export function calculateSigningRewards(
   offer: IPartialRewardOffer,
-  data: DataForRewardCalculation,
+  data: DataForRewardCalculation
 ): IPartialRewardClaim[] {
   const votingRoundId = data.dataForCalculations.votingRoundId;
   let rewardEligibleSignatures: GenericSubmissionData<ISignaturePayload>[] = [];
-  let doubleSigners = calculateDoubleSigners(data.dataForCalculations.votingRoundId, FTSO2_PROTOCOL_ID, data.signatures);
+  let doubleSigners = calculateDoubleSigners(
+    data.dataForCalculations.votingRoundId,
+    FTSO2_PROTOCOL_ID,
+    data.signatures
+  );
   if (!data.firstSuccessfulFinalization) {
     const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
     const signatures = mostFrequentHashSignaturesBeforeDeadline(
@@ -41,7 +50,9 @@ export function calculateSigningRewards(
       };
       return [backClaim];
     }
-    rewardEligibleSignatures = signatures.filter(signature => !doubleSigners.has(signature.messages.signer!.toLowerCase()));
+    rewardEligibleSignatures = signatures.filter(
+      signature => !doubleSigners.has(signature.messages.signer!.toLowerCase())
+    );
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
       data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
@@ -69,7 +80,7 @@ export function calculateSigningRewards(
     undistributedSigningRewardWeight += BigInt(signature.messages.weight!);
   }
 
-  if(undistributedSigningRewardWeight === 0n) {
+  if (undistributedSigningRewardWeight === 0n) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
@@ -95,7 +106,11 @@ export function calculateSigningRewards(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, signature.messages.signer!, data.dataForCalculations.rewardEpoch)
+      ...generateSigningWeightBasedClaimsForVoter(
+        amount,
+        signature.messages.signer!,
+        data.dataForCalculations.rewardEpoch
+      )
     );
   }
   // assert check for undistributed amount
@@ -128,7 +143,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   signatures: Map<string, GenericSubmissionData<ISignaturePayload>[]>,
   totalSigningWeight: number,
   deadlineTimestamp: number,
-  protocolId: number = FTSO2_PROTOCOL_ID,
+  protocolId: number = FTSO2_PROTOCOL_ID
 ): GenericSubmissionData<ISignaturePayload>[] {
   const result: GenericSubmissionData<ISignaturePayload>[] = [];
   let maxWeight = 0;
@@ -139,7 +154,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
       isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
     );
     for (const signatureSubmission of filteredSubmissions) {
-      if(signatureSubmission.messages.message.protocolId !== protocolId) {
+      if (signatureSubmission.messages.message.protocolId !== protocolId) {
         throw new Error("Critical error: Illegal protocol id");
       }
       weightSum += signatureSubmission.messages.weight!;

@@ -41,7 +41,7 @@ describe("generator-rewards", () => {
     const voters = generateVoters(numberOfVoters)
     const dataSource = await getDataSource(false);
     const entityManager = dataSource.createEntityManager();
-    const offerAmount = BigInt(1000);
+    const offerAmount = BigInt(1000000);
     const rewardEpochId = 1;
   
     const clock = await generateRewardEpochDataForRewardCalculation(
