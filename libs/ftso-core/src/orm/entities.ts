@@ -81,10 +81,10 @@ export class TLPEvents {
   log_index: number;
 
   @Column()
-  block_number: number;
+  timestamp: number;
 
   @Column()
-  timestamp: number;
+  block_number: number;
 }
 
 export type ITLPTransaction = new () => TLPTransaction;

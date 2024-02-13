@@ -82,7 +82,7 @@ export async function partialRewardClaimsForVotingRound(
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
   // Calculate feed medians
-  const medianResults: MedianCalculationResult[] = calculateMedianResults(
+  const medianResults: MedianCalculationResult[] = await calculateMedianResults(
     rewardDataForCalculations.dataForCalculations
   );
   // feedName => medianResult

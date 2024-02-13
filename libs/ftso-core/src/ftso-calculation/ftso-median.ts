@@ -15,7 +15,7 @@ export interface VoteData {
 /**
  * Given a DataForCalculations object, it calculates the median calculation results for all feeds.
  */
-export function calculateMedianResults(data: DataForCalculations): MedianCalculationResult[] {
+export async function calculateMedianResults(data: DataForCalculations): Promise<MedianCalculationResult[]> {
   const voters = data.orderedVotersSubmissionAddresses;
   const weights = voters.map(voter => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
 
