@@ -3,7 +3,7 @@ import Web3 from "web3";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../apps/ftso-data-provider/src/response-encoders";
 import { IPayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
 import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningPolicy";
-import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
+import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
 
 import FakeTimers from "@sinonjs/fake-timers";
 import { writeFileSync } from "fs";
@@ -228,7 +228,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   moveTo(previousRewardEpochStartSec);
   entities.push(
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RewardEpochStarted.eventName,
       new RewardEpochStarted({
         rewardEpochId: previousRewardEpochId,
@@ -257,7 +257,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   // Emit RandomAcquisitionStarted
   entities.push(
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RandomAcquisitionStarted.eventName,
       new RandomAcquisitionStarted({
         rewardEpochId: rewardEpochId,
@@ -274,7 +274,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   // Emit VotePowerBlockSelected
   entities.push(
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       VotePowerBlockSelected.eventName,
       new VotePowerBlockSelected({
         rewardEpochId: rewardEpochId,
@@ -290,11 +290,12 @@ export async function generateRewardEpochDataForRewardCalculation(
   for (const voter of voters) {
     entities.push(
       generateEvent(
-        CONTRACTS.FlareSystemCalculator,
+        CONTRACTS.FlareSystemsCalculator,
         VoterRegistrationInfo.eventName,
         new VoterRegistrationInfo({
           rewardEpochId,
           voter: voter.identityAddress,
+          delegationAddress: voter.delegationAddress,
           wNatCappedWeight: voter.wNatCappedWeight,
           wNatWeight: voter.wNatWeight,
           nodeIds: voter.nodeIds,
@@ -317,6 +318,8 @@ export async function generateRewardEpochDataForRewardCalculation(
           submitAddress: voter.submitAddress,
           submitSignaturesAddress: voter.submitSignaturesAddress,
           registrationWeight: voter.registrationWeight,
+          publicKeyPart1: ZERO_BYTES32,
+          publicKeyPart2: ZERO_BYTES32,      
         }),
         block,
         timestamp
@@ -350,7 +353,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   moveTo(rewardEpochStartSec);
   entities.push(
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RewardEpochStarted.eventName,
       new RewardEpochStarted({
         rewardEpochId: rewardEpochId,
@@ -667,17 +670,17 @@ function votingEpochPosition(timestamp: number) {
 
 export function parseEventSummary(event: TLPEvents, voterToIndexMap: Map<string, number>): string {
   const eventAddress = "0x" + event.address.toLowerCase();
-  if (eventAddress === CONTRACTS.FlareSystemManager.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemManager.name, RandomAcquisitionStarted.eventName)) {
+  if (eventAddress === CONTRACTS.FlareSystemsManager.address.toLowerCase()) {
+    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsManager.name, RandomAcquisitionStarted.eventName)) {
       const parsedEvent = RandomAcquisitionStarted.fromRawEvent(event)
       return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RandomAcquisitionStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemManager.name, VotePowerBlockSelected.eventName)) {
+    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsManager.name, VotePowerBlockSelected.eventName)) {
       const parsedEvent = VotePowerBlockSelected.fromRawEvent(event)
       return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VotePowerBlockSelected;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
 
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemManager.name, RewardEpochStarted.eventName)) {
+    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsManager.name, RewardEpochStarted.eventName)) {
       const parsedEvent = RewardEpochStarted.fromRawEvent(event)
       return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RewardEpochStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
     }
@@ -688,8 +691,8 @@ export function parseEventSummary(event: TLPEvents, voterToIndexMap: Map<string,
       return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VoterRegistered;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
     }
   }
-  if (eventAddress === CONTRACTS.FlareSystemCalculator.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemCalculator.name, VoterRegistrationInfo.eventName)) {
+  if (eventAddress === CONTRACTS.FlareSystemsCalculator.address.toLowerCase()) {
+    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsCalculator.name, VoterRegistrationInfo.eventName)) {
       const parsedEvent = VoterRegistrationInfo.fromRawEvent(event)
       return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VoterRegistrationInfo;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
     }

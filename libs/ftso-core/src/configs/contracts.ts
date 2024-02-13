@@ -1,7 +1,7 @@
 export type ContractAddress = string;
 
-interface FlareSystemManagerDefinition {
-  name: "FlareSystemManager";
+interface FlareSystemsManagerDefinition {
+  name: "FlareSystemsManager";
   address: ContractAddress;
 }
 interface FtsoRewardOffersManagerDefinition {
@@ -20,8 +20,8 @@ interface RelayDefinition {
   name: "Relay";
   address: ContractAddress;
 }
-interface FlareSystemCalculatorDefinition {
-  name: "FlareSystemCalculator";
+interface FlareSystemsCalculatorDefinition {
+  name: "FlareSystemsCalculator";
   address: ContractAddress;
 }
 interface VoterRegistryDefinition {
@@ -38,12 +38,12 @@ interface ProtocolMerkleStructsDefinition {
 }
 
 export type ContractDefinitions =
-  | FlareSystemManagerDefinition
+  | FlareSystemsManagerDefinition
   | FtsoRewardOffersManagerDefinition
   | RewardManagerDefinition
   | SubmissionDefinition
   | RelayDefinition
-  | FlareSystemCalculatorDefinition
+  | FlareSystemsCalculatorDefinition
   | VoterRegistryDefinition
   | ProtocolMerkleStructsDefinition;
 
@@ -66,12 +66,12 @@ export enum ContractMethodNames {
 }
 
 export interface NetworkContractAddresses {
-  FlareSystemManager: FlareSystemManagerDefinition;
+  FlareSystemsManager: FlareSystemsManagerDefinition;
   FtsoRewardOffersManager: FtsoRewardOffersManagerDefinition;
   RewardManager: RewardManagerDefinition;
   Submission: SubmissionDefinition;
   Relay: RelayDefinition;
-  FlareSystemCalculator: FlareSystemCalculatorDefinition;
+  FlareSystemsCalculator: FlareSystemsCalculatorDefinition;
   VoterRegistry: VoterRegistryDefinition;
   FtsoMerkleStructs: FtsoMerkleStructsDefinition;
   ProtocolMerkleStructs: ProtocolMerkleStructsDefinition;

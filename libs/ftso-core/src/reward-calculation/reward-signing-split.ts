@@ -31,7 +31,7 @@ export function generateSigningWeightBasedClaimsForVoter(
     (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
   const stakingFee =
     (stakingAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
-  const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase();
+  const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress.toLowerCase();
   rewardClaims.push({
     beneficiary: delegationBeneficiary,
     amount: delegationFee + stakingFee,

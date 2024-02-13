@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import { RewardEpoch, VoterWeights } from "../../libs/ftso-core/src/RewardEpoch";
-import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
+import { CONTRACTS, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -19,6 +19,8 @@ import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { Feed, MedianCalculationResult } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent } from "./basic-generators";
+import { utils } from "web3";
+import { Bytes32 } from "../../libs/ftso-core/src/utils/sol-types";
 import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
 
 export const encodingUtils = EncodingUtils.instance;
@@ -37,7 +39,7 @@ export function generateRewardEpochEvents(
   const rewardEpochStartSec = epochSettings.expectedRewardEpochStartTimeSec(previousRewardEpochId);
   return [
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RewardEpochStarted.eventName,
       new RewardEpochStarted({
         rewardEpochId: previousRewardEpochId,
@@ -51,7 +53,7 @@ export function generateRewardEpochEvents(
     ...generateRewards(offerCount, feeds, rewardEpochId, rewardEpochStartSec + 10),
 
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RandomAcquisitionStarted.eventName,
       new RandomAcquisitionStarted({
         rewardEpochId: rewardEpochId,
@@ -61,7 +63,7 @@ export function generateRewardEpochEvents(
       rewardEpochStartSec + 20
     ),
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       VotePowerBlockSelected.eventName,
       new VotePowerBlockSelected({
         rewardEpochId: rewardEpochId,
@@ -145,16 +147,17 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
   for (const voter of voters) {
     events.push(
       generateEvent(
-        CONTRACTS.FlareSystemCalculator,
+        CONTRACTS.FlareSystemsCalculator,
         "VoterRegistrationInfo",
         new VoterRegistrationInfo({
-          rewardEpochId: rewardEpoch,
           voter: voter.identityAddress,
-          wNatCappedWeight: voter.wNatCappedWeight,
+          rewardEpochId: rewardEpoch,
+          delegationAddress: voter.delegationAddress,
+          delegationFeeBIPS: voter.delegationFeeBIPS,
           wNatWeight: voter.wNatWeight,
+          wNatCappedWeight: voter.wNatCappedWeight,
           nodeIds: voter.nodeIds,
           nodeWeights: voter.nodeWeights,
-          delegationFeeBIPS: voter.delegationFeeBIPS,
         }),
         1,
         timestamp
@@ -164,15 +167,16 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
       generateEvent(
         CONTRACTS.VoterRegistry,
         "VoterRegistered",
-        new VoterRegistered({
+        {
           voter: voter.identityAddress,
           rewardEpochId: rewardEpoch,
           signingPolicyAddress: voter.signingAddress,
-          delegationAddress: voter.delegationAddress,
           submitAddress: voter.submitAddress,
           submitSignaturesAddress: voter.submitSignaturesAddress,
+          publicKeyPart1: Bytes32.ZERO.toString(),
+          publicKeyPart2: Bytes32.ZERO.toString(),
           registrationWeight: voter.registrationWeight,
-        }),
+        },
         1,
         timestamp
       )
@@ -254,6 +258,8 @@ export function generateRawFullVoter(name: string, rewardEpochId: number, weight
     submitAddress: generateAddress(name + "submit"),
     submitSignaturesAddress: generateAddress(name + "submitSignatures"),
     registrationWeight: BigInt(weight),
+    publicKeyPart1: ZERO_BYTES32,
+    publicKeyPart2: ZERO_BYTES32,
   };
 }
 

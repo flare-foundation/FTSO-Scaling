@@ -108,20 +108,20 @@ export enum BlockAssuranceResult {
  * The lifecycle of events leading to signing policy initialization is as follows.
  * For given rewardEpochId:
  * - Start of reward offers (low boundary event).
- *    - ["FlareSystemManager", undefined, "RewardEpochStarted"], for rewardEpochId - 1.
+ *    - ["FlareSystemsManager", undefined, "RewardEpochStarted"], for rewardEpochId - 1.
  * - End of reward offers (high boundary event).
- *    - ["FlareSystemManager", undefined, "RandomAcquisitionStarted"],
+ *    - ["FlareSystemsManager", undefined, "RandomAcquisitionStarted"],
  * - Reward offers between the timestamps of the above two events.
  *    - ["FtsoRewardOffersManager", undefined, "InflationRewardsOffered"],
  *    - ["FtsoRewardOffersManager", undefined, "RewardsOffered"],
  * - Start of voter registration (low boundary event).
- *    - ["FlareSystemManager", undefined, "VotePowerBlockSelected"]
+ *    - ["FlareSystemsManager", undefined, "VotePowerBlockSelected"]
  * - End of voter registration and signing policy (high boundary event)
  *    - ["Relay", undefined, "SigningPolicyInitialized"],
  * - All voter registration events and related voter info events,
  *   between the timestamps of the above two events.
  *    - ["VoterRegistry", undefined, "VoterRegistered"],
- *    - ["FlareSystemCalculator", undefined, "VoterRegistrationInfo"],
+ *    - ["FlareSystemsCalculator", undefined, "VoterRegistrationInfo"],
  * All these events should be available before the first voting round of the rewardEpochId in order for
  * the protocol data provider to function properly.
  */
@@ -250,7 +250,7 @@ export class IndexerClient {
     const status = await this.ensureLowerBlock(startTime);
     let data: RewardEpochStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
-      const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime);
+      const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
       const events = result.map(event => RewardEpochStarted.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
@@ -271,7 +271,7 @@ export class IndexerClient {
     const status = await this.ensureLowerBlock(startTime);
     let data: RandomAcquisitionStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
-      const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime);
+      const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
       const events = result.map(event => RandomAcquisitionStarted.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
@@ -330,7 +330,7 @@ export class IndexerClient {
     const status = await this.ensureLowerBlock(startTime);
     let data: VotePowerBlockSelected | undefined;
     if (status === BlockAssuranceResult.OK) {
-      const result = await this.queryEvents(CONTRACTS.FlareSystemManager, eventName, startTime);
+      const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
       const events = result.map(event => VotePowerBlockSelected.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
@@ -361,7 +361,7 @@ export class IndexerClient {
   /**
    * Assuming that the indexer has indexed all the events in the given timestamp range,
    * it extracts all the 'VoterRegistered' (VoterRegistry contract) and
-   * VoterRegistrationInfo (FlareSystemCalculator contract) events in the given timestamp range.
+   * VoterRegistrationInfo (FlareSystemsCalculator contract) events in the given timestamp range.
    * Timestamp range are obtained from timestamps of relevant events VotePowerBlockSelectedEvent and SigningPolicyInitialized.
    * The function checks the availability of block range in the indexer database.
    */
@@ -382,7 +382,7 @@ export class IndexerClient {
     const voterRegistered = voterRegisteredResults.map(event => VoterRegistered.fromRawEvent(event));
 
     const voterRegistrationInfoResults = await this.queryEvents(
-      CONTRACTS.FlareSystemCalculator,
+      CONTRACTS.FlareSystemsCalculator,
       VoterRegistrationInfo.eventName,
       startTime,
       endTime

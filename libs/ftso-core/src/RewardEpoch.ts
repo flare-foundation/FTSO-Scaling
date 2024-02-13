@@ -112,29 +112,29 @@ export class RewardEpoch {
       }
       const voter = tmpSigningAddressToVoter.get(voterSigningAddress)!.toLowerCase();
       this.signingAddressToVoter.set(voterSigningAddress, voter);
-      const voterRegistrationInfo = this.voterToRegistrationInfo.get(voter);
-      if (!voterRegistrationInfo) {
+      const fullVoterRegistrationInfo = this.voterToRegistrationInfo.get(voter);
+      if (!fullVoterRegistrationInfo) {
         throw new Error(
           "Critical error: Voter in signing policy not found in voter registration info. This should never happen."
         );
       }
       this.delegationAddressToCappedWeight.set(
-        voterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase(),
-        voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
+        fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress.toLowerCase(),
+        fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
-      this.submitterToVoter.set(voterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(), voter);
+      this.submitterToVoter.set(fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(), voter);
       this.submissionAddressToCappedWeight.set(
-        voterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
-        voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
+        fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
+        fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
       this.submissionAddressToVoterRegistrationInfo.set(
-        voterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
-        voterRegistrationInfo
+        fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
+        fullVoterRegistrationInfo
       );
-      this.orderedVotersSubmissionAddresses.push(voterRegistrationInfo.voterRegistered.submitAddress);
+      this.orderedVotersSubmissionAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
       this.signingAddressToDelegationAddress.set(
         voterSigningAddress,
-        voterRegistrationInfo.voterRegistered.delegationAddress
+        fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress
       );
       this.signingAddressToSigningWeight.set(voterSigningAddress, signingWeight);
     }
@@ -237,7 +237,7 @@ export class RewardEpoch {
       const voterWeights: VoterWeights = {
         submitAddress: voterRegistrationInfo.voterRegistered.submitAddress,
         signingAddress: voterRegistrationInfo.voterRegistered.signingPolicyAddress,
-        delegationAddress: voterRegistrationInfo.voterRegistered.delegationAddress,
+        delegationAddress: voterRegistrationInfo.voterRegistrationInfo.delegationAddress,
         delegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatWeight,
         cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
         signingWeight: this.signingPolicy.weights[index],

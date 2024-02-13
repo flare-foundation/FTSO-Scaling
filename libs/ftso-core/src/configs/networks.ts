@@ -1,15 +1,100 @@
 import { RewardEpochStarted } from "../events";
 import { EpochSettings } from "../utils/EpochSettings";
 import { isValidContractAddress } from "../utils/voting-utils";
-import { NetworkContractAddresses } from "./contracts";
+import { Address } from "../voting-types";
+
+interface FlareSystemsManagerDefinition {
+  name: "FlareSystemsManager";
+  address: Address;
+}
+
+interface FtsoRewardOffersManagerDefinition {
+  name: "FtsoRewardOffersManager";
+  address: Address;
+}
+
+interface RewardManagerDefinition {
+  name: "RewardManager";
+  address: Address;
+}
+
+interface SubmissionDefinition {
+  name: "Submission";
+  address: Address;
+}
+
+interface RelayDefinition {
+  name: "Relay";
+  address: Address;
+}
+
+interface FlareSystemsCalculatorDefinition {
+  name: "FlareSystemsCalculator";
+  address: Address;
+}
+
+interface VoterRegistryDefinition {
+  name: "VoterRegistry";
+  address: Address;
+}
+
+interface FtsoMerkleStructsDefinition {
+  name: "FtsoMerkleStructs";
+  address: Address;
+}
+
+interface ProtocolMerkleStructsDefinition {
+  name: "ProtocolMerkleStructs";
+  address: Address;
+}
+
+export type ContractDefinitions =
+  | FlareSystemsManagerDefinition
+  | FtsoRewardOffersManagerDefinition
+  | RewardManagerDefinition
+  | SubmissionDefinition
+  | RelayDefinition
+  | FlareSystemsCalculatorDefinition
+  | VoterRegistryDefinition
+  | ProtocolMerkleStructsDefinition;
+
+export enum ContractMethodNames {
+  submit1 = "submit1",
+  submit2 = "submit2",
+  submit3 = "submit3",
+  submitSignatures = "submitSignatures",
+  relay = "relay",
+
+  // Struct definitions helper methods (to extract abis)
+  // FTSO merkle tree node definitions
+  feedStruct = "feedStruct",
+  randomStruct = "randomStruct",
+  feedWithProofStruct = "feedWithProofStruct",
+
+  // Rewarding definitions
+  rewardClaimStruct = "rewardClaimStruct",
+  rewardClaimWithProofStruct = "rewardClaimWithProofStruct",
+}
+
+export interface NetworkContractAddresses {
+  FlareSystemsManager: FlareSystemsManagerDefinition;
+  FtsoRewardOffersManager: FtsoRewardOffersManagerDefinition;
+  RewardManager: RewardManagerDefinition;
+  Submission: SubmissionDefinition;
+  Relay: RelayDefinition;
+  FlareSystemsCalculator: FlareSystemsCalculatorDefinition;
+  VoterRegistry: VoterRegistryDefinition;
+  FtsoMerkleStructs: FtsoMerkleStructsDefinition;
+  ProtocolMerkleStructs: ProtocolMerkleStructsDefinition;
+}
 
 const TEST_CONFIG: NetworkContractAddresses = {
-  FlareSystemManager: { name: "FlareSystemManager", address: "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF" },
+  FlareSystemsManager: { name: "FlareSystemsManager", address: "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x8456161947DFc1fC159A0B26c025cD2b4bba0c3e" },
   RewardManager: { name: "RewardManager", address: "0x22474D350EC2dA53D717E30b96e9a2B7628Ede5b" },
   Submission: { name: "Submission", address: "0x18b9306737eaf6E8FC8e737F488a1AE077b18053" },
   Relay: { name: "Relay", address: "0x5A0773Ff307Bf7C71a832dBB5312237fD3437f9F" },
-  FlareSystemCalculator: { name: "FlareSystemCalculator", address: "0x58F132FBB86E21545A4Bace3C19f1C05d86d7A22" },
+  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x58F132FBB86E21545A4Bace3C19f1C05d86d7A22" },
   VoterRegistry: { name: "VoterRegistry", address: "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
@@ -28,10 +113,10 @@ const configs = () => {
         `Loading contract addresses from environment variables, as specified in .env NETWORK: ${process.env.NETWORK}`
       );
       if (
-        !process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS ||
-        !isValidContractAddress(process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS)
+        !process.env.FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS ||
+        !isValidContractAddress(process.env.FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS)
       )
-        throw new Error("FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS value is not valid contract address");
+        throw new Error("FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS ||
         !isValidContractAddress(process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS)
@@ -47,17 +132,17 @@ const configs = () => {
       if (!process.env.FTSO_CA_RELAY_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_RELAY_ADDRESS))
         throw new Error("FTSO_CA_RELAY_ADDRESS value is not valid contract address");
       if (
-        !process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS ||
-        !isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS)
+        !process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS ||
+        !isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS)
       )
-        throw new Error("FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS value is not valid contract address");
+        throw new Error("FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS ||
         !isValidContractAddress(process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS)
       )
         throw new Error("FTSO_CA_VOTER_REGISTRY_ADDRESS value is not valid contract address");
       const CONTRACT_CONFIG: NetworkContractAddresses = {
-        FlareSystemManager: { name: "FlareSystemManager", address: process.env.FTSO_CA_FTSO_SYSTEM_MANAGER_ADDRESS },
+        FlareSystemsManager: { name: "FlareSystemsManager", address: process.env.FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS },
         FtsoRewardOffersManager: {
           name: "FtsoRewardOffersManager",
           address: process.env.FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS,
@@ -65,9 +150,9 @@ const configs = () => {
         RewardManager: { name: "RewardManager", address: process.env.FTSO_CA_REWARD_MANAGER_ADDRESS },
         Submission: { name: "Submission", address: process.env.FTSO_CA_SUBMISSION_ADDRESS },
         Relay: { name: "Relay", address: process.env.FTSO_CA_RELAY_ADDRESS },
-        FlareSystemCalculator: {
-          name: "FlareSystemCalculator",
-          address: process.env.FTSO_CA_FLARE_SYSTEM_CALCULATOR_ADDRESS,
+        FlareSystemsCalculator: {
+          name: "FlareSystemsCalculator",
+          address: process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS,
         },
         VoterRegistry: { name: "VoterRegistry", address: process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS },
         FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
@@ -118,7 +203,7 @@ const epochSettings = () => {
     case "local-test":
     default:
       return new EpochSettings(
-        1704250616, // ES_FIRST_VOTING_ROUND_START_TS
+        1707110090, // ES_FIRST_VOTING_ROUND_START_TS
         20, //ES_VOTING_EPOCH_DURATION_SECONDS
         1000, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
         5, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
