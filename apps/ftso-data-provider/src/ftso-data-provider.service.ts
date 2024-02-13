@@ -23,6 +23,7 @@ import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEnc
 import { MerkleTreeStructs } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
+import { retry } from "../../../libs/ftso-core/src/utils/retry";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
@@ -182,15 +183,14 @@ export class FtsoDataProviderService {
   // Internal methods
 
   private async getPricesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
-    // TODO: do some retries here
-    const pricesRes = await this.priceProviderClient.priceProviderApi.getPriceFeeds(votingRoundId, {
-      feeds: supportedFeeds.map(feed => feed.name),
-    });
+    const pricesRes = await retry(
+      async () =>
+        await this.priceProviderClient.priceProviderApi.getPriceFeeds(votingRoundId, {
+          feeds: supportedFeeds.map(feed => feed.name),
+        })
+    );
 
-    // This should just be a warning
     if (pricesRes.status < 200 || pricesRes.status >= 300) {
-      this.logger.warn(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);
-      // TODO: exit
       throw new Error(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);
     }
 

@@ -3,7 +3,7 @@ import { keccak256 } from "ethers";
 import { privateKeyToAddress } from "web3-eth-accounts";
 
 /** Deterministic random. */
-const random = new Prando(42);
+export const testRandom = new Prando(42);
 
 export function generateRandomAddress(): string {
   const privateKeyHex = unsafeRandomHex(32);
@@ -18,7 +18,7 @@ export function randomHash() {
 export function unsafeRandomHex(bytes: number): string {
   const randomBytes = new Uint8Array(bytes);
   for (let i = 0; i < randomBytes.length; i++) {
-    randomBytes[i] = random.nextInt(0, 255);
+    randomBytes[i] = testRandom.nextInt(0, 255);
   }
   return "0x" + Buffer.from(randomBytes).toString("hex");
 }
