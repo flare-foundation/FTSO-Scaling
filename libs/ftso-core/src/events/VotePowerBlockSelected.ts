@@ -3,7 +3,7 @@ import { decodeEvent } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
 /**
- * VotePowerBlockSelected object obtained from the FlareSystemManager smart contract
+ * VotePowerBlockSelected object obtained from the FlareSystemsManager smart contract
  * as an event VotePowerBlockSelected.
  */
 export class VotePowerBlockSelected extends RawEventConstructible {
@@ -17,7 +17,7 @@ export class VotePowerBlockSelected extends RawEventConstructible {
 
   static fromRawEvent(event: any): VotePowerBlockSelected {
     return decodeEvent<VotePowerBlockSelected>(
-      CONTRACTS.FlareSystemManager.name,
+      CONTRACTS.FlareSystemsManager.name,
       VotePowerBlockSelected.eventName,
       event,
       (data: any) => new VotePowerBlockSelected(data)

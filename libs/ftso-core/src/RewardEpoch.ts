@@ -117,7 +117,7 @@ export class RewardEpoch {
         );
       }
       this.delegationAddressToCappedWeight.set(
-        fullVoterRegistrationInfo.voterRegistered.delegationAddress,
+        fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress,
         fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
       this.submitterToVoter.set(fullVoterRegistrationInfo.voterRegistered.submitAddress, voter);
@@ -132,7 +132,7 @@ export class RewardEpoch {
       this.orderedVotersSubmissionAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
       this.signingAddressToDelegationAddress.set(
         voterSigningAddress,
-        fullVoterRegistrationInfo.voterRegistered.delegationAddress
+        fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress
       );
       this.signingAddressToSigningWeight.set(voterSigningAddress, signingWeight);
     }
@@ -233,7 +233,7 @@ export class RewardEpoch {
       const voterRegistrationInfo = this.submissionAddressToVoterRegistrationInfo.get(submissionAddress)!;
       const voterWeights: VoterWeights = {
         submitAddress: voterRegistrationInfo.voterRegistered.submitAddress,
-        delegationAddress: voterRegistrationInfo.voterRegistered.delegationAddress,
+        delegationAddress: voterRegistrationInfo.voterRegistrationInfo.delegationAddress,
         delegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatWeight,
         cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
         feeBIPS: voterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS,

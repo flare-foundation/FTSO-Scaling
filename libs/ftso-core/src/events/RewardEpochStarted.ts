@@ -4,7 +4,7 @@ import { decodeEvent } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
 /**
- * RewardOffer object obtained from the FlareSystemManager smart contract
+ * RewardOffer object obtained from the FlareSystemsManager smart contract
  * as an event RewardsOffered.
  */
 export class RewardEpochStarted extends RawEventConstructible {
@@ -17,7 +17,7 @@ export class RewardEpochStarted extends RawEventConstructible {
   }
   static fromRawEvent(event: any): RewardEpochStarted {
     return decodeEvent<RewardEpochStarted>(
-      CONTRACTS.FlareSystemManager.name,
+      CONTRACTS.FlareSystemsManager.name,
       RewardEpochStarted.eventName,
       event,
       (data: any) => new RewardEpochStarted(data)

@@ -1,5 +1,6 @@
 import { CONTRACTS } from "../configs/networks";
 import { decodeEvent } from "../utils/EncodingUtils";
+import { Bytes32 } from "../utils/sol-types";
 import { Address } from "../voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
 
@@ -14,9 +15,10 @@ export class VoterRegistered extends RawEventConstructible {
     this.rewardEpochId = Number(data.rewardEpochId);
     this.voter = data.voter.toLowerCase();
     this.signingPolicyAddress = data.signingPolicyAddress.toLowerCase();
-    this.delegationAddress = data.delegationAddress.toLowerCase();
     this.submitAddress = data.submitAddress.toLowerCase();
     this.submitSignaturesAddress = data.submitSignaturesAddress.toLowerCase();
+    this.publicKeyPart1 = Bytes32.fromHexString(data.publicKeyPart1);
+    this.publicKeyPart2 = Bytes32.fromHexString(data.publicKeyPart2);
     this.registrationWeight = BigInt(data.registrationWeight);
   }
 
@@ -32,8 +34,9 @@ export class VoterRegistered extends RawEventConstructible {
   voter: Address;
   rewardEpochId: number;
   signingPolicyAddress: Address;
-  delegationAddress: Address;
   submitAddress: Address;
   submitSignaturesAddress: Address;
+  publicKeyPart1: Bytes32;
+  publicKeyPart2: Bytes32;
   registrationWeight: bigint;
 }

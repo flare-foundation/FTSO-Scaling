@@ -4,7 +4,6 @@ import {
   RewardEpochStarted,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
-  VoterRegistered,
   VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
 import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
@@ -15,6 +14,7 @@ import { encodeParameters, encodeParameter } from "web3-eth-abi";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
 import { utils } from "web3";
+import { Bytes32 } from "../../libs/ftso-core/src/utils/sol-types";
 
 const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
@@ -80,7 +80,7 @@ export async function generateRewardEpochEvents(
   const rewardEpochStartSec = epochSettings.expectedRewardEpochStartTimeSec(previousRewardEpochId);
   return [
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RewardEpochStarted.eventName,
       new RewardEpochStarted({
         rewardEpochId: previousRewardEpochId,
@@ -93,7 +93,7 @@ export async function generateRewardEpochEvents(
     ...generateRewards(offerCount, feeds, rewardEpochId, rewardEpochStartSec + 10),
 
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       RandomAcquisitionStarted.eventName,
       new RandomAcquisitionStarted({
         rewardEpochId: rewardEpochId,
@@ -102,7 +102,7 @@ export async function generateRewardEpochEvents(
       rewardEpochStartSec + 20
     ),
     generateEvent(
-      CONTRACTS.FlareSystemManager,
+      CONTRACTS.FlareSystemsManager,
       VotePowerBlockSelected.eventName,
       new VotePowerBlockSelected({
         rewardEpochId: rewardEpochId,
@@ -182,16 +182,17 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
   for (const voter of voters) {
     events.push(
       generateEvent(
-        CONTRACTS.FlareSystemCalculator,
+        CONTRACTS.FlareSystemsCalculator,
         "VoterRegistrationInfo",
         new VoterRegistrationInfo({
-          rewardEpochId: rewardEpoch,
           voter: voter.identityAddress,
-          wNatCappedWeight: voter.wNatCappedWeight,
+          rewardEpochId: rewardEpoch,
+          delegationAddress: voter.delegationAddress,
+          delegationFeeBIPS: voter.delegationFeeBIPS,
           wNatWeight: voter.wNatWeight,
+          wNatCappedWeight: voter.wNatCappedWeight,
           nodeIds: voter.nodeIds,
           nodeWeights: voter.nodeWeights,
-          delegationFeeBIPS: voter.delegationFeeBIPS,
         }),
         timestamp
       )
@@ -200,15 +201,16 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
       generateEvent(
         CONTRACTS.VoterRegistry,
         "VoterRegistered",
-        new VoterRegistered({
+        {
           voter: voter.identityAddress,
           rewardEpochId: rewardEpoch,
           signingPolicyAddress: voter.signingAddress,
-          delegationAddress: voter.delegationAddress,
           submitAddress: voter.submitAddress,
           submitSignaturesAddress: voter.submitSignaturesAddress,
+          publicKeyPart1: Bytes32.ZERO.toString(),
+          publicKeyPart2: Bytes32.ZERO.toString(),
           registrationWeight: voter.registrationWeight,
-        }),
+        },
         timestamp
       )
     );

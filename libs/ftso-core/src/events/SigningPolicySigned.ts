@@ -16,7 +16,7 @@ export class SigningPolicySigned extends RawEventConstructible {
 
   static fromRawEvent(event: any): SigningPolicySigned {
     return decodeEvent<SigningPolicySigned>(
-      CONTRACTS.FlareSystemManager.name,
+      CONTRACTS.FlareSystemsManager.name,
       SigningPolicySigned.eventName,
       event,
       (data: any) => new SigningPolicySigned(data)

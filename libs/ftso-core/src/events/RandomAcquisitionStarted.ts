@@ -3,7 +3,7 @@ import { decodeEvent } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
 /**
- * RandomAcquisitionStarted object obtained from the FlareSystemManager smart contract
+ * RandomAcquisitionStarted object obtained from the FlareSystemsManager smart contract
  * as an event RandomAcquisitionStarted.
  */
 export class RandomAcquisitionStarted extends RawEventConstructible {
@@ -16,7 +16,7 @@ export class RandomAcquisitionStarted extends RawEventConstructible {
 
   static fromRawEvent(event: any): RandomAcquisitionStarted {
     return decodeEvent<RandomAcquisitionStarted>(
-      CONTRACTS.FlareSystemManager.name,
+      CONTRACTS.FlareSystemsManager.name,
       RandomAcquisitionStarted.eventName,
       event,
       (data: any) => new RandomAcquisitionStarted(data)
