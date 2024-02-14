@@ -53,11 +53,10 @@ export function calculateDoubleSigners(
 export function calculateDoubleSigningPenalties(
   offer: IPartialRewardOffer,
   signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>,
-  rewardEpoch: RewardEpoch,
+  votersWeights: Map<Address, VoterWeights>,
   protocolId = FTSO2_PROTOCOL_ID,
   addLog = false
 ): IPartialRewardClaim[] {
-  const votersWeights = rewardEpoch.getVotersWeights();
   const votingRoundId = offer.votingRoundId;
   const doubleSigners = calculateDoubleSigners(votingRoundId, protocolId, signatures);
   if (doubleSigners.size === 0) {

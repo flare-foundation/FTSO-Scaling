@@ -45,7 +45,6 @@ export async function rewardClaimsForRewardEpoch(
     const rewardClaims = await partialRewardClaimsForVotingRound(
       votingRoundId,
       randomGenerationBenchingWindow,
-      rewardEpoch,
       dataManager,
       rewardOfferMap.get(votingRoundId),
       merge,
@@ -74,7 +73,6 @@ export async function rewardClaimsForRewardEpoch(
 export async function partialRewardClaimsForVotingRound(
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
-  rewardEpoch: RewardEpoch,
   dataManager: DataManager,
   feedOffers: Map<string, IPartialRewardOffer[]>,
   merge = true,
@@ -90,9 +88,11 @@ export async function partialRewardClaimsForVotingRound(
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
 
-  const voterWeights = rewardEpoch.getVotersWeights();
-
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
+
+  const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
+
+  const voterWeights = rewardEpoch.getVotersWeights();
 
   // Calculate feed medians
   const medianResults: MedianCalculationResult[] = await calculateMedianResults(
@@ -157,14 +157,14 @@ export async function partialRewardClaimsForVotingRound(
       const revealWithdrawalPenalties = calculateRevealWithdrawalPenalties(
         offer,
         rewardDataForCalculations.dataForCalculations.revealOffenders,
-        rewardDataForCalculations.dataForCalculations.rewardEpoch,
+        voterWeights,
         addLog
       );
 
       const doubleSigningPenalties = calculateDoubleSigningPenalties(
         offer,
         rewardDataForCalculations.signatures,
-        rewardDataForCalculations.dataForCalculations.rewardEpoch,
+        voterWeights,
         FTSO2_PROTOCOL_ID,
         addLog
       );

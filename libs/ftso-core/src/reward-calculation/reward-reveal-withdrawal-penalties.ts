@@ -13,10 +13,9 @@ import { medianRewardDistributionWeight } from "./reward-utils";
 export function calculateRevealWithdrawalPenalties(
   offer: IPartialRewardOffer,
   revealOffenders: Set<Address>,
-  rewardEpoch: RewardEpoch,
+  votersWeights: Map<Address, VoterWeights>,
   addLog = false
 ): IPartialRewardClaim[] {
-  const votersWeights = rewardEpoch.getVotersWeights();
   const totalWeight = [...votersWeights.values()]
     .map(voterWeight => medianRewardDistributionWeight(voterWeight))
     .reduce((a, b) => a + b, 0n);
