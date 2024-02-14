@@ -19,7 +19,7 @@ import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, res
 // const logger = console;
 const logger = emptyLogger;
 
-describe.only("generator-rewards", () => {
+describe("generator-rewards", () => {
   before(() => {
     process.env.NETWORK = "from-env";
     setupEpochSettings(realtimeShorterEpochSettings);
