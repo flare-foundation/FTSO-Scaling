@@ -190,7 +190,6 @@ export class DataManager {
       signaturesResponse.data.finalizations,
       FTSO2_PROTOCOL_ID
     );
-    const voterWeights = rewardEpoch.getVoterWeights();
     const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
     return {
       status: DataAvailabilityStatus.OK,
@@ -198,7 +197,6 @@ export class DataManager {
         dataForCalculations: dataForCalculationsResponse.data,
         signatures,
         finalizations,
-        voterWeights,
         firstSuccessfulFinalization,
       },
     };

@@ -10,6 +10,7 @@ import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export interface VoterWeights {
+  readonly identityAddress: string;
   readonly submitAddress: string;
   readonly signingAddress: string;
   readonly delegationAddress: string;
@@ -226,18 +227,24 @@ export class RewardEpoch {
     return this.voterToRegistrationInfo.get(voterAddress.toLowerCase());
   }
 
+  private cachedVoterWeights: Map<Address, VoterWeights> | undefined = undefined;
+
   /**
    * Returns a map from submission address to voter weights information.
    * @returns
    */
   public getVoterWeights(): Map<Address, VoterWeights> {
+    if(this.cachedVoterWeights) {
+      return this.cachedVoterWeights;
+    }
     const result = new Map<Address, VoterWeights>();
     this.orderedVotersSubmissionAddresses.forEach((submissionAddress, index) => {
       const voterRegistrationInfo = this.submissionAddressToVoterRegistrationInfo.get(submissionAddress.toLowerCase())!;
       const voterWeights: VoterWeights = {
-        submitAddress: voterRegistrationInfo.voterRegistered.submitAddress,
-        signingAddress: voterRegistrationInfo.voterRegistered.signingPolicyAddress,
-        delegationAddress: voterRegistrationInfo.voterRegistrationInfo.delegationAddress,
+        identityAddress: voterRegistrationInfo.voterRegistered.voter.toLowerCase(),
+        submitAddress: voterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
+        signingAddress: voterRegistrationInfo.voterRegistered.signingPolicyAddress.toLowerCase(),
+        delegationAddress: voterRegistrationInfo.voterRegistrationInfo.delegationAddress.toLowerCase(),
         delegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatWeight,
         cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
         signingWeight: this.signingPolicy.weights[index],
@@ -247,6 +254,7 @@ export class RewardEpoch {
       };
       result.set(submissionAddress, voterWeights);
     });
+    this.cachedVoterWeights = result;
     return result;
   }
 }

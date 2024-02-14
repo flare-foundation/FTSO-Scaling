@@ -1,7 +1,7 @@
-import { GenericSubmissionData, ParsedFinalizationData } from "./IndexerClient";
-import { RewardEpoch, VoterWeights } from "./RewardEpoch";
-import { IRevealData } from "./utils/RevealData";
 import { ISignaturePayload } from "../../fsp-utils/src/SignaturePayload";
+import { GenericSubmissionData, ParsedFinalizationData } from "./IndexerClient";
+import { RewardEpoch } from "./RewardEpoch";
+import { IRevealData } from "./utils/RevealData";
 import { Address, Feed, MessageHash } from "./voting-types";
 
 export interface DataForCalculationsPartial {
@@ -34,5 +34,4 @@ export interface DataForRewardCalculation {
   finalizations: ParsedFinalizationData[];
   // might be undefined, if such finalization does not exist in an observed range
   firstSuccessfulFinalization?: ParsedFinalizationData;
-  voterWeights: Map<Address, VoterWeights>;
 }

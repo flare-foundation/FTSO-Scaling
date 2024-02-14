@@ -369,3 +369,11 @@ export const FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS = () => {
   }
   return constantFinalizationVoterSelectionThresholdWeightBips;
 };
+
+/**
+ * For signing and finalization rewards in grace period delegation fee is used. 
+ * In future mirrored staking fee will be used. Since a malicious voter could still have stake in the system
+ * while changing the delegation fee and stakers are locked into the stake, the cap is the protection 
+ * against the malicious behavior.
+ */
+export const CAPPED_STAKING_FEE_BIPS = 2000;

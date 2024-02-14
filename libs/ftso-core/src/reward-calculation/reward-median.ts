@@ -14,13 +14,23 @@ import { TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
 export function calculateMedianRewardClaims(
   offer: IPartialRewardOffer,
   calculationResult: MedianCalculationResult,
-  voterWeights: Map<Address, VoterWeights>
+  voterWeights: Map<Address, VoterWeights>,
+  addLog = false,
 ): IPartialRewardClaim[] {
   interface VoterRewarding {
     readonly voterAddress: string;
     weight: bigint;
     readonly pct: boolean; // gets PCT (percent) reward
     readonly iqr: boolean; // gets IQR (inter quartile range) reward
+  }
+
+  function addInfo(text: string) {
+    return addLog
+      ? {
+        info: `Median: ${text}`,
+        votingRoundId,
+      }
+      : {};
   }
 
   // sanity check
@@ -57,6 +67,7 @@ export function calculateMedianRewardClaims(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("low turnout claim back"),
     };
     return [backClaim];
   }
@@ -138,6 +149,7 @@ export function calculateMedianRewardClaims(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("no normalized weight"),
     };
     return [backClaim];
   }
@@ -158,7 +170,7 @@ export function calculateMedianRewardClaims(
 
     totalReward += reward;
 
-    const rewardClaim = generateMedianRewardClaimsForVoter(reward, voterWeights.get(voterRecord.voterAddress)!);
+    const rewardClaim = generateMedianRewardClaimsForVoter(reward, offer.votingRoundId, voterWeights.get(voterRecord.voterAddress)!, addLog);
     rewardClaims.push(...rewardClaim);
   }
   // Assert
@@ -173,7 +185,16 @@ export function calculateMedianRewardClaims(
  * Given assigned reward it generates reward claims for the voter.
  * Currently only a partial fee claim and capped wnat delegation participation weight claims are created.
  */
-export function generateMedianRewardClaimsForVoter(amount: bigint, voterWeights: VoterWeights) {
+function generateMedianRewardClaimsForVoter(amount: bigint, votingRoundId: number, voterWeights: VoterWeights, addLog = false) {
+  function addInfo(text: string) {
+    return addLog
+      ? {
+        info: `Median: ${text}`,
+        votingRoundId,
+      }
+      : {};
+  }
+
   const result: IPartialRewardClaim[] = [];
   const fee = (amount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
 
@@ -182,9 +203,10 @@ export function generateMedianRewardClaimsForVoter(amount: bigint, voterWeights:
   // No claims with zero amount
   if (fee > 0n) {
     const feeClaim: IPartialRewardClaim = {
-      beneficiary: voterWeights.delegationAddress.toLowerCase(),
+      beneficiary: voterWeights.identityAddress.toLowerCase(),
       amount: fee,
       claimType: ClaimType.FEE,
+      ...addInfo("fee"),
     };
     result.push(feeClaim);
   }
@@ -193,6 +215,7 @@ export function generateMedianRewardClaimsForVoter(amount: bigint, voterWeights:
       beneficiary: voterWeights.delegationAddress.toLowerCase(),
       amount: participationReward,
       claimType: ClaimType.WNAT,
+      ...addInfo("participation"),
     };
     result.push(rewardClaim);
   }

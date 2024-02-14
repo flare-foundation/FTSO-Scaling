@@ -12,13 +12,24 @@ import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePer
 export function calculateFinalizationRewardClaims(
   offer: IPartialRewardOffer,
   data: DataForRewardCalculation,
-  eligibleFinalizationRewardVotersInGracePeriod: Set<Address>
+  eligibleFinalizationRewardVotersInGracePeriod: Set<Address>,
+  addLog = false,
 ): IPartialRewardClaim[] {
+  function addInfo(text: string) {
+    return addLog
+      ? {
+        info: `Finalization: ${text}`,
+        votingRoundId: offer.votingRoundId
+      }
+      : {};
+  }
+
   if (!data.firstSuccessfulFinalization) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("No finalization"),
     };
     return [backClaim];
   }
@@ -29,6 +40,7 @@ export function calculateFinalizationRewardClaims(
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("outside of grace period"),
     };
     return [otherFinalizerClaim];
   }
@@ -40,6 +52,7 @@ export function calculateFinalizationRewardClaims(
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("in grace period"),
     };
     return [otherFinalizerClaim];
   }
@@ -64,7 +77,7 @@ export function calculateFinalizationRewardClaims(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, signingAddress, data.dataForCalculations.rewardEpoch)
+      ...generateSigningWeightBasedClaimsForVoter(amount, signingAddress, data.dataForCalculations.rewardEpoch, offer.votingRoundId, "Finalization", addLog)
     );
   }
 
@@ -77,6 +90,7 @@ export function calculateFinalizationRewardClaims(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: undistributedAmount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("Claim back for undistributed rewards"),
     });
   }
   return resultClaims;

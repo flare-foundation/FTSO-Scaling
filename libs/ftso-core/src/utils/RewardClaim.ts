@@ -36,6 +36,8 @@ export interface IPartialRewardClaim {
   beneficiary: string;
   amount: bigint;
   claimType: ClaimType;
+  votingRoundId?: number;
+  info?: string;
 }
 
 /**
@@ -71,18 +73,22 @@ export namespace RewardClaim {
    */
   export function merge(claims: IPartialRewardClaim[]): IPartialRewardClaim[] {
     // beneficiary => claimType => sign => claim
-    const claimsByBeneficiaryTypeAndSign = new Map<string, Map<number, Map<Number, IPartialRewardClaim>>>();
+    const claimsByBeneficiaryTypeAndSign = new Map<string, Map<number, Map<number, IPartialRewardClaim>>>();
     for (const claim of claims) {
       const beneficiary = claim.beneficiary.toLowerCase();
       const beneficiaryClaimsByTypeAndSign =
-        claimsByBeneficiaryTypeAndSign.get(beneficiary) || new Map<number, Map<number, IRewardClaim>>();
+        claimsByBeneficiaryTypeAndSign.get(beneficiary) || new Map<number, Map<number, IPartialRewardClaim>>();
       claimsByBeneficiaryTypeAndSign.set(claim.beneficiary, beneficiaryClaimsByTypeAndSign);
-      const claimTypeBySign = beneficiaryClaimsByTypeAndSign.get(claim.claimType) || new Map<number, IRewardClaim>();
+      const claimTypeBySign = beneficiaryClaimsByTypeAndSign.get(claim.claimType) || new Map<number, IPartialRewardClaim>();
       beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);
       const sign = claim.amount < 0 ? -1 : 1;
       let mergedClaim = claimTypeBySign.get(sign);
       if (!mergedClaim) {
-        mergedClaim = { ...claim, beneficiary };
+        mergedClaim = {
+          beneficiary: claim.beneficiary,
+          amount: claim.amount,
+          claimType: claim.claimType
+        };
         claimTypeBySign.set(sign, mergedClaim);
       } else {
         mergedClaim.amount += claim.amount;
@@ -113,5 +119,80 @@ export namespace RewardClaim {
         rewardEpochId,
       };
     });
+  }
+
+  /**
+   * Given merged claims, where positive and negative claims are already merged separately and fully for
+   * each combination of (beneficiary, claimType), the function subtracts the negative claims from the positive.
+   * If a negative claim is larger (in absolute value) then the corresponding positive one, the positive 
+   * claim is discarded and a burn claim with value equal to the positive claim is created. 
+   * If a negative claim is smaller (in absolute value) then the corresponding positive one, the positive
+   * is reduced for the amount of the negative claim and a burn claim with value equal to the negative claim
+   * (in absolute value) is created.
+   * At the end, only positive claims remain (possible 0-value claims are removed).
+   * The procedure relies on the following:
+   * - the sum of positive input claims matches the total amount of rewards distributed
+   * - negative input claims can have any total value, even its absolute value exceeding the 
+   *   total amount of rewards distributed. However, negative claims are selectively subtracted
+   *   from positive claims up to the value of particular positive claims. The value subtracted 
+   *   from positive claims converts to burn claims, which are always non-negative and direct claims 
+   *   to burn address.
+   * - at the end all output claims are positive and the sum of positive input claims matches the sum of all
+   *   output claims.
+   */
+  export function mergeWithBurnClaims(claims: IRewardClaim[], burnAddress: string) {
+    // beneficiary => claimType => claim
+    const negativeClaims = new Map<string, Map<Number, IRewardClaim>>();
+    // assemble map of negative claims
+    for (const claim of claims) {
+      if (claim.amount >= 0) {
+        continue;
+      }
+      const beneficiary = claim.beneficiary.toLowerCase();
+      const beneficiaryClaimsByType =
+        negativeClaims.get(beneficiary) || new Map<number, IRewardClaim>();
+      negativeClaims.set(claim.beneficiary, beneficiaryClaimsByType);
+      if (beneficiaryClaimsByType.get(claim.claimType) !== undefined) {
+        throw new Error(`Duplicate negative claim type for beneficiary ${beneficiary}`);
+      }
+      beneficiaryClaimsByType.set(claim.claimType, claim);
+    }
+    const finalClaims: IRewardClaim[] = [];
+    for (const claim of claims) {
+      if (claim.amount <= 0) {
+        continue;
+      }
+      const negativeClaim = negativeClaims.get(claim.beneficiary)?.get(claim.claimType);
+      if (!negativeClaim) {
+        finalClaims.push(claim);
+        continue;
+      }
+      const negativeAmount = -1n * negativeClaim.amount;
+      if (negativeAmount > claim.amount) {
+        // create full burn claim
+        finalClaims.push({
+          beneficiary: burnAddress,
+          claimType: claim.claimType,
+          amount: claim.amount,
+          rewardEpochId: claim.rewardEpochId
+        });
+      } else {
+        // create partial burn claim
+        finalClaims.push({
+          beneficiary: burnAddress,
+          claimType: claim.claimType,
+          amount: negativeAmount,
+          rewardEpochId: claim.rewardEpochId
+        });
+        // create partial claim
+        finalClaims.push({
+          ...claim,
+          amount: claim.amount - negativeAmount
+        });
+      }
+    }
+    // Perform the final merge, merging together all burn claims.
+
+    return merge(finalClaims);
   }
 }

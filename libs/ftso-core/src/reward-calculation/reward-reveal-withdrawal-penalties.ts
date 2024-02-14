@@ -14,8 +14,9 @@ export function calculateRevealWithdrawalPenalties(
   offer: IPartialRewardOffer,
   revealOffenders: Set<Address>,
   rewardEpoch: RewardEpoch,
-  voterWeights: Map<Address, VoterWeights>
+  addLog = false,
 ): IPartialRewardClaim[] {
+  const voterWeights = rewardEpoch.getVoterWeights();
   const totalWeight = [...voterWeights.values()]
     .map(voterWeight => medianRewardDistributionWeight(voterWeight))
     .reduce((a, b) => a + b, 0n);
@@ -29,7 +30,7 @@ export function calculateRevealWithdrawalPenalties(
     const voterWeight = medianRewardDistributionWeight(voterData);
     const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR()) / totalWeight;
     const signingAddress = voterData.signingAddress;
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch));
+    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch, offer.votingRoundId, "Reveal withdrawal", addLog));
   }
   return penaltyClaims;
 }

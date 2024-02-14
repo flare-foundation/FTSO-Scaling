@@ -3,10 +3,11 @@ import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
 import { rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import { RewardClaim } from "../../../libs/ftso-core/src/utils/RewardClaim";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
-import { claimSummary, printSummary, generateRewardEpochDataForRewardCalculation, offersSummary, voterFeedValue, votersSummary } from "../../utils/generators-rewards";
+import { claimSummary, generateRewardEpochDataForRewardCalculation, offersSummary, printSummary, voterFeedValue, votersSummary } from "../../utils/generators-rewards";
 import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEnvVariables, resetEpochSettings, rewardSettingsForRealtimeShorterEpochSettings, setupEnvVariables, setupEpochSettings } from "../../utils/test-epoch-settings";
 
 // Ensure that the networks are not loaded
@@ -69,16 +70,20 @@ describe("generator-rewards", () => {
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);    
 
+    const addLog = true;
+    const merge = false;
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,
       benchingWindowRevealOffenders,
       dataManager,
-      rewardEpochManger
-    );
-
+      rewardEpochManger,
+      merge,
+      addLog,
+    );    
+    const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
     offersSummary(rewardEpoch.rewardOffers);
     votersSummary(voters);
-    claimSummary(voters, claims);
+    claimSummary(voters, mergedClaims);
   });
 
 });

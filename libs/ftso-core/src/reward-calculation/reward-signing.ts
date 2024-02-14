@@ -25,8 +25,18 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
  */
 export function calculateSigningRewards(
   offer: IPartialRewardOffer,
-  data: DataForRewardCalculation
+  data: DataForRewardCalculation,
+  addLog = false
 ): IPartialRewardClaim[] {
+  function addInfo(text: string) {
+    return addLog
+      ? {
+        info: `Signing: ${text}`,
+        votingRoundId,
+      }
+      : {};
+  }
+
   const votingRoundId = data.dataForCalculations.votingRoundId;
   let rewardEligibleSignatures: GenericSubmissionData<ISignaturePayload>[] = [];
   let doubleSigners = calculateDoubleSigners(
@@ -47,6 +57,7 @@ export function calculateSigningRewards(
         beneficiary: offer.claimBackAddress.toLowerCase(),
         amount: offer.amount,
         claimType: ClaimType.DIRECT,
+        ...addInfo("No most frequent signatures"),
       };
       return [backClaim];
     }
@@ -85,6 +96,7 @@ export function calculateSigningRewards(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("no weight of eligible signers")
     };
     return [backClaim];
   }
@@ -109,7 +121,10 @@ export function calculateSigningRewards(
       ...generateSigningWeightBasedClaimsForVoter(
         amount,
         signature.messages.signer!,
-        data.dataForCalculations.rewardEpoch
+        data.dataForCalculations.rewardEpoch,
+        offer.votingRoundId,
+        "Signing",
+        addLog,
       )
     );
   }
@@ -123,6 +138,7 @@ export function calculateSigningRewards(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("claim back no claims")
     };
     return [backClaim];
   }

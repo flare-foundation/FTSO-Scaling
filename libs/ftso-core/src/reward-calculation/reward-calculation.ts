@@ -23,8 +23,10 @@ export async function rewardClaimsForRewardEpoch(
   rewardEpochId: number,
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
-  rewardEpochManager: RewardEpochManager
-): Promise<IRewardClaim[]> {
+  rewardEpochManager: RewardEpochManager,
+  merge = true,
+  addLog = false
+): Promise<IRewardClaim[] | IPartialRewardClaim[]> {
   // Reward epoch definitions
 
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
@@ -45,11 +47,19 @@ export async function rewardClaimsForRewardEpoch(
       randomGenerationBenchingWindow,
       rewardEpoch,
       dataManager,
-      rewardOfferMap.get(votingRoundId)
+      rewardOfferMap.get(votingRoundId),
+      merge,
+      addLog
     );
-    allRewardClaims = RewardClaim.merge([...allRewardClaims, ...rewardClaims]);
+    allRewardClaims.push(...rewardClaims);
+    if (merge) {
+      allRewardClaims = RewardClaim.merge(allRewardClaims);
+    }
   }
-  return RewardClaim.convertToRewardClaims(rewardEpochId, allRewardClaims);
+  if (merge) {
+    return RewardClaim.convertToRewardClaims(rewardEpochId, allRewardClaims);
+  }
+  return allRewardClaims;
 }
 
 /**
@@ -66,7 +76,9 @@ export async function partialRewardClaimsForVotingRound(
   randomGenerationBenchingWindow: number,
   rewardEpoch: RewardEpoch,
   dataManager: DataManager,
-  feedOffers: Map<string, IPartialRewardOffer[]>
+  feedOffers: Map<string, IPartialRewardOffer[]>,  
+  merge = true,
+  addLog = false,
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
   // Obtain data for reward calculation
@@ -78,6 +90,8 @@ export async function partialRewardClaimsForVotingRound(
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
+
+  const voterWeights = rewardEpoch.getVoterWeights();
 
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
@@ -126,37 +140,40 @@ export async function partialRewardClaimsForVotingRound(
       const medianRewardClaims = calculateMedianRewardClaims(
         splitOffers.medianRewardOffer,
         medianResult,
-        rewardDataForCalculations.voterWeights
+        voterWeights,
+        addLog,
       );
-      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations);
+      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations, addLog);
       const finalizationRewardClaims = calculateFinalizationRewardClaims(
         splitOffers.finalizationRewardOffer,
         rewardDataForCalculations,
-        eligibleFinalizationRewardVotersInGracePeriod
+        eligibleFinalizationRewardVotersInGracePeriod,
+        addLog,
       );
       // Calculate penalties for reveal withdrawal offenders
       const revealWithdrawalPenalties = calculateRevealWithdrawalPenalties(
         offer,
         rewardDataForCalculations.dataForCalculations.revealOffenders,
         rewardDataForCalculations.dataForCalculations.rewardEpoch,
-        rewardDataForCalculations.voterWeights
+        addLog
       );
 
       const doubleSigningPenalties = calculateDoubleSigningPenalties(
         offer,
         rewardDataForCalculations.signatures,
         rewardDataForCalculations.dataForCalculations.rewardEpoch,
-        rewardDataForCalculations.voterWeights
+        FTSO2_PROTOCOL_ID,
+        addLog
       );
       // Merge all reward claims into a single array
-      allRewardClaims = RewardClaim.merge([
-        ...allRewardClaims,
-        ...medianRewardClaims,
-        ...signingRewardClaims,
-        ...finalizationRewardClaims,
-        ...revealWithdrawalPenalties,
-        ...doubleSigningPenalties,
-      ]);
+      allRewardClaims.push(...medianRewardClaims);
+      allRewardClaims.push(...signingRewardClaims);
+      allRewardClaims.push(...finalizationRewardClaims);
+      allRewardClaims.push(...revealWithdrawalPenalties);
+      allRewardClaims.push(...doubleSigningPenalties);
+      if (merge) {
+        allRewardClaims = RewardClaim.merge(allRewardClaims);
+      }
     }
   }
   return allRewardClaims;

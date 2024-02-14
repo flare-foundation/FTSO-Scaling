@@ -1,5 +1,5 @@
 import { RewardEpoch } from "../RewardEpoch";
-import { TOTAL_BIPS } from "../configs/networks";
+import { CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 
@@ -16,8 +16,20 @@ import { Address } from "../voting-types";
 export function generateSigningWeightBasedClaimsForVoter(
   amount: bigint,
   signerAddress: Address,
-  rewardEpoch: RewardEpoch
+  rewardEpoch: RewardEpoch,
+  votingRoundId: number,
+  info: string,
+  addLog = false,
 ): IPartialRewardClaim[] {
+  function addInfo(text: string) {
+    return addLog
+      ? {
+        info: `${info}: ${text}`,
+        votingRoundId,
+      }
+      : {};
+  }
+
   const rewardClaims: IPartialRewardClaim[] = [];
   const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
   let stakedWeight = 0n;
@@ -29,20 +41,25 @@ export function generateSigningWeightBasedClaimsForVoter(
   const delegationAmount = amount - stakingAmount;
   const delegationFee =
     (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
+  const cappedStakingFeeBips = BigInt(Math.min(CAPPED_STAKING_FEE_BIPS, fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS));
   const stakingFee =
-    (stakingAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
+    (stakingAmount * cappedStakingFeeBips) / TOTAL_BIPS;
+  const feeBeneficiary = fullVoterRegistrationInfo.voterRegistrationInfo.voter.toLowerCase();
   const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress.toLowerCase();
   rewardClaims.push({
-    beneficiary: delegationBeneficiary,
+    beneficiary: feeBeneficiary,
     amount: delegationFee + stakingFee,
     claimType: ClaimType.FEE,
-  });
+    ...addInfo("fee for delegation and staking")
+  } as IPartialRewardClaim);
+
   const delegationCommunityReward = delegationAmount - delegationFee;
   rewardClaims.push({
     beneficiary: delegationBeneficiary,
     amount: delegationCommunityReward,
     claimType: ClaimType.WNAT,
-  });
+    ...addInfo("delegation community reward")
+  } as IPartialRewardClaim);
   let undistributedStakedWeight = stakedWeight;
   let undistributedStakedAmount = stakingAmount - stakingFee;
 
@@ -60,7 +77,8 @@ export function generateSigningWeightBasedClaimsForVoter(
       beneficiary: nodeId,
       amount: nodeCommunityReward,
       claimType: ClaimType.MIRROR,
-    });
+      ...addInfo("node community reward")
+    } as IPartialRewardClaim);
   }
   // assert
   if (undistributedStakedAmount !== 0n) {
