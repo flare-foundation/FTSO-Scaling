@@ -122,10 +122,10 @@ export function calculateSigningRewards(
       signature.messages.signer!
     );
 
-    const voterWeight = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
+    const voterWeights = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
 
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, voterWeight, offer.votingRoundId, "Signing", addLog)
+      ...generateSigningWeightBasedClaimsForVoter(amount, voterWeights, offer.votingRoundId, "Signing", addLog)
     );
   }
   // assert check for undistributed amount
