@@ -6,38 +6,33 @@ import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningP
 import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
 
 import FakeTimers from "@sinonjs/fake-timers";
-import { writeFileSync } from "fs";
 import { ContractMethodNames } from "../../libs/ftso-core/src/configs/contracts";
 import {
-  InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
-  RewardOffers,
-  RewardsOffered,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo
 } from "../../libs/ftso-core/src/events";
-import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
+import { TLPEvents, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
 import { RandomVoterSelector } from "../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
 import { CommitData, ICommitData } from "../../libs/ftso-core/src/utils/CommitData";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
-import { ILogger } from "../../libs/ftso-core/src/utils/ILogger";
+import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { IRevealData } from "../../libs/ftso-core/src/utils/RevealData";
-import { ClaimType, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 import { Feed } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent, generateState, generateTx } from "./basic-generators";
 import { MiniFinalizer } from "./mini-finalizer/MiniFinalizer";
 import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
 import { FSPSettings } from "./test-epoch-settings";
 
-const encodingUtils = EncodingUtils.instance;
-const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
-const sigReveal = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);
-const sigSignature = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submitSignatures);
-const relaySignature = encodingUtils.getFunctionSignature(CONTRACTS.Relay.name, ContractMethodNames.relay);
+export const encodingUtils = EncodingUtils.instance;
+export const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
+export const sigReveal = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);
+export const sigSignature = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submitSignatures);
+export const relaySignature = encodingUtils.getFunctionSignature(CONTRACTS.Relay.name, ContractMethodNames.relay);
 
 export interface IndexerPosition<T> {
   block: number;
@@ -86,7 +81,35 @@ export function offersForFeeds(
   return result;
 }
 
+export interface VoterInVotingEpoch {
+  votingEpochId: number;
+  voterIndex: number;
+}
 
+export interface AddressInVotingEpoch {
+  votingEpochId: number;
+  // Voter acting on behalf of the address in simulation
+  voterIndex: number;
+  address: string;
+}
+
+export interface RewardDataSimulationScenario {
+  noSignatureSubmitters: VoterInVotingEpoch[];
+  noGracePeriodFinalizers: VoterInVotingEpoch[];
+  outsideGracePeriodFinalizers: VoterInVotingEpoch[];
+  doubleSigners: VoterInVotingEpoch[];
+  revealWithholders: VoterInVotingEpoch[];
+  independentFinalizersOutsideGracePeriod: AddressInVotingEpoch[];
+}
+
+export const happyRewardDataSimulationScenario: RewardDataSimulationScenario = {
+  noSignatureSubmitters: [],
+  noGracePeriodFinalizers: [],
+  outsideGracePeriodFinalizers: [],
+  doubleSigners: [],
+  revealWithholders: [],
+  independentFinalizersOutsideGracePeriod: [],
+}
 
 // Sequence:
 // - 0: RewardEpochStarted r - 1
@@ -112,9 +135,8 @@ export async function generateRewardEpochDataForRewardCalculation(
   rewardEpochId: number,
   voters: TestVoter[],
   valueFunction: (votingRoundId: number, voterIndex: number, feedSequence: Feed[]) => number[],
-  // commitRevealSelectorFunction: (votingRoundId: number, voterIndex: number, allRevealData: IRevealData) => IRevealData[],
-  // signatureSelection: (votingRoundId: number, voterIndex: number, allSignatureData: any) => any,
-  logger: ILogger,
+  scenario: RewardDataSimulationScenario,
+  logger: ILogger = emptyLogger,
 ): Promise<FakeTimers.InstalledClock> {
   const previousRewardEpochId = rewardEpochId - 1;
   const previousRewardEpochStartSec = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
@@ -411,7 +433,7 @@ export async function generateRewardEpochDataForRewardCalculation(
     const finalizer = new MiniFinalizer(voter, voterIndex, voterSelector, entityManager, logger);
     voterIndexToMiniFinalizer.set(voterIndex, finalizer);
   }
-  console.log(`STARTING WITH: ${signingPolicy.startVotingRoundId}`)
+  logger.log(`STARTING WITH: ${signingPolicy.startVotingRoundId}`)
   // move to the start of the reward epoch
 
   const lastVotingEpochId = signingPolicy.startVotingRoundId + EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs - 1;
@@ -455,7 +477,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
     // REVEALS
     if (votingEpochId > signingPolicy.startVotingRoundId) {
-      console.log(`REVEALS ${votingEpochId - 1}`);
+      logger.log(`REVEALS ${votingEpochId - 1}`);
       const lastRevealTime = EPOCH_SETTINGS().votingEpochStartSec(votingEpochId) + EPOCH_SETTINGS().revealDeadlineSeconds - 2;
       if (timestamp >= lastRevealTime) {
         throw new Error("Last reveal time too late");
@@ -496,7 +518,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
     // SIGNATURES
     if (votingEpochId > signingPolicy.startVotingRoundId) {
-      console.log(`SIGNATURES ${votingEpochId - 1}`);
+      logger.log(`SIGNATURES ${votingEpochId - 1}`);
       moveToVotingEpochOffset(votingEpochId, signatureStartOffset + 1);
       for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
         const voter = voters[voterIndex];
@@ -526,7 +548,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
     // FINALIZATIONS
     if (votingEpochId > signingPolicy.startVotingRoundId) {
-      console.log(`FINALIZATIONS ${votingEpochId - 1}`);
+      logger.log(`FINALIZATIONS ${votingEpochId - 1}`);
       const lastFinalizationTime = EPOCH_SETTINGS().votingEpochEndSec(votingEpochId);
       if (timestamp >= lastFinalizationTime) {
         throw new Error("Last finalization timestamp is too high");
@@ -564,7 +586,7 @@ export async function generateRewardEpochDataForRewardCalculation(
     }
     // COMMITS
     if (votingEpochId < signingPolicy.startVotingRoundId + EPOCH_SETTINGS().votingEpochDurationSeconds - 1) {
-      console.log(`COMMITS ${votingEpochId}`);
+      logger.log(`COMMITS ${votingEpochId}`);
       reset(startBlock, startTime);
       const lastCommitTime = EPOCH_SETTINGS().votingEpochEndSec(votingEpochId);
       if (timestamp >= lastCommitTime) {
@@ -621,379 +643,5 @@ export async function generateRewardEpochDataForRewardCalculation(
   return clock;
 }
 
-export interface IndexerObject {
-  block_number: number;
-  timestamp: number;
-}
 
-export function getVoterToIndexMap(voters: TestVoter[]): Map<string, number> {
-  const voterToIndexMap = new Map<string, number>();
-  for (let i = 0; i < voters.length; i++) {
-    voterToIndexMap.set(voters[i].submitAddress.toLowerCase(), i);
-    voterToIndexMap.set(voters[i].submitSignaturesAddress.toLowerCase(), i);
-    voterToIndexMap.set(voters[i].signingAddress.toLowerCase(), i);
-    voterToIndexMap.set(voters[i].identityAddress.toLowerCase(), i);
-  }
-  return voterToIndexMap;
-}
-
-function votingEpoch(timestamp: number) {
-  return EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
-}
-function rewardEpoch(timestamp: number) {
-  try {
-    return EPOCH_SETTINGS().rewardEpochForTimeSec(timestamp)
-  } catch (e) {
-    return "-";
-  }
-}
-
-// String of form (and meaning)
-// - Rev - reveal
-// - GS - grace period for signatures
-// - GF - grace period for finalization
-// - C  - beyond grace period for finalization
-function votingEpochPosition(timestamp: number) {
-  const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
-  const offset = timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId);
-  if (offset <= EPOCH_SETTINGS().revealDeadlineSeconds) {
-    return `Rev`;
-  }
-  if (offset <= EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()) {
-    return `GS`;
-  }
-  if (offset <= EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC() + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()) {
-    return `GF`;
-  }
-  return `C`;
-}
-
-export function parseEventSummary(event: TLPEvents, voterToIndexMap: Map<string, number>): string {
-  const eventAddress = "0x" + event.address.toLowerCase();
-  if (eventAddress === CONTRACTS.FlareSystemsManager.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsManager.name, RandomAcquisitionStarted.eventName)) {
-      const parsedEvent = RandomAcquisitionStarted.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RandomAcquisitionStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
-    }
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsManager.name, VotePowerBlockSelected.eventName)) {
-      const parsedEvent = VotePowerBlockSelected.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VotePowerBlockSelected;rewardEpochId: ${parsedEvent.rewardEpochId}`;
-    }
-
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsManager.name, RewardEpochStarted.eventName)) {
-      const parsedEvent = RewardEpochStarted.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RewardEpochStarted;rewardEpochId: ${parsedEvent.rewardEpochId}`;
-    }
-  }
-  if (eventAddress === CONTRACTS.VoterRegistry.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.VoterRegistry.name, VoterRegistered.eventName)) {
-      const parsedEvent = VoterRegistered.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VoterRegistered;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
-    }
-  }
-  if (eventAddress === CONTRACTS.FlareSystemsCalculator.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FlareSystemsCalculator.name, VoterRegistrationInfo.eventName)) {
-      const parsedEvent = VoterRegistrationInfo.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};VoterRegistrationInfo;rewardEpochId: ${parsedEvent.rewardEpochId};voter: ${voterToIndexMap.get(parsedEvent.voter.toLowerCase())}`;
-    }
-  }
-  if (eventAddress === CONTRACTS.Relay.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.Relay.name, SigningPolicyInitialized.eventName)) {
-      const parsedEvent = SigningPolicyInitialized.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};SigningPolicyInitialized;rewardEpochId: ${parsedEvent.rewardEpochId}`;
-    }
-  }
-  if (eventAddress === CONTRACTS.FtsoRewardOffersManager.address.toLowerCase()) {
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FtsoRewardOffersManager.name, RewardsOffered.eventName)) {
-      const parsedEvent = RewardsOffered.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};RewardsOffered;rewardEpochId: ${parsedEvent.rewardEpochId}`;
-    }
-    if ("0x" + event.topic0 === encodingUtils.getEventSignature(CONTRACTS.FtsoRewardOffersManager.name, InflationRewardsOffered.eventName)) {
-      const parsedEvent = InflationRewardsOffered.fromRawEvent(event)
-      return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};InflationRewardsOffered;rewardEpochId: ${parsedEvent.rewardEpochId}`;
-    }
-
-  }
-  return `${event.timestamp};${event.block_number};${votingEpoch(event.timestamp)};${rewardEpoch(event.timestamp)};Unknown Event;${eventAddress} ${event.topic0}`;
-}
-
-export function parseTransactionSummary(tx: TLPTransaction, voterToIndexMap: Map<string, number>) {
-  const toAddress = "0x" + tx.to_address.toLowerCase();
-  const fromAddress = "0x" + tx.from_address.toLowerCase();
-  if (toAddress === CONTRACTS.Submission.address.toLowerCase()) {
-    if (tx.input.startsWith(sigCommit.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxCommit;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
-    }
-    if (tx.input.startsWith(sigReveal.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxReveal;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
-    }
-    if (tx.input.startsWith(sigSignature.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxSignature;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
-    }
-  }
-  if (toAddress === CONTRACTS.Relay.address.toLowerCase()) {
-    if (tx.input.startsWith(relaySignature.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxRelay;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
-    }
-  }
-  if (toAddress === BURN_ADDRESS.toLowerCase() && fromAddress === BURN_ADDRESS.toLowerCase()) {
-    return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxFake`;
-  }
-  return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};Unknown TX;to address: ${toAddress}; input: ${tx.input};status: ${tx.status}`;
-}
-
-export async function printSummary(entityManager: EntityManager, voters: TestVoter[], filename?: string) {
-  const voterToIndexMap = getVoterToIndexMap(voters)
-  const state = await entityManager.getRepository(TLPState)
-    .createQueryBuilder("state")
-    .getMany();
-  const events = await entityManager.getRepository(TLPEvents)
-    .createQueryBuilder("event")
-    .addOrderBy("event.block_number", "ASC")
-    .addOrderBy("event.log_index", "ASC")
-    .getMany();
-  const transactions = await entityManager.getRepository(TLPTransaction)
-    .createQueryBuilder("tx")
-    .addOrderBy("tx.block_number", "ASC")
-    .addOrderBy("tx.transaction_index", "ASC")
-    .getMany();
-  let i = 0;
-  let j = 0;
-  let text = "";
-  const sortedSequence = [];
-  for (const stateRows of state) {
-    text += `STATE;${stateRows.name}; block: ${stateRows.index}; timestamp: ${stateRows.block_timestamp}\n`;
-  }
-  while (i < events.length && j < transactions.length) {
-    if (events[i].block_number <= transactions[j].block_number) {
-      sortedSequence.push(events[i]);
-      i++;
-    } else {
-      sortedSequence.push(transactions[j]);
-      j++;
-    }
-  }
-  if (i < events.length) {
-    for (let k = i; k < events.length; k++) {
-      sortedSequence.push(events[k]);
-    }
-  }
-  if (j < transactions.length) {
-    for (let k = j; k < transactions.length; k++) {
-      sortedSequence.push(transactions[k]);
-    }
-  }
-
-  text += sortedSequence.map((entity) => {
-    if (entity instanceof TLPEvents) {
-      return parseEventSummary(entity, voterToIndexMap);
-    } else {
-      return parseTransactionSummary(entity, voterToIndexMap);
-    }
-  }).join("\n")
-
-  if (filename) {
-    writeFileSync(filename, text);
-  } else {
-    console.log(text);
-  }
-}
-
-function claimListSummary(beneficiary: string, voterIndex: number, type: "node" | "delegation" | "signing" | "identity" | "none", claims: IRewardClaim[], padding = 6) {
-  const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
-  const fee = (feeClaim ? Number(feeClaim.amount) : 0).toString().padStart(padding);
-  const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
-  const wnat = (wnatClaim ? Number(wnatClaim.amount) : 0).toString().padStart(padding);
-  const mirrorClaim = claims.find(c => c.claimType === ClaimType.MIRROR);
-  const mirror = (mirrorClaim ? Number(mirrorClaim.amount) : 0).toString().padStart(padding);
-  const directClaim = claims.find(c => c.claimType === ClaimType.DIRECT);
-  const direct = (directClaim ? Number(directClaim.amount) : 0).toString().padStart(padding);
-  const cchainClaim = claims.find(c => c.claimType === ClaimType.CCHAIN);
-  const cchain = (cchainClaim ? Number(cchainClaim.amount) : 0).toString().padStart(padding);
-
-  let indexValue = "-";
-  if (type === "node") {
-    indexValue = "n-" + voterIndex.toString();
-  } else if (type === "delegation") {
-    indexValue = "d-" + voterIndex.toString();
-  } else if (type === "signing") {
-    indexValue = "s-" + voterIndex.toString();
-  } else if (type === "identity") {
-    indexValue = "i-" + voterIndex.toString();
-  }
-  let addressText = beneficiary.slice(0, 10);
-  if (beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
-    addressText = "BURN ADDR ";
-  }
-  return `${indexValue.padStart(5)} ${addressText}: FEE: ${fee}|  WNAT: ${wnat}|  MIRROR: ${mirror}|  DIRECT: ${direct}|  CCHAIN: ${cchain}`
-}
-
-export function claimSummary(voters: TestVoter[], claims: IRewardClaim[]) {
-  const voterToClaimMap = new Map<string, IRewardClaim[]>();
-  const nodeIdToVoterIndex = new Map<string, number>();
-  const signingAddressToVoterIndex = new Map<string, number>();
-  const delegationAddressToVoterIndex = new Map<string, number>();
-  const identityAddressToVoterIndex = new Map<string, number>();
-  const voterIndexToFees = new Map<number, bigint>();
-  const voterIndexToParticipationRewards = new Map<number, bigint>();
-
-  for (let i = 0; i < voters.length; i++) {
-    const voter = voters[i];
-    for (const nodeId of voter.nodeIds) {
-      nodeIdToVoterIndex.set(nodeId, i);
-    }
-    signingAddressToVoterIndex.set(voter.signingAddress.toLowerCase(), i);
-    identityAddressToVoterIndex.set(voter.identityAddress.toLowerCase(), i);
-    delegationAddressToVoterIndex.set(voter.delegationAddress.toLowerCase(), i);
-  }
-  let totalValue = 0n;
-  let burned = 0n;
-  const unusedBeneficiaries = new Set<string>();
-  for (const claim of claims) {
-    totalValue += claim.amount;
-    const beneficiary = claim.beneficiary.toLowerCase();
-    unusedBeneficiaries.add(beneficiary);
-    if (beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
-      burned += claim.amount;
-    }
-    const claimList = voterToClaimMap.get(beneficiary) || [];
-    claimList.push(claim);
-    voterToClaimMap.set(beneficiary, claimList);
-  }
-  const allVoters = new Set<string>();
-  for (const voter of voters) {
-    allVoters.add(voter.identityAddress.toLowerCase());
-  }
-  const nonVoterAddresses = new Set<string>();
-  for (const claim of claims) {
-    const beneficiary = claim.beneficiary.toLowerCase();
-    if (!allVoters.has(beneficiary)) {
-      nonVoterAddresses.add(beneficiary);
-    }
-  }
-  console.log("CLAIM SUMMARY");
-  console.log("Total value: ", totalValue.toString());
-  console.log("Burned value:", burned.toString());
-  console.log("VOTER FEES (by identity address):");
-  for (let i = 0; i < voters.length; i++) {
-    const voter = voters[i];
-    const address = voter.identityAddress.toLowerCase();
-    unusedBeneficiaries.delete(address);
-    const claimList = voterToClaimMap.get(address) || [];
-    if (claimList.length > 0) {
-      console.log(claimListSummary(address, i, "identity", claimList));
-    }
-  }
-  console.log("DELEGATION REWARDS");
-  for (let i = 0; i < voters.length; i++) {
-    const voter = voters[i];
-    const address = voter.delegationAddress.toLowerCase();
-    unusedBeneficiaries.delete(address);
-    const claimList = voterToClaimMap.get(address) || [];
-    if (claimList.length > 0) {
-      console.log(claimListSummary(address, i, "delegation", claimList));
-    }
-  }
-  console.log("STAKING REWARDS");
-  for (let i = 0; i < voters.length; i++) {
-    const voter = voters[i];
-    for (let nodeId of voter.nodeIds) {
-      unusedBeneficiaries.delete(nodeId);
-      const claimList = voterToClaimMap.get(nodeId) || [];
-      if (claimList.length > 0) {
-        console.log(claimListSummary(nodeId, i, "node", claimList));
-      }
-    }
-  }
-
-  console.log("SIGNING ADDRESS REWARDS");
-  for (let i = 0; i < voters.length; i++) {
-    const voter = voters[i];
-    const address = voter.signingAddress.toLowerCase();
-    unusedBeneficiaries.delete(address);
-    const claimList = voterToClaimMap.get(address) || [];
-    if (claimList.length > 0) {
-      console.log(claimListSummary(address, i, "signing", claimList));
-    }
-  }
-
-  console.log("DIRECT CLAIMS");
-  if (unusedBeneficiaries.size === 0) {
-    console.log("-----");
-  }
-  for (const beneficiary of unusedBeneficiaries) {
-    const claimList = voterToClaimMap.get(beneficiary) || [];
-    if (claimList.length > 0) {
-      console.log(claimListSummary(beneficiary, -1, "none", claimList));
-    }
-  }
-
-  for (const claim of claims) {
-    if (claim.claimType === ClaimType.DIRECT) {
-      continue;
-    }
-    if (claim.claimType === ClaimType.CCHAIN) {
-      throw new Error(`Unsupported claim type: ${claim.claimType}`);
-    }
-    let voterIndex: number | undefined;
-    if (identityAddressToVoterIndex.get(claim.beneficiary) !== undefined) {
-      voterIndex = identityAddressToVoterIndex.get(claim.beneficiary);
-    } else if (delegationAddressToVoterIndex.get(claim.beneficiary) !== undefined) {
-      voterIndex = delegationAddressToVoterIndex.get(claim.beneficiary);
-    } else if (nodeIdToVoterIndex.get(claim.beneficiary) !== undefined) {
-      voterIndex = nodeIdToVoterIndex.get(claim.beneficiary);
-    } else if (signingAddressToVoterIndex.get(claim.beneficiary)) {
-      voterIndex = signingAddressToVoterIndex.get(claim.beneficiary);
-    } else {
-      if (claim.beneficiary !== BURN_ADDRESS) {
-        throw new Error(`Strange beneficiary: ${claim.beneficiary}`)
-      }
-    }
-    if (claim.claimType === ClaimType.FEE) {
-      let currentAmount = voterIndexToFees.get(voterIndex) || 0n;
-      voterIndexToFees.set(voterIndex, currentAmount + claim.amount);
-    }
-    if (claim.claimType === ClaimType.WNAT) {
-      let currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
-      voterIndexToParticipationRewards.set(voterIndex, currentAmount + claim.amount);
-    }
-    if (claim.claimType === ClaimType.MIRROR) {
-      let currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
-      voterIndexToParticipationRewards.set(voterIndex, currentAmount + claim.amount);
-    }
-  }
-  console.log("VOTER FEE PERCENTAGES:");
-  for (let i = 0; i < voters.length; i++) {
-    const feeVal = voterIndexToFees.get(i) || 0n;
-    const partVal = voterIndexToParticipationRewards.get(i) || 0n;
-    const percentage = Number(feeVal * 10000n / (feeVal + partVal)) / 100;
-    console.log(`Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${feeVal}, part: ${partVal}, pct: ${percentage}`);
-  }
-}
-
-function voterSummary(voterIndex: number, voter: TestVoter) {
-  return `Voter: ${voterIndex} feePCT: ${voter.delegationFeeBIPS} del: ${voter.delegationAddress.toLowerCase().slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress.toLowerCase().slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${voter.registrationWeight}`;
-}
-
-export function votersSummary(voters: TestVoter[]) {
-  console.log("VOTER SUMMARY:")
-  for (let i = 0; i < voters.length; i++) {
-    const voter = voters[i];
-    console.log(voterSummary(i, voter));
-  }
-}
-
-export function offersSummary(offers: RewardOffers) {
-  console.log("OFFERS SUMMARY:");
-  let totalOffers = 0n;
-  for (let offer of offers.rewardOffers) {
-    totalOffers += offer.amount;
-  }
-  let totalInflationOffers = 0n;
-  for (let offer of offers.inflationOffers) {
-    totalInflationOffers += offer.amount;
-  }
-  console.log(`Community offers: ${offers.rewardOffers.length}, total: ${totalOffers}`);
-  console.log(`Inflation offers: ${offers.inflationOffers.length}, total: ${totalInflationOffers}`);
-}
 
