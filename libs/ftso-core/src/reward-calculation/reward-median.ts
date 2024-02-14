@@ -14,36 +14,35 @@ import { TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
 export function calculateMedianRewardClaims(
   offer: IPartialRewardOffer,
   calculationResult: MedianCalculationResult,
-  voterWeights: Map<Address, VoterWeights>,
-  addLog = false,
+  votersWeights: Map<Address, VoterWeights>,
+  addLog = false
 ): IPartialRewardClaim[] {
   interface VoterRewarding {
-    readonly voterAddress: string;
+    readonly submitAddress: Address;
     weight: bigint;
     readonly pct: boolean; // gets PCT (percent) reward
     readonly iqr: boolean; // gets IQR (inter quartile range) reward
   }
 
+  ///////// Helper functions /////////
+
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `Median: ${text}`,
-        votingRoundId,
-      }
+          info: `Median: ${text}`,
+          votingRoundId,
+        }
       : {};
   }
 
-  // sanity check
-  if (offer.votingRoundId === undefined) {
-    throw new Error("Critical: voting round must be defined.");
-  }
-  const votingRoundId = offer.votingRoundId;
-  if (calculationResult.votingRoundId !== votingRoundId) {
-    throw new Error("Critical: Calculation result voting round id does not match the offer voting round id");
-  }
-
-  // Randomization for border cases
-  // - a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
+  /**
+   * Randomization for border cases
+   *  a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
+   * @param feedName
+   * @param votingRoundId
+   * @param voterAddress
+   * @returns
+   */
   function randomSelect(feedName: string, votingRoundId: number, voterAddress: Address): boolean {
     const prefixedFeedName = feedName.startsWith("0x") ? feedName : "0x" + feedName;
     return (
@@ -55,6 +54,15 @@ export function calculateMedianRewardClaims(
         2n ===
       1n
     );
+  }
+
+  // sanity check
+  if (offer.votingRoundId === undefined) {
+    throw new Error("Critical: voting round must be defined.");
+  }
+  const votingRoundId = offer.votingRoundId;
+  if (calculationResult.votingRoundId !== votingRoundId) {
+    throw new Error("Critical: Calculation result voting round id does not match the offer voting round id");
   }
 
   // Turnout condition is not reached or no median is computed. Offer is returned to the provider.
@@ -92,19 +100,19 @@ export function calculateMedianRewardClaims(
   const highPCT = medianPrice + secondaryBandDiff;
 
   // assemble voter records
-  for (let i = 0; i < calculationResult.voters!.length; i++) {
-    const voterAddress = calculationResult.voters![i];
+  for (let i = 0; i < calculationResult.votersSubmitAddresses!.length; i++) {
+    const submitAddress = calculationResult.votersSubmitAddresses![i];
     const feedValue = calculationResult.feedValues![i];
     if (feedValue.isEmpty) {
       continue;
     }
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
-      voterAddress,
-      weight: medianRewardDistributionWeight(voterWeights.get(voterAddress)!),
+      submitAddress: submitAddress,
+      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)!),
       iqr:
         (value > lowIQR && value < highIQR) ||
-        ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, voterAddress)),
+        ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, submitAddress)),
       pct: value > lowPCT && value < highPCT,
     };
 
@@ -170,7 +178,12 @@ export function calculateMedianRewardClaims(
 
     totalReward += reward;
 
-    const rewardClaim = generateMedianRewardClaimsForVoter(reward, offer.votingRoundId, voterWeights.get(voterRecord.voterAddress)!, addLog);
+    const rewardClaim = generateMedianRewardClaimsForVoter(
+      reward,
+      offer.votingRoundId,
+      votersWeights.get(voterRecord.submitAddress)!,
+      addLog
+    );
     rewardClaims.push(...rewardClaim);
   }
   // Assert
@@ -185,13 +198,18 @@ export function calculateMedianRewardClaims(
  * Given assigned reward it generates reward claims for the voter.
  * Currently only a partial fee claim and capped wnat delegation participation weight claims are created.
  */
-function generateMedianRewardClaimsForVoter(amount: bigint, votingRoundId: number, voterWeights: VoterWeights, addLog = false) {
+function generateMedianRewardClaimsForVoter(
+  amount: bigint,
+  votingRoundId: number,
+  voterWeights: VoterWeights,
+  addLog = false
+) {
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `Median: ${text}`,
-        votingRoundId,
-      }
+          info: `Median: ${text}`,
+          votingRoundId,
+        }
       : {};
   }
 

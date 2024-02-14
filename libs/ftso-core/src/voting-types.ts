@@ -20,7 +20,7 @@ export interface EpochResult {
 export interface MedianCalculationResult {
   readonly votingRoundId: number;
   readonly feed: Feed;
-  readonly voters: readonly string[];
+  readonly votersSubmitAddresses: readonly string[];
   readonly feedValues: readonly ValueWithDecimals[];
   readonly data: MedianCalculationSummary;
   readonly weights: readonly bigint[];

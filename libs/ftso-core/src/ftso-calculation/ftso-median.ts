@@ -60,7 +60,7 @@ export function calculateResultForFeed(
   const result: MedianCalculationResult = {
     votingRoundId,
     feed: feed,
-    voters: voters,
+    votersSubmitAddresses: voters,
     feedValues: feedValues,
     data: medianSummary,
     weights: weights,

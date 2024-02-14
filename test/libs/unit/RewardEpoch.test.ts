@@ -13,8 +13,8 @@ describe(`RewardEpoch, ${getTestFile(__filename)}`, function () {
     const okAddress = generateAddress("1submit");
     const failAddress = generateAddress("anything");
 
-    assert(rewardEpoch.isEligibleVoterSubmissionAddress(okAddress), "ok");
-    assert(!rewardEpoch.isEligibleVoterSubmissionAddress(failAddress), "fail");
+    assert(rewardEpoch.isEligibleSubmitAddress(okAddress), "ok");
+    assert(!rewardEpoch.isEligibleSubmitAddress(failAddress), "fail");
   });
 
   it("should tell if isEligibleSignerAddress", function () {
