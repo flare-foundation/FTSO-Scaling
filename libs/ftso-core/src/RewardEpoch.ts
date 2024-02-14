@@ -18,7 +18,7 @@ export interface VoterWeights {
   readonly cappedDelegationWeight: bigint;
   readonly signingWeight: number;
   readonly feeBIPS: number;
-  readonly nodeIDs: string[];
+  readonly nodeIds: string[];
   readonly nodeWeights: bigint[];
 }
 
@@ -44,6 +44,8 @@ export class RewardEpoch {
   readonly submitAddressToCappedWeight = new Map<Address, bigint>();
   readonly submitAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
   readonly signingAddressToDelegationAddress = new Map<Address, Address>();
+  readonly signingAddressToSubmitAddress = new Map<Address, Address>();
+
   readonly signingAddressToSigningWeight = new Map<Address, number>();
   readonly signingAddressToVotingPolicyIndex = new Map<Address, number>();
 
@@ -128,15 +130,23 @@ export class RewardEpoch {
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
         fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
+
       this.submitAddressToVoterRegistrationInfo.set(
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
         fullVoterRegistrationInfo
       );
       this.orderedVotersSubmitAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
+
       this.signingAddressToDelegationAddress.set(
         voterSigningAddress,
         fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress
       );
+
+      this.signingAddressToSubmitAddress.set(
+        voterSigningAddress,
+        fullVoterRegistrationInfo.voterRegistered.submitAddress
+      );
+
       this.signingAddressToSigningWeight.set(voterSigningAddress, signingWeight);
     }
   }
@@ -233,7 +243,7 @@ export class RewardEpoch {
    * Returns a map from submitAddress to voterWeights information.
    * @returns
    */
-  public getVoterWeights(): Map<Address, VoterWeights> {
+  public getVotersWeights(): Map<Address, VoterWeights> {
     if (this.cachedVoterWeights) {
       return this.cachedVoterWeights;
     }
@@ -249,7 +259,7 @@ export class RewardEpoch {
         cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
         signingWeight: this.signingPolicy.weights[index],
         feeBIPS: voterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS,
-        nodeIDs: voterRegistrationInfo.voterRegistrationInfo.nodeIds,
+        nodeIds: voterRegistrationInfo.voterRegistrationInfo.nodeIds,
         nodeWeights: voterRegistrationInfo.voterRegistrationInfo.nodeWeights,
       };
       result.set(submissionAddress, voterWeights);

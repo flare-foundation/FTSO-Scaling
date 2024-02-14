@@ -91,7 +91,7 @@ describe(`RewardEpoch, ${getTestFile(__filename)}`, function () {
   });
 
   it("should get voter weights", function () {
-    const weights = rewardEpoch.getVoterWeights();
+    const weights = rewardEpoch.getVotersWeights();
     expect(weights.size).to.eq(50);
   });
 

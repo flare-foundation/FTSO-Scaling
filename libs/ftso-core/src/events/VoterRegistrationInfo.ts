@@ -30,7 +30,7 @@ export class VoterRegistrationInfo extends RawEventConstructible {
     );
   }
 
-  voter: Address;
+  voter: Address; //identityAddress
   rewardEpochId: number;
   delegationAddress: Address;
   delegationFeeBIPS: number;

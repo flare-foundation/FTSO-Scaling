@@ -90,7 +90,7 @@ export async function partialRewardClaimsForVotingRound(
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
 
-  const voterWeights = rewardEpoch.getVoterWeights();
+  const voterWeights = rewardEpoch.getVotersWeights();
 
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 

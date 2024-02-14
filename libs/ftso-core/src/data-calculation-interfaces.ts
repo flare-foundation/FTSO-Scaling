@@ -7,11 +7,11 @@ import { Address, Feed, MessageHash } from "./voting-types";
 export interface DataForCalculationsPartial {
   // voting round id
   votingRoundId: number;
-  // Ordered list of submission addresses matching the order in the signing policy
-  orderedVotersSubmissionAddresses: Address[];
-  // Reveals from eligible submission addresses that match to existing commits
+  // Ordered list of submitAddresses matching the order in the signing policy
+  orderedVotersSubmitAddresses: Address[];
+  // Reveals from eligible submitAddresses that match to existing commits
   validEligibleReveals: Map<Address, IRevealData>;
-  // Submission addresses of eligible voters that committed but withheld or provided wrong reveals in the voting round
+  // submitAddresses of eligible voters that committed but withheld or provided wrong reveals in the voting round
   revealOffenders: Set<Address>;
   // Median voting weight
   voterMedianVotingWeights: Map<Address, bigint>;
@@ -22,7 +22,7 @@ export interface DataForCalculationsPartial {
 export interface DataForCalculations extends DataForCalculationsPartial {
   // Window in which offenses related to reveal withholding or providing wrong reveals are counted
   randomGenerationBenchingWindow: number;
-  // Set of offending submission addresses in the randomGenerationBenchingWindow
+  // Set of offending submitAddresses in the randomGenerationBenchingWindow
   benchingWindowRevealOffenders: Set<Address>;
   // Reward epoch
   rewardEpoch: RewardEpoch;

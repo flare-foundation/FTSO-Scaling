@@ -475,7 +475,7 @@ export class DataManager {
 
     const result: DataForCalculationsPartial = {
       votingRoundId: commitsAndReveals.votingRoundId,
-      orderedVotersSubmissionAddresses,
+      orderedVotersSubmitAddresses: orderedVotersSubmissionAddresses,
       validEligibleReveals,
       revealOffenders,
       voterMedianVotingWeights,

@@ -10,15 +10,15 @@ const web3 = new Web3();
 export class RandomVoterSelector {
   thresholds: bigint[];
   totalWeight: bigint;
-  voters: Address[];
+  votersSigningAddresses: Address[];
   weights: bigint[];
   defaultThresholdBIPS: number;
 
-  constructor(voters: Address[], weights: bigint[], defaultThresholdBIPS: number) {
-    if (voters.length !== weights.length) {
+  constructor(votersSigningAddresses: Address[], weights: bigint[], defaultThresholdBIPS: number) {
+    if (votersSigningAddresses.length !== weights.length) {
       throw new Error("voters and weights must have the same length");
     }
-    this.voters = [...voters];
+    this.votersSigningAddresses = [...votersSigningAddresses];
     this.weights = [...weights];
     this.totalWeight = 0n;
     this.thresholds = [];
@@ -36,7 +36,7 @@ export class RandomVoterSelector {
   }
 
   /**
-   * Selects a random voter based provided random number.
+   * Selects a random voter signing address based provided random number.
    * Random number is encoded as 32-bytes 0x prefixed hex string.
    * @returns the selected voter
    */
@@ -93,7 +93,7 @@ export class RandomVoterSelector {
     // If threshold weight is not too big, the loop should end quickly
     while (selectedWeight < thresholdWeight) {
       const index = this.selectVoterIndex(currentSeed);
-      const selectedAddress = this.voters[index].toLowerCase();
+      const selectedAddress = this.votersSigningAddresses[index].toLowerCase();
       if (!selectedVoters.has(selectedAddress)) {
         selectedVoters.add(selectedAddress);
         selectedWeight += this.weights[index];
@@ -128,11 +128,11 @@ export class RandomVoterSelector {
    * Given protocol ID, voting round ID and address, it checks if the address is in the selection set.
    */
   public inSelectionList(
-    voters: string[],
+    voters: Address[],
     rewardEpochSeed: string,
     protocolId: number,
     votingRoundId: number,
-    address: string
+    address: Address
   ): number {
     const initialSeed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     let selection = this.randomSelectThresholdWeightVoters(initialSeed);

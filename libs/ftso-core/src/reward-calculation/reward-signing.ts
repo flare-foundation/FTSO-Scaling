@@ -31,9 +31,9 @@ export function calculateSigningRewards(
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `Signing: ${text}`,
-        votingRoundId,
-      }
+          info: `Signing: ${text}`,
+          votingRoundId,
+        }
       : {};
   }
 
@@ -96,7 +96,7 @@ export function calculateSigningRewards(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
-      ...addInfo("no weight of eligible signers")
+      ...addInfo("no weight of eligible signers"),
     };
     return [backClaim];
   }
@@ -117,15 +117,15 @@ export function calculateSigningRewards(
     const amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
+
+    const submitAddress = data.dataForCalculations.rewardEpoch.signingAddressToSubmitAddress.get(
+      signature.messages.signer!
+    );
+
+    const voterWeight = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
+
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(
-        amount,
-        signature.messages.signer!,
-        data.dataForCalculations.rewardEpoch,
-        offer.votingRoundId,
-        "Signing",
-        addLog,
-      )
+      ...generateSigningWeightBasedClaimsForVoter(amount, voterWeight, offer.votingRoundId, "Signing", addLog)
     );
   }
   // assert check for undistributed amount
@@ -138,7 +138,7 @@ export function calculateSigningRewards(
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
-      ...addInfo("claim back no claims")
+      ...addInfo("claim back no claims"),
     };
     return [backClaim];
   }
