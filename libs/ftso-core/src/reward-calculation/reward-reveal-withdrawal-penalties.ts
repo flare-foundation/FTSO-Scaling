@@ -13,24 +13,30 @@ import { medianRewardDistributionWeight } from "./reward-utils";
 export function calculateRevealWithdrawalPenalties(
   offer: IPartialRewardOffer,
   revealOffenders: Set<Address>,
-  rewardEpoch: RewardEpoch,
-  addLog = false,
+  votersWeights: Map<Address, VoterWeights>,
+  addLog = false
 ): IPartialRewardClaim[] {
-  const voterWeights = rewardEpoch.getVoterWeights();
-  const totalWeight = [...voterWeights.values()]
+  const totalWeight = [...votersWeights.values()]
     .map(voterWeight => medianRewardDistributionWeight(voterWeight))
     .reduce((a, b) => a + b, 0n);
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of revealOffenders) {
-    const voterData = voterWeights.get(submitAddress)!;
-    if (!voterData) {
+    const voterWeights = votersWeights.get(submitAddress)!;
+    if (!voterWeights) {
       throw new Error("Critical error: Illegal offender");
     }
-    const voterWeight = medianRewardDistributionWeight(voterData);
+    const voterWeight = medianRewardDistributionWeight(voterWeights);
     const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR()) / totalWeight;
-    const signingAddress = voterData.signingAddress;
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch, offer.votingRoundId, "Reveal withdrawal", addLog));
+    penaltyClaims.push(
+      ...generateSigningWeightBasedClaimsForVoter(
+        penalty,
+        voterWeights,
+        offer.votingRoundId,
+        "Reveal withdrawal",
+        addLog
+      )
+    );
   }
   return penaltyClaims;
 }

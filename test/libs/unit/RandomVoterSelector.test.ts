@@ -31,12 +31,16 @@ describe("RandomVoterSelector", () => {
     const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     expect(randomVoterSelector.thresholds).to.deep.equal([0n, 100n, 300n, 600n, 1000n]);
     expect(randomVoterSelector.totalWeight).to.equal(1500n);
-    expect(randomVoterSelector.voters).to.deep.equal(voters);
+    expect(randomVoterSelector.votersSigningAddresses).to.deep.equal(voters);
     expect(randomVoterSelector.weights).to.deep.equal(weights);
   });
 
   it("Should binary search work correctly", () => {
-    const randomVoterSelector1 = new RandomVoterSelector(["0xc783df8a850f42e7f7e57013759c285caa701eb6"], [100n], DEFAULT_THRESHOLD_BIPS);
+    const randomVoterSelector1 = new RandomVoterSelector(
+      ["0xc783df8a850f42e7f7e57013759c285caa701eb6"],
+      [100n],
+      DEFAULT_THRESHOLD_BIPS
+    );
     expect(randomVoterSelector1.binarySearch(0n)).to.equal(0);
     expect(randomVoterSelector1.binarySearch(1n)).to.equal(0);
     expect(randomVoterSelector1.binarySearch(99n)).to.equal(0);
@@ -88,8 +92,8 @@ describe("RandomVoterSelector", () => {
       "0x40fbc8d055fe82800694c5338691326aa2222d48aee82caa94b205472c449ffa",
       "0x300c3d8713d21d925323a3116beabc414581d802db066e67545d92be4fa0c497",
       "0x5e6e95ed94fb91b7abcafc4e004db6512e4aaae046ebba4636df9ed42688773b",
-      "0xd715de2c04db332785c511abdac7cb431df9c86c2dad3bc2e32cc04ee4f20836" 
-     ];
+      "0xd715de2c04db332785c511abdac7cb431df9c86c2dad3bc2e32cc04ee4f20836",
+    ];
     const seed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     const randoms = randomVoterSelector.randomNumberSequence(seed, 5);
     expect(expected).to.deep.equal(randoms);

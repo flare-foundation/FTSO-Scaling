@@ -15,14 +15,14 @@ export interface VoteData {
 /**
  * Given a DataForCalculations object, it calculates the median calculation results for all feeds.
  */
-export async function calculateMedianResults(data: DataForCalculations): Promise<MedianCalculationResult[]> {
-  const voters = data.orderedVotersSubmissionAddresses;
-  const weights = voters.map(voter => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
+export function calculateMedianResults(data: DataForCalculations): MedianCalculationResult[] {
+  const votersSubmitAddresses = data.orderedVotersSubmitAddresses;
+  const weights = votersSubmitAddresses.map(voter => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
 
   // "mapping": feedIndex => array of submissions by voters (in signing policy order)
   const feedValues = new Map<number, ValueWithDecimals[]>();
   let totalVotingWeight = 0n;
-  for (const voter of voters) {
+  for (const voter of votersSubmitAddresses) {
     const revealData = data.validEligibleReveals.get(voter.toLowerCase());
     totalVotingWeight += data.voterMedianVotingWeights.get(voter.toLowerCase());
     let encodedVoterValues: ValueWithDecimals[] = [];
@@ -41,7 +41,14 @@ export async function calculateMedianResults(data: DataForCalculations): Promise
 
   // trigger calculations for all feed
   return data.feedOrder.map((feed, feedIndex) =>
-    calculateResultForFeed(data.votingRoundId, voters, feedValues.get(feedIndex), weights, feed, totalVotingWeight)
+    calculateResultForFeed(
+      data.votingRoundId,
+      votersSubmitAddresses,
+      feedValues.get(feedIndex),
+      weights,
+      feed,
+      totalVotingWeight
+    )
   );
 }
 
@@ -50,17 +57,17 @@ export async function calculateMedianResults(data: DataForCalculations): Promise
  */
 export function calculateResultForFeed(
   votingRoundId: number,
-  voters: string[],
+  votersSubmitAddresses: string[],
   feedValues: ValueWithDecimals[],
   weights: bigint[],
   feed: Feed,
   totalVotingWeight: bigint
 ): MedianCalculationResult {
-  const medianSummary = calculateMedian(voters, feedValues, weights, feed.decimals);
+  const medianSummary = calculateMedian(votersSubmitAddresses, feedValues, weights, feed.decimals);
   const result: MedianCalculationResult = {
     votingRoundId,
     feed: feed,
-    voters: voters,
+    votersSubmitAddresses: votersSubmitAddresses,
     feedValues: feedValues,
     data: medianSummary,
     weights: weights,

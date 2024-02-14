@@ -160,8 +160,7 @@ export class DataManager {
    */
   public async getDataForRewardCalculation(
     votingRoundId: number,
-    randomGenerationBenchingWindow: number,
-    rewardEpoch: RewardEpoch
+    randomGenerationBenchingWindow: number
   ): Promise<DataMangerResponse<DataForRewardCalculation>> {
     const dataForCalculationsResponse = await this.getDataForCalculations(
       votingRoundId,
@@ -456,27 +455,27 @@ export class DataManager {
     const eligibleReveals = new Map<Address, IRevealData>();
     // Filter out commits from non-eligible voters
     for (const [submitAddress, commit] of commitsAndReveals.commits.entries()) {
-      if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
+      if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
         eligibleCommits.set(submitAddress, commit);
       }
     }
     // Filter out reveals from non-eligible voters
     for (const [submitAddress, reveal] of commitsAndReveals.reveals.entries()) {
-      if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
+      if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
         eligibleReveals.set(submitAddress, reveal);
       }
     }
     const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
     const revealOffenders = this.getRevealOffenders(eligibleCommits, eligibleReveals);
     const voterMedianVotingWeights = new Map<Address, bigint>();
-    const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmissionAddresses;
+    const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmitAddresses;
     for (const submitAddress of orderedVotersSubmissionAddresses) {
       voterMedianVotingWeights.set(submitAddress, rewardEpoch.ftsoMedianVotingWeight(submitAddress));
     }
 
     const result: DataForCalculationsPartial = {
       votingRoundId: commitsAndReveals.votingRoundId,
-      orderedVotersSubmissionAddresses,
+      orderedVotersSubmitAddresses: orderedVotersSubmissionAddresses,
       validEligibleReveals,
       revealOffenders,
       voterMedianVotingWeights,

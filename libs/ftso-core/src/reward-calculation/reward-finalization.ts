@@ -5,6 +5,7 @@ import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePeriod } from "./reward-utils";
+import { generateVotersWeights } from "../../../../test/utils/generators";
 
 /**
  * Calculates partial finalization reward claims for the given offer.
@@ -13,14 +14,14 @@ export function calculateFinalizationRewardClaims(
   offer: IPartialRewardOffer,
   data: DataForRewardCalculation,
   eligibleFinalizationRewardVotersInGracePeriod: Set<Address>,
-  addLog = false,
+  addLog = false
 ): IPartialRewardClaim[] {
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `Finalization: ${text}`,
-        votingRoundId: offer.votingRoundId
-      }
+          info: `Finalization: ${text}`,
+          votingRoundId: offer.votingRoundId,
+        }
       : {};
   }
 
@@ -69,15 +70,24 @@ export function calculateFinalizationRewardClaims(
     if (!eligibleFinalizationRewardVotersInGracePeriod.has(finalization.submitAddress.toLowerCase())) {
       throw new Error("Critical: finalization submit address must be eligible");
     }
-    // submitAddress === signing address for the finalizations in grace period
+    // submitAddress of finalization === signingAddress for the finalizations in grace period
     const signingAddress = finalization.submitAddress.toLowerCase();
+
+    const submitAddress = rewardEpoch.signingAddressToSubmitAddress.get(signingAddress);
+
+    if (!submitAddress) {
+      throw new Error("Critical: eligible finalization submit address must be equal to signingAddress of an entity");
+    }
+
+    const voterWeight = rewardEpoch.getVotersWeights().get(submitAddress);
+
     const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
     const amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
 
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, signingAddress, data.dataForCalculations.rewardEpoch, offer.votingRoundId, "Finalization", addLog)
+      ...generateSigningWeightBasedClaimsForVoter(amount, voterWeight, offer.votingRoundId, "Finalization", addLog)
     );
   }
 

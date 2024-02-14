@@ -45,7 +45,7 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
   // Random seed.
   seed: string;
   // The list of eligible voters in the canonical order.
-  voters: string[];
+  voters: Address[];
   // The corresponding list of normalised signing weights of eligible voters.
   // Normalisation is done by compressing the weights from 32-byte values to 2 bytes,
   // while approximately keeping the weight relations.

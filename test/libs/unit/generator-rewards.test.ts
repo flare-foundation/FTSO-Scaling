@@ -10,16 +10,26 @@ import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
 import { generateRewardEpochDataForRewardCalculation, happyRewardDataSimulationScenario, voterFeedValue } from "../../utils/generators-rewards";
+import { getTestFile } from "../../utils/getTestFile";
 import { printSummary } from "../../utils/indexer-db-summary";
 import { claimSummary, offersSummary, votersSummary } from "../../utils/reward-claim-summaries";
-import { defaultSigningPolicyProtocolSettings, realtimeShorterEpochSettings, resetEnvVariables, resetEpochSettings, rewardSettingsForRealtimeShorterEpochSettings, setupEnvVariables, setupEpochSettings } from "../../utils/test-epoch-settings";
+import {
+  defaultSigningPolicyProtocolSettings,
+  realtimeShorterEpochSettings,
+  resetEnvVariables,
+  resetEpochSettings,
+  rewardSettingsForRealtimeShorterEpochSettings,
+  setupEnvVariables,
+  setupEpochSettings,
+} from "../../utils/test-epoch-settings";
 
 // Ensure that the networks are not loaded
 
 // const logger = console;
 const logger = emptyLogger;
 
-describe("generator-rewards", () => {
+
+describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
   before(() => {
     process.env.NETWORK = "from-env";
     setupEpochSettings(realtimeShorterEpochSettings);
@@ -35,7 +45,7 @@ describe("generator-rewards", () => {
   after(() => {
     resetEpochSettings();
     resetEnvVariables();
-  })
+  });
 
   it("should happy path scenario work", async () => {
     const numberOfVoters = 10;
@@ -50,7 +60,7 @@ describe("generator-rewards", () => {
     const entityManager = dataSource.createEntityManager();
     const offerAmount = BigInt(1000000);
     const rewardEpochId = 1;
-  
+
     const clock = await generateRewardEpochDataForRewardCalculation(
       entityManager,
       defaultSigningPolicyProtocolSettings,
@@ -63,8 +73,6 @@ describe("generator-rewards", () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    // const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
-    // this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now()/1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
@@ -74,7 +82,7 @@ describe("generator-rewards", () => {
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
-    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);    
+    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
     const addLog = true;
     const merge = false;
@@ -84,8 +92,8 @@ describe("generator-rewards", () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog,
-    );    
+      addLog
+    );
     const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
     offersSummary(rewardEpoch.rewardOffers, logger);
     votersSummary(voters, logger);
@@ -105,5 +113,4 @@ describe("generator-rewards", () => {
     expect((mergedClaims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
 
   });
-
 });

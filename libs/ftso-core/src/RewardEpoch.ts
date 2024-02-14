@@ -10,40 +10,42 @@ import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 
 export interface VoterWeights {
-  readonly identityAddress: string;
-  readonly submitAddress: string;
-  readonly signingAddress: string;
-  readonly delegationAddress: string;
+  readonly identityAddress: Address; //voter
+  readonly submitAddress: Address;
+  readonly signingAddress: Address;
+  readonly delegationAddress: Address;
   readonly delegationWeight: bigint;
   readonly cappedDelegationWeight: bigint;
   readonly signingWeight: number;
   readonly feeBIPS: number;
-  readonly nodeIDs: string[];
+  readonly nodeIds: string[];
   readonly nodeWeights: bigint[];
 }
 
 export class RewardEpoch {
   // TODO: think through the mappings!!!
 
-  readonly orderedVotersSubmissionAddresses: Address[] = [];
+  readonly orderedVotersSubmitAddresses: Address[] = [];
 
   public readonly rewardOffers: RewardOffers;
   public readonly signingPolicy: SigningPolicyInitialized;
   // delegationAddress => weight (capped WFLR)
   readonly delegationAddressToCappedWeight = new Map<Address, bigint>();
-  // identifyingAddress => info
+  // identityAddress => info
   // Only for voters in signing policy
   readonly voterToRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
-  // signingAddress => identifyingAddress
+  // signingAddress => identityAddress
   readonly signingAddressToVoter = new Map<Address, Address>();
-  // submittingAddress => identifyingAddress
-  readonly submitterToVoter = new Map<Address, Address>();
-  // delegateAddress => identifyingAddress
+  // submitAddress => identityAddress
+  readonly submitAddressToVoter = new Map<Address, Address>();
+  // delegateAddress => identityAddress
   readonly delegationAddressToVoter = new Map<Address, Address>();
 
-  readonly submissionAddressToCappedWeight = new Map<Address, bigint>();
-  readonly submissionAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
+  readonly submitAddressToCappedWeight = new Map<Address, bigint>();
+  readonly submitAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
   readonly signingAddressToDelegationAddress = new Map<Address, Address>();
+  readonly signingAddressToSubmitAddress = new Map<Address, Address>();
+
   readonly signingAddressToSigningWeight = new Map<Address, number>();
   readonly signingAddressToVotingPolicyIndex = new Map<Address, number>();
 
@@ -123,20 +125,28 @@ export class RewardEpoch {
         fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress.toLowerCase(),
         fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
-      this.submitterToVoter.set(fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(), voter);
-      this.submissionAddressToCappedWeight.set(
+      this.submitAddressToVoter.set(fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(), voter);
+      this.submitAddressToCappedWeight.set(
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
         fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
-      this.submissionAddressToVoterRegistrationInfo.set(
+
+      this.submitAddressToVoterRegistrationInfo.set(
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
         fullVoterRegistrationInfo
       );
-      this.orderedVotersSubmissionAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
+      this.orderedVotersSubmitAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
+
       this.signingAddressToDelegationAddress.set(
         voterSigningAddress,
         fullVoterRegistrationInfo.voterRegistrationInfo.delegationAddress
       );
+
+      this.signingAddressToSubmitAddress.set(
+        voterSigningAddress,
+        fullVoterRegistrationInfo.voterRegistered.submitAddress
+      );
+
       this.signingAddressToSigningWeight.set(voterSigningAddress, signingWeight);
     }
   }
@@ -159,11 +169,11 @@ export class RewardEpoch {
 
   /**
    * Checks if the given address is a valid voter in this reward epoch.
-   * @param submissionData
+   * @param submitAddress
    * @returns
    */
-  public isEligibleVoterSubmissionAddress(submitAddress: Address): boolean {
-    return this.submitterToVoter.has(submitAddress.toLowerCase());
+  public isEligibleSubmitAddress(submitAddress: Address): boolean {
+    return this.submitAddressToVoter.has(submitAddress.toLowerCase());
   }
 
   public isEligibleSignerAddress(signerAddress: Address): boolean {
@@ -176,10 +186,10 @@ export class RewardEpoch {
    * @returns
    */
   public ftsoMedianVotingWeight(submissionAddress: Address): bigint {
-    if (!this.isEligibleVoterSubmissionAddress(submissionAddress)) {
+    if (!this.isEligibleSubmitAddress(submissionAddress)) {
       throw new Error("Invalid submission address");
     }
-    return this.submissionAddressToCappedWeight.get(submissionAddress.toLowerCase())!;
+    return this.submitAddressToCappedWeight.get(submissionAddress.toLowerCase())!;
   }
 
   //Currently unused
@@ -230,16 +240,16 @@ export class RewardEpoch {
   private cachedVoterWeights: Map<Address, VoterWeights> | undefined = undefined;
 
   /**
-   * Returns a map from submission address to voter weights information.
+   * Returns a map from submitAddress to voterWeights information.
    * @returns
    */
-  public getVoterWeights(): Map<Address, VoterWeights> {
-    if(this.cachedVoterWeights) {
+  public getVotersWeights(): Map<Address, VoterWeights> {
+    if (this.cachedVoterWeights) {
       return this.cachedVoterWeights;
     }
     const result = new Map<Address, VoterWeights>();
-    this.orderedVotersSubmissionAddresses.forEach((submissionAddress, index) => {
-      const voterRegistrationInfo = this.submissionAddressToVoterRegistrationInfo.get(submissionAddress.toLowerCase())!;
+    this.orderedVotersSubmitAddresses.forEach((submissionAddress, index) => {
+      const voterRegistrationInfo = this.submitAddressToVoterRegistrationInfo.get(submissionAddress.toLowerCase())!;
       const voterWeights: VoterWeights = {
         identityAddress: voterRegistrationInfo.voterRegistered.voter.toLowerCase(),
         submitAddress: voterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
@@ -249,7 +259,7 @@ export class RewardEpoch {
         cappedDelegationWeight: voterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight,
         signingWeight: this.signingPolicy.weights[index],
         feeBIPS: voterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS,
-        nodeIDs: voterRegistrationInfo.voterRegistrationInfo.nodeIds,
+        nodeIds: voterRegistrationInfo.voterRegistrationInfo.nodeIds,
         nodeWeights: voterRegistrationInfo.voterRegistrationInfo.nodeWeights,
       };
       result.set(submissionAddress, voterWeights);

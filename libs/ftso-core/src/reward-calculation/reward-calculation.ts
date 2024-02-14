@@ -45,7 +45,6 @@ export async function rewardClaimsForRewardEpoch(
     const rewardClaims = await partialRewardClaimsForVotingRound(
       votingRoundId,
       randomGenerationBenchingWindow,
-      rewardEpoch,
       dataManager,
       rewardOfferMap.get(votingRoundId),
       merge,
@@ -74,29 +73,29 @@ export async function rewardClaimsForRewardEpoch(
 export async function partialRewardClaimsForVotingRound(
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
-  rewardEpoch: RewardEpoch,
   dataManager: DataManager,
-  feedOffers: Map<string, IPartialRewardOffer[]>,  
+  feedOffers: Map<string, IPartialRewardOffer[]>,
   merge = true,
-  addLog = false,
+  addLog = false
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
   // Obtain data for reward calculation
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
     votingRoundId,
-    randomGenerationBenchingWindow,
-    rewardEpoch
+    randomGenerationBenchingWindow
   );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
 
-  const voterWeights = rewardEpoch.getVoterWeights();
-
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
 
+  const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
+
+  const voterWeights = rewardEpoch.getVotersWeights();
+
   // Calculate feed medians
-  const medianResults: MedianCalculationResult[] = await calculateMedianResults(
+  const medianResults: MedianCalculationResult[] = calculateMedianResults(
     rewardDataForCalculations.dataForCalculations
   );
   // feedName => medianResult
@@ -141,27 +140,31 @@ export async function partialRewardClaimsForVotingRound(
         splitOffers.medianRewardOffer,
         medianResult,
         voterWeights,
-        addLog,
+        addLog
       );
-      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations, addLog);
+      const signingRewardClaims = calculateSigningRewards(
+        splitOffers.signingRewardOffer,
+        rewardDataForCalculations,
+        addLog
+      );
       const finalizationRewardClaims = calculateFinalizationRewardClaims(
         splitOffers.finalizationRewardOffer,
         rewardDataForCalculations,
         eligibleFinalizationRewardVotersInGracePeriod,
-        addLog,
+        addLog
       );
       // Calculate penalties for reveal withdrawal offenders
       const revealWithdrawalPenalties = calculateRevealWithdrawalPenalties(
         offer,
         rewardDataForCalculations.dataForCalculations.revealOffenders,
-        rewardDataForCalculations.dataForCalculations.rewardEpoch,
+        voterWeights,
         addLog
       );
 
       const doubleSigningPenalties = calculateDoubleSigningPenalties(
         offer,
         rewardDataForCalculations.signatures,
-        rewardDataForCalculations.dataForCalculations.rewardEpoch,
+        voterWeights,
         FTSO2_PROTOCOL_ID,
         addLog
       );

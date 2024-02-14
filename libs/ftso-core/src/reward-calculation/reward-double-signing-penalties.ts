@@ -53,30 +53,31 @@ export function calculateDoubleSigners(
 export function calculateDoubleSigningPenalties(
   offer: IPartialRewardOffer,
   signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>,
-  rewardEpoch: RewardEpoch,
+  votersWeights: Map<Address, VoterWeights>,
   protocolId = FTSO2_PROTOCOL_ID,
-  addLog = false,
+  addLog = false
 ): IPartialRewardClaim[] {
-  const voterWeights = rewardEpoch.getVoterWeights();
   const votingRoundId = offer.votingRoundId;
   const doubleSigners = calculateDoubleSigners(votingRoundId, protocolId, signatures);
   if (doubleSigners.size === 0) {
     return [];
   }
   const totalWeight = BigInt(
-    [...voterWeights.values()].map(voterWeight => voterWeight.signingWeight).reduce((a, b) => a + b, 0)
+    [...votersWeights.values()].map(voterWeight => voterWeight.signingWeight).reduce((a, b) => a + b, 0)
   );
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of doubleSigners) {
-    const voterData = voterWeights.get(submitAddress)!;
-    if (!voterData) {
+    const voterWeights = votersWeights.get(submitAddress)!;
+    if (!voterWeights) {
       throw new Error("Critical error: Illegal offender");
     }
-    const voterWeight = BigInt(voterData.signingWeight);
+    const voterWeight = BigInt(voterWeights.signingWeight);
     const penalty = (-voterWeight * offer.amount * PENALTY_FACTOR()) / totalWeight;
-    const signingAddress = voterData.signingAddress;
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, signingAddress, rewardEpoch, offer.votingRoundId, "Double signing", addLog));
+    const signingAddress = voterWeights.signingAddress;
+    penaltyClaims.push(
+      ...generateSigningWeightBasedClaimsForVoter(penalty, voterWeights, offer.votingRoundId, "Double signing", addLog)
+    );
   }
   return penaltyClaims;
 }

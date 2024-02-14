@@ -368,7 +368,7 @@ export function generateVotersWeights(numberOfVoters: number) {
 
   for (let j = 0; j < numberOfVoters; j++) {
     const voterWeight: VoterWeights = {
-      identityAddress: generateAddress(`${j}identity`), 
+      identityAddress: generateAddress(`${j}identity`),
       submitAddress: generateAddress(`${j}`),
       delegationAddress: generateAddress(`${j}delegation`),
       signingAddress: generateAddress(`${j}signing`),
@@ -376,7 +376,7 @@ export function generateVotersWeights(numberOfVoters: number) {
       cappedDelegationWeight: BigInt(1000 + (j % 5)),
       signingWeight: 1000 + (j % 5) + 3,
       feeBIPS: j * 10,
-      nodeIDs: [unsafeRandomHex(20), unsafeRandomHex(20)],
+      nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
       nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
     };
 
@@ -413,7 +413,7 @@ export function generateMedianCalculationResult(numberOfVoters: number, feedName
   const medianCalculationResult: MedianCalculationResult = {
     votingRoundId,
     feed,
-    voters,
+    votersSubmitAddresses: voters,
     feedValues,
     data,
     weights,
