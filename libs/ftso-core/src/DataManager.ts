@@ -160,8 +160,7 @@ export class DataManager {
    */
   public async getDataForRewardCalculation(
     votingRoundId: number,
-    randomGenerationBenchingWindow: number,
-    rewardEpoch: RewardEpoch
+    randomGenerationBenchingWindow: number
   ): Promise<DataMangerResponse<DataForRewardCalculation>> {
     const dataForCalculationsResponse = await this.getDataForCalculations(
       votingRoundId,

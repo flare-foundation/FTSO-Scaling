@@ -76,16 +76,15 @@ export async function partialRewardClaimsForVotingRound(
   randomGenerationBenchingWindow: number,
   rewardEpoch: RewardEpoch,
   dataManager: DataManager,
-  feedOffers: Map<string, IPartialRewardOffer[]>,  
+  feedOffers: Map<string, IPartialRewardOffer[]>,
   merge = true,
-  addLog = false,
+  addLog = false
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
   // Obtain data for reward calculation
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
     votingRoundId,
-    randomGenerationBenchingWindow,
-    rewardEpoch
+    randomGenerationBenchingWindow
   );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
@@ -141,14 +140,18 @@ export async function partialRewardClaimsForVotingRound(
         splitOffers.medianRewardOffer,
         medianResult,
         voterWeights,
-        addLog,
+        addLog
       );
-      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, rewardDataForCalculations, addLog);
+      const signingRewardClaims = calculateSigningRewards(
+        splitOffers.signingRewardOffer,
+        rewardDataForCalculations,
+        addLog
+      );
       const finalizationRewardClaims = calculateFinalizationRewardClaims(
         splitOffers.finalizationRewardOffer,
         rewardDataForCalculations,
         eligibleFinalizationRewardVotersInGracePeriod,
-        addLog,
+        addLog
       );
       // Calculate penalties for reveal withdrawal offenders
       const revealWithdrawalPenalties = calculateRevealWithdrawalPenalties(
