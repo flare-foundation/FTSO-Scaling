@@ -3,7 +3,7 @@ import Web3 from "web3";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../apps/ftso-data-provider/src/response-encoders";
 import { IPayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
 import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningPolicy";
-import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
+import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
 
 import FakeTimers from "@sinonjs/fake-timers";
 import { ContractMethodNames } from "../../libs/ftso-core/src/configs/contracts";
@@ -82,12 +82,12 @@ export function offersForFeeds(
 }
 
 export interface VoterInVotingEpoch {
-  votingEpochId: number;
+  votingRoundIds: number[];
   voterIndex: number;
 }
 
 export interface AddressInVotingEpoch {
-  votingEpochId: number;
+  votingRoundIds: number[];
   // Voter acting on behalf of the address in simulation
   voterIndex: number;
   address: string;
@@ -208,6 +208,93 @@ export async function generateRewardEpochDataForRewardCalculation(
     const upperState = generateState(LAST_DATABASE_INDEX_STATE, 1, block, timestamp);
     const lastState = generateState(LAST_CHAIN_INDEX_STATE, 2, block, timestamp);
     return entityManager.save([upperState, lastState]);
+  }
+
+  ///////////////////// ACTION PREDICATES /////////////////////////
+
+  // true means no submission
+  let noVoterSubmissionMap: Map<string, boolean>;
+  function voterRoundKey(voterIndex: number, votingEpochId: number): string {
+    return `${voterIndex}-${votingEpochId}`;
+  }
+
+  function shouldVoterSubmitSignature(voterIndex: number, votingEpochId: number): boolean {
+    if (!noVoterSubmissionMap) {
+      noVoterSubmissionMap = new Map<string, boolean>();
+      for (const entry of scenario.noSignatureSubmitters) {
+        for (const votingRoundId of entry.votingRoundIds) {
+          noVoterSubmissionMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+        }
+      }
+    }
+    return !noVoterSubmissionMap.get(voterRoundKey(voterIndex, votingEpochId));
+  }
+
+  let noVoterFinalizingGPMap: Map<string, boolean>;
+  function shouldVoterFinalizeInGracePeriodIfSelected(voterIndex: number, votingEpochId: number): boolean {
+    if (!noVoterFinalizingGPMap) {
+      noVoterFinalizingGPMap = new Map<string, boolean>();
+      for (const entry of scenario.noGracePeriodFinalizers) {
+        for (const votingRoundId of entry.votingRoundIds) {
+          noVoterFinalizingGPMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+        }
+      }
+    }
+    return !noVoterFinalizingGPMap.get(voterRoundKey(voterIndex, votingEpochId));
+  }
+
+  let outsideGPFinalizerVoters: Map<string, boolean>;
+  function shouldVoterFinalizeOutsideGracePeriod(voterIndex: number, votingEpochId: number): boolean {
+    if (!outsideGPFinalizerVoters) {
+      outsideGPFinalizerVoters = new Map<string, boolean>();
+      for (const entry of scenario.outsideGracePeriodFinalizers) {
+        for (const votingRoundId of entry.votingRoundIds) {
+          outsideGPFinalizerVoters.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+        }
+      }
+    }
+    return !!outsideGPFinalizerVoters.get(voterRoundKey(voterIndex, votingEpochId));
+  }
+
+  let revealWithholderMap: Map<string, boolean>;
+  function isVoterRevealWithholder(voterIndex: number, votingEpochId: number) {
+    if (!revealWithholderMap) {
+      revealWithholderMap = new Map<string, boolean>();
+      for (const entry of scenario.revealWithholders) {
+        for (const votingRoundId of entry.votingRoundIds) {
+          revealWithholderMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+        }
+      }
+    }
+    return !!revealWithholderMap.get(voterRoundKey(voterIndex, votingEpochId));
+  }
+
+  let doubleSignerMap: Map<string, boolean>;
+  function isVoterDoubleSigner(voterIndex: number, votingEpochId: number) {
+    if (!doubleSignerMap) {
+      doubleSignerMap = new Map<string, boolean>();
+      for (const entry of scenario.doubleSigners) {
+        for (const votingRoundId of entry.votingRoundIds) {
+          doubleSignerMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+        }
+      }
+    }
+    return !!doubleSignerMap.get(voterRoundKey(voterIndex, votingEpochId));
+  }
+
+  let independentFinalizersOutsideGPMap: Map<number, string[]>;
+  function getIndependentFinalizersOutsideGracePeriod(votingEpochId: number) {
+    if (!independentFinalizersOutsideGPMap) {
+      independentFinalizersOutsideGPMap = new Map<number, string[]>();
+      for (const entry of scenario.independentFinalizersOutsideGracePeriod) {
+        for (const votingRoundId of entry.votingRoundIds) {
+          const value = independentFinalizersOutsideGPMap.get(votingRoundId) || [];
+          value.push(entry.address);
+          independentFinalizersOutsideGPMap.set(votingRoundId, value);
+        }
+      }
+    }
+    return independentFinalizersOutsideGPMap.get(votingEpochId) || [];
   }
 
   ////////// START OF DATABASE GENERATION //////////
@@ -474,6 +561,8 @@ export async function generateRewardEpochDataForRewardCalculation(
     // const signatureDuration = Math.floor(EPOCH_SETTINGS().votingEpochDurationSeconds * 0.2);
     const finalizationStartOffset = EPOCH_SETTINGS().revealDeadlineSeconds + 1 + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
     const finalizationStartDeadline = EPOCH_SETTINGS().votingEpochStartSec(votingEpochId) + finalizationStartOffset;
+    const finalizationEndGracePeriodOffset = EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC() + 1;
+    const lastFinalizationTimeOutsideGracePeriod = EPOCH_SETTINGS().votingEpochEndSec(votingEpochId) - 1;
 
     // REVEALS
     if (votingEpochId > signingPolicy.startVotingRoundId) {
@@ -488,6 +577,9 @@ export async function generateRewardEpochDataForRewardCalculation(
         const voterRevealData = getFromRevealsMap(votingEpochId - 1, voterIndex);
         if (!voterRevealData) {
           throw new Error(`No reveal data for voter: ${voterIndex}`);
+        }
+        if(isVoterRevealWithholder(voterIndex, votingEpochId - 1)) {
+          continue;
         }
         const msg: IPayloadMessage<IRevealData> = {
           protocolId: FTSO2_PROTOCOL_ID,
@@ -521,9 +613,13 @@ export async function generateRewardEpochDataForRewardCalculation(
       logger.log(`SIGNATURES ${votingEpochId - 1}`);
       moveToVotingEpochOffset(votingEpochId, signatureStartOffset + 1);
       for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
+        if (!shouldVoterSubmitSignature(voterIndex, votingEpochId - 1)) {
+          continue;
+        }
         const voter = voters[voterIndex];
         const calculator = voterIndexToMiniFTSOCalculator.get(voterIndex);
-        const payload = await calculator.getSignaturePayload(votingEpochId - 1);
+        const doubleSign = isVoterDoubleSigner(voterIndex, votingEpochId - 1);
+        const payload = await calculator.getSignaturePayload(votingEpochId - 1, doubleSign);
         const signaturePayload = sigSignature + payload.slice(2);
         const signatureTx = generateTx(
           voter.submitSignaturesAddress,
@@ -556,10 +652,11 @@ export async function generateRewardEpochDataForRewardCalculation(
 
       moveToVotingEpochOffset(votingEpochId, finalizationStartOffset);
 
-      // if (votingEpochId > signingPolicy.startVotingRoundId) {
-      //   await extractIndexerToCSV(entityManager, voters, `test-${votingEpochId}.csv`);
-      // }
+      // Finalization in grace period
       for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
+        if (!shouldVoterFinalizeInGracePeriodIfSelected(voterIndex, votingEpochId - 1)) {
+          continue;
+        }
         const finalizer = voterIndexToMiniFinalizer.get(voterIndex);
 
         const selectionIndex = voterSelector.inSelectionList(
@@ -580,6 +677,49 @@ export async function generateRewardEpochDataForRewardCalculation(
           mineBlock();
         }
       }
+
+      // Finalizations outside grace period
+      moveToVotingEpochOffset(votingEpochId, finalizationEndGracePeriodOffset);
+      for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
+        if (!shouldVoterFinalizeOutsideGracePeriod(voterIndex, votingEpochId - 1)) {
+          continue;
+        }
+        const finalizer = voterIndexToMiniFinalizer.get(voterIndex);
+
+        const selectionIndex = voterSelector.inSelectionList(
+          signingPolicy.voters.map(x => x.toLowerCase()),
+          signingPolicy.seed,
+          FTSO2_PROTOCOL_ID,
+          votingEpochId - 1,
+          finalizer.voter.signingAddress
+        );
+        if (selectionIndex < 0) {
+          continue;
+        }
+        const tx = await finalizer.processFinalization(votingEpochId - 1, block, timestamp);
+        if (tx) {
+          entities.push(tx);
+        }
+        if (timestamp < lastFinalizationTime) {
+          mineBlock();
+        }
+      }
+
+      // Finalizations by independent addresses
+      let independentFinalizers = getIndependentFinalizersOutsideGracePeriod(votingEpochId - 1);
+      // use the first finalizer
+      const finalizer = voterIndexToMiniFinalizer.get(0);
+      for(let address of independentFinalizers) {
+        // override the sending address
+        const tx = await finalizer.processFinalization(votingEpochId - 1, block, timestamp, address);
+        if (tx) {
+          entities.push(tx);
+        }
+        if (timestamp < lastFinalizationTimeOutsideGracePeriod) {
+          mineBlock();
+        }        
+      }
+
       await entityManager.save(entities);
       await updateUpperState();
       entities = [];

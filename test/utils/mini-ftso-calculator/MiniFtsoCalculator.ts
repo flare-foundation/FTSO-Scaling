@@ -72,9 +72,10 @@ export class MiniFtsoCalculator {
     }
   }
 
-  public async getSignaturePayload(votingRoundId: number): Promise<string> {
+  public async getSignaturePayload(votingRoundId: number, doubleSignRandom = false): Promise<string> {
     let result = await this.prepareCalculationResultData(votingRoundId);
-    const merkleRoot = result.merkleTree.root;
+    const merkleRoot = doubleSignRandom ? Web3.utils.randomHex(32) : result.merkleTree.root;
+
     const message: IProtocolMessageMerkleRoot = {
       protocolId: FTSO2_PROTOCOL_ID,
       votingRoundId,

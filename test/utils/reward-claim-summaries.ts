@@ -171,7 +171,10 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
   for (let i = 0; i < voters.length; i++) {
     const feeVal = voterIndexToFees.get(i) || 0n;
     const partVal = voterIndexToParticipationRewards.get(i) || 0n;
-    const percentage = Number(feeVal * 10000n / (feeVal + partVal)) / 100;
+    let percentage = 0;
+    if (feeVal + partVal > 0) {
+      percentage = Number(feeVal * 10000n / (feeVal + partVal)) / 100;
+    }
     logger.log(`Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${feeVal}, part: ${partVal}, pct: ${percentage}`);
   }
 }

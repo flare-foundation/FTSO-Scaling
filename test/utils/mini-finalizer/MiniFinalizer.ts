@@ -59,7 +59,9 @@ export class MiniFinalizer {
   public async processFinalization(
     votingRoundId: number,
     block: number,
-    timestamp: number
+    timestamp: number,
+    overrideAddress?: string,
+    revertOnOverrideAddress?: boolean
   ): Promise<TLPTransaction | undefined> {
     this.queue.destroy();
     const rewardEpoch = await this.rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
@@ -106,22 +108,28 @@ export class MiniFinalizer {
         signatures,
         protocolMessageMerkleRoot: messageData,
       }
-      const selectionIndex = this.voterSelector.inSelectionList(
-        matchingSigningPolicy.voters.map(x => x.toLowerCase()),
-        matchingSigningPolicy.seed,
-        messageData.protocolId,
-        messageData.votingRoundId,
-        this.voter.signingAddress
-      );
-      if (selectionIndex < 0) {
+      let selectionIndex = -1;
+      if (!overrideAddress) {
+        selectionIndex = this.voterSelector.inSelectionList(
+          matchingSigningPolicy.voters.map(x => x.toLowerCase()),
+          matchingSigningPolicy.seed,
+          messageData.protocolId,
+          messageData.votingRoundId,
+          this.voter.signingAddress
+        );
+      }
+      if (!overrideAddress && selectionIndex < 0) {
         return;
+      }
+      if(overrideAddress) {
+        selectionIndex = revertOnOverrideAddress ? 1 : 0;  // if no revert, act like a first finalizer
       }
       try {
         // reverts if not enough signature weight
         const fullData = RelayMessage.encode(relayMessage, true);
         const sigRelay = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.relay);
         return generateTx(
-          this.voter.signingAddress,
+          overrideAddress ?? this.voter.signingAddress,
           CONTRACTS.Relay.address,
           sigRelay,
           block,

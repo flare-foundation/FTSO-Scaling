@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { CONTRACTS } from "../configs/networks";
+import { BURN_ADDRESS, CONTRACTS } from "../configs/networks";
 import { ContractMethodNames } from "../configs/contracts";
 import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();
@@ -77,16 +77,16 @@ export namespace RewardClaim {
     for (const claim of claims) {
       const beneficiary = claim.beneficiary.toLowerCase();
       const beneficiaryClaimsByTypeAndSign =
-        claimsByBeneficiaryTypeAndSign.get(beneficiary) || new Map<number, Map<number, IPartialRewardClaim>>();
-      claimsByBeneficiaryTypeAndSign.set(claim.beneficiary, beneficiaryClaimsByTypeAndSign);
+        claimsByBeneficiaryTypeAndSign.get(beneficiary) ?? new Map<number, Map<number, IPartialRewardClaim>>();
+      claimsByBeneficiaryTypeAndSign.set(beneficiary, beneficiaryClaimsByTypeAndSign);
       const claimTypeBySign =
-        beneficiaryClaimsByTypeAndSign.get(claim.claimType) || new Map<number, IPartialRewardClaim>();
+        beneficiaryClaimsByTypeAndSign.get(claim.claimType) ?? new Map<number, IPartialRewardClaim>();
       beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);
-      const sign = claim.amount < 0 ? -1 : 1;
+      const sign = claim.amount < 0n ? -1 : 1;
       let mergedClaim = claimTypeBySign.get(sign);
       if (!mergedClaim) {
         mergedClaim = {
-          beneficiary: claim.beneficiary,
+          beneficiary,
           amount: claim.amount,
           claimType: claim.claimType,
         };
@@ -104,6 +104,7 @@ export namespace RewardClaim {
         }
       }
     }
+
     return mergedClaims;
   }
 
@@ -141,17 +142,23 @@ export namespace RewardClaim {
    * - at the end all output claims are positive and the sum of positive input claims matches the sum of all
    *   output claims.
    */
-  export function mergeWithBurnClaims(claims: IRewardClaim[], burnAddress: string) {
+  export function mergeWithBurnClaims(claims: IRewardClaim[], burnAddress: string): IRewardClaim[] {
     // beneficiary => claimType => claim
+    if (claims.length === 0) {
+      return [];
+    }
+    let initialTotalAmount = 0n;
+    const rewardEpochId = claims[0].rewardEpochId;
     const negativeClaims = new Map<string, Map<Number, IRewardClaim>>();
     // assemble map of negative claims
     for (const claim of claims) {
       if (claim.amount >= 0) {
+        initialTotalAmount += claim.amount;
         continue;
       }
       const beneficiary = claim.beneficiary.toLowerCase();
       const beneficiaryClaimsByType = negativeClaims.get(beneficiary) || new Map<number, IRewardClaim>();
-      negativeClaims.set(claim.beneficiary, beneficiaryClaimsByType);
+      negativeClaims.set(beneficiary, beneficiaryClaimsByType);
       if (beneficiaryClaimsByType.get(claim.claimType) !== undefined) {
         throw new Error(`Duplicate negative claim type for beneficiary ${beneficiary}`);
       }
@@ -159,20 +166,26 @@ export namespace RewardClaim {
     }
     const finalClaims: IRewardClaim[] = [];
     for (const claim of claims) {
+      // ignore negative claim as they are being subtracted
+      const beneficiary = claim.beneficiary.toLowerCase();
       if (claim.amount <= 0) {
         continue;
       }
-      const negativeClaim = negativeClaims.get(claim.beneficiary)?.get(claim.claimType);
+      const negativeClaim = negativeClaims.get(beneficiary)?.get(claim.claimType);
       if (!negativeClaim) {
         finalClaims.push(claim);
         continue;
       }
+      
       const negativeAmount = -1n * negativeClaim.amount;
+      if(negativeAmount <= 0) {
+        throw new Error(`Negative amount is not negative: ${negativeAmount}`);
+      }
       if (negativeAmount > claim.amount) {
         // create full burn claim
         finalClaims.push({
           beneficiary: burnAddress,
-          claimType: claim.claimType,
+          claimType: ClaimType.DIRECT,
           amount: claim.amount,
           rewardEpochId: claim.rewardEpochId,
         });
@@ -180,7 +193,7 @@ export namespace RewardClaim {
         // create partial burn claim
         finalClaims.push({
           beneficiary: burnAddress,
-          claimType: claim.claimType,
+          claimType: ClaimType.DIRECT,
           amount: negativeAmount,
           rewardEpochId: claim.rewardEpochId,
         });
@@ -192,7 +205,33 @@ export namespace RewardClaim {
       }
     }
     // Perform the final merge, merging together all burn claims.
+    let finalTotalAmount = 0n;    
+    for (let claim of finalClaims) {
+      if (claim.amount <= 0) {
+        throw new Error(`Negative or zero claim amount: ${claim.amount}`);
+      }
+      finalTotalAmount += claim.amount;
+    }
+    
+    if (initialTotalAmount !== finalTotalAmount) {
+      throw new Error(`Mismatch in total amount of claims: ${initialTotalAmount} !== ${finalTotalAmount}`);
+    }
+   const tmp = merge(finalClaims)
+    const result = convertToRewardClaims(rewardEpochId, tmp);
+    finalTotalAmount = 0n;
+    for (let claim of tmp) {
+      if (claim.amount <= 0) {
+        throw new Error(`2 -Negative or zero claim amount: ${claim.amount}`);
+      }
+      finalTotalAmount += claim.amount;
+    }
+    
+    if (initialTotalAmount !== finalTotalAmount) {
+      throw new Error(`2- Mismatch in total amount of claims: ${initialTotalAmount} !== ${finalTotalAmount}`);
+    }
+    
+    return result;
+    // sanity check
 
-    return merge(finalClaims);
   }
 }
