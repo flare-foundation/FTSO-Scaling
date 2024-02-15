@@ -167,7 +167,11 @@ export async function partialRewardClaimsForVotingRound(
         rewardDataForCalculations.signatures
       );
 
-      const doubleSigningPenalties = calculateDoubleSigningPenalties(offer, doubleSigners, voterWeights, addLog);
+      const doubleSignersSubmit = new Set(
+        [...doubleSigners.keys()].map(signingAddress => rewardEpoch.signingAddressToSubmitAddress.get(signingAddress))
+      );
+
+      const doubleSigningPenalties = calculateDoubleSigningPenalties(offer, doubleSignersSubmit, voterWeights, addLog);
 
       // Merge all reward claims into a single array
       allRewardClaims.push(...medianRewardClaims);
