@@ -7,7 +7,7 @@ import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
-import { calculateDoubleSigningPenalties } from "./reward-double-signing-penalties";
+import { calculateDoubleSigners, calculateDoubleSigningPenalties } from "./reward-double-signing-penalties";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
@@ -161,13 +161,14 @@ export async function partialRewardClaimsForVotingRound(
         addLog
       );
 
-      const doubleSigningPenalties = calculateDoubleSigningPenalties(
-        offer,
-        rewardDataForCalculations.signatures,
-        voterWeights,
+      const doubleSigners = calculateDoubleSigners(
+        votingRoundId,
         FTSO2_PROTOCOL_ID,
-        addLog
+        rewardDataForCalculations.signatures
       );
+
+      const doubleSigningPenalties = calculateDoubleSigningPenalties(offer, doubleSigners, voterWeights, addLog);
+
       // Merge all reward claims into a single array
       allRewardClaims.push(...medianRewardClaims);
       allRewardClaims.push(...signingRewardClaims);
