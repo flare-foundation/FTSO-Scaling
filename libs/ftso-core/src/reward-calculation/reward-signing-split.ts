@@ -38,16 +38,20 @@ export function generateSigningWeightBasedClaimsForVoter(
   const stakingAmount = (amount * stakedWeight) / totalWeight;
   const delegationAmount = amount - stakingAmount;
   const delegationFee = (delegationAmount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
+
   const cappedStakingFeeBips = BigInt(Math.min(CAPPED_STAKING_FEE_BIPS, voterWeights.feeBIPS));
   const stakingFee = (stakingAmount * cappedStakingFeeBips) / TOTAL_BIPS;
   const feeBeneficiary = voterWeights.identityAddress.toLowerCase(); //identityAddress
   const delegationBeneficiary = voterWeights.delegationAddress.toLowerCase();
-  rewardClaims.push({
-    beneficiary: feeBeneficiary,
-    amount: delegationFee + stakingFee,
-    claimType: ClaimType.FEE,
-    ...addInfo("fee for delegation and staking"),
-  } as IPartialRewardClaim);
+
+  if (delegationFee + stakingFee != 0n) {
+    rewardClaims.push({
+      beneficiary: feeBeneficiary,
+      amount: delegationFee + stakingFee,
+      claimType: ClaimType.FEE,
+      ...addInfo("fee for delegation and staking"),
+    } as IPartialRewardClaim);
+  }
 
   const delegationCommunityReward = delegationAmount - delegationFee;
   rewardClaims.push({

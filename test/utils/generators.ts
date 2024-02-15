@@ -375,7 +375,7 @@ export function generateVotersWeights(numberOfVoters: number) {
       delegationWeight: BigInt(1000 + (j % 5)),
       cappedDelegationWeight: BigInt(1000 + (j % 5)),
       signingWeight: 1000 + (j % 5) + 3,
-      feeBIPS: j * 10,
+      feeBIPS: j * 100,
       nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
       nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
     };
