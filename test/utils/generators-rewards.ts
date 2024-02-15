@@ -619,8 +619,8 @@ export async function generateRewardEpochDataForRewardCalculation(
         }
         const voter = voters[voterIndex];
         const calculator = voterIndexToMiniFTSOCalculator.get(voterIndex);
-        const doubleSign = isVoterDoubleSigner(voterIndex, votingEpochId - 1);
-        const payload = await calculator.getSignaturePayload(votingEpochId - 1, doubleSign);
+        
+        const payload = await calculator.getSignaturePayload(votingEpochId - 1);
         const signaturePayload = sigSignature + payload.slice(2);
         const signatureTx = generateTx(
           voter.submitSignaturesAddress,
@@ -631,6 +631,19 @@ export async function generateRewardEpochDataForRewardCalculation(
           signaturePayload
         );
         entities.push(signatureTx);
+        if(isVoterDoubleSigner(voterIndex, votingEpochId - 1)) {
+          const payload = await calculator.getSignaturePayload(votingEpochId - 1, true);
+          const signaturePayload = sigSignature + payload.slice(2);
+          const signatureTx = generateTx(
+            voter.submitSignaturesAddress,
+            CONTRACTS.Submission.address,
+            sigSignature,
+            block,
+            timestamp,
+            signaturePayload
+          );
+          entities.push(signatureTx);  
+        }
         // Increase block and timestamp, but if near the end, pack all of them into one block
         if (timestamp < finalizationStartDeadline - 1) {
           mineBlock();

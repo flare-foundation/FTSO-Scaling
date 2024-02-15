@@ -27,7 +27,7 @@ import {
 
 // Ensure that the networks are not loaded
 
-const useEmptyLogger = true;
+const useEmptyLogger = false;
 const logger = useEmptyLogger ? emptyLogger : console;
 
 ////////////////
@@ -253,4 +253,64 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     // votersSummary(voters, logger);
     claimSummary(voters, mergedWithBurn, logger);
   });
+
+  it.only("should second last voter get penalized for double signing", async () => {
+    const scenario: RewardDataSimulationScenario = {
+      noSignatureSubmitters: [],
+      noGracePeriodFinalizers: [],
+      outsideGracePeriodFinalizers: [],
+      doubleSigners: [
+        {
+          voterIndex: 8,
+          votingRoundIds: [1005]
+        }
+      ],
+      revealWithholders: [],
+      independentFinalizersOutsideGracePeriod: [],
+    };
+    await generateRewardEpochDataForRewardCalculation(
+      clock,
+      entityManager,
+      defaultSigningPolicyProtocolSettings,
+      feeds,
+      offerAmount,
+      rewardEpochId,
+      voters,
+      voterFeedValue,
+      scenario,
+      logger
+    );
+    await printSummary(entityManager, voters, undefined, logger);
+    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
+    logger.log("Earliest timestamp", earliestTimestamp);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const rewardEpochManger = new RewardEpochManager(indexerClient);
+    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+
+    const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+    const benchingWindowRevealOffenders = 1;
+    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
+
+    const addLog = true;
+    const merge = false;
+    const claims = await rewardClaimsForRewardEpoch(
+      rewardEpoch.rewardEpochId,
+      benchingWindowRevealOffenders,
+      dataManager,
+      rewardEpochManger,
+      merge,
+      addLog
+    );
+    console.log("BEFORE MERGE");
+    const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
+    console.log("AFTER MERGE");
+    const mergedWithBurn = RewardClaim.mergeWithBurnClaims(mergedClaims, BURN_ADDRESS);
+    console.log("AFTER MERGE WITH BURN");
+    // console.dir(mergedWithBurn);
+    // offersSummary(rewardEpoch.rewardOffers, logger);
+    // votersSummary(voters, logger);
+    claimSummary(voters, mergedWithBurn, logger);
+  });
+
 });
