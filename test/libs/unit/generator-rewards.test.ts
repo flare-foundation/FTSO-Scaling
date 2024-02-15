@@ -27,22 +27,23 @@ import {
 
 // Ensure that the networks are not loaded
 
-const useEmptyLogger = false;
+const useEmptyLogger = true;
 const logger = useEmptyLogger ? emptyLogger : console;
 
 ////////////////
-let numberOfVoters: number;
-let feeds: Feed[];
-let voters: TestVoter[];
-let dataSource: DataSource;
-let entityManager: EntityManager;
-let offerAmount: bigint;
-let rewardEpochId: number;
-let clock: FakeTimers.InstalledClock;
-
 
 describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
+  let numberOfVoters: number;
+  let feeds: Feed[];
+  let voters: TestVoter[];
+  let dataSource: DataSource;
+  let entityManager: EntityManager;
+  let offerAmount: bigint;
+  let rewardEpochId: number;
+  let clock: FakeTimers.InstalledClock;
+
   before(async () => {
+    clock = FakeTimers.install({ now: Date.now() });
     process.env.NETWORK = "from-env";
     setupEpochSettings(realtimeShorterEpochSettings);
     logger.log("Epoch settings used");
@@ -81,7 +82,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
 
 
   it("should happy path scenario work", async () => {
-    clock = await generateRewardEpochDataForRewardCalculation(
+    await generateRewardEpochDataForRewardCalculation(
+      clock,
       entityManager,
       defaultSigningPolicyProtocolSettings,
       feeds,
@@ -153,7 +155,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       revealWithholders: [],
       independentFinalizersOutsideGracePeriod: [],
     };
-    clock = await generateRewardEpochDataForRewardCalculation(
+    await generateRewardEpochDataForRewardCalculation(
+      clock,
       entityManager,
       defaultSigningPolicyProtocolSettings,
       feeds,
@@ -192,7 +195,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     claimSummary(voters, mergedClaims, logger);
   });
 
-  it.only("should last voter get penalized for withholding reveal", async () => {
+  it("should last voter get penalized for withholding reveal", async () => {
     const scenario: RewardDataSimulationScenario = {
       noSignatureSubmitters: [],
       noGracePeriodFinalizers: [],
@@ -206,7 +209,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       ],
       independentFinalizersOutsideGracePeriod: [],
     };
-    clock = await generateRewardEpochDataForRewardCalculation(
+    await generateRewardEpochDataForRewardCalculation(
+      clock,
       entityManager,
       defaultSigningPolicyProtocolSettings,
       feeds,

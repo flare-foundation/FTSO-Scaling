@@ -128,6 +128,7 @@ export const happyRewardDataSimulationScenario: RewardDataSimulationScenario = {
  */
 
 export async function generateRewardEpochDataForRewardCalculation(
+  clock: FakeTimers.InstalledClock,
   entityManager: EntityManager,
   fspSettings: FSPSettings,
   feeds: Feed[],
@@ -137,7 +138,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   valueFunction: (votingRoundId: number, voterIndex: number, feedSequence: Feed[]) => number[],
   scenario: RewardDataSimulationScenario,
   logger: ILogger = emptyLogger,
-): Promise<FakeTimers.InstalledClock> {
+) {
   const previousRewardEpochId = rewardEpochId - 1;
   const previousRewardEpochStartSec = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
   const rewardEpochStartSec = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId);
@@ -145,7 +146,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   let entities: (TLPEvents | TLPTransaction)[] = [];
   let block = 0;
   let timestamp = previousRewardEpochStartSec - 20;
-  let clock = FakeTimers.install({ now: timestamp * 1000 });
+  clock.setSystemTime(timestamp * 1000);
 
   function mineBlock() {
     block++;
@@ -578,7 +579,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         if (!voterRevealData) {
           throw new Error(`No reveal data for voter: ${voterIndex}`);
         }
-        if(isVoterRevealWithholder(voterIndex, votingEpochId - 1)) {
+        if (isVoterRevealWithholder(voterIndex, votingEpochId - 1)) {
           continue;
         }
         const msg: IPayloadMessage<IRevealData> = {
@@ -709,7 +710,7 @@ export async function generateRewardEpochDataForRewardCalculation(
       let independentFinalizers = getIndependentFinalizersOutsideGracePeriod(votingEpochId - 1);
       // use the first finalizer
       const finalizer = voterIndexToMiniFinalizer.get(0);
-      for(let address of independentFinalizers) {
+      for (let address of independentFinalizers) {
         // override the sending address
         const tx = await finalizer.processFinalization(votingEpochId - 1, block, timestamp, address);
         if (tx) {
@@ -717,7 +718,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         }
         if (timestamp < lastFinalizationTimeOutsideGracePeriod) {
           mineBlock();
-        }        
+        }
       }
 
       await entityManager.save(entities);
@@ -780,7 +781,6 @@ export async function generateRewardEpochDataForRewardCalculation(
   // Move beyond the last relevant voting epoch
   moveToVotingEpochOffset(lastVotingEpochId + 2, 1);
   mineFakeTransaction();
-  return clock;
 }
 
 
