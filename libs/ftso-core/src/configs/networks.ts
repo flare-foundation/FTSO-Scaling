@@ -238,6 +238,22 @@ const randomGenerationBenchingWindow = () => {
 
 export const RANDOM_GENERATION_BENCHING_WINDOW = randomGenerationBenchingWindow();
 
+const firstActiveRewardEpochId = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": {
+      if (!process.env.FIRST_ACTIVE_REWARD_EPOCH_ID) {
+        throw new Error("FIRST_ACTIVE_REWARD_EPOCH_ID value is not provided");
+      }
+      return parseInt(process.env.FIRST_ACTIVE_REWARD_EPOCH_ID);
+    }
+    case "local-test":
+    default:
+      return 1;
+  }
+};
+
+export const FIRST_ACTIVE_REWARD_EPOCH_ID = firstActiveRewardEpochId();
+
 const burnAddress = () => {
   switch (process.env.NETWORK) {
     case "local-test":
