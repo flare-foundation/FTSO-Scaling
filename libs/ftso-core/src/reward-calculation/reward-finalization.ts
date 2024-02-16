@@ -1,11 +1,9 @@
-import { sign } from "crypto";
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePeriod } from "./reward-utils";
-import { generateVotersWeights } from "../../../../test/utils/generators";
 
 /**
  * Calculates partial finalization reward claims for the given offer.

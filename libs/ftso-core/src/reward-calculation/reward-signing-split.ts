@@ -1,7 +1,6 @@
-import { RewardEpoch, VoterWeights } from "../RewardEpoch";
+import { VoterWeights } from "../RewardEpoch";
 import { CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
-import { Address } from "../voting-types";
 
 /**
  * Given an amount of a reward it produces specific partial reward claims split based when reward amount is assigned to
@@ -42,7 +41,7 @@ export function generateSigningWeightBasedClaimsForVoter(
   const cappedStakingFeeBips = BigInt(Math.min(CAPPED_STAKING_FEE_BIPS, voterWeights.feeBIPS));
   const stakingFee = (stakingAmount * cappedStakingFeeBips) / TOTAL_BIPS;
   const feeBeneficiary = voterWeights.identityAddress.toLowerCase(); //identityAddress
-  const delegationBeneficiary = voterWeights.delegationAddress.toLowerCase();
+  const delegationBeneficiary = voterWeights.delegationAddress.toLowerCase(); //delegationAddress
 
   if (delegationFee + stakingFee != 0n) {
     rewardClaims.push({

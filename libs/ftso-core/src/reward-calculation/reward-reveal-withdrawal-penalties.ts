@@ -1,4 +1,4 @@
-import { RewardEpoch, VoterWeights } from "../RewardEpoch";
+import { VoterWeights } from "../RewardEpoch";
 import { PENALTY_FACTOR } from "../configs/networks";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../utils/RewardClaim";
@@ -9,6 +9,11 @@ import { medianRewardDistributionWeight } from "./reward-utils";
 /**
  * Given a full reward offer, total rewarded weight and data for reward calculation it calculates penalty claims for reveal withdrawal offenders.
  * The penalty amount is proportional to the weight of the offender.
+ * @param offer
+ * @param revealOffenders A set of submitAddresses of reveal offenders. A reveal offender is always a registered voter.
+ * @param votersWeights Mapping from submitAddress of a registered voter to their Weights and addresses of registered voters.
+ * @param addLog
+ * @returns
  */
 export function calculateRevealWithdrawalPenalties(
   offer: IPartialRewardOffer,
