@@ -238,21 +238,21 @@ const randomGenerationBenchingWindow = () => {
 
 export const RANDOM_GENERATION_BENCHING_WINDOW = randomGenerationBenchingWindow();
 
-const firstActiveRewardEpochId = () => {
+const initialRewardEpochId = () => {
   switch (process.env.NETWORK) {
     case "from-env": {
-      if (!process.env.FIRST_ACTIVE_REWARD_EPOCH_ID) {
-        throw new Error("FIRST_ACTIVE_REWARD_EPOCH_ID value is not provided");
+      if (!process.env.INITIAL_REWARD_EPOCH_ID) {
+        throw new Error("INITIAL_REWARD_EPOCH_ID value is not provided");
       }
-      return parseInt(process.env.FIRST_ACTIVE_REWARD_EPOCH_ID);
+      return parseInt(process.env.INITIAL_REWARD_EPOCH_ID);
     }
     case "local-test":
     default:
-      return 1;
+      return 0;
   }
 };
 
-export const FIRST_ACTIVE_REWARD_EPOCH_ID = firstActiveRewardEpochId();
+export const INITIAL_REWARD_EPOCH_ID = initialRewardEpochId();
 
 const burnAddress = () => {
   switch (process.env.NETWORK) {
@@ -280,7 +280,7 @@ const additionalRewardFinalizationWindows = () => {
 export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinalizationWindows();
 
 export const GENESIS_REWARD_EPOCH_START_EVENT: RewardEpochStarted = {
-  rewardEpochId: 0,
-  timestamp: EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(0),
-  startVotingRoundId: EPOCH_SETTINGS.expectedFirstVotingRoundForRewardEpoch(0),
+  rewardEpochId: INITIAL_REWARD_EPOCH_ID,
+  timestamp: EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(INITIAL_REWARD_EPOCH_ID),
+  startVotingRoundId: EPOCH_SETTINGS.expectedFirstVotingRoundForRewardEpoch(INITIAL_REWARD_EPOCH_ID),
 };

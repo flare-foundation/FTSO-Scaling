@@ -24,7 +24,7 @@ export namespace FeedValueEncoder {
       }
       const value = Math.round(price * 10 ** feeds[index].decimals) + 2 ** 31;
       if (value <= 0 || value >= 2 ** 32) {
-        throw new Error(`Price ${price} is out of range`);
+        throw new Error(`Price ${price} is out of range for feed ${JSON.stringify(feeds[index])}`);
       }
       return value.toString(16).padStart(8, "0");
     });
