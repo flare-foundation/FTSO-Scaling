@@ -1,5 +1,6 @@
 import { expect } from "chai";
-import { calculateRevealWithdrawalPenalties } from "../../../libs/ftso-core/src/reward-calculation/reward-reveal-withdrawal-penalties";
+import { PENALTY_FACTOR } from "../../../libs/ftso-core/src/configs/networks";
+import { calculatePenalties } from "../../../libs/ftso-core/src/reward-calculation/reward-penalties";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { generateAddress, generateRewardsOffer, generateVotersWeights } from "../../utils/generators";
@@ -19,7 +20,14 @@ describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
 
   const perRoundOffer = PartialRewardOffer.splitToVotingRoundsEqually(10, 109, offerPartial);
 
-  const penaltyClaims = calculateRevealWithdrawalPenalties(perRoundOffer[0], revealOffenders, votersWeights, true);
+  const penaltyClaims = calculatePenalties(
+    perRoundOffer[0],
+    PENALTY_FACTOR(),
+    revealOffenders,
+    votersWeights,
+    true,
+    "Reveal offenders"
+  );
 
   it("should calculate penalties", function () {
     expect(penaltyClaims.length).to.eq(7);

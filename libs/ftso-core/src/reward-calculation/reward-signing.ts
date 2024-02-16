@@ -10,7 +10,7 @@ import {
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
-import { calculateDoubleSigners } from "./reward-double-signing-penalties";
+import { calculateDoubleSigners } from "./reward-double-signers";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
 
