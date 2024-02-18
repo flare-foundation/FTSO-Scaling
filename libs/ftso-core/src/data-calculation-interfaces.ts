@@ -20,7 +20,7 @@ export interface DataForCalculationsPartial {
 }
 
 export interface DataForCalculations extends DataForCalculationsPartial {
-  // Window in which offenses related to reveal withholding or providing wrong reveals are counted
+  // Window in which offenses related to reveal offenders or providing wrong reveals are counted
   randomGenerationBenchingWindow: number;
   // Set of offending submitAddresses in the randomGenerationBenchingWindow
   benchingWindowRevealOffenders: Set<Address>;

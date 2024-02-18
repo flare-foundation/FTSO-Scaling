@@ -6,6 +6,7 @@ import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
 import { medianRewardDistributionWeight } from "./reward-utils";
 import { TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
+import { RewardTypePrefix } from "./RewardTypePrefix";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
@@ -29,7 +30,7 @@ export function calculateMedianRewardClaims(
   function addInfo(text: string) {
     return addLog
       ? {
-          info: `Median: ${text}`,
+          info: `${RewardTypePrefix.MEDIAN}: ${text}`,
           votingRoundId,
         }
       : {};
@@ -207,7 +208,7 @@ function generateMedianRewardClaimsForVoter(
   function addInfo(text: string) {
     return addLog
       ? {
-          info: `Median: ${text}`,
+          info: `${RewardTypePrefix.MEDIAN}: ${text}`,
           votingRoundId,
         }
       : {};

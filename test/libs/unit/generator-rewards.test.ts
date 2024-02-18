@@ -5,6 +5,7 @@ import { DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { BURN_ADDRESS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
 import { rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import { ClaimType, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/ftso-core/src/utils/RewardClaim";
@@ -32,7 +33,7 @@ const logger = useEmptyLogger ? emptyLogger : console;
 
 ////////////////
 
-describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
+describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
   let numberOfVoters: number;
   let feeds: Feed[];
   let voters: TestVoter[];
@@ -144,12 +145,12 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
     // zero burn value
     expect((claims as IPartialRewardClaim[]).filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length).to.equal(0);
 
-    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith("Finalization"));
+    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.FINALIZATION));
     expect(finalizationClaims.length).to.equal(60);   // 5 voting rounds x 4 claims x 3 offers x 1 finalizer 
     const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
     expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
 
-    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith("Signing"));
+    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
     // console.dir(finalizationClaims)
     expect (signatureClaims.length).to.equal(600);  // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
     for (const voter of voters) {
@@ -190,11 +191,11 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
       }
     }
     // no double signing penalties
-    const doubleSigningClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith("Double signing"));
-    expect(doubleSigningClaims.length).to.equal(0);
-    // no reveal withholding penalties "Reveal withdrawal"
-    const revealWithholdingClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith("Reveal withdrawal"));
-    expect(revealWithholdingClaims.length).to.equal(0);
+    const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS));
+    expect(doubleSignerClaims.length).to.equal(0);
+    // no reveal offender penalties Reveal offenders
+    const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS));
+    expect(revealOffenderClaims.length).to.equal(0);
 
   });
 
@@ -215,7 +216,7 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
       ],
       outsideGracePeriodFinalizers: [],
       doubleSigners: [],
-      revealWithholders: [],
+      revealOffenders: [],
       independentFinalizersOutsideGracePeriod: [],
     };
     await generateRewardEpochDataForRewardCalculation(
@@ -258,8 +259,8 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
     claimSummary(voters, mergedClaims, logger);
 
     // extract signing claims
-    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith("Signing"));
-    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith("Finalization"));
+    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
+    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.FINALIZATION));
     expect(signatureClaims.length).to.equal(540);  // 3 offers x 9 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
     const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
     expect(feeFinalizationClams.length).to.equal(12); // 3 offers x 4 voting rounds (1 finalizer per voting round, amoung them is the first voter)
@@ -285,14 +286,14 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
     expect(claimSummaries[firstVoterIndex].finalizationNodeIdRewards.length).to.equal(0);
   });
 
-  it("should last voter get penalized for withholding reveal", async () => {
+  it("should last voter get penalized for reveal offense", async () => {
     const lastVoterIndex = 9;
     const scenario: RewardDataSimulationScenario = {
       noSignatureSubmitters: [],
       noGracePeriodFinalizers: [],
       outsideGracePeriodFinalizers: [],
       doubleSigners: [],
-      revealWithholders: [
+      revealOffenders: [
         {
           voterIndices: [lastVoterIndex],
           votingRoundIds: [1005]
@@ -359,7 +360,7 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
           votingRoundIds: [1005]
         }
       ],
-      revealWithholders: [],
+      revealOffenders: [],
       independentFinalizersOutsideGracePeriod: [],
     };
     await generateRewardEpochDataForRewardCalculation(
@@ -424,7 +425,7 @@ describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
       ],
       outsideGracePeriodFinalizers: [],
       doubleSigners: [],
-      revealWithholders: [],
+      revealOffenders: [],
       independentFinalizersOutsideGracePeriod: [
         {
           votingRoundIds: [1005],

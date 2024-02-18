@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { PENALTY_FACTOR } from "../../../libs/ftso-core/src/configs/networks";
+import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
 import { calculatePenalties } from "../../../libs/ftso-core/src/reward-calculation/reward-penalties";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
@@ -26,7 +27,7 @@ describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
     revealOffenders,
     votersWeights,
     true,
-    "Reveal offenders"
+    RewardTypePrefix.REVEAL_OFFENDERS
   );
 
   it("should calculate penalties", function () {

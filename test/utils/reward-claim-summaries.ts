@@ -1,5 +1,6 @@
 import { BURN_ADDRESS } from "../../libs/ftso-core/src/configs/networks";
 import { RewardOffers } from "../../libs/ftso-core/src/events";
+import { RewardTypePrefix } from "../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 import { TestVoter } from "./basic-generators";
@@ -103,19 +104,19 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
     if (voterIndex !== undefined) {
       // should be fee of direct claim from external voter
       if (claim.claimType === ClaimType.FEE) {
-        if (claim.info.startsWith("Median")) {
+        if (claim.info.startsWith(RewardTypePrefix.MEDIAN)) {
           voterIndexToSummary.get(voterIndex).medianFees.push(claim);
           continue;
-        } else if (claim.info.startsWith("Signing")) {
+        } else if (claim.info.startsWith(RewardTypePrefix.SIGNING)) {
           voterIndexToSummary.get(voterIndex).signingFees.push(claim);
           continue;
-        } else if (claim.info.startsWith("Finalization")) {
+        } else if (claim.info.startsWith(RewardTypePrefix.FINALIZATION)) {
           voterIndexToSummary.get(voterIndex).finalizationFees.push(claim);
           continue;
-        } else if (claim.info.startsWith("Double signing")) {
+        } else if (claim.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
           voterIndexToSummary.get(voterIndex).doubleSigningFeePenalties.push(claim);
           continue;
-        } else if (claim.info.startsWith("Reveal withdrawal")) {
+        } else if (claim.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
           voterIndexToSummary.get(voterIndex).revealWithdrawalFeePenalties.push(claim);
           continue;
         } else {
@@ -133,19 +134,19 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
     }
     voterIndex = delegationAddressToVoterIndex.get(beneficiary);
     if (voterIndex !== undefined) {
-      if (claim.info.startsWith("Median")) {
+      if (claim.info.startsWith(RewardTypePrefix.MEDIAN)) {
         voterIndexToSummary.get(voterIndex).medianDelegationRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith("Signing")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.SIGNING)) {
         voterIndexToSummary.get(voterIndex).signingDelegationRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith("Finalization")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.FINALIZATION)) {
         voterIndexToSummary.get(voterIndex).finalizationDelegationRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith("Double signing")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
         voterIndexToSummary.get(voterIndex).doubleSigningDelegationPenalties.push(claim);
         continue;
-      } else if (claim.info.startsWith("Reveal withdrawal")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
         voterIndexToSummary.get(voterIndex).revealWithdrawalDelegationPenalties.push(claim);
         continue;
       } else {
@@ -154,16 +155,16 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
     }
     voterIndex = nodeIdToVoterIndex.get(beneficiary);
     if (voterIndex !== undefined) {
-      if (claim.info.startsWith("Signing")) {
+      if (claim.info.startsWith(RewardTypePrefix.SIGNING)) {
         voterIndexToSummary.get(voterIndex).signingNodeIdRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith("Finalization")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.FINALIZATION)) {
         voterIndexToSummary.get(voterIndex).finalizationNodeIdRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith("Double signing")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
         voterIndexToSummary.get(voterIndex).doubleSigningNodeIdPenalties.push(claim);
         continue;
-      } else if (claim.info.startsWith("Reveal withdrawal")) {
+      } else if (claim.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
         voterIndexToSummary.get(voterIndex).revealWithdrawalNodeIdPenalties.push(claim);
         continue;
       } else {

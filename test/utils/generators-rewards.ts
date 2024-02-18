@@ -98,7 +98,7 @@ export interface RewardDataSimulationScenario {
   noGracePeriodFinalizers: VotersInVotingEpoch[];
   outsideGracePeriodFinalizers: VotersInVotingEpoch[];
   doubleSigners: VotersInVotingEpoch[];
-  revealWithholders: VotersInVotingEpoch[];
+  revealOffenders: VotersInVotingEpoch[];
   independentFinalizersOutsideGracePeriod: AddressInVotingEpoch[];
 }
 
@@ -107,7 +107,7 @@ export const happyRewardDataSimulationScenario: RewardDataSimulationScenario = {
   noGracePeriodFinalizers: [],
   outsideGracePeriodFinalizers: [],
   doubleSigners: [],
-  revealWithholders: [],
+  revealOffenders: [],
   independentFinalizersOutsideGracePeriod: [],
 }
 
@@ -263,19 +263,19 @@ export async function generateRewardEpochDataForRewardCalculation(
     return !!outsideGPFinalizerVoters.get(voterRoundKey(voterIndex, votingEpochId));
   }
 
-  let revealWithholderMap: Map<string, boolean>;
-  function isVoterRevealWithholder(voterIndex: number, votingEpochId: number) {
-    if (!revealWithholderMap) {
-      revealWithholderMap = new Map<string, boolean>();
-      for (const entry of scenario.revealWithholders) {
+  let revealOffendersMap: Map<string, boolean>;
+  function isVoterRevealOffender(voterIndex: number, votingEpochId: number) {
+    if (!revealOffendersMap) {
+      revealOffendersMap = new Map<string, boolean>();
+      for (const entry of scenario.revealOffenders) {
         for (const votingRoundId of entry.votingRoundIds) {
           for (const voterIndex of entry.voterIndices) {
-            revealWithholderMap.set(voterRoundKey(voterIndex, votingRoundId), true);
+            revealOffendersMap.set(voterRoundKey(voterIndex, votingRoundId), true);
           }
         }
       }
     }
-    return !!revealWithholderMap.get(voterRoundKey(voterIndex, votingEpochId));
+    return !!revealOffendersMap.get(voterRoundKey(voterIndex, votingEpochId));
   }
 
   let doubleSignerMap: Map<string, boolean>;
@@ -589,7 +589,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         if (!voterRevealData) {
           throw new Error(`No reveal data for voter: ${voterIndex}`);
         }
-        if (isVoterRevealWithholder(voterIndex, votingEpochId - 1)) {
+        if (isVoterRevealOffender(voterIndex, votingEpochId - 1)) {
           continue;
         }
         const msg: IPayloadMessage<IRevealData> = {

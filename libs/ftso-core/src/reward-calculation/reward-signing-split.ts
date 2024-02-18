@@ -1,6 +1,7 @@
 import { VoterWeights } from "../RewardEpoch";
 import { CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { RewardTypePrefix } from "./RewardTypePrefix";
 
 /**
  * Given an amount of a reward it produces specific partial reward claims split based when reward amount is assigned to
@@ -16,7 +17,7 @@ export function generateSigningWeightBasedClaimsForVoter(
   amount: bigint,
   voterWeights: VoterWeights,
   votingRoundId: number,
-  info: string,
+  info: RewardTypePrefix,
   addLog = false
 ): IPartialRewardClaim[] {
   function addInfo(text: string) {

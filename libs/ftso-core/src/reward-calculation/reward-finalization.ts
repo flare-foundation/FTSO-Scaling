@@ -2,6 +2,7 @@ import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
+import { RewardTypePrefix } from "./RewardTypePrefix";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePeriod } from "./reward-utils";
 
@@ -17,7 +18,7 @@ export function calculateFinalizationRewardClaims(
   function addInfo(text: string) {
     return addLog
       ? {
-          info: `Finalization: ${text}`,
+          info: `${RewardTypePrefix.FINALIZATION}: ${text}`,
           votingRoundId: offer.votingRoundId,
         }
       : {};
@@ -85,7 +86,13 @@ export function calculateFinalizationRewardClaims(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, voterWeight, offer.votingRoundId, "Finalization", addLog)
+      ...generateSigningWeightBasedClaimsForVoter(
+        amount,
+        voterWeight,
+        offer.votingRoundId,
+        RewardTypePrefix.FINALIZATION,
+        addLog
+      )
     );
   }
 

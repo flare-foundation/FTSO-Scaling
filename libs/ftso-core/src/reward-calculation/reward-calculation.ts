@@ -10,6 +10,7 @@ import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
+import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
@@ -164,7 +165,7 @@ export async function partialRewardClaimsForVotingRound(
         rewardDataForCalculations.dataForCalculations.revealOffenders,
         voterWeights,
         addLog,
-        "Reveal offenders"
+        RewardTypePrefix.REVEAL_OFFENDERS
       );
 
       // Calculate penalties for reveal double signers
@@ -187,7 +188,7 @@ export async function partialRewardClaimsForVotingRound(
         doubleSignersSubmit,
         voterWeights,
         addLog,
-        "Double signers"
+        RewardTypePrefix.DOUBLE_SIGNERS
       );
 
       // Merge all reward claims into a single array

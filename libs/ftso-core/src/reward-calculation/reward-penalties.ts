@@ -1,8 +1,8 @@
 import { VoterWeights } from "../RewardEpoch";
-import { PENALTY_FACTOR } from "../configs/networks";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
+import { RewardTypePrefix } from "./RewardTypePrefix";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { medianRewardDistributionWeight } from "./reward-utils";
 
@@ -23,7 +23,7 @@ export function calculatePenalties(
   offenders: Set<Address>,
   votersWeights: Map<Address, VoterWeights>,
   addLog = false,
-  penaltyType: string
+  penaltyType: RewardTypePrefix
 ): IPartialRewardClaim[] {
   const totalWeight = [...votersWeights.values()]
     .map(voterWeight => medianRewardDistributionWeight(voterWeight))

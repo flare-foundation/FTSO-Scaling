@@ -10,6 +10,7 @@ import {
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
@@ -31,7 +32,7 @@ export function calculateSigningRewards(
   function addInfo(text: string) {
     return addLog
       ? {
-          info: `Signing: ${text}`,
+          info: `${RewardTypePrefix.SIGNING}: ${text}`,
           votingRoundId,
         }
       : {};
@@ -125,7 +126,13 @@ export function calculateSigningRewards(
     const voterWeights = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
 
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, voterWeights, offer.votingRoundId, "Signing", addLog)
+      ...generateSigningWeightBasedClaimsForVoter(
+        amount,
+        voterWeights,
+        offer.votingRoundId,
+        RewardTypePrefix.SIGNING,
+        addLog
+      )
     );
   }
   // assert check for undistributed amount
