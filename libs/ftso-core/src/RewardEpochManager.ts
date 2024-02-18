@@ -1,13 +1,9 @@
 import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
+import { RewardEpochDuration } from "./utils/RewardEpochDuration";
 import { EPOCH_SETTINGS, GENESIS_REWARD_EPOCH_START_EVENT } from "./configs/networks";
 import { RewardEpochStarted, SigningPolicyInitialized } from "./events";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
-
-export interface RewardEpochDuration {
-  startVotingRoundId: VotingEpochId;
-  endVotingRoundId: VotingEpochId;
-}
 
 /**
  * Manages reward epochs
@@ -168,7 +164,10 @@ export class RewardEpochManager {
    * @param rewardEpochId
    * @returns
    */
-  public async getRewardEpochDurationRange(rewardEpochId: number): Promise<RewardEpochDuration> {
+  public async getRewardEpochDurationRange(
+    rewardEpochId: number,
+    useExpectedEndIfNoSigningPolicyAfter = false
+  ): Promise<RewardEpochDuration> {
     const lowestExpectedIndexerHistoryTime = Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
     const signingPolicyInitializedEventsResponse = await this.indexerClient.getLatestSigningPolicyInitializedEvents(
       lowestExpectedIndexerHistoryTime
@@ -182,14 +181,27 @@ export class RewardEpochManager {
       const signingPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i];
       if (signingPolicyInitializedEvent.rewardEpochId === rewardEpochId) {
         if (i === signingPolicyInitializedEventsResponse.data!.length - 1) {
-          throw new Error(
-            "Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history"
-          );
+          if (!useExpectedEndIfNoSigningPolicyAfter) {
+            throw new Error(
+              "Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history"
+            );
+          } else {
+            const expectedEndVotingRoundId =
+              EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId + 1) - 1;
+            return {
+              rewardEpochId,
+              startVotingRoundId: signingPolicyInitializedEvent.startVotingRoundId,
+              endVotingRoundId: expectedEndVotingRoundId,
+              expectedEndUsed: true,
+            };
+          }
         }
         const nextSigningPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i + 1];
         return {
+          rewardEpochId,
           startVotingRoundId: signingPolicyInitializedEvent.startVotingRoundId,
           endVotingRoundId: nextSigningPolicyInitializedEvent.startVotingRoundId - 1,
+          expectedEndUsed: false,
         };
       }
     }

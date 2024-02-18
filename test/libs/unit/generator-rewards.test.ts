@@ -6,7 +6,7 @@ import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { BURN_ADDRESS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
 import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
-import { rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import { initializeRewardEpochStorage, partialRewardClaimsForVotingRound, rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import { ClaimType, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/ftso-core/src/utils/RewardClaim";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
@@ -31,7 +31,83 @@ import {
 let useEmptyLogger = true;
 const logger = useEmptyLogger ? emptyLogger : console;
 
-////////////////
+function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mergedClaims: IRewardClaim[]) {
+  // Number of claims checks
+  expect(claims.length).to.equal(960);
+  expect(mergedClaims.length).to.equal(40);
+  expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
+  expect((claims as any).filter(c => c.claimType === ClaimType.FEE).length).to.equal(315);
+  expect((claims as any).filter(c => c.claimType === ClaimType.WNAT).length).to.equal(315);
+  expect((claims as any).filter(c => c.claimType === ClaimType.MIRROR).length).to.equal(330);
+  expect((claims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
+
+  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
+  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.FEE).length).to.equal(10);
+  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.WNAT).length).to.equal(10);
+  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.MIRROR).length).to.equal(20);
+  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
+
+  // no negative claims
+  expect((claims as any).filter(c => c.amount < 0).length).to.equal(0);
+  // no direct claims
+  expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
+  // zero burn value
+  expect((claims as IPartialRewardClaim[]).filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length).to.equal(0);
+
+  const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.FINALIZATION));
+  expect(finalizationClaims.length).to.equal(60);   // 5 voting rounds x 4 claims x 3 offers x 1 finalizer 
+  const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
+  expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
+
+  const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
+  // console.dir(finalizationClaims)
+  expect(signatureClaims.length).to.equal(600);  // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
+  for (const voter of voters) {
+    // all voters have fees in merged claims
+    const feeClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE);
+    expect(feeClaim).to.not.be.undefined;
+    expect(Number(feeClaim.amount)).gt(0);
+    // all voters have delegation rewards in merged claims
+    const delegationClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT);
+    expect(delegationClaim).to.not.be.undefined;
+    expect(Number(delegationClaim.amount)).gt(0);
+    // all nodes of voters have staking rewards in merged claims
+    for (const nodeId of voter.nodeIds) {
+      const stakingClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR);
+      expect(stakingClaim).to.not.be.undefined;
+      expect(Number(stakingClaim.amount)).gt(0);
+    }
+    // each voter has a signature claims for each voting round
+    const signatureFeeClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase());
+    expect(signatureFeeClaim.length).to.equal(15);  // 3 offers x 5 voting rounds
+    for (const c of signatureFeeClaim) {
+      expect(Number(c.amount)).gt(0);
+      expect(c.claimType).to.equal(ClaimType.FEE);
+    }
+    const signatureDelegationClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase());
+    expect(signatureDelegationClaim.length).to.equal(15); // 3 offers x 5 voting rounds
+    for (const c of signatureDelegationClaim) {
+      expect(Number(c.amount)).gt(0);
+      expect(c.claimType).to.equal(ClaimType.WNAT);
+    }
+    for (const nodeId of voter.nodeIds) {
+      const stakingClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === nodeId.toLowerCase());
+      expect(stakingClaim.length).to.equal(15); // 5 voting rounds x 3 offers
+      for (const c of stakingClaim) {
+        expect(Number(c.amount)).gt(0);
+        expect(c.claimType).to.equal(ClaimType.MIRROR);
+      }
+    }
+  }
+  // no double signing penalties
+  const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS));
+  expect(doubleSignerClaims.length).to.equal(0);
+  // no reveal offender penalties Reveal offenders
+  const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS));
+  expect(revealOffenderClaims.length).to.equal(0);
+
+}
+
 
 describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
   let numberOfVoters: number;
@@ -122,81 +198,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     offersSummary(rewardEpoch.rewardOffers, logger);
     votersSummary(voters, logger);
     claimSummary(voters, mergedClaims, logger);
-
-    // Number of claims checks
-    expect(claims.length).to.equal(960); 
-    expect(mergedClaims.length).to.equal(40);
-    expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
-    expect((claims as any).filter(c => c.claimType === ClaimType.FEE).length).to.equal(315);
-    expect((claims as any).filter(c => c.claimType === ClaimType.WNAT).length).to.equal(315);
-    expect((claims as any).filter(c => c.claimType === ClaimType.MIRROR).length).to.equal(330);
-    expect((claims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
-
-    expect((mergedClaims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
-    expect((mergedClaims as any).filter(c => c.claimType === ClaimType.FEE).length).to.equal(10);
-    expect((mergedClaims as any).filter(c => c.claimType === ClaimType.WNAT).length).to.equal(10);
-    expect((mergedClaims as any).filter(c => c.claimType === ClaimType.MIRROR).length).to.equal(20);
-    expect((mergedClaims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
-
-    // no negative claims
-    expect((claims as any).filter(c => c.amount < 0).length).to.equal(0);
-    // no direct claims
-    expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
-    // zero burn value
-    expect((claims as IPartialRewardClaim[]).filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length).to.equal(0);
-
-    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.FINALIZATION));
-    expect(finalizationClaims.length).to.equal(60);   // 5 voting rounds x 4 claims x 3 offers x 1 finalizer 
-    const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
-    expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
-
-    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
-    // console.dir(finalizationClaims)
-    expect (signatureClaims.length).to.equal(600);  // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
-    for (const voter of voters) {
-      // all voters have fees in merged claims
-      const feeClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE);
-      expect(feeClaim).to.not.be.undefined;
-      expect(Number(feeClaim.amount)).gt(0);
-      // all voters have delegation rewards in merged claims
-      const delegationClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT);
-      expect(delegationClaim).to.not.be.undefined;
-      expect(Number(delegationClaim.amount)).gt(0);
-      // all nodes of voters have staking rewards in merged claims
-      for (const nodeId of voter.nodeIds) {
-        const stakingClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR);
-        expect(stakingClaim).to.not.be.undefined;
-        expect(Number(stakingClaim.amount)).gt(0);
-      }
-      // each voter has a signature claims for each voting round
-      const signatureFeeClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase());
-      expect(signatureFeeClaim.length).to.equal(15);  // 3 offers x 5 voting rounds
-      for(const c of signatureFeeClaim) {
-        expect(Number(c.amount)).gt(0);
-        expect(c.claimType).to.equal(ClaimType.FEE);
-      }
-      const signatureDelegationClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase());
-      expect(signatureDelegationClaim.length).to.equal(15); // 3 offers x 5 voting rounds
-      for(const c of signatureDelegationClaim) {
-        expect(Number(c.amount)).gt(0);
-        expect(c.claimType).to.equal(ClaimType.WNAT);
-      }
-      for (const nodeId of voter.nodeIds) {
-        const stakingClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === nodeId.toLowerCase());      
-        expect(stakingClaim.length).to.equal(15); // 5 voting rounds x 3 offers
-        for(const c of stakingClaim) {
-          expect(Number(c.amount)).gt(0);
-          expect(c.claimType).to.equal(ClaimType.MIRROR);
-        }
-      }
-    }
-    // no double signing penalties
-    const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS));
-    expect(doubleSignerClaims.length).to.equal(0);
-    // no reveal offender penalties Reveal offenders
-    const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS));
-    expect(revealOffenderClaims.length).to.equal(0);
-
+    happyPathChecks(voters, claims, mergedClaims);
   });
 
   it("should first voter never sign and finalize", async () => {
@@ -278,7 +280,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     expect(claimSummaries[numberOfVoters].externalVoter.toLowerCase()).to.equal(BURN_ADDRESS.toLowerCase());
     expect(claimSummaries[numberOfVoters].directClaims.length).to.equal(3);
 
-    expect(claimSummaries[firstVoterIndex].signingFees.length).to.equal(0); 
+    expect(claimSummaries[firstVoterIndex].signingFees.length).to.equal(0);
     expect(claimSummaries[firstVoterIndex].signingDelegationRewards.length).to.equal(0);
     expect(claimSummaries[firstVoterIndex].signingNodeIdRewards.length).to.equal(0);
     expect(claimSummaries[firstVoterIndex].finalizationFees.length).to.equal(0);
@@ -340,7 +342,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     expect(claimSummaries[lastVoterIndex].revealWithdrawalFeePenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[lastVoterIndex].revealWithdrawalDelegationPenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[lastVoterIndex].revealWithdrawalNodeIdPenalties.length).to.equal(6); // 3 offers x 2 nodes
-    for(let i = 0; i < lastVoterIndex; i++) {
+    for (let i = 0; i < lastVoterIndex; i++) {
       const summary = claimSummaries[i];
       expect(summary.revealWithdrawalFeePenalties.length).to.equal(0);
       expect(summary.revealWithdrawalDelegationPenalties.length).to.equal(0);
@@ -402,8 +404,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     expect(claimSummaries[secondLastVoterIndex].doubleSigningFeePenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[secondLastVoterIndex].doubleSigningDelegationPenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[secondLastVoterIndex].doubleSigningNodeIdPenalties.length).to.equal(6); // 3 offers x 2 nodes
-    for(let i = 0; i < numberOfVoters; i++) {
-      if(i === secondLastVoterIndex) {
+    for (let i = 0; i < numberOfVoters; i++) {
+      if (i === secondLastVoterIndex) {
         continue;
       }
       const summary = claimSummaries[i];
@@ -476,5 +478,68 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     expect(aSet.size).to.equal(1);
     expect(aSet.has(1005)).to.be.true;
   });
+
+
+  it("should happy path scenario work with storage", async () => {
+    await generateRewardEpochDataForRewardCalculation(
+      clock,
+      entityManager,
+      defaultSigningPolicyProtocolSettings,
+      feeds,
+      offerAmount,
+      rewardEpochId,
+      voters,
+      voterFeedValue,
+      happyRewardDataSimulationScenario,
+      logger
+    );
+    await printSummary(entityManager, voters, undefined, logger);
+    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
+    logger.log("Earliest timestamp", earliestTimestamp);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const rewardEpochManger = new RewardEpochManager(indexerClient);
+    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+
+    const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+    const benchingWindowRevealOffenders = 1;
+    const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
+
+    const addLog = true;
+    const merge = false;
+
+    // Fix here
+
+    const useExpectedEndIfNoSigningPolicyAfter = true;
+    const rewardEpochDuration = await initializeRewardEpochStorage(
+      rewardEpoch.rewardEpochId,
+      rewardEpochManger,
+      useExpectedEndIfNoSigningPolicyAfter
+    );
+
+    const serializeResults = true;
+    const claims: IPartialRewardClaim[] = [];
+    for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
+      const rewardClaims = await partialRewardClaimsForVotingRound(
+        rewardEpochId,
+        votingRoundId,
+        benchingWindowRevealOffenders,
+        dataManager,
+        undefined,  // should be read from calculations folder
+        merge,
+        addLog,
+        serializeResults
+      );
+      claims.push(...rewardClaims);
+    }
+
+    const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
+    offersSummary(rewardEpoch.rewardOffers, logger);
+    votersSummary(voters, logger);
+    claimSummary(voters, mergedClaims, logger);
+
+    happyPathChecks(voters, claims, mergedClaims);
+  });
+
 
 });

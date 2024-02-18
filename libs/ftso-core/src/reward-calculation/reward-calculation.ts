@@ -8,6 +8,7 @@ import {
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
+import { RewardEpochDuration } from "../utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
 import { RewardTypePrefix } from "./RewardTypePrefix";
@@ -15,6 +16,11 @@ import { calculateDoubleSigners } from "./reward-double-signers";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
+import {
+  deserializeGranulatedPartialOfferMap,
+  serializeGranulatedPartialOfferMap,
+  serializePartialClaimsForVotingRoundId,
+} from "../utils/serialize-deserialize";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
 
@@ -47,6 +53,7 @@ export async function rewardClaimsForRewardEpoch(
   let allRewardClaims: IPartialRewardClaim[] = [];
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
     const rewardClaims = await partialRewardClaimsForVotingRound(
+      rewardEpochId,
       votingRoundId,
       randomGenerationBenchingWindow,
       dataManager,
@@ -66,6 +73,32 @@ export async function rewardClaimsForRewardEpoch(
 }
 
 /**
+ * Initializes reward epoch storage for the given reward epoch.
+ * Creates calculation folders with granulated offer data.
+ */
+export async function initializeRewardEpochStorage(
+  rewardEpochId: number,
+  rewardEpochManager: RewardEpochManager,
+  useExpectedEndIfNoSigningPolicyAfter = false
+): Promise<RewardEpochDuration> {
+  const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
+    rewardEpochId,
+    useExpectedEndIfNoSigningPolicyAfter
+  );
+  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
+  // Partial offer generation from reward offers
+  // votingRoundId => feedName => partialOffer
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(
+    rewardEpochDuration.startVotingRoundId,
+    rewardEpochDuration.endVotingRoundId,
+    rewardEpoch.rewardOffers
+  );
+  // sync call
+  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap);
+  return rewardEpochDuration;
+}
+
+/**
  * Calculates partial reward claims for the given voting round.
  * The map @param feedOffers provides partial reward offers for each feed in the voting round.
  * For each such offer the offer is first split into three parts: median, signing and finalization.
@@ -75,13 +108,19 @@ export async function rewardClaimsForRewardEpoch(
  * All reward claims are then merged into a single array and returned.
  */
 export async function partialRewardClaimsForVotingRound(
+  rewardEpochId: number,
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
-  feedOffers: Map<string, IPartialRewardOffer[]>,
+  feedOffersParam: Map<string, IPartialRewardOffer[]> | undefined,
   merge = true,
-  addLog = false
+  addLog = false,
+  serializeResults = false
 ): Promise<IPartialRewardClaim[]> {
+  let feedOffers = feedOffersParam;
+  if (feedOffers === undefined) {
+    feedOffers = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId);
+  }
   let allRewardClaims: IPartialRewardClaim[] = [];
   // Obtain data for reward calculation
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
@@ -106,10 +145,6 @@ export async function partialRewardClaimsForVotingRound(
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of medianResults) {
     medianCalculationMap.set(medianResult.feed.name, medianResult);
-  }
-  if (feedOffers === undefined) {
-    // This should never happen
-    throw new Error("Critical error: Feed offers are undefined");
   }
 
   // Select eligible voters for finalization rewards
@@ -202,5 +237,17 @@ export async function partialRewardClaimsForVotingRound(
       }
     }
   }
+  if (serializeResults) {
+    serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims);
+  }
   return allRewardClaims;
+}
+
+export function aggregateRewardClaimsInStorage(
+  rewardEpochId: number,
+  startVotingRoundId: number,
+  endVotingRoundId: number,
+  forceRecalculate = false
+): IRewardClaim[] {
+  throw new Error("Not yet implemented");
 }

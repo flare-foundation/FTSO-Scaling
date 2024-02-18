@@ -377,3 +377,5 @@ export const FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS = () => {
  * against the malicious behavior.
  */
 export const CAPPED_STAKING_FEE_BIPS = 2000;
+
+export const CALCULATIONS_FOLDER = () => "calculations";
