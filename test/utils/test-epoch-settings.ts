@@ -98,10 +98,11 @@ export const defaultSigningPolicyProtocolSettings: FSPSettings = {
   signingPolicyThresholdPPM: 500000,
 };
 export const realtimeShorterEpochSettings: EpochSettingsConfig = {
+  // DO NOT CHANGE THOSE SETTINGS AS TESTS BASE ON THEM
   firstVotingRoundStartTs: 1704250616,
   votingEpochDurationSeconds: 90,
   firstRewardEpochStartVotingRoundId: 1000,
-  rewardEpochDurationInVotingEpochs: 5,  //20
+  rewardEpochDurationInVotingEpochs: 5,
   revealDeadlineSeconds: 30,
 };
 

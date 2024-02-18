@@ -1,7 +1,7 @@
 import { BURN_ADDRESS } from "../../libs/ftso-core/src/configs/networks";
 import { RewardOffers } from "../../libs/ftso-core/src/events";
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
-import { ClaimType, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
+import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 import { TestVoter } from "./basic-generators";
 
 function claimListSummary(beneficiary: string, voterIndex: number, type: "node" | "delegation" | "signing" | "identity" | "none", claims: IRewardClaim[], padding = 6) {
@@ -33,6 +33,174 @@ function claimListSummary(beneficiary: string, voterIndex: number, type: "node" 
   return `${indexValue.padStart(5)} ${addressText}: FEE: ${fee}|  WNAT: ${wnat}|  MIRROR: ${mirror}|  DIRECT: ${direct}|  CCHAIN: ${cchain}`;
 }
 
+export interface VoterClaimSummary {
+  voter?: TestVoter;
+  voterIndex?: number;
+  externalVoter?: string;
+  medianFees: IPartialRewardClaim[];
+  medianDelegationRewards: IPartialRewardClaim[];
+  signingFees: IPartialRewardClaim[];
+  signingDelegationRewards: IPartialRewardClaim[];
+  signingNodeIdRewards: IPartialRewardClaim[];
+  finalizationFees: IPartialRewardClaim[];
+  finalizationDelegationRewards: IPartialRewardClaim[];
+  finalizationNodeIdRewards: IPartialRewardClaim[];
+  doubleSigningFeePenalties: IPartialRewardClaim[];
+  doubleSigningDelegationPenalties: IPartialRewardClaim[];
+  doubleSigningNodeIdPenalties: IPartialRewardClaim[];
+  revealWithdrawalFeePenalties: IPartialRewardClaim[];
+  revealWithdrawalDelegationPenalties: IPartialRewardClaim[];
+  revealWithdrawalNodeIdPenalties: IPartialRewardClaim[];
+  directClaims: IPartialRewardClaim[];
+}
+
+function initializeEmptyVoterClaimSummary(): VoterClaimSummary {
+  return {
+    medianFees: [],
+    medianDelegationRewards: [],
+    signingFees: [],
+    signingDelegationRewards: [],
+    signingNodeIdRewards: [],
+    finalizationFees: [],
+    finalizationDelegationRewards: [],
+    finalizationNodeIdRewards: [],
+    doubleSigningFeePenalties: [],
+    doubleSigningDelegationPenalties: [],
+    doubleSigningNodeIdPenalties: [],
+    revealWithdrawalFeePenalties: [],
+    revealWithdrawalDelegationPenalties: [],
+    revealWithdrawalNodeIdPenalties: [],
+    directClaims: []
+  };
+}
+
+export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IPartialRewardClaim[]): VoterClaimSummary[] {
+  const nodeIdToVoterIndex = new Map<string, number>();
+  const signingAddressToVoterIndex = new Map<string, number>();
+  const delegationAddressToVoterIndex = new Map<string, number>();
+  const identityAddressToVoterIndex = new Map<string, number>();
+  const voterIndexToSummary = new Map<number, VoterClaimSummary>();
+  const externalAddressToSummary = new Map<string, VoterClaimSummary>();
+
+  for (let i = 0; i < voters.length; i++) {
+    const voter = voters[i];
+    for (const nodeId of voter.nodeIds) {
+      nodeIdToVoterIndex.set(nodeId, i);
+    }
+    signingAddressToVoterIndex.set(voter.signingAddress.toLowerCase(), i);
+    identityAddressToVoterIndex.set(voter.identityAddress.toLowerCase(), i);
+    delegationAddressToVoterIndex.set(voter.delegationAddress.toLowerCase(), i);
+    const voterSummary = initializeEmptyVoterClaimSummary();
+    voterSummary.voter = voter;
+    voterSummary.voterIndex = i;
+    voterIndexToSummary.set(i, voterSummary);
+  }
+
+  for (let claim of claims) {
+    const isVoterClaim = false;
+    const beneficiary = claim.beneficiary.toLowerCase();
+    let voterIndex = identityAddressToVoterIndex.get(beneficiary);
+    if (voterIndex !== undefined) {
+      // should be fee of direct claim from external voter
+      if (claim.claimType === ClaimType.FEE) {
+        if (claim.info.startsWith("Median")) {
+          voterIndexToSummary.get(voterIndex).medianFees.push(claim);
+          continue;
+        } else if (claim.info.startsWith("Signing")) {
+          voterIndexToSummary.get(voterIndex).signingFees.push(claim);
+          continue;
+        } else if (claim.info.startsWith("Finalization")) {
+          voterIndexToSummary.get(voterIndex).finalizationFees.push(claim);
+          continue;
+        } else if (claim.info.startsWith("Double signing")) {
+          voterIndexToSummary.get(voterIndex).doubleSigningFeePenalties.push(claim);
+          continue;
+        } else if (claim.info.startsWith("Reveal withdrawal")) {
+          voterIndexToSummary.get(voterIndex).revealWithdrawalFeePenalties.push(claim);
+          continue;
+        } else {
+          throw new Error(`Unknown claim info: ${claim.info}, identityAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
+        }
+      } else if (claim.claimType === ClaimType.DIRECT) {
+        let summary = externalAddressToSummary.get(beneficiary) || initializeEmptyVoterClaimSummary();
+        summary.directClaims.push(claim);
+        summary.externalVoter = beneficiary;
+        externalAddressToSummary.set(beneficiary, summary);
+        continue;
+      } else {
+        throw new Error(`Invalid claim type ${claim.claimType} for identity address: ${claim.claimType}, voterIndex: ${voterIndex}`);
+      }
+    }
+    voterIndex = delegationAddressToVoterIndex.get(beneficiary);
+    if (voterIndex !== undefined) {
+      if (claim.info.startsWith("Median")) {
+        voterIndexToSummary.get(voterIndex).medianDelegationRewards.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Signing")) {
+        voterIndexToSummary.get(voterIndex).signingDelegationRewards.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Finalization")) {
+        voterIndexToSummary.get(voterIndex).finalizationDelegationRewards.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Double signing")) {
+        voterIndexToSummary.get(voterIndex).doubleSigningDelegationPenalties.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Reveal withdrawal")) {
+        voterIndexToSummary.get(voterIndex).revealWithdrawalDelegationPenalties.push(claim);
+        continue;
+      } else {
+        throw new Error(`Unknown claim info: ${claim.info}, delegationAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
+      }
+    }
+    voterIndex = nodeIdToVoterIndex.get(beneficiary);
+    if (voterIndex !== undefined) {
+      if (claim.info.startsWith("Signing")) {
+        voterIndexToSummary.get(voterIndex).signingNodeIdRewards.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Finalization")) {
+        voterIndexToSummary.get(voterIndex).finalizationNodeIdRewards.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Double signing")) {
+        voterIndexToSummary.get(voterIndex).doubleSigningNodeIdPenalties.push(claim);
+        continue;
+      } else if (claim.info.startsWith("Reveal withdrawal")) {
+        voterIndexToSummary.get(voterIndex).revealWithdrawalNodeIdPenalties.push(claim);
+        continue;
+      } else {
+        throw new Error(`Unknown claim info: ${claim.info}, nodeId: ${beneficiary}, voterIndex: ${voterIndex}`);
+      }
+    }
+    voterIndex = signingAddressToVoterIndex.get(beneficiary);
+    if (voterIndex !== undefined) {
+      if (claim.claimType === ClaimType.DIRECT) {
+        voterIndexToSummary.get(voterIndex).directClaims.push(claim);
+        continue;
+      }
+      throw new Error(`Unknown claim info: ${claim.info}, signingAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
+    }
+
+    if(claim.claimType !== ClaimType.DIRECT) {
+      throw new Error(`Unknown claim info: ${claim.info}, beneficiary: ${beneficiary} not a voter, but claim is not DIRECT`);
+    }
+    // DIRECT claim by external voter
+    const summary = externalAddressToSummary.get(beneficiary) || initializeEmptyVoterClaimSummary();
+    summary.directClaims.push(claim);
+    summary.externalVoter = beneficiary;
+    externalAddressToSummary.set(beneficiary, summary);
+  } // for claim of claims
+
+  const result: VoterClaimSummary[] = [];
+  for (let i = 0; i < voters.length; i++) {
+    result.push(voterIndexToSummary.get(i));
+  }
+  for (let summary of externalAddressToSummary.values()) {
+    result.push(summary);
+  }
+  return result;
+}
+/**
+ * Calculates and possibly prints out the summary of the rewards per voter 
+ */
 export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger: ILogger = emptyLogger) {
   const voterToClaimMap = new Map<string, IRewardClaim[]>();
   const nodeIdToVoterIndex = new Map<string, number>();

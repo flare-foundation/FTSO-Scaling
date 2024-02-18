@@ -3,7 +3,7 @@ import { Address } from "../voting-types";
 import Web3 from "web3";
 import { encodeParameters } from "web3-eth-abi";
 
-const web3 = new Web3();
+const web3 = new Web3("https://dummy");
 /**
  * Random voter selector for finalization reward eligibility calculation.
  */

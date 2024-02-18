@@ -81,9 +81,9 @@ export function offersForFeeds(
   return result;
 }
 
-export interface VoterInVotingEpoch {
+export interface VotersInVotingEpoch {
   votingRoundIds: number[];
-  voterIndex: number;
+  voterIndices: number[];
 }
 
 export interface AddressInVotingEpoch {
@@ -94,11 +94,11 @@ export interface AddressInVotingEpoch {
 }
 
 export interface RewardDataSimulationScenario {
-  noSignatureSubmitters: VoterInVotingEpoch[];
-  noGracePeriodFinalizers: VoterInVotingEpoch[];
-  outsideGracePeriodFinalizers: VoterInVotingEpoch[];
-  doubleSigners: VoterInVotingEpoch[];
-  revealWithholders: VoterInVotingEpoch[];
+  noSignatureSubmitters: VotersInVotingEpoch[];
+  noGracePeriodFinalizers: VotersInVotingEpoch[];
+  outsideGracePeriodFinalizers: VotersInVotingEpoch[];
+  doubleSigners: VotersInVotingEpoch[];
+  revealWithholders: VotersInVotingEpoch[];
   independentFinalizersOutsideGracePeriod: AddressInVotingEpoch[];
 }
 
@@ -224,7 +224,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       noVoterSubmissionMap = new Map<string, boolean>();
       for (const entry of scenario.noSignatureSubmitters) {
         for (const votingRoundId of entry.votingRoundIds) {
-          noVoterSubmissionMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+          for (const voterIndex of entry.voterIndices) {
+            noVoterSubmissionMap.set(voterRoundKey(voterIndex, votingRoundId), true);
+          }
         }
       }
     }
@@ -237,7 +239,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       noVoterFinalizingGPMap = new Map<string, boolean>();
       for (const entry of scenario.noGracePeriodFinalizers) {
         for (const votingRoundId of entry.votingRoundIds) {
-          noVoterFinalizingGPMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+          for (const voterIndex of entry.voterIndices) {
+            noVoterFinalizingGPMap.set(voterRoundKey(voterIndex, votingRoundId), true);
+          }
         }
       }
     }
@@ -250,7 +254,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       outsideGPFinalizerVoters = new Map<string, boolean>();
       for (const entry of scenario.outsideGracePeriodFinalizers) {
         for (const votingRoundId of entry.votingRoundIds) {
-          outsideGPFinalizerVoters.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+          for (const voterIndex of entry.voterIndices) {
+            outsideGPFinalizerVoters.set(voterRoundKey(voterIndex, votingRoundId), true);
+          }
         }
       }
     }
@@ -263,7 +269,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       revealWithholderMap = new Map<string, boolean>();
       for (const entry of scenario.revealWithholders) {
         for (const votingRoundId of entry.votingRoundIds) {
-          revealWithholderMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+          for (const voterIndex of entry.voterIndices) {
+            revealWithholderMap.set(voterRoundKey(voterIndex, votingRoundId), true);
+          }
         }
       }
     }
@@ -276,7 +284,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       doubleSignerMap = new Map<string, boolean>();
       for (const entry of scenario.doubleSigners) {
         for (const votingRoundId of entry.votingRoundIds) {
-          doubleSignerMap.set(voterRoundKey(entry.voterIndex, votingRoundId), true);
+          for (const voterIndex of entry.voterIndices) {
+            doubleSignerMap.set(voterRoundKey(voterIndex, votingRoundId), true);
+          }
         }
       }
     }
@@ -619,7 +629,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         }
         const voter = voters[voterIndex];
         const calculator = voterIndexToMiniFTSOCalculator.get(voterIndex);
-        
+
         const payload = await calculator.getSignaturePayload(votingEpochId - 1);
         const signaturePayload = sigSignature + payload.slice(2);
         const signatureTx = generateTx(
@@ -631,7 +641,7 @@ export async function generateRewardEpochDataForRewardCalculation(
           signaturePayload
         );
         entities.push(signatureTx);
-        if(isVoterDoubleSigner(voterIndex, votingEpochId - 1)) {
+        if (isVoterDoubleSigner(voterIndex, votingEpochId - 1)) {
           const payload = await calculator.getSignaturePayload(votingEpochId - 1, true);
           const signaturePayload = sigSignature + payload.slice(2);
           const signatureTx = generateTx(
@@ -642,7 +652,7 @@ export async function generateRewardEpochDataForRewardCalculation(
             timestamp,
             signaturePayload
           );
-          entities.push(signatureTx);  
+          entities.push(signatureTx);
         }
         // Increase block and timestamp, but if near the end, pack all of them into one block
         if (timestamp < finalizationStartDeadline - 1) {

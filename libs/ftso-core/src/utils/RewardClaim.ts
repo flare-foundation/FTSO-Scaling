@@ -176,9 +176,9 @@ export namespace RewardClaim {
         finalClaims.push(claim);
         continue;
       }
-      
+
       const negativeAmount = -1n * negativeClaim.amount;
-      if(negativeAmount <= 0) {
+      if (negativeAmount <= 0) {
         throw new Error(`Negative amount is not negative: ${negativeAmount}`);
       }
       if (negativeAmount > claim.amount) {
@@ -205,18 +205,18 @@ export namespace RewardClaim {
       }
     }
     // Perform the final merge, merging together all burn claims.
-    let finalTotalAmount = 0n;    
+    let finalTotalAmount = 0n;
     for (let claim of finalClaims) {
       if (claim.amount <= 0) {
         throw new Error(`Negative or zero claim amount: ${claim.amount}`);
       }
       finalTotalAmount += claim.amount;
     }
-    
+
     if (initialTotalAmount !== finalTotalAmount) {
       throw new Error(`Mismatch in total amount of claims: ${initialTotalAmount} !== ${finalTotalAmount}`);
     }
-   const tmp = merge(finalClaims)
+    const tmp = merge(finalClaims);
     const result = convertToRewardClaims(rewardEpochId, tmp);
     finalTotalAmount = 0n;
     for (let claim of tmp) {
@@ -225,13 +225,12 @@ export namespace RewardClaim {
       }
       finalTotalAmount += claim.amount;
     }
-    
+
     if (initialTotalAmount !== finalTotalAmount) {
       throw new Error(`2- Mismatch in total amount of claims: ${initialTotalAmount} !== ${finalTotalAmount}`);
     }
-    
+
     return result;
     // sanity check
-
   }
 }

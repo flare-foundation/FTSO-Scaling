@@ -1,5 +1,4 @@
 import { DataAvailabilityStatus, DataManager } from "../DataManager";
-import { RewardEpoch } from "../RewardEpoch";
 import { RewardEpochManager } from "../RewardEpochManager";
 import { FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FTSO2_PROTOCOL_ID } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
