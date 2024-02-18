@@ -1,5 +1,5 @@
 import { CONTRACTS } from "../configs/networks";
-import { decodeEvent, unPrefix0x } from "../utils/EncodingUtils";
+import { decodeEvent } from "../utils/EncodingUtils";
 import { Address } from "../voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
 

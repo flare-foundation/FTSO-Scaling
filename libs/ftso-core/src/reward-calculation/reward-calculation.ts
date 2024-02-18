@@ -1,16 +1,20 @@
 import { DataAvailabilityStatus, DataManager } from "../DataManager";
 import { RewardEpochManager } from "../RewardEpochManager";
-import { FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FTSO2_PROTOCOL_ID } from "../configs/networks";
+import {
+  FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
+  FTSO2_PROTOCOL_ID,
+  PENALTY_FACTOR,
+} from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
-import { calculateDoubleSigners, calculateDoubleSigningPenalties } from "./reward-double-signing-penalties";
+import { calculateDoubleSigners } from "./reward-double-signers";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
-import { calculateRevealWithdrawalPenalties } from "./reward-reveal-withdrawal-penalties";
+import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
 
 /**
@@ -152,25 +156,39 @@ export async function partialRewardClaimsForVotingRound(
         eligibleFinalizationRewardVotersInGracePeriod,
         addLog
       );
+
       // Calculate penalties for reveal withdrawal offenders
-      const revealWithdrawalPenalties = calculateRevealWithdrawalPenalties(
+      const revealWithdrawalPenalties = calculatePenalties(
         offer,
+        PENALTY_FACTOR(),
         rewardDataForCalculations.dataForCalculations.revealOffenders,
         voterWeights,
-        addLog
+        addLog,
+        "Reveal offenders"
       );
 
+      // Calculate penalties for reveal double signers
+      // get signingAddresses of double signers
       const doubleSigners = calculateDoubleSigners(
         votingRoundId,
         FTSO2_PROTOCOL_ID,
         rewardDataForCalculations.signatures
       );
 
+      // convert signingAddresses to submitAddresses
       const doubleSignersSubmit = new Set(
         [...doubleSigners.keys()].map(signingAddress => rewardEpoch.signingAddressToSubmitAddress.get(signingAddress))
       );
 
-      const doubleSigningPenalties = calculateDoubleSigningPenalties(offer, doubleSignersSubmit, voterWeights, addLog);
+      //distribute penalties
+      const doubleSigningPenalties = calculatePenalties(
+        offer,
+        PENALTY_FACTOR(),
+        doubleSignersSubmit,
+        voterWeights,
+        addLog,
+        "Double signers"
+      );
 
       // Merge all reward claims into a single array
       allRewardClaims.push(...medianRewardClaims);
