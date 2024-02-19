@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
-import { BURN_ADDRESS, CONTRACTS } from "../configs/networks";
 import { ContractMethodNames } from "../configs/contracts";
+import { CONTRACTS } from "../configs/networks";
 import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 

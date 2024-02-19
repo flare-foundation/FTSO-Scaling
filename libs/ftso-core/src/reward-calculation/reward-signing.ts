@@ -8,7 +8,7 @@ import {
   TOTAL_BIPS,
 } from "../configs/networks";
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
@@ -25,7 +25,7 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
  * TODO: think through whether to reward only in grace period or up to the end of the voting epoch id of votingRoundId + 1.
  */
 export function calculateSigningRewards(
-  offer: IPartialRewardOffer,
+  offer: IPartialRewardOfferForRound,
   data: DataForRewardCalculation,
   addLog = false
 ): IPartialRewardClaim[] {

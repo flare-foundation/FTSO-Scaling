@@ -6,7 +6,7 @@ import {
   PENALTY_FACTOR,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
@@ -37,7 +37,7 @@ export async function rewardClaimsForRewardEpoch(
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
   // Partial offer generation from reward offers
   // votingRoundId => feedName => partialOffer
-  const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
     startVotingRoundId,
     endVotingRoundId,
     rewardEpoch.rewardOffers
@@ -78,7 +78,7 @@ export async function partialRewardClaimsForVotingRound(
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
-  feedOffers: Map<string, IPartialRewardOffer[]>,
+  feedOffers: Map<string, IPartialRewardOfferForRound[]>,
   merge = true,
   addLog = false
 ): Promise<IPartialRewardClaim[]> {

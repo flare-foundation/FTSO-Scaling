@@ -1,19 +1,24 @@
 import { encodeParameters } from "web3-eth-abi";
 import { soliditySha3 } from "web3-utils";
 import { VoterWeights } from "../RewardEpoch";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
 import { medianRewardDistributionWeight } from "./reward-utils";
 import { TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
 import { RewardTypePrefix } from "./RewardTypePrefix";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
  * reward claims for the offer for all voters (with non-zero reward). For each voter all relevant partial claims are generated (including fees, participation rewards, etc).
+ * @param offer
+ * @param calculationResult
+ * @param votersWeights map from submitAddress to VoterWeights
+ * @param addLog
+ * @returns
  */
 export function calculateMedianRewardClaims(
-  offer: IPartialRewardOffer,
+  offer: IPartialRewardOfferForRound,
   calculationResult: MedianCalculationResult,
   votersWeights: Map<Address, VoterWeights>,
   addLog = false
@@ -21,8 +26,8 @@ export function calculateMedianRewardClaims(
   interface VoterRewarding {
     readonly submitAddress: Address;
     weight: bigint;
-    readonly pct: boolean; // gets PCT (percent) reward
-    readonly iqr: boolean; // gets IQR (inter quartile range) reward
+    readonly pct: boolean; // gets PCT (percent) reward (secondary band)
+    readonly iqr: boolean; // gets IQR (inter quartile range) reward (primary band)
   }
 
   ///////// Helper functions /////////
