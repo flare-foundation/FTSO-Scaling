@@ -7,7 +7,7 @@ import { BaseDataFeed } from "./base-feed";
 const TRADE_HISTORY_WINDOW_MS = 60_000;
 const DEFAULT_EXCHANGE = "binance";
 
-export const CCXT_FALLBACK_PRICE = 1;
+export const CCXT_FALLBACK_PRICE = 0.01;
 
 export class CcxtFeed implements BaseDataFeed {
   private readonly logger = new Logger(CcxtFeed.name);
