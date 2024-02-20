@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
-import { BURN_ADDRESS, CONTRACTS } from "../configs/networks";
 import { ContractMethodNames } from "../configs/contracts";
+import { CONTRACTS } from "../configs/networks";
 import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
@@ -25,17 +25,17 @@ export enum ClaimType {
  * where ClaimType is an enum:
  * enum ClaimType { DIRECT, FEE, WNAT, MIRROR, CCHAIN }
  */
-export interface IRewardClaim {
-  rewardEpochId: number;
+
+export interface IMergeableRewardClaim {
   beneficiary: string;
   amount: bigint;
   claimType: ClaimType;
 }
+export interface IRewardClaim extends IMergeableRewardClaim {
+  rewardEpochId: number;
+}
 
-export interface IPartialRewardClaim {
-  beneficiary: string;
-  amount: bigint;
-  claimType: ClaimType;
+export interface IPartialRewardClaim extends IMergeableRewardClaim {
   votingRoundId?: number;
   info?: string;
 }
@@ -71,16 +71,16 @@ export namespace RewardClaim {
    * @param IRewardClaim
    * @returns
    */
-  export function merge(claims: IPartialRewardClaim[]): IPartialRewardClaim[] {
+  export function merge(claims: IMergeableRewardClaim[]): IMergeableRewardClaim[] {
     // beneficiary => claimType => sign => claim
-    const claimsByBeneficiaryTypeAndSign = new Map<string, Map<number, Map<number, IPartialRewardClaim>>>();
+    const claimsByBeneficiaryTypeAndSign = new Map<string, Map<number, Map<number, IMergeableRewardClaim>>>();
     for (const claim of claims) {
       const beneficiary = claim.beneficiary.toLowerCase();
       const beneficiaryClaimsByTypeAndSign =
-        claimsByBeneficiaryTypeAndSign.get(beneficiary) ?? new Map<number, Map<number, IPartialRewardClaim>>();
+        claimsByBeneficiaryTypeAndSign.get(beneficiary) ?? new Map<number, Map<number, IMergeableRewardClaim>>();
       claimsByBeneficiaryTypeAndSign.set(beneficiary, beneficiaryClaimsByTypeAndSign);
       const claimTypeBySign =
-        beneficiaryClaimsByTypeAndSign.get(claim.claimType) ?? new Map<number, IPartialRewardClaim>();
+        beneficiaryClaimsByTypeAndSign.get(claim.claimType) ?? new Map<number, IMergeableRewardClaim>();
       beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);
       const sign = claim.amount < 0n ? -1 : 1;
       let mergedClaim = claimTypeBySign.get(sign);
@@ -95,7 +95,7 @@ export namespace RewardClaim {
         mergedClaim.amount += claim.amount;
       }
     }
-    const mergedClaims: IPartialRewardClaim[] = [];
+    const mergedClaims: IMergeableRewardClaim[] = [];
 
     for (const beneficiaryClaimsByType of claimsByBeneficiaryTypeAndSign.values()) {
       for (const signToClaims of beneficiaryClaimsByType.values()) {
@@ -109,18 +109,66 @@ export namespace RewardClaim {
   }
 
   /**
-   * Converts a list of IPartialRewardClaim to IRewardClaim.
+   * Converts a list of IMergeableRewardClaim to IRewardClaim.
    * @param rewardEpochId
    * @param claims
    * @returns
    */
-  export function convertToRewardClaims(rewardEpochId: number, claims: IPartialRewardClaim[]): IRewardClaim[] {
+  export function convertToRewardClaims(rewardEpochId: number, claims: IMergeableRewardClaim[]): IRewardClaim[] {
     return claims.map(claim => {
       return {
-        ...claim,
+        beneficiary: claim.beneficiary.toLowerCase(),
+        claimType: claim.claimType,
+        amount: claim.amount,
         rewardEpochId,
       };
     });
+  }
+
+  /**
+   * Compares whether two lists of reward claims contain equal claims. They have
+   * to have the same length and the same claims in the same order.
+   * Lists are first sorted by beneficiary and then by claim type.
+   */
+  export function compareRewardClaims(claims1: IRewardClaim[], claims2: IRewardClaim[]): boolean {
+    if (claims1.length !== claims2.length) {
+      return false;
+    }
+    const sortFunc = (a, b) => {
+      if (a.beneficiary < b.beneficiary) {
+        return -1;
+      }
+      if (a.beneficiary > b.beneficiary) {
+        return 1;
+      }
+      if (a.claimType < b.claimType) {
+        return -1;
+      }
+      if (a.claimType > b.claimType) {
+        return 1;
+      }
+      return 0;
+    };
+
+    const claimsInternal1 = [...claims1];
+    const claimsInternal2 = [...claims2];
+    claimsInternal1.sort(sortFunc);
+    claimsInternal2.sort(sortFunc);
+
+    for (let i = 0; i < claims1.length; i++) {
+      const claim1 = claimsInternal1[i];
+      const claim2 = claimsInternal2[i];
+      if (claim1.beneficiary !== claim2.beneficiary) {
+        return false;
+      }
+      if (claim1.claimType !== claim2.claimType) {
+        return false;
+      }
+      if (claim1.amount !== claim2.amount) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

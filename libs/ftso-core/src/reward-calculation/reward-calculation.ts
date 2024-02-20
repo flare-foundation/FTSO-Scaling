@@ -1,13 +1,14 @@
 import { DataAvailabilityStatus, DataManager } from "../DataManager";
 import { RewardEpochManager } from "../RewardEpochManager";
 import {
+  CALCULATIONS_FOLDER,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
   FTSO2_PROTOCOL_ID,
   PENALTY_FACTOR,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
-import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
+import { IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RewardEpochDuration } from "../utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
@@ -17,7 +18,11 @@ import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
 import {
+  aggregatedClaimsForVotingRoundIdExist,
+  deserializeAggregatedClaimsForVotingRoundId,
   deserializeGranulatedPartialOfferMap,
+  deserializePartialClaimsForVotingRoundId,
+  serializeAggregatedClaimsForVotingRoundId,
   serializeGranulatedPartialOfferMap,
   serializePartialClaimsForVotingRoundId,
 } from "../utils/serialize-deserialize";
@@ -79,7 +84,8 @@ export async function rewardClaimsForRewardEpoch(
 export async function initializeRewardEpochStorage(
   rewardEpochId: number,
   rewardEpochManager: RewardEpochManager,
-  useExpectedEndIfNoSigningPolicyAfter = false
+  useExpectedEndIfNoSigningPolicyAfter = false,
+  calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<RewardEpochDuration> {
   const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
     rewardEpochId,
@@ -94,7 +100,7 @@ export async function initializeRewardEpochStorage(
     rewardEpoch.rewardOffers
   );
   // sync call
-  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap);
+  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, calculationFolder);
   return rewardEpochDuration;
 }
 
@@ -115,11 +121,12 @@ export async function partialRewardClaimsForVotingRound(
   feedOffersParam: Map<string, IPartialRewardOffer[]> | undefined,
   merge = true,
   addLog = false,
-  serializeResults = false
+  serializeResults = false,
+  calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
   let feedOffers = feedOffersParam;
   if (feedOffers === undefined) {
-    feedOffers = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId);
+    feedOffers = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId, calculationFolder);
   }
   let allRewardClaims: IPartialRewardClaim[] = [];
   // Obtain data for reward calculation
@@ -238,16 +245,69 @@ export async function partialRewardClaimsForVotingRound(
     }
   }
   if (serializeResults) {
-    serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims);
+    serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims, calculationFolder);
   }
   return allRewardClaims;
 }
 
+/**
+ * If force recalculate is set to true, the startVotingRoundId is considered as the first voting round
+ * so partial claims from there are taken for first merge. Then all aggregated reward claims are calculated
+ * up to endVotingRoundId.
+ * Otherwise startVotingRoundId is considered to have calculated aggregate. If so, for each
+ * next voting round it is first checked whether the aggregate is already calculated. If not, it is calculated.
+ * Then the procedure is repeated incrementally until endVotingRoundId. Consequently, aggregated reward claims
+ * are calculated only if they are not already calculated.
+ */
 export function aggregateRewardClaimsInStorage(
   rewardEpochId: number,
   startVotingRoundId: number,
   endVotingRoundId: number,
-  forceRecalculate = false
-): IRewardClaim[] {
-  throw new Error("Not yet implemented");
+  forceRecalculate = false,
+  calculationFolder = CALCULATIONS_FOLDER()
+) {
+  if (forceRecalculate) {
+    const partialClaims: IMergeableRewardClaim[] = deserializePartialClaimsForVotingRoundId(
+      rewardEpochId,
+      startVotingRoundId,
+      calculationFolder
+    );
+    let aggregatedClaims = RewardClaim.convertToRewardClaims(rewardEpochId, partialClaims);
+    serializeAggregatedClaimsForVotingRoundId(rewardEpochId, startVotingRoundId, aggregatedClaims, calculationFolder);
+    for (let votingRoundId = startVotingRoundId + 1; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      const partialClaims = deserializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, calculationFolder);
+      if (partialClaims === undefined) {
+        throw new Error("Partial claims are undefined");
+      }
+      aggregatedClaims = RewardClaim.convertToRewardClaims(
+        rewardEpochId,
+        RewardClaim.merge([...aggregatedClaims, ...partialClaims])
+      );
+      serializeAggregatedClaimsForVotingRoundId(rewardEpochId, votingRoundId, aggregatedClaims, calculationFolder);
+    }
+    return;
+  }
+  if (!aggregatedClaimsForVotingRoundIdExist(rewardEpochId, startVotingRoundId, calculationFolder)) {
+    throw new Error(`Aggregated claims are not calculated for start voting round: ${startVotingRoundId}`);
+  }
+  let aggregatedClaims: IRewardClaim[] = deserializeAggregatedClaimsForVotingRoundId(
+    rewardEpochId,
+    startVotingRoundId,
+    calculationFolder
+  );
+  for (let votingRoundId = startVotingRoundId + 1; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    if (aggregatedClaimsForVotingRoundIdExist(rewardEpochId, votingRoundId, calculationFolder)) {
+      aggregatedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, votingRoundId, calculationFolder);
+      continue;
+    }
+    const partialClaims = deserializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, calculationFolder);
+    if (partialClaims === undefined) {
+      throw new Error("Partial claims are undefined");
+    }
+    aggregatedClaims = RewardClaim.convertToRewardClaims(
+      rewardEpochId,
+      RewardClaim.merge([...aggregatedClaims, ...partialClaims])
+    );
+    serializeAggregatedClaimsForVotingRoundId(rewardEpochId, votingRoundId, aggregatedClaims, calculationFolder);
+  }
 }

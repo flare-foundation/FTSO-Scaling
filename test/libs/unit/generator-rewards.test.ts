@@ -6,7 +6,7 @@ import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { BURN_ADDRESS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
 import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
-import { initializeRewardEpochStorage, partialRewardClaimsForVotingRound, rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import { aggregateRewardClaimsInStorage, initializeRewardEpochStorage, partialRewardClaimsForVotingRound, rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import { ClaimType, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/ftso-core/src/utils/RewardClaim";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
@@ -25,6 +25,7 @@ import {
   setupEnvVariables,
   setupEpochSettings,
 } from "../../utils/test-epoch-settings";
+import { deserializeAggregatedClaimsForVotingRoundId, destroyStorage } from "../../../libs/ftso-core/src/utils/serialize-deserialize";
 
 // Ensure that the networks are not loaded
 
@@ -511,7 +512,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     // Fix here
 
     const useExpectedEndIfNoSigningPolicyAfter = true;
-    const rewardEpochDuration = await initializeRewardEpochStorage(
+    let rewardEpochDuration = await initializeRewardEpochStorage(
       rewardEpoch.rewardEpochId,
       rewardEpochManger,
       useExpectedEndIfNoSigningPolicyAfter
@@ -534,6 +535,56 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     }
 
     const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
+    // full alternative calculation of merged claims
+    aggregateRewardClaimsInStorage(
+      rewardEpoch.rewardEpochId,
+      rewardEpochDuration.startVotingRoundId,
+      rewardEpochDuration.endVotingRoundId,
+      true
+    );
+    let alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, rewardEpochDuration.endVotingRoundId);
+    expect(RewardClaim.compareRewardClaims(mergedClaims, alternativeMergedClaims)).to.be.true;
+
+    destroyStorage(rewardEpochId);
+
+    // partial alternative calculation of merged claims
+    rewardEpochDuration = await initializeRewardEpochStorage(
+      rewardEpoch.rewardEpochId,
+      rewardEpochManger,
+      useExpectedEndIfNoSigningPolicyAfter
+    );
+    for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
+      await partialRewardClaimsForVotingRound(
+        rewardEpochId,
+        votingRoundId,
+        benchingWindowRevealOffenders,
+        dataManager,
+        undefined,  // should be read from calculations folder
+        merge,
+        addLog,
+        serializeResults
+      );
+    }
+
+
+    const halfVotingRoundId = Math.floor((rewardEpochDuration.startVotingRoundId + rewardEpochDuration.endVotingRoundId) / 2);
+    aggregateRewardClaimsInStorage(
+      rewardEpoch.rewardEpochId,
+      rewardEpochDuration.startVotingRoundId,
+      halfVotingRoundId,
+      true
+    );
+    for (let votingRoundId = halfVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
+      aggregateRewardClaimsInStorage(
+        rewardEpoch.rewardEpochId,
+        votingRoundId - 1,
+        votingRoundId
+      );
+    }
+
+    alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, rewardEpochDuration.endVotingRoundId);
+    expect(RewardClaim.compareRewardClaims(mergedClaims, alternativeMergedClaims)).to.be.true;
+
     offersSummary(rewardEpoch.rewardOffers, logger);
     votersSummary(voters, logger);
     claimSummary(voters, mergedClaims, logger);
