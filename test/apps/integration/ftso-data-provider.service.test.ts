@@ -53,6 +53,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     db_user: "",
     db_pass: "",
     db_port: -1,
+    api_keys: [],
   };
 
   const configService = new ConfigService(configValues);
