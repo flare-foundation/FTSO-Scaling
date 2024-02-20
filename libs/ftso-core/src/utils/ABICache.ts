@@ -1,5 +1,7 @@
 import { readFileSync } from "fs";
-import { CONTRACTS, ContractMethodNames } from "../configs/networks";
+import { AbiEventFragment, AbiFunctionFragment, AbiInput } from "web3";
+import { encodeEventSignature, encodeFunctionSignature } from "web3-eth-abi";
+import { CONTRACTS, ContractDefinitionsNames, ContractMethodNames } from "../configs/networks";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -11,8 +13,6 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "../events";
-import { AbiEventFragment, AbiFunctionFragment, AbiInput } from "web3";
-import { encodeFunctionSignature, encodeEventSignature } from "web3-eth-abi";
 
 type AbiItem = AbiFunctionFragment | AbiEventFragment;
 
@@ -35,27 +35,49 @@ export class ABICache {
 
   constructor() {
     // Cache the following ABIs
-    // TODO: LUKA extract first parameter from ContractDefinitions union type
-    const cachedABIs: [string, ContractMethodNames | undefined, string | undefined][] = [
-      [CONTRACTS.Submission.name, ContractMethodNames.submit1, undefined],
-      [CONTRACTS.Submission.name, ContractMethodNames.submit2, undefined],
-      [CONTRACTS.Submission.name, ContractMethodNames.submit3, undefined],
-      [CONTRACTS.Submission.name, ContractMethodNames.submitSignatures, undefined],
-      [CONTRACTS.FlareSystemsManager.name, undefined, VotePowerBlockSelected.eventName],
-      [CONTRACTS.FlareSystemsManager.name, undefined, RandomAcquisitionStarted.eventName],
-      [CONTRACTS.FlareSystemsManager.name, undefined, RewardEpochStarted.eventName],
-      [CONTRACTS.VoterRegistry.name, undefined, VoterRegistered.eventName],
-      [CONTRACTS.FlareSystemsCalculator.name, undefined, VoterRegistrationInfo.eventName],
-      [CONTRACTS.Relay.name, undefined, SigningPolicyInitialized.eventName],
-      [CONTRACTS.Relay.name, ContractMethodNames.relay, undefined],
-      [CONTRACTS.FlareSystemsManager.name, undefined, SigningPolicySigned.eventName],
-      [CONTRACTS.FtsoRewardOffersManager.name, undefined, InflationRewardsOffered.eventName],
-      [CONTRACTS.FtsoRewardOffersManager.name, undefined, RewardsOffered.eventName],
-      [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedStruct, undefined],
-      [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.randomStruct, undefined],
-      [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedWithProofStruct, undefined],
-      [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimStruct, undefined],
-      [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimWithProofStruct, undefined],
+    // console.log("Loading ABIs...");
+    // console.dir(CONTRACTS);
+    // const cachedABIs: [ContractDefinitionsNames, ContractMethodNames | undefined, string | undefined][] = [
+    //   [CONTRACTS.Submission.name, ContractMethodNames.submit1, undefined],
+    //   [CONTRACTS.Submission.name, ContractMethodNames.submit2, undefined],
+    //   [CONTRACTS.Submission.name, ContractMethodNames.submit3, undefined],
+    //   [CONTRACTS.Submission.name, ContractMethodNames.submitSignatures, undefined],
+    //   [CONTRACTS.FlareSystemsManager.name, undefined, VotePowerBlockSelected.eventName],
+    //   [CONTRACTS.FlareSystemsManager.name, undefined, RandomAcquisitionStarted.eventName],
+    //   [CONTRACTS.FlareSystemsManager.name, undefined, RewardEpochStarted.eventName],
+    //   [CONTRACTS.VoterRegistry.name, undefined, VoterRegistered.eventName],
+    //   [CONTRACTS.FlareSystemsCalculator.name, undefined, VoterRegistrationInfo.eventName],
+    //   [CONTRACTS.Relay.name, undefined, SigningPolicyInitialized.eventName],
+    //   [CONTRACTS.Relay.name, ContractMethodNames.relay, undefined],
+    //   [CONTRACTS.FlareSystemsManager.name, undefined, SigningPolicySigned.eventName],
+    //   [CONTRACTS.FtsoRewardOffersManager.name, undefined, InflationRewardsOffered.eventName],
+    //   [CONTRACTS.FtsoRewardOffersManager.name, undefined, RewardsOffered.eventName],
+    //   [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedStruct, undefined],
+    //   [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.randomStruct, undefined],
+    //   [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedWithProofStruct, undefined],
+    //   [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimStruct, undefined],
+    //   [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimWithProofStruct, undefined],
+    // ];
+    const cachedABIs: [ContractDefinitionsNames, ContractMethodNames | undefined, string | undefined][] = [
+      ["Submission", ContractMethodNames.submit1, undefined],
+      ["Submission", ContractMethodNames.submit2, undefined],
+      ["Submission", ContractMethodNames.submit3, undefined],
+      ["Submission", ContractMethodNames.submitSignatures, undefined],
+      ["FlareSystemsManager", undefined, VotePowerBlockSelected.eventName],
+      ["FlareSystemsManager", undefined, RandomAcquisitionStarted.eventName],
+      ["FlareSystemsManager", undefined, RewardEpochStarted.eventName],
+      ["VoterRegistry", undefined, VoterRegistered.eventName],
+      ["FlareSystemsCalculator", undefined, VoterRegistrationInfo.eventName],
+      ["Relay", undefined, SigningPolicyInitialized.eventName],
+      ["Relay", ContractMethodNames.relay, undefined],
+      ["FlareSystemsManager", undefined, SigningPolicySigned.eventName],
+      ["FtsoRewardOffersManager", undefined, InflationRewardsOffered.eventName],
+      ["FtsoRewardOffersManager", undefined, RewardsOffered.eventName],
+      ["FtsoMerkleStructs", ContractMethodNames.feedStruct, undefined],
+      ["FtsoMerkleStructs", ContractMethodNames.randomStruct, undefined],
+      ["FtsoMerkleStructs", ContractMethodNames.feedWithProofStruct, undefined],
+      ["ProtocolMerkleStructs", ContractMethodNames.rewardClaimStruct, undefined],
+      ["ProtocolMerkleStructs", ContractMethodNames.rewardClaimWithProofStruct, undefined],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {

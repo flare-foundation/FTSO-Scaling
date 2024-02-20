@@ -14,6 +14,7 @@ async function bootstrap() {
     .setDescription(
       "This server is used by the Flare Protocol client and therefore implements the default api endpoints to facilitate Flare Time Series Oracle (FTSO) protocol. It also adds the support for querying the finalized median merkle trees"
     )
+    .addApiKey({ type: "apiKey", name: "X-API-KEY", in: "header" }, "X-API-KEY")
     .setBasePath(basePath)
     .setVersion("1.0")
     .build();
@@ -28,4 +29,5 @@ async function bootstrap() {
   logger.log(`Open link: http://localhost:${PORT}/api-doc`);
   await app.listen(PORT);
 }
-bootstrap();
+
+void bootstrap();

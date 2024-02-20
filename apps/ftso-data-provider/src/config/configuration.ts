@@ -3,6 +3,7 @@ import { throwError } from "../../../../libs/ftso-core/src/utils/error";
 export interface IConfig {
   // server port (PORT)
   port: number;
+  api_keys: string[];
 
   // DB credentials
   db_host: string;
@@ -23,6 +24,7 @@ export default () => {
     port: parseInt(
       process.env.DATA_PROVIDER_CLIENT_PORT ?? throwError("DATA_PROVIDER_CLIENT_PORT env variable not set")
     ),
+    api_keys: process.env.DATA_PROVIDER_CLIENT_API_KEYS?.split(",") || [],
     db_host: process.env.DB_HOST ?? throwError("DB_HOST env variable not set"),
     db_port: parseInt(process.env.DB_PORT ?? throwError("DB_PORT env variable not set")),
     db_user: process.env.DB_USERNAME ?? throwError("DB_USERNAME env variable not set"),

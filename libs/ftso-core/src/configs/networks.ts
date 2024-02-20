@@ -56,7 +56,19 @@ export type ContractDefinitions =
   | RelayDefinition
   | FlareSystemsCalculatorDefinition
   | VoterRegistryDefinition
-  | ProtocolMerkleStructsDefinition;
+  | ProtocolMerkleStructsDefinition
+  | FtsoMerkleStructsDefinition;
+
+export type ContractDefinitionsNames =
+  | FlareSystemsManagerDefinition["name"]
+  | FtsoRewardOffersManagerDefinition["name"]
+  | RewardManagerDefinition["name"]
+  | SubmissionDefinition["name"]
+  | RelayDefinition["name"]
+  | FlareSystemsCalculatorDefinition["name"]
+  | VoterRegistryDefinition["name"]
+  | ProtocolMerkleStructsDefinition["name"]
+  | FtsoMerkleStructsDefinition["name"];
 
 export enum ContractMethodNames {
   submit1 = "submit1",
