@@ -1,14 +1,18 @@
 import { FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered, RewardOffers } from "../events";
-import { IPartialRewardOffer, PartialRewardOffer } from "../utils/PartialRewardOffer";
+import {
+  IPartialRewardOfferForEpoch,
+  IPartialRewardOfferForRound,
+  PartialRewardOffer,
+} from "../utils/PartialRewardOffer";
 
 /**
  * A split of partial reward offer into three parts:
  */
-export interface SplitRewardOffer {
-  readonly medianRewardOffer: IPartialRewardOffer;
-  readonly signingRewardOffer: IPartialRewardOffer;
-  readonly finalizationRewardOffer: IPartialRewardOffer;
+export interface SplitRewardOffer<T> {
+  readonly medianRewardOffer: T;
+  readonly signingRewardOffer: T;
+  readonly finalizationRewardOffer: T;
 }
 
 /**
@@ -17,7 +21,7 @@ export interface SplitRewardOffer {
  */
 export function distributeInflationRewardOfferToFeeds(
   inflationRewardOffer: InflationRewardsOffered
-): IPartialRewardOffer[] {
+): IPartialRewardOfferForEpoch[] {
   if (inflationRewardOffer.mode === 0) {
     return PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer);
   }
@@ -34,8 +38,8 @@ export function granulatedPartialOfferMap(
   startVotingRoundId: number,
   endVotingRoundId: number,
   rewardOffers: RewardOffers
-): Map<number, Map<string, IPartialRewardOffer[]>> {
-  const rewardOfferMap = new Map<number, Map<string, IPartialRewardOffer[]>>();
+): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
+  const rewardOfferMap = new Map<number, Map<string, IPartialRewardOfferForRound[]>>();
   const allRewardOffers = rewardOffers.rewardOffers.map(rewardOffer =>
     PartialRewardOffer.fromRewardOffered(rewardOffer)
   );
@@ -51,7 +55,7 @@ export function granulatedPartialOfferMap(
     for (const votingEpochRewardOffer of votingEpochRewardOffers) {
       const votingRoundId = votingEpochRewardOffer.votingRoundId!;
       const feedName = votingEpochRewardOffer.feedName;
-      const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOffer[]>();
+      const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
       rewardOfferMap.set(votingRoundId, feedOffers);
       const feedNameOffers = feedOffers.get(feedName) || [];
       feedOffers.set(feedName, feedNameOffers);
@@ -66,11 +70,11 @@ export function granulatedPartialOfferMap(
  * These split offers are used as inputs into reward calculation for specific types
  * of rewards.
  */
-export function splitRewardOfferByTypes(offer: IPartialRewardOffer): SplitRewardOffer {
+export function splitRewardOfferByTypes<T extends IPartialRewardOfferForEpoch>(offer: T): SplitRewardOffer<T> {
   const forSigning = (offer.amount * SIGNING_BIPS()) / TOTAL_BIPS;
   const forFinalization = (offer.amount * FINALIZATION_BIPS()) / TOTAL_BIPS;
   const forMedian = offer.amount - forSigning - forFinalization;
-  const result: SplitRewardOffer = {
+  const result: SplitRewardOffer<T> = {
     medianRewardOffer: {
       ...offer,
       amount: forMedian,

@@ -181,6 +181,7 @@ export namespace RewardClaim {
    * (in absolute value) is created.
    * At the end, only positive claims remain (possible 0-value claims are removed).
    * The procedure relies on the following:
+   * - all claims are for the same reward epoch
    * - the sum of positive input claims matches the total amount of rewards distributed
    * - negative input claims can have any total value, even its absolute value exceeding the
    *   total amount of rewards distributed. However, negative claims are selectively subtracted
@@ -200,6 +201,9 @@ export namespace RewardClaim {
     const negativeClaims = new Map<string, Map<Number, IRewardClaim>>();
     // assemble map of negative claims
     for (const claim of claims) {
+      if (claim.rewardEpochId != rewardEpochId) {
+        throw new Error("Merge with burn claims for mixed epochs");
+      }
       if (claim.amount >= 0) {
         initialTotalAmount += claim.amount;
         continue;
@@ -226,7 +230,7 @@ export namespace RewardClaim {
       }
 
       const negativeAmount = -1n * negativeClaim.amount;
-      if (negativeAmount <= 0) {
+      if (negativeAmount <= 0n) {
         throw new Error(`Negative amount is not negative: ${negativeAmount}`);
       }
       if (negativeAmount > claim.amount) {
@@ -246,10 +250,13 @@ export namespace RewardClaim {
           rewardEpochId: claim.rewardEpochId,
         });
         // create partial claim
-        finalClaims.push({
-          ...claim,
-          amount: claim.amount - negativeAmount,
-        });
+
+        if (claim.amount - negativeAmount != 0n) {
+          finalClaims.push({
+            ...claim,
+            amount: claim.amount - negativeAmount,
+          });
+        }
       }
     }
     // Perform the final merge, merging together all burn claims.

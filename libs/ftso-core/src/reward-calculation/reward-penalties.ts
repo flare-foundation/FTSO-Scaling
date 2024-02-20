@@ -1,5 +1,5 @@
 import { VoterWeights } from "../RewardEpoch";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
@@ -18,7 +18,7 @@ import { medianRewardDistributionWeight } from "./reward-utils";
  * @returns
  */
 export function calculatePenalties(
-  offer: IPartialRewardOffer,
+  offer: IPartialRewardOfferForRound,
   penaltyFactor: bigint,
   offenders: Set<Address>,
   votersWeights: Map<Address, VoterWeights>,

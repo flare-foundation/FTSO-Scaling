@@ -7,7 +7,6 @@ import {
   PENALTY_FACTOR,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
 import { IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RewardEpochDuration } from "../utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../voting-types";
@@ -28,6 +27,7 @@ import {
 } from "../utils/serialize-deserialize";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -48,7 +48,7 @@ export async function rewardClaimsForRewardEpoch(
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
   // Partial offer generation from reward offers
   // votingRoundId => feedName => partialOffer
-  const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
     startVotingRoundId,
     endVotingRoundId,
     rewardEpoch.rewardOffers
@@ -94,7 +94,7 @@ export async function initializeRewardEpochStorage(
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
   // Partial offer generation from reward offers
   // votingRoundId => feedName => partialOffer
-  const rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>> = granulatedPartialOfferMap(
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
     rewardEpochDuration.startVotingRoundId,
     rewardEpochDuration.endVotingRoundId,
     rewardEpoch.rewardOffers
@@ -118,7 +118,7 @@ export async function partialRewardClaimsForVotingRound(
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
-  feedOffersParam: Map<string, IPartialRewardOffer[]> | undefined,
+  feedOffersParam: Map<string, IPartialRewardOfferForRound[]> | undefined,
   merge = true,
   addLog = false,
   serializeResults = false,

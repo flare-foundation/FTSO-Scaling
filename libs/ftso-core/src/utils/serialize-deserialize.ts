@@ -1,14 +1,14 @@
 import fs from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../configs/networks";
-import { IPartialRewardOffer } from "./PartialRewardOffer";
+import { IPartialRewardOfferForRound } from "./PartialRewardOffer";
 import { IPartialRewardClaim, IRewardClaim } from "./RewardClaim";
 import { RewardEpochDuration } from "./RewardEpochDuration";
 import { bigIntReplacer, bigIntReviver } from "./big-number-serialization";
 
 export interface FeedOffers {
   readonly feedName: string;
-  readonly offers: IPartialRewardOffer[];
+  readonly offers: IPartialRewardOfferForRound[];
 }
 export interface OffersPerVotingRound {
   readonly votingRoundId: number;
@@ -28,7 +28,7 @@ export interface VotingRoundResult {
  */
 export function serializeGranulatedPartialOfferMap(
   rewardEpochDuration: RewardEpochDuration,
-  rewardOfferMap: Map<number, Map<string, IPartialRewardOffer[]>>,
+  rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>>,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   if (!fs.existsSync(calculationFolder)) {
@@ -71,12 +71,12 @@ export function deserializeGranulatedPartialOfferMap(
   rewardEpochId: number,
   votingRoundId: number,
   calculationFolder = CALCULATIONS_FOLDER()
-): Map<string, IPartialRewardOffer[]> {
+): Map<string, IPartialRewardOfferForRound[]> {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const offersPath = path.join(votingRoundFolder, `offers.json`);
   const offersPerVotingRound: OffersPerVotingRound = JSON.parse(fs.readFileSync(offersPath, "utf8"), bigIntReviver);
-  const feedOffers = new Map<string, IPartialRewardOffer[]>();
+  const feedOffers = new Map<string, IPartialRewardOfferForRound[]>();
   for (const feedOffer of offersPerVotingRound.feedOffers) {
     feedOffers.set(feedOffer.feedName, feedOffer.offers);
   }

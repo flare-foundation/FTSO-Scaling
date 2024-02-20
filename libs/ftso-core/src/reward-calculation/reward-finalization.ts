@@ -1,5 +1,5 @@
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
@@ -10,7 +10,7 @@ import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePer
  * Calculates partial finalization reward claims for the given offer.
  */
 export function calculateFinalizationRewardClaims(
-  offer: IPartialRewardOffer,
+  offer: IPartialRewardOfferForRound,
   data: DataForRewardCalculation,
   eligibleFinalizationRewardVotersInGracePeriod: Set<Address>,
   addLog = false
