@@ -205,7 +205,13 @@ export function generateFeedName(name: string) {
  * @param claimBack
  * @returns
  */
-export function generateRewardsOffer(feed: string, rewardEpochId: number, claimBack: string, value: number) {
+export function generateRewardsOffer(
+  feed: string,
+  rewardEpochId: number,
+  claimBack: string,
+  value: number,
+  secondaryBandWidthPPM: number = 2000
+) {
   feed = feed.slice(0, 7);
 
   const rawRewardsOffered = {
@@ -213,9 +219,9 @@ export function generateRewardsOffer(feed: string, rewardEpochId: number, claimB
     feedName: generateFeedName(feed),
     decimals: "0x02",
     amount: Web3.utils.numberToHex(value),
-    minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
+    minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
     primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
-    secondaryBandWidthPPM: Web3.utils.numberToHex(2000),
+    secondaryBandWidthPPM: Web3.utils.numberToHex(secondaryBandWidthPPM),
     claimBackAddress: generateAddress(claimBack),
   };
 
@@ -235,7 +241,7 @@ export function generateInflationRewardOffer(feeds: string[], rewardEpochId: num
     feedNames: "0x" + unprefixedFeedsInHex.join(""),
     decimals: "0x" + "02".repeat(feeds.length),
     amount: "0x10000000001",
-    minRewardedTurnoutBIPS: Web3.utils.numberToHex(100),
+    minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
     primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
     secondaryBandWidthPPMs: "0x" + "0007d0".repeat(feeds.length),
     mode: "0x00",
@@ -375,7 +381,7 @@ export function generateVotersWeights(numberOfVoters: number) {
       delegationWeight: BigInt(1000 + (j % 5)),
       cappedDelegationWeight: BigInt(1000 + (j % 5)),
       signingWeight: 1000 + (j % 5) + 3,
-      feeBIPS: j * 100,
+      feeBIPS: (j % 5) * 100,
       nodeIds: [unsafeRandomHex(20), unsafeRandomHex(20)],
       nodeWeights: [BigInt(1000 + (j % 5)), BigInt(1000 + (j % 5))],
     };
@@ -386,7 +392,12 @@ export function generateVotersWeights(numberOfVoters: number) {
   return votersWeights;
 }
 
-export function generateMedianCalculationResult(numberOfVoters: number, feedName: string, votingRoundId: number) {
+export function generateMedianCalculationResult(
+  numberOfVoters: number,
+  feedName: string,
+  votingRoundId: number,
+  lowTurnout = false
+) {
   const voters: string[] = [];
   const feedValues: ValueWithDecimals[] = [];
 
@@ -394,7 +405,7 @@ export function generateMedianCalculationResult(numberOfVoters: number, feedName
 
   for (let j = 0; j < numberOfVoters; j++) {
     const valueWithDecimal: ValueWithDecimals = {
-      isEmpty: !(j % 13),
+      isEmpty: lowTurnout ? j != 3 : !((j + 1) % 13),
       value: 1000 + (j % 50),
       decimals: 2,
     };

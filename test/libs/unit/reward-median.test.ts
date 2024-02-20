@@ -1,4 +1,4 @@
-import Web3 from "web3";
+import { expect } from "chai";
 import { calculateMedianRewardClaims } from "../../../libs/ftso-core/src/reward-calculation/reward-median";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import {
@@ -9,10 +9,10 @@ import {
   generateVotersWeights,
 } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
-import { expect } from "chai";
 
 describe(`Reward median, ${getTestFile(__filename)}`, function () {
   const medianCalculationResult = generateMedianCalculationResult(70, "USD EUR", 10);
+  const medianCalculationResultLowTurnout = generateMedianCalculationResult(70, "USD EUR", 10, true);
 
   const voterWeights = generateVotersWeights(70);
 
@@ -32,6 +32,16 @@ describe(`Reward median, ${getTestFile(__filename)}`, function () {
 
   const splitPartialOfferedReward = PartialRewardOffer.splitToVotingRoundsEqually(10, 100, partialOfferedReward);
 
+  const offeredRewardNoSecondary = generateRewardsOffer("USD EUR", 508, generateAddress("claimBack"), 10000000, 0);
+
+  const partialOfferedRewardNoSecondary = PartialRewardOffer.fromRewardOffered(offeredRewardNoSecondary);
+
+  const splitPartialOfferedRewardNoSecondary = PartialRewardOffer.splitToVotingRoundsEqually(
+    10,
+    100,
+    partialOfferedRewardNoSecondary
+  );
+
   it("should calculate rewards inflation", function () {
     const claims = calculateMedianRewardClaims(
       splitPartialRewardOfferInflation[0],
@@ -42,9 +52,36 @@ describe(`Reward median, ${getTestFile(__filename)}`, function () {
     expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
   });
 
+  it("should calculate rewards inflation low turnout", function () {
+    const claims = calculateMedianRewardClaims(
+      splitPartialRewardOfferInflation[0],
+      medianCalculationResultLowTurnout,
+      voterWeights
+    );
+
+    expect(claims.length).to.eq(1);
+    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
+  });
+
   it("should calculate rewards offer", function () {
-    const claims = calculateMedianRewardClaims(splitPartialOfferedReward[0], medianCalculationResult, voterWeights);
+    const claims = calculateMedianRewardClaims(
+      splitPartialOfferedReward[0],
+      medianCalculationResult,
+      voterWeights,
+      true
+    );
 
     expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedReward[0].amount);
+  });
+
+  it("should calculate rewards offer with no secondary width", function () {
+    const claims = calculateMedianRewardClaims(
+      splitPartialOfferedRewardNoSecondary[0],
+      medianCalculationResult,
+      voterWeights,
+      true
+    );
+
+    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedRewardNoSecondary[0].amount);
   });
 });
