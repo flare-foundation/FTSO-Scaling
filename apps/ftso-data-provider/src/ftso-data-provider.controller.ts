@@ -1,5 +1,5 @@
 import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiSecurity, ApiTags } from "@nestjs/swagger";
 import {
   AbiDefinitionsResponse,
   ExternalResponse,
@@ -20,6 +20,7 @@ enum ApiTagsEnum {
 
 @Controller("")
 @UseGuards(ApiKeyAuthGuard)
+@ApiSecurity("X-API-KEY")
 export class FtsoDataProviderController {
   private readonly logger = new Logger(FtsoDataProviderController.name);
   constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}
