@@ -83,6 +83,9 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.1.3"
   },
+  "resolutions": {
+    "string-width": "4.2.3"
+  },
   "nyc": {
     "extends": "@istanbuljs/nyc-config-typescript",
     "check-coverage": true,
