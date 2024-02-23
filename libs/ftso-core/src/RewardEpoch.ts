@@ -23,8 +23,6 @@ export interface VoterWeights {
 }
 
 export class RewardEpoch {
-  // TODO: think through the mappings!!!
-
   readonly orderedVotersSubmitAddresses: Address[] = [];
 
   public readonly rewardOffers: RewardOffers;
@@ -52,6 +50,9 @@ export class RewardEpoch {
   private readonly _canonicalFeedOrder: Feed[];
 
   public readonly totalSigningWeight: number = 0;
+
+  public readonly votePowerBlock: number;
+  public readonly votePowerBlockTimestamp: number;
 
   constructor(
     previousRewardEpochStartedEvent: RewardEpochStarted,
@@ -93,6 +94,8 @@ export class RewardEpoch {
     }
 
     ///////// Data initialization /////////
+    this.votePowerBlock = votePowerBlockSelectedEvent.votePowerBlock;
+    this.votePowerBlockTimestamp = votePowerBlockSelectedEvent.timestamp;
     this.rewardOffers = rewardOffers;
     this._canonicalFeedOrder = rewardEpochFeedSequence(rewardOffers);
     const tmpSigningAddressToVoter = new Map<Address, Address>();

@@ -25,7 +25,13 @@ import {
   setupEnvVariables,
   setupEpochSettings,
 } from "../../utils/test-epoch-settings";
-import { deserializeAggregatedClaimsForVotingRoundId, destroyStorage } from "../../../libs/ftso-core/src/utils/serialize-deserialize";
+
+import { deserializeAggregatedClaimsForVotingRoundId } from "../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
+import { ProgressType, printProgress, rewardCalculationProgress } from "../../../libs/ftso-core/src/utils/stat-info/progress";
+import { RewardCalculationStatus, setRewardCalculationStatus } from "../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
+import { getRewardEpochInfo, serializeRewardEpochInfo } from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { destroyStorage } from "../../../libs/ftso-core/src/utils/stat-info/storage";
+
 
 // Ensure that the networks are not loaded
 
@@ -109,8 +115,7 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
 
 }
 
-
-describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
+describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
   let numberOfVoters: number;
   let feeds: Feed[];
   let voters: TestVoter[];
@@ -482,6 +487,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
 
 
   it("should happy path scenario work with storage", async () => {
+    const progressEnabled = false;
     await generateRewardEpochDataForRewardCalculation(
       clock,
       entityManager,
@@ -518,6 +524,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       useExpectedEndIfNoSigningPolicyAfter
     );
 
+    const rewardEpochInfo = getRewardEpochInfo(rewardEpoch);
+    serializeRewardEpochInfo(rewardEpoch.rewardEpochId, rewardEpochInfo);
+
     const serializeResults = true;
     const claims: IPartialRewardClaim[] = [];
     for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
@@ -553,6 +562,18 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       rewardEpochManger,
       useExpectedEndIfNoSigningPolicyAfter
     );
+
+    function logStatus(type: ProgressType = ProgressType.CLAIM_AGGREGATION) {
+      if (progressEnabled) {
+        console.log(printProgress(rewardCalculationProgress(rewardEpochId, type)));
+      }
+    }
+
+    serializeRewardEpochInfo(rewardEpoch.rewardEpochId, rewardEpochInfo);
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.PENDING, rewardEpoch, rewardEpochDuration.endVotingRoundId);
+    logStatus(ProgressType.CLAIM_CALCULATION);
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.IN_PROGRESS);
+    logStatus();
     for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
       await partialRewardClaimsForVotingRound(
         rewardEpochId,
@@ -564,8 +585,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         addLog,
         serializeResults
       );
+      logStatus(ProgressType.CLAIM_CALCULATION);
     }
-
+    logStatus();
 
     const halfVotingRoundId = Math.floor((rewardEpochDuration.startVotingRoundId + rewardEpochDuration.endVotingRoundId) / 2);
     aggregateRewardClaimsInStorage(
@@ -574,14 +596,16 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       halfVotingRoundId,
       true
     );
+    logStatus();
     for (let votingRoundId = halfVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
       aggregateRewardClaimsInStorage(
         rewardEpoch.rewardEpochId,
         votingRoundId - 1,
         votingRoundId
       );
+      logStatus();
     }
-
+    logStatus();
     alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, rewardEpochDuration.endVotingRoundId);
     expect(RewardClaim.compareRewardClaims(mergedClaims, alternativeMergedClaims)).to.be.true;
 

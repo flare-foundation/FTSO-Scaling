@@ -16,18 +16,19 @@ import { calculateDoubleSigners } from "./reward-double-signers";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
+
+import { calculateRandom } from "../ftso-calculation/ftso-random";
+import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import {
-  aggregatedClaimsForVotingRoundIdExist,
-  deserializeAggregatedClaimsForVotingRoundId,
-  deserializeGranulatedPartialOfferMap,
-  deserializePartialClaimsForVotingRoundId,
-  serializeAggregatedClaimsForVotingRoundId,
-  serializeGranulatedPartialOfferMap,
-  serializePartialClaimsForVotingRoundId,
-} from "../utils/serialize-deserialize";
+  aggregatedClaimsForVotingRoundIdExist, deserializeAggregatedClaimsForVotingRoundId,
+  serializeAggregatedClaimsForVotingRoundId
+} from "../utils/stat-info/aggregated-claims";
+import { serializeFeedValuesForVotingRoundId } from "../utils/stat-info/feed-values";
+import { deserializeGranulatedPartialOfferMap, serializeGranulatedPartialOfferMap } from "../utils/stat-info/granulated-partial-offers-map";
+import { deserializePartialClaimsForVotingRoundId, serializePartialClaimsForVotingRoundId } from "../utils/stat-info/partial-claims";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -148,6 +149,16 @@ export async function partialRewardClaimsForVotingRound(
   const medianResults: MedianCalculationResult[] = calculateMedianResults(
     rewardDataForCalculations.dataForCalculations
   );
+
+  if (serializeResults) {
+    const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
+    const calculationResults = [
+      MerkleTreeStructs.fromRandomCalculationResult(randomData),
+      ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+    ];
+    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
+  }
+
   // feedName => medianResult
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of medianResults) {
