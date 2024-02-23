@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { AbiEventFragment, AbiFunctionFragment, AbiInput } from "web3";
 import { encodeEventSignature, encodeFunctionSignature } from "web3-eth-abi";
-import { CONTRACTS, ContractDefinitionsNames, ContractMethodNames } from "../configs/networks";
+import { ContractDefinitionsNames, ContractMethodNames } from "../configs/networks";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -34,30 +34,6 @@ export class ABICache {
   readonly contractAndNameToAbiData = new Map<string, AbiData>();
 
   constructor() {
-    // Cache the following ABIs
-    // console.log("Loading ABIs...");
-    // console.dir(CONTRACTS);
-    // const cachedABIs: [ContractDefinitionsNames, ContractMethodNames | undefined, string | undefined][] = [
-    //   [CONTRACTS.Submission.name, ContractMethodNames.submit1, undefined],
-    //   [CONTRACTS.Submission.name, ContractMethodNames.submit2, undefined],
-    //   [CONTRACTS.Submission.name, ContractMethodNames.submit3, undefined],
-    //   [CONTRACTS.Submission.name, ContractMethodNames.submitSignatures, undefined],
-    //   [CONTRACTS.FlareSystemsManager.name, undefined, VotePowerBlockSelected.eventName],
-    //   [CONTRACTS.FlareSystemsManager.name, undefined, RandomAcquisitionStarted.eventName],
-    //   [CONTRACTS.FlareSystemsManager.name, undefined, RewardEpochStarted.eventName],
-    //   [CONTRACTS.VoterRegistry.name, undefined, VoterRegistered.eventName],
-    //   [CONTRACTS.FlareSystemsCalculator.name, undefined, VoterRegistrationInfo.eventName],
-    //   [CONTRACTS.Relay.name, undefined, SigningPolicyInitialized.eventName],
-    //   [CONTRACTS.Relay.name, ContractMethodNames.relay, undefined],
-    //   [CONTRACTS.FlareSystemsManager.name, undefined, SigningPolicySigned.eventName],
-    //   [CONTRACTS.FtsoRewardOffersManager.name, undefined, InflationRewardsOffered.eventName],
-    //   [CONTRACTS.FtsoRewardOffersManager.name, undefined, RewardsOffered.eventName],
-    //   [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedStruct, undefined],
-    //   [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.randomStruct, undefined],
-    //   [CONTRACTS.FtsoMerkleStructs.name, ContractMethodNames.feedWithProofStruct, undefined],
-    //   [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimStruct, undefined],
-    //   [CONTRACTS.ProtocolMerkleStructs.name, ContractMethodNames.rewardClaimWithProofStruct, undefined],
-    // ];
     const cachedABIs: [ContractDefinitionsNames, ContractMethodNames | undefined, string | undefined][] = [
       ["Submission", ContractMethodNames.submit1, undefined],
       ["Submission", ContractMethodNames.submit2, undefined],
