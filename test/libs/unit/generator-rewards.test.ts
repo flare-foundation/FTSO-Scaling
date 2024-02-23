@@ -115,7 +115,7 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
 
 }
 
-describe.only(`generator-rewards, ${getTestFile(__filename)}`, () => {
+describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
   let numberOfVoters: number;
   let feeds: Feed[];
   let voters: TestVoter[];
