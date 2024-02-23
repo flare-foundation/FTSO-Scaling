@@ -100,7 +100,7 @@ const TEST_CONFIG: NetworkContractAddresses = {
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
 
-type networks = "local-test" | "from-env" | "coston2";
+export type networks = "local-test" | "from-env" | "coston2";
 
 const configs = () => {
   const network = process.env.NETWORK as networks;

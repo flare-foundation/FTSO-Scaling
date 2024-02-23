@@ -15,7 +15,7 @@ import { CcxtFeed } from "./price-feeds/ccxt-provider-service";
 
         // Ccxt service
         const priceFeed = new CcxtFeed();
-        await priceFeed.initialize();
+        await priceFeed.start();
 
         const service = new ExampleProviderService(priceFeed);
         return service;
