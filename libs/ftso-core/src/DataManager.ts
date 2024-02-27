@@ -116,6 +116,8 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId);
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId);
+    this.logger.log(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
+    this.logger.log(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpoch(votingRoundId);
     if (!rewardEpoch) {
@@ -137,6 +139,7 @@ export class DataManager {
       randomGenerationBenchingWindow,
       this.rewardEpochManager
     );
+    this.logger.log(`Valid reveals: ${JSON.stringify(partialData.validEligibleReveals)}`);
     return {
       status: mappingsResponse.status,
       data: {
@@ -460,12 +463,16 @@ export class DataManager {
     for (const [submitAddress, commit] of commitsAndReveals.commits.entries()) {
       if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
         eligibleCommits.set(submitAddress, commit);
+      } else {
+        this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
       }
     }
     // Filter out reveals from non-eligible voters
     for (const [submitAddress, reveal] of commitsAndReveals.reveals.entries()) {
       if (rewardEpoch.isEligibleVoterSubmissionAddress(submitAddress)) {
         eligibleReveals.set(submitAddress, reveal);
+      } else {
+        this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
       }
     }
     const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
@@ -503,6 +510,9 @@ export class DataManager {
       }
       const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
       if (commit.commitHash !== commitHash) {
+        this.logger.warn(
+          `Invalid reveal found for address ${submitAddress}, commit: ${commit.commitHash}, reveal: ${commitHash}`
+        );
         continue;
       }
       validEligibleReveals.set(submitAddress, reveal);
