@@ -72,7 +72,7 @@ export class CcxtFeed implements BaseDataFeed {
     const price = await this.getFeedPrice(decodedFeed);
     return {
       feed: hexFeed,
-      price: price,
+      price: price !== undefined ? price : CCXT_FALLBACK_PRICE,
     };
   }
 
