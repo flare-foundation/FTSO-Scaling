@@ -106,10 +106,14 @@ export class DataManager {
       endVotingRoundId,
       endTimeout
     );
+    this.logger.log(`Mappings response: ${JSON.stringify(mappingsResponse)}`);
     if (
       mappingsResponse.status === DataAvailabilityStatus.NOT_OK ||
       (mappingsResponse.status === DataAvailabilityStatus.TIMEOUT_OK && !endTimeout)
     ) {
+      this.logger.warn(
+        `No commit reveal mappings found for voting round range ${startVotingRoundId} - ${endVotingRoundId}`
+      );
       return {
         status: mappingsResponse.status,
       };
@@ -121,6 +125,7 @@ export class DataManager {
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpoch(votingRoundId);
     if (!rewardEpoch) {
+      this.logger.warn(`No reward epoch found for voting round ${votingRoundId}`);
       return {
         status: DataAvailabilityStatus.NOT_OK,
       };
@@ -139,7 +144,7 @@ export class DataManager {
       randomGenerationBenchingWindow,
       this.rewardEpochManager
     );
-    this.logger.log(`Valid reveals: ${JSON.stringify(partialData.validEligibleReveals)}`);
+    this.logger.log(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
     return {
       status: mappingsResponse.status,
       data: {
@@ -508,7 +513,11 @@ export class DataManager {
       if (!commit) {
         continue;
       }
+
       const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
+      this.logger.log(
+        `Comparing commit ${commit.commitHash} with reveal ${commitHash}: ${submitAddress} ${reveal.random} ${reveal.encodedValues}`
+      );
       if (commit.commitHash !== commitHash) {
         this.logger.warn(
           `Invalid reveal found for address ${submitAddress}, commit: ${commit.commitHash}, reveal: ${commitHash}`

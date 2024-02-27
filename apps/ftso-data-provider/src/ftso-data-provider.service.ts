@@ -65,6 +65,9 @@ export class FtsoDataProviderService {
   ): Promise<IPayloadMessage<ICommitData> | undefined> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
+    this.logger.log(
+      `Getting commit for voting round ${votingRoundId}: ${submissionAddress} ${revealData.random} ${revealData.encodedValues}`
+    );
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
     const commitData: ICommitData = {
       commitHash: hash,
@@ -104,6 +107,7 @@ export class FtsoDataProviderService {
       return undefined;
     }
     const merkleRoot = result.merkleTree.root;
+    this.logger.log(`Computed merkle root for voting round ${votingRoundId}: ${merkleRoot}`);
     const message: IProtocolMessageMerkleRoot = {
       protocolId: FTSO2_PROTOCOL_ID,
       votingRoundId,
