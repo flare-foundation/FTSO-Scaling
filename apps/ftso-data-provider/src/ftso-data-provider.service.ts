@@ -143,7 +143,7 @@ export class FtsoDataProviderService {
       RANDOM_GENERATION_BENCHING_WINDOW,
       this.indexer_top_timeout
     );
-    if (dataResponse.status !== DataAvailabilityStatus.OK) {
+    if (dataResponse.status === DataAvailabilityStatus.NOT_OK) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
       return undefined;
     }
