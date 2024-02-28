@@ -106,7 +106,6 @@ export class DataManager {
       endVotingRoundId,
       endTimeout
     );
-    this.logger.log(`Mappings response: ${JSON.stringify(mappingsResponse)}`);
     if (
       mappingsResponse.status === DataAvailabilityStatus.NOT_OK ||
       (mappingsResponse.status === DataAvailabilityStatus.TIMEOUT_OK && !endTimeout)
@@ -120,8 +119,8 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId);
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId);
-    this.logger.log(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
-    this.logger.log(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
+    this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
+    this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpoch(votingRoundId);
     if (!rewardEpoch) {
@@ -144,7 +143,7 @@ export class DataManager {
       randomGenerationBenchingWindow,
       this.rewardEpochManager
     );
-    this.logger.log(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
+    this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
     return {
       status: mappingsResponse.status,
       data: {
@@ -257,8 +256,7 @@ export class DataManager {
       };
     }
     if (revealSubmissionResponse.status === BlockAssuranceResult.TIMEOUT_OK) {
-      // USELOGER
-      console.warn("Used revels data with timeout assumption on indexer client. TIMEOUT_OK");
+      this.logger.warn("Used reveals data with timeout assumption on indexer client. TIMEOUT_OK");
     }
 
     const votingRoundIdToCommits = this.remapSubmissionDataArrayToVotingRounds(commitSubmissionResponse.data, "commit");
@@ -511,13 +509,11 @@ export class DataManager {
     for (const [submitAddress, reveal] of eligibleReveals.entries()) {
       const commit = eligibleCommits.get(submitAddress);
       if (!commit) {
+        this.logger.debug(`No eligible commit found for address ${submitAddress}`);
         continue;
       }
 
       const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
-      this.logger.log(
-        `Comparing commit ${commit.commitHash} with reveal ${commitHash}: ${submitAddress} ${reveal.random} ${reveal.encodedValues}`
-      );
       if (commit.commitHash !== commitHash) {
         this.logger.warn(
           `Invalid reveal found for address ${submitAddress}, commit: ${commit.commitHash}, reveal: ${commitHash}`

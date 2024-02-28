@@ -65,7 +65,7 @@ export class FtsoDataProviderService {
   ): Promise<IPayloadMessage<ICommitData> | undefined> {
     const rewardEpoch = await this.rewardEpochManger.getRewardEpoch(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
-    this.logger.log(
+    this.logger.debug(
       `Getting commit for voting round ${votingRoundId}: ${submissionAddress} ${revealData.random} ${revealData.encodedValues}`
     );
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
@@ -143,7 +143,10 @@ export class FtsoDataProviderService {
       RANDOM_GENERATION_BENCHING_WINDOW,
       this.indexer_top_timeout
     );
-    if (dataResponse.status === DataAvailabilityStatus.NOT_OK) {
+    if (
+      dataResponse.status !== DataAvailabilityStatus.OK &&
+      dataResponse.status !== DataAvailabilityStatus.TIMEOUT_OK
+    ) {
       this.logger.error(`Data not available for epoch ${votingRoundId}`);
       return undefined;
     }

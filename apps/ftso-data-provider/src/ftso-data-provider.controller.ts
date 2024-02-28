@@ -40,7 +40,7 @@ export class FtsoDataProviderController {
     this.checkSubmitAddress(votingRoundId, submitAddress);
     const data = await this.ftsoDataProviderService.getCommitData(votingRoundId, submitAddress);
     const encodedData = data ? encodeCommitPayloadMessage(data) : undefined;
-    this.logger.log(`Returning commit data voting round ${votingRoundId}: `);
+    this.logger.log(`Returning commit data for voting round ${votingRoundId}: `);
     return {
       status: encodedData ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
@@ -59,7 +59,7 @@ export class FtsoDataProviderController {
     this.checkSubmitAddress(votingRoundId, submitAddress);
     const data = await this.ftsoDataProviderService.getRevealData(votingRoundId);
     const encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
-    this.logger.log(`Returning reveal data voting round ${votingRoundId}`);
+    this.logger.log(`Returning reveal data for voting round ${votingRoundId}`);
     return {
       status: encodedData ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
@@ -77,8 +77,7 @@ export class FtsoDataProviderController {
     );
     const data = await this.ftsoDataProviderService.getResultData(votingRoundId);
     const encodedData = data ? ProtocolMessageMerkleRoot.encode(data) : undefined;
-    this.logger.log(`Returning result data voting round ${votingRoundId}`);
-
+    this.logger.log(`Returning result data for voting round ${votingRoundId}`);
     return {
       status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
