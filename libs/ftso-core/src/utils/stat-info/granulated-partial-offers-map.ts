@@ -70,6 +70,9 @@ export function deserializeGranulatedPartialOfferMap(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const offersPath = path.join(votingRoundFolder, OFFERS_FILE);
+  if (!fs.existsSync(offersPath)) {
+    throw new Error(`Critical error: No granulated offers for voting round ${votingRoundId}`);
+  }
   const offersPerVotingRound: OffersPerVotingRound = JSON.parse(fs.readFileSync(offersPath, "utf8"), bigIntReviver);
   const feedOffers = new Map<string, IPartialRewardOfferForRound[]>();
   for (const feedOffer of offersPerVotingRound.feedOffers) {

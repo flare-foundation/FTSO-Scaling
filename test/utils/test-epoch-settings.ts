@@ -107,6 +107,7 @@ export const realtimeShorterEpochSettings: EpochSettingsConfig = {
 };
 
 export const rewardSettingsForRealtimeShorterEpochSettings = {
+  RANDOM_GENERATION_BENCHING_WINDOW: 1,
   PENALTY_FACTOR: 30n,
   GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC: 10,
   GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC: 20,

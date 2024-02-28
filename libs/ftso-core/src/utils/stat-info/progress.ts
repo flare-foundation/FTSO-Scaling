@@ -1,15 +1,24 @@
-import { globSync } from 'glob';
+import { globSync } from "glob";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { AGGREGATED_CLAIMS_FILE, CLAIMS_FILE, FEED_VALUES_FILE, OFFERS_FILE } from "./constants";
+import {
+  AGGREGATED_CLAIMS_FILE,
+  CLAIMS_FILE,
+  CLAIM_AGGREGATION_PROGRESS_FILE,
+  CLAIM_CALCULATION_PROGRESS_FILE,
+  FEED_CALCULATION_PROGRESS_FILE,
+  FEED_VALUES_FILE,
+  OFFERS_FILE,
+  OFFER_DISTRIBUTION_PROGRESS_FILE,
+} from "./constants";
 import { RewardCalculationStatus, deserializeRewardEpochCalculationStatus } from "./reward-calculation-status";
-
+import { writeFileSync } from "fs";
 
 export enum ProgressType {
   OFFER_DISTRIBUTION = "OFFER_DISTRIBUTION",
   FEED_CALCULATION = "FEED_CALCULATION",
   CLAIM_CALCULATION = "CLAIM_CALCULATION",
-  CLAIM_AGGREGATION = "CLAIM_AGGREGATION"
+  CLAIM_AGGREGATION = "CLAIM_AGGREGATION",
 }
 
 export interface ProgressReport {
@@ -22,7 +31,7 @@ export interface ProgressReport {
   // if not sequential, startVotingRoundId + number of processed rounds - 1
   progress?: number;
   confirmed?: boolean;
-};
+}
 
 export interface ProgressConfig {
   fileName: string;
@@ -37,34 +46,38 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
     case ProgressType.OFFER_DISTRIBUTION:
       return {
         fileName: OFFERS_FILE,
-        sequentialCount: false
+        sequentialCount: false,
       };
     case ProgressType.FEED_CALCULATION:
       return {
         fileName: FEED_VALUES_FILE,
-        sequentialCount: false
+        sequentialCount: false,
       };
     case ProgressType.CLAIM_CALCULATION:
       return {
         fileName: CLAIMS_FILE,
-        sequentialCount: true
+        sequentialCount: true,
       };
     case ProgressType.CLAIM_AGGREGATION:
       return {
         fileName: AGGREGATED_CLAIMS_FILE,
-        sequentialCount: true
+        sequentialCount: true,
       };
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(progressType);
+      ((_: never): void => {})(progressType);
   }
 }
 
 /**
  * Calculates the progress of reward calculation for a given reward epoch.
  */
-export function rewardCalculationProgress(rewardEpochId: number, progressType: ProgressType, calculationFolder = CALCULATIONS_FOLDER()): ProgressReport {
+export function rewardCalculationProgress(
+  rewardEpochId: number,
+  progressType: ProgressType,
+  calculationFolder = CALCULATIONS_FOLDER()
+): ProgressReport {
   const status = deserializeRewardEpochCalculationStatus(rewardEpochId, calculationFolder);
   const config = progressConfig(progressType);
   const tmpResult = {
@@ -72,8 +85,8 @@ export function rewardCalculationProgress(rewardEpochId: number, progressType: P
     endVotingRoundId: status.endVotingRoundId,
     sequential: config.sequentialCount,
     status: status.calculationStatus,
-    type: progressType
-  }
+    type: progressType,
+  };
   if (status.calculationStatus === RewardCalculationStatus.PENDING) {
     return tmpResult;
   }
@@ -81,15 +94,15 @@ export function rewardCalculationProgress(rewardEpochId: number, progressType: P
     return {
       ...tmpResult,
       progress: status.endVotingRoundId,
-      confirmed: true
-    }
+      confirmed: true,
+    };
   }
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
 
   const numberExtractRegex = new RegExp(`^.*\/(\\d+)\/${config.fileName}$`);
   const result = globSync(`${rewardEpochFolder}/**/${config.fileName}`)
-    .map((file) => parseInt(file.replace(numberExtractRegex, "$1")))
-    .filter((votingRoundId) => status.startVotingRoundId <= votingRoundId && votingRoundId <= status.endVotingRoundId);
+    .map(file => parseInt(file.replace(numberExtractRegex, "$1")))
+    .filter(votingRoundId => status.startVotingRoundId <= votingRoundId && votingRoundId <= status.endVotingRoundId);
   result.sort();
 
   if (result.length === 0) {
@@ -99,8 +112,8 @@ export function rewardCalculationProgress(rewardEpochId: number, progressType: P
   if (!config.sequentialCount) {
     return {
       ...tmpResult,
-      progress: status.startVotingRoundId + result.length - 1
-    }
+      progress: status.startVotingRoundId + result.length - 1,
+    };
   }
   // sequential count
   if (result[0] !== status.startVotingRoundId) {
@@ -110,15 +123,16 @@ export function rewardCalculationProgress(rewardEpochId: number, progressType: P
   let progress = result[0];
   for (let i = 1; i < result.length; i++) {
     const votingRoundId = result[i];
-    if (votingRoundId !== progress + 1) { // gap detected
+    if (votingRoundId !== progress + 1) {
+      // gap detected
       break;
     }
     progress = votingRoundId;
   }
   return {
     ...tmpResult,
-    progress
-  }
+    progress,
+  };
 }
 
 /**
@@ -127,7 +141,46 @@ export function rewardCalculationProgress(rewardEpochId: number, progressType: P
 export function printProgress(progress: ProgressReport): string {
   let value = "-";
   if (progress.progress !== undefined) {
-    value = (progress.progress - progress.startVotingRoundId) / (progress.endVotingRoundId - progress.startVotingRoundId) * 100 + "%";
+    value =
+      ((progress.progress - progress.startVotingRoundId) / (progress.endVotingRoundId - progress.startVotingRoundId)) *
+        100 +
+      "%";
   }
   return `${progress.type} (${progress.status}): ${value}`;
+}
+
+/**
+ * Records the progress of reward calculation for a given reward epoch into the progress files.
+ */
+export function recordProgress(rewardEpochId: number, calculationFolder = CALCULATIONS_FOLDER()) {
+  const progressOfferDistribution = rewardCalculationProgress(
+    rewardEpochId,
+    ProgressType.OFFER_DISTRIBUTION,
+    calculationFolder
+  );
+  const progressFeedCalculation = rewardCalculationProgress(
+    rewardEpochId,
+    ProgressType.FEED_CALCULATION,
+    calculationFolder
+  );
+  const progressClaimCalculation = rewardCalculationProgress(
+    rewardEpochId,
+    ProgressType.CLAIM_CALCULATION,
+    calculationFolder
+  );
+  const progressClaimAggregation = rewardCalculationProgress(
+    rewardEpochId,
+    ProgressType.CLAIM_AGGREGATION,
+    calculationFolder
+  );
+  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+
+  const statusFileProgressOfferDistribution = path.join(rewardEpochFolder, OFFER_DISTRIBUTION_PROGRESS_FILE);
+  writeFileSync(statusFileProgressOfferDistribution, JSON.stringify(progressOfferDistribution));
+  const statusFileProgressFeedCalculation = path.join(rewardEpochFolder, FEED_CALCULATION_PROGRESS_FILE);
+  writeFileSync(statusFileProgressFeedCalculation, JSON.stringify(progressFeedCalculation));
+  const statusFileProgressClaimCalculation = path.join(rewardEpochFolder, CLAIM_CALCULATION_PROGRESS_FILE);
+  writeFileSync(statusFileProgressClaimCalculation, JSON.stringify(progressClaimCalculation));
+  const statusFileProgressClaimAggregation = path.join(rewardEpochFolder, CLAIM_AGGREGATION_PROGRESS_FILE);
+  writeFileSync(statusFileProgressClaimAggregation, JSON.stringify(progressClaimAggregation));
 }

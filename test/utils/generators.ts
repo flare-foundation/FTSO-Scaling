@@ -17,10 +17,9 @@ import { TLPEvents } from "../../libs/ftso-core/src/orm/entities";
 import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
 import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { Bytes32 } from "../../libs/ftso-core/src/utils/sol-types";
 import { Feed, MedianCalculationResult } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent } from "./basic-generators";
-import { utils } from "web3";
-import { Bytes32 } from "../../libs/ftso-core/src/utils/sol-types";
 import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
 
 export const encodingUtils = EncodingUtils.instance;
@@ -229,9 +228,7 @@ export function generateRewardsOffer(
 }
 
 /**
- *
- * @param feeds
- * @param rewardEpochId
+ * Generate an inflation reward offer for given feeds
  */
 export function generateInflationRewardOffer(feeds: string[], rewardEpochId: number) {
   const unprefixedFeedsInHex = feeds.map(feed => generateFeedName(feed).slice(2, 18));

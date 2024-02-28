@@ -114,7 +114,7 @@ export function parseTransactionSummary(tx: TLPTransaction, voterToIndexMap: Map
       return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxCommit;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
     if (tx.input.startsWith(sigReveal.slice(2))) {
-      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxReveal;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
+      return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxReveal(${tx.input.length});voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;
     }
     if (tx.input.startsWith(sigSignature.slice(2))) {
       return `${tx.timestamp};${tx.block_number};${votingEpoch(tx.timestamp)};${rewardEpoch(tx.timestamp)};${votingEpochPosition(tx.timestamp)};TxSignature;voter: ${voterToIndexMap.get(fromAddress)};status: ${tx.status}`;

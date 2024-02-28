@@ -22,7 +22,7 @@ import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { IRevealData } from "../../libs/ftso-core/src/utils/RevealData";
-import { Feed } from "../../libs/ftso-core/src/voting-types";
+import { EpochResult, Feed } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent, generateState, generateTx } from "./basic-generators";
 import { MiniFinalizer } from "./mini-finalizer/MiniFinalizer";
 import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
@@ -51,10 +51,15 @@ export function voterFeedValue(votingRoundId: number, voterIndex: number, feedSe
 
 export function offersForFeeds(
   rewardEpochId: number, feeds: Feed[], amount: bigint,
-  startBlock: number, startTime: number
+  startBlock: number, startTime: number,
+  maxBlocks: number = 100
 ): IndexerPosition<TLPEvents> {
   const events: TLPEvents[] = [];
+  const maxBlock = startBlock + maxBlocks;
+  let block = startBlock;
+  let timestamp = startTime;
   for (const [i, feed] of feeds.entries()) {
+    
     let event = generateEvent(
       CONTRACTS.FtsoRewardOffersManager,
       "RewardsOffered",
@@ -68,10 +73,14 @@ export function offersForFeeds(
         secondaryBandWidthPPM: 10000,
         claimBackAddress: BURN_ADDRESS,
       },
-      startBlock + i,
-      startTime + i
+      block,
+      timestamp
     );
     events.push(event);
+    if(block < maxBlock) {
+      block++;
+      timestamp++;
+    }
   }
   const result: IndexerPosition<TLPEvents> = {
     block: startBlock + feeds.length,
@@ -100,6 +109,7 @@ export interface RewardDataSimulationScenario {
   doubleSigners: VotersInVotingEpoch[];
   revealOffenders: VotersInVotingEpoch[];
   independentFinalizersOutsideGracePeriod: AddressInVotingEpoch[];
+  useFixedCalculationResult?: boolean;
 }
 
 export const happyRewardDataSimulationScenario: RewardDataSimulationScenario = {
@@ -623,14 +633,17 @@ export async function generateRewardEpochDataForRewardCalculation(
     if (votingEpochId > signingPolicy.startVotingRoundId) {
       logger.log(`SIGNATURES ${votingEpochId - 1}`);
       moveToVotingEpochOffset(votingEpochId, signatureStartOffset + 1);
+      let fixedCalculationResult: EpochResult | undefined;
       for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
         if (!shouldVoterSubmitSignature(voterIndex, votingEpochId - 1)) {
           continue;
         }
         const voter = voters[voterIndex];
         const calculator = voterIndexToMiniFTSOCalculator.get(voterIndex);
-
-        const payload = await calculator.getSignaturePayload(votingEpochId - 1);
+        if(scenario.useFixedCalculationResult && !fixedCalculationResult) {
+          fixedCalculationResult = await calculator.prepareCalculationResultData(votingEpochId - 1);
+        }
+        const payload = await calculator.getSignaturePayload(votingEpochId - 1, false, fixedCalculationResult);
         const signaturePayload = sigSignature + payload.slice(2);
         const signatureTx = generateTx(
           voter.submitSignaturesAddress,
@@ -642,7 +655,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         );
         entities.push(signatureTx);
         if (isVoterDoubleSigner(voterIndex, votingEpochId - 1)) {
-          const payload = await calculator.getSignaturePayload(votingEpochId - 1, true);
+          const payload = await calculator.getSignaturePayload(votingEpochId - 1, true, fixedCalculationResult);
           const signaturePayload = sigSignature + payload.slice(2);
           const signatureTx = generateTx(
             voter.submitSignaturesAddress,
@@ -658,6 +671,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         if (timestamp < finalizationStartDeadline - 1) {
           mineBlock();
         }
+        
       }
       // Generate calculation data per each voter
       // Calculate medians
@@ -748,8 +762,9 @@ export async function generateRewardEpochDataForRewardCalculation(
       await updateUpperState();
       entities = [];
     }
+
     // COMMITS
-    if (votingEpochId < signingPolicy.startVotingRoundId + EPOCH_SETTINGS().votingEpochDurationSeconds - 1) {
+    if (votingEpochId <= lastVotingEpochId) {
       logger.log(`COMMITS ${votingEpochId}`);
       reset(startBlock, startTime);
       const lastCommitTime = EPOCH_SETTINGS().votingEpochEndSec(votingEpochId);

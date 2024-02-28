@@ -34,5 +34,8 @@ export function deserializeFeedValuesForVotingRoundId(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const feedValuesPath = path.join(votingRoundFolder, FEED_VALUES_FILE);
+  if (!fs.existsSync(feedValuesPath)) {
+    return;
+  }
   return JSON.parse(fs.readFileSync(feedValuesPath, "utf8"), bigIntReviver);
 }

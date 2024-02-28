@@ -38,6 +38,9 @@ export function deserializeAggregatedClaimsForVotingRoundId(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const claimsPath = path.join(votingRoundFolder, AGGREGATED_CLAIMS_FILE);
+  if (!fs.existsSync(claimsPath)) {
+    return;
+  }
   return JSON.parse(fs.readFileSync(claimsPath, "utf8"), bigIntReviver);
 }
 /**

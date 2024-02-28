@@ -54,7 +54,7 @@ export class MiniFtsoCalculator {
     return message;
   }
 
-  private async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
+  public async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(
       votingRoundId,
       RANDOM_GENERATION_BENCHING_WINDOW(),
@@ -72,8 +72,8 @@ export class MiniFtsoCalculator {
     }
   }
 
-  public async getSignaturePayload(votingRoundId: number, doubleSignRandom = false): Promise<string> {
-    let result = await this.prepareCalculationResultData(votingRoundId);
+  public async getSignaturePayload(votingRoundId: number, doubleSignRandom = false, providedEpochResult?: EpochResult): Promise<string> {
+    let result = providedEpochResult ?? await this.prepareCalculationResultData(votingRoundId);
     const merkleRoot = doubleSignRandom ? Web3.utils.randomHex(32) : result.merkleTree.root;
 
     const message: IProtocolMessageMerkleRoot = {

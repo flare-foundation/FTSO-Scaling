@@ -4,7 +4,7 @@ import { DataSource, EntityManager } from "typeorm";
 import { DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { BURN_ADDRESS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { BURN_ADDRESS, EPOCH_SETTINGS, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
 import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
 import { aggregateRewardClaimsInStorage, initializeRewardEpochStorage, partialRewardClaimsForVotingRound, rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
@@ -132,8 +132,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     setupEpochSettings(realtimeShorterEpochSettings);
     logger.log("Epoch settings used");
     logger.dir(EPOCH_SETTINGS());
-    process.env.RANDOM_GENERATION_BENCHING_WINDOW = "1";
-    logger.log(`RANDOM_GENERATION_BENCHING_WINDOW = ${process.env.RANDOM_GENERATION_BENCHING_WINDOW}`);
     setupEnvVariables(rewardSettingsForRealtimeShorterEpochSettings);
     logger.log("Reward settings used");
     logger.dir(rewardSettingsForRealtimeShorterEpochSettings);
@@ -509,7 +507,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
-    const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
     const addLog = true;
@@ -533,7 +530,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       const rewardClaims = await partialRewardClaimsForVotingRound(
         rewardEpochId,
         votingRoundId,
-        benchingWindowRevealOffenders,
+        RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
         undefined,  // should be read from calculations folder
         merge,
@@ -578,7 +575,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       await partialRewardClaimsForVotingRound(
         rewardEpochId,
         votingRoundId,
-        benchingWindowRevealOffenders,
+        RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
         undefined,  // should be read from calculations folder
         merge,

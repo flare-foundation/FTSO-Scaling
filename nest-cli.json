@@ -35,6 +35,15 @@
         "tsConfigPath": "apps/ftso-reward-calculator/tsconfig.app.json"
       }
     },
+    "ftso-reward-calculation-process": {
+      "type": "application",
+      "root": "apps/ftso-reward-calculation-process",
+      "entryFile": "main",
+      "sourceRoot": "apps/ftso-reward-calculation-process/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/ftso-reward-calculation-process/tsconfig.app.json"
+      }
+    },
     "example_provider": {
       "type": "application",
       "root": "apps/example_provider",

@@ -38,5 +38,8 @@ export function deserializePartialClaimsForVotingRoundId(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const claimsPath = path.join(votingRoundFolder, CLAIMS_FILE);
+  if (!fs.existsSync(claimsPath)) {
+    return;
+  }
   return JSON.parse(fs.readFileSync(claimsPath, "utf8"), bigIntReviver);
 }

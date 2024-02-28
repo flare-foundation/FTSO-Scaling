@@ -8,7 +8,6 @@ import { Feed } from "../../voting-types";
 import { bigIntReplacer } from "../big-number-serialization";
 import { REWARD_EPOCH_INFO_FILE } from "./constants";
 
-
 export interface RewardEpochInfo {
   rewardEpochId: number;
   signingPolicy: ISigningPolicy;
@@ -41,7 +40,8 @@ export function getRewardEpochInfo(rewardEpoch: RewardEpoch): RewardEpochInfo {
     votePowerBlock: rewardEpoch.votePowerBlock,
     votePowerTimestamp: rewardEpoch.votePowerBlockTimestamp,
     expectedStartVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpoch.rewardEpochId),
-    expectedEndVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpoch.rewardEpochId + 1) - 1
+    expectedEndVotingRoundId:
+      EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpoch.rewardEpochId + 1) - 1,
   };
   return result;
 }
@@ -75,6 +75,8 @@ export function deserializeRewardEpochInfo(
 ): RewardEpochInfo {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const rewardEpochInfoPath = path.join(rewardEpochFolder, REWARD_EPOCH_INFO_FILE);
+  if (!fs.existsSync(rewardEpochInfoPath)) {
+    return;
+  }
   return JSON.parse(fs.readFileSync(rewardEpochInfoPath, "utf8"));
 }
-

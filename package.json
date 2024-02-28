@@ -39,10 +39,12 @@
     "helmet": "^7.1.0",
     "lru-cache": "^10.2.0",
     "mysql2": "^3.6.5",
+    "nest-commander": "^3.12.5",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.17",
-    "web3": "^4"
+    "web3": "^4",
+    "workerpool": "^9.1.0"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -59,6 +61,7 @@
     "@types/node": "^20.3.1",
     "@types/sinon": "^17.0.3",
     "@types/sinonjs__fake-timers": "^8.1.5",
+    "@types/workerpool": "^6.4.7",
     "@typescript-eslint/eslint-plugin": "^5.59.11",
     "@typescript-eslint/parser": "^5.59.11",
     "axios-mock-adapter": "^1.22.0",

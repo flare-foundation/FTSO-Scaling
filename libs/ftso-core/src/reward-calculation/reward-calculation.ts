@@ -21,14 +21,22 @@ import { calculateRandom } from "../ftso-calculation/ftso-random";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import {
-  aggregatedClaimsForVotingRoundIdExist, deserializeAggregatedClaimsForVotingRoundId,
-  serializeAggregatedClaimsForVotingRoundId
+  aggregatedClaimsForVotingRoundIdExist,
+  deserializeAggregatedClaimsForVotingRoundId,
+  serializeAggregatedClaimsForVotingRoundId,
 } from "../utils/stat-info/aggregated-claims";
 import { serializeFeedValuesForVotingRoundId } from "../utils/stat-info/feed-values";
-import { deserializeGranulatedPartialOfferMap, serializeGranulatedPartialOfferMap } from "../utils/stat-info/granulated-partial-offers-map";
-import { deserializePartialClaimsForVotingRoundId, serializePartialClaimsForVotingRoundId } from "../utils/stat-info/partial-claims";
+import {
+  deserializeGranulatedPartialOfferMap,
+  serializeGranulatedPartialOfferMap,
+} from "../utils/stat-info/granulated-partial-offers-map";
+import {
+  deserializePartialClaimsForVotingRoundId,
+  serializePartialClaimsForVotingRoundId,
+} from "../utils/stat-info/partial-claims";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
+import { destroyStorage } from "../utils/stat-info/storage";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -41,10 +49,13 @@ export async function rewardClaimsForRewardEpoch(
   dataManager: DataManager,
   rewardEpochManager: RewardEpochManager,
   merge = true,
-  addLog = false
+  addLog = false,
+  serialize = false,
+  forceDestroyStorage = false
 ): Promise<IRewardClaim[] | IPartialRewardClaim[]> {
-  // Reward epoch definitions
-
+  if (serialize && forceDestroyStorage) {
+    destroyStorage(rewardEpochId);
+  }
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
   // Partial offer generation from reward offers
