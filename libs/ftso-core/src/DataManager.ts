@@ -110,9 +110,9 @@ export class DataManager {
         status: mappingsResponse.status,
       };
     }
-    const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId);
-    const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId);
-
+    const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
+    const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
+    
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
       return {
@@ -545,8 +545,8 @@ export class DataManager {
   ) {
     const randomOffenders = new Set<Address>();
     for (let i = votingRoundId - randomGenerationBenchingWindow; i < votingRoundId; i++) {
-      const commits = votingRoundIdToCommits.get(i);
-      const reveals = votingRoundIdToReveals.get(i);
+      const commits = votingRoundIdToCommits.get(i) || [];
+      const reveals = votingRoundIdToReveals.get(i) || [];
       if (!commits || commits.length === 0) {
         continue;
       }

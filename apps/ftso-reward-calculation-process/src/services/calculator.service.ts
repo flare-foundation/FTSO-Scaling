@@ -173,7 +173,7 @@ export class CalculatorService {
         logger.log(options);
         logger.log("-------------------");
         const pool = workerPool.pool(__dirname + "/../claim-calculation-worker.js", {
-          maxWorkers: 10, //options.numberOfWorkers,
+          maxWorkers: options.numberOfWorkers,
         });
         const promises = [];
         for (let votingRoundId = start; votingRoundId <= end; votingRoundId += options.batchSize) {
