@@ -38,4 +38,13 @@ describe("FeedValueEncoder", () => {
     expect(decoded[1].value).to.equal(Math.round(prices[1] * 10 ** feeds[1].decimals));
     expect(decoded[1].decimals).to.equal(feeds[1].decimals);
   });
+
+  it("should encode and decode correctly with undefined values - all", () => {
+    const prices: (number | undefined)[] = [undefined, undefined];
+    const encoded = FeedValueEncoder.encode(prices, feeds);
+    const decoded = FeedValueEncoder.decode(encoded, feeds);
+
+    expect(decoded[0].isEmpty).to.equal(true);
+    expect(decoded[1].isEmpty).to.equal(true);
+  });
 });
