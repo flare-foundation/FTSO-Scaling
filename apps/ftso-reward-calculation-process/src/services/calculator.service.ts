@@ -40,6 +40,7 @@ export interface OptionalCommandOptions {
   // if set, the logs will be written to the file
   loggerFile?: string;
   calculationFolder?: string;
+  rpcUrl?: string;
 }
 
 if (process.env.FORCE_NOW) {

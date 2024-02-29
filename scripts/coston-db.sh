@@ -31,12 +31,16 @@ export DB_PASSWORD=root
 export DB_NAME=flare_ftso_indexer
 
 # check here: https://coston-explorer.flare.network/address/0x6e5A85aB09c2056A9Af46c3Ca5a5A1E6752C8D79/read-contract#address-tabs
-# 8. getCurrentRewardEpoch, and use one epoch less for test (required indexer history is 3 epochs)
-export REWARD_EPOCH_ID=2349
+# 9.  getCurrentRewardEpochId, and use one epoch less for test (required indexer history is 4 epochs/ 1 day)
+# export REWARD_EPOCH_ID=2349
+
 yarn nest build ftso-reward-calculation-process
 
 # node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r $REWARD_EPOCH_ID -i
 # node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r $REWARD_EPOCH_ID -c -b 10 -w 24
 # node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r $REWARD_EPOCH_ID -a
 
-node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r $REWARD_EPOCH_ID -i -a -c -b 10 -w 24
+# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r $REWARD_EPOCH_ID -i -a -c -b 10 -w 24
+
+# calculate all for the last finished reward epoch id
+node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -i -a -c -b 10 -w 24 -u https://coston-api.flare.network/ext/bc/C/rpc
