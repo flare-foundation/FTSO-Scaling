@@ -1,5 +1,5 @@
-import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
+import { ApiSecurity, ApiTags } from "@nestjs/swagger";
 import {
   AbiDefinitionsResponse,
   ExternalResponse,
@@ -11,6 +11,7 @@ import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
 import { LRUCache } from "lru-cache";
+import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 
 enum ApiTagsEnum {
   PDP = "FTSO Protocol data provider",
@@ -18,6 +19,8 @@ enum ApiTagsEnum {
 }
 
 @Controller("")
+@UseGuards(ApiKeyAuthGuard)
+@ApiSecurity("X-API-KEY")
 export class FtsoDataProviderController {
   private readonly logger = new Logger(FtsoDataProviderController.name);
   constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}

@@ -112,7 +112,7 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
-    
+
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
       return {

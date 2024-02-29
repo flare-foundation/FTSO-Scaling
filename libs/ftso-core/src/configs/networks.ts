@@ -15,7 +15,7 @@ const TEST_CONFIG: NetworkContractAddresses = {
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
 
-type networks = "local-test" | "from-env" | "coston2";
+export type networks = "local-test" | "from-env" | "coston2";
 
 const configs = () => {
   const network = process.env.NETWORK as networks;
@@ -167,6 +167,22 @@ export const RANDOM_GENERATION_BENCHING_WINDOW = () => {
   return constantRandomGenerationBenchingWindow;
 };
 
+const initialRewardEpochId = () => {
+  switch (process.env.NETWORK) {
+    case "from-env": {
+      if (!process.env.INITIAL_REWARD_EPOCH_ID) {
+        throw new Error("INITIAL_REWARD_EPOCH_ID value is not provided");
+      }
+      return parseInt(process.env.INITIAL_REWARD_EPOCH_ID);
+    }
+    case "local-test":
+    default:
+      return 0;
+  }
+};
+
+export const INITIAL_REWARD_EPOCH_ID = initialRewardEpochId();
+
 const burnAddress = () => {
   switch (process.env.NETWORK) {
     case "local-test":
@@ -194,9 +210,9 @@ export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinaliza
 
 export const GENESIS_REWARD_EPOCH_START_EVENT = () => {
   const result: RewardEpochStarted = {
-    rewardEpochId: 0,
-    timestamp: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0),
-    startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(0),
+    rewardEpochId: INITIAL_REWARD_EPOCH_ID,
+    timestamp: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(INITIAL_REWARD_EPOCH_ID),
+    startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(INITIAL_REWARD_EPOCH_ID),
   };
   return result;
 };

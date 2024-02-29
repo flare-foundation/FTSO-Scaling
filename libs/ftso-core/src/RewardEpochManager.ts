@@ -1,7 +1,7 @@
 import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochDuration } from "./utils/RewardEpochDuration";
-import { EPOCH_SETTINGS, GENESIS_REWARD_EPOCH_START_EVENT } from "./configs/networks";
+import { EPOCH_SETTINGS, INITIAL_REWARD_EPOCH_ID, GENESIS_REWARD_EPOCH_START_EVENT } from "./configs/networks";
 import { RewardEpochStarted, SigningPolicyInitialized } from "./events";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
 
@@ -135,8 +135,8 @@ export class RewardEpochManager {
   }
 
   private async getPreviousRewardEpochStartedEvent(rewardEpochId: number): Promise<RewardEpochStarted> {
-    if (rewardEpochId === 1) {
-      // Reward epoch start event does not exist for epoch 0
+    if (rewardEpochId === INITIAL_REWARD_EPOCH_ID + 1) {
+      // Reward epoch start event does not exist for initial reward epoch
       return GENESIS_REWARD_EPOCH_START_EVENT();
     } else {
       const previousRewardEpochStartedEventResponse = await this.indexerClient.getStartOfRewardEpochEvent(

@@ -5,6 +5,9 @@ import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src
 import configuration, { IConfig } from "./config/configuration";
 import { FtsoDataProviderController } from "./ftso-data-provider.controller";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
+import { AuthService } from "./auth/auth.service";
+import { AuthModule } from "./auth/auth.module";
+import { ApiKeyStrategy } from "./auth/apikey.strategy";
 
 const IMPORTS_ARRAY = [
   ConfigModule.forRoot({
@@ -26,11 +29,12 @@ const IMPORTS_ARRAY = [
       };
     },
   }),
+  AuthModule,
 ];
 
 @Module({
   imports: IMPORTS_ARRAY,
   controllers: [FtsoDataProviderController],
-  providers: [FtsoDataProviderService],
+  providers: [ApiKeyStrategy, AuthService, FtsoDataProviderService],
 })
 export class FtsoDataProviderModule {}

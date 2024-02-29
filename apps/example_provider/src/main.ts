@@ -13,7 +13,6 @@ async function bootstrap() {
     .setTitle("Simple Pricer Provider API interface")
     .setDescription("This server is used by the FTSO protocol data provider.")
     .setBasePath(basePath)
-    // .addApiKey({ type: 'apiKey', name: 'X-API-KEY', in: 'header' }, 'X-API-KEY')
     .setVersion("1.0")
     .build();
   const options: SwaggerDocumentOptions = {
@@ -29,4 +28,5 @@ async function bootstrap() {
   console.log(`Open link: http://localhost:${PORT}/api-doc`);
   await app.listen(PORT);
 }
-bootstrap();
+
+void bootstrap();
