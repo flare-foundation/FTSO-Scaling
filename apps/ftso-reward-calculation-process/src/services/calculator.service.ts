@@ -40,7 +40,6 @@ export interface OptionalCommandOptions {
   // if set, the logs will be written to the file
   loggerFile?: string;
   calculationFolder?: string;
-  isWorker?: boolean;
 }
 
 if (process.env.FORCE_NOW) {
@@ -187,20 +186,17 @@ export class CalculatorService {
             loggerFile = path.join(logFolder, `logs-${votingRoundId}-${endBatch}.log`);
           }
           const batchOptions = {
-            ...options,
+            rewardEpochId: options.rewardEpochId,
+            calculateClaims: true,
             startVotingRoundId: votingRoundId,
             endVotingRoundId: endBatch,
-            // set to undefined to avoid recursive use of pools
-            batchSize: undefined,
-            numberOfWorkers: undefined,
-            // loggerFile,
-            isWorker: true,
+            loggerFile,
           };
           // logger.log(batchOptions);
           promises.push(pool.exec("run", [batchOptions]));
         }
         await Promise.all(promises);
-        pool.terminate();
+        await pool.terminate();
       }
     }
 
