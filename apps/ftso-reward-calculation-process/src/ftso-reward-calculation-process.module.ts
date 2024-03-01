@@ -16,7 +16,6 @@ const IMPORTS_ARRAY = [
     inject: [ConfigService],
     useFactory: async (configService: ConfigService<IConfig>) => {
       const sqliteDatabase = configService.get("db_sqlite3_path");
-      console.log(process.cwd());
       if (sqliteDatabase) {
         return {
           type: "sqlite",

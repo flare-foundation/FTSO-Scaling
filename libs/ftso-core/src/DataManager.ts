@@ -106,15 +106,21 @@ export class DataManager {
       mappingsResponse.status === DataAvailabilityStatus.NOT_OK ||
       (mappingsResponse.status === DataAvailabilityStatus.TIMEOUT_OK && !endTimeout)
     ) {
+      this.logger.warn(
+        `No commit reveal mappings found for voting round range ${startVotingRoundId} - ${endVotingRoundId}`
+      );
       return {
         status: mappingsResponse.status,
       };
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
+    // this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
+    // this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
+      this.logger.warn(`No reward epoch found for voting round ${votingRoundId}`);
       return {
         status: DataAvailabilityStatus.NOT_OK,
       };
@@ -133,6 +139,7 @@ export class DataManager {
       randomGenerationBenchingWindow,
       this.rewardEpochManager
     );
+    // this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
     return {
       status: mappingsResponse.status,
       data: {
@@ -242,8 +249,7 @@ export class DataManager {
       };
     }
     if (revealSubmissionResponse.status === BlockAssuranceResult.TIMEOUT_OK) {
-      // USELOGER
-      console.warn("Used revels data with timeout assumption on indexer client. TIMEOUT_OK");
+      this.logger.warn("Used reveals data with timeout assumption on indexer client. TIMEOUT_OK");
     }
 
     const votingRoundIdToCommits = this.remapSubmissionDataArrayToVotingRounds(commitSubmissionResponse.data, "commit");
@@ -457,12 +463,16 @@ export class DataManager {
     for (const [submitAddress, commit] of commitsAndReveals.commits.entries()) {
       if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
         eligibleCommits.set(submitAddress, commit);
+      } else {
+        this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
       }
     }
     // Filter out reveals from non-eligible voters
     for (const [submitAddress, reveal] of commitsAndReveals.reveals.entries()) {
       if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
         eligibleReveals.set(submitAddress, reveal);
+      } else {
+        this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
       }
     }
     const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
@@ -496,10 +506,15 @@ export class DataManager {
     for (const [submitAddress, reveal] of eligibleReveals.entries()) {
       const commit = eligibleCommits.get(submitAddress);
       if (!commit) {
+        this.logger.debug(`No eligible commit found for address ${submitAddress}`);
         continue;
       }
+
       const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
       if (commit.commitHash !== commitHash) {
+        this.logger.warn(
+          `Invalid reveal found for address ${submitAddress}, commit: ${commit.commitHash}, reveal: ${commitHash}`
+        );
         continue;
       }
       validEligibleReveals.set(submitAddress, reveal);

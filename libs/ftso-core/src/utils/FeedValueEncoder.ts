@@ -29,7 +29,8 @@ export namespace FeedValueEncoder {
       return value.toString(16).padStart(8, "0");
     });
     if (endStrip) {
-      while (result.length > 0 && result[result.length - 1] === "00000000") {
+      // Strip trailing empty feed values, but keep at least one so the encoded result is not empty
+      while (result.length > 1 && result[result.length - 1] === EMPTY_FEED_VALUE) {
         result.pop();
       }
     }

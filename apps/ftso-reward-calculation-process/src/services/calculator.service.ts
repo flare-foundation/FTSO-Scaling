@@ -8,7 +8,11 @@ import * as workerPool from "workerpool";
 import { DataManager } from "../../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
-import { CONTRACTS, EPOCH_SETTINGS, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../../libs/ftso-core/src/configs/networks";
+import {
+  CONTRACTS,
+  EPOCH_SETTINGS,
+  RANDOM_GENERATION_BENCHING_WINDOW,
+} from "../../../../libs/ftso-core/src/configs/networks";
 import {
   aggregateRewardClaimsInStorage,
   initializeRewardEpochStorage,
@@ -102,11 +106,14 @@ export class CalculatorService {
 
   /**
    * Checks into the indexer for the latest reward epoch start event and returns the reward epoch id.
-   * It looks into the history of depth of 5 reward epoch lengths from now. 
+   * It looks into the history of depth of 5 reward epoch lengths from now.
    */
   async latestRewardEpochStart(HISTORY_DEPTH_IN_REWARD_EPOCHS = 5): Promise<number | undefined> {
     const eventName = RewardEpochStarted.eventName;
-    const historyDepth = EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * HISTORY_DEPTH_IN_REWARD_EPOCHS * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const historyDepth =
+      EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs *
+      HISTORY_DEPTH_IN_REWARD_EPOCHS *
+      EPOCH_SETTINGS().votingEpochDurationSeconds;
     const startTime = Math.floor(Date.now() / 1000) - historyDepth;
     const result = await this.indexerClient.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
     const events = result.map(event => RewardEpochStarted.fromRawEvent(event));
@@ -116,21 +123,26 @@ export class CalculatorService {
     return;
   }
 
-  claimAggregation(rewardEpochDuration: RewardEpochDuration, votingRoundId: number, logger: Console | SimpleFileLogger) {
-    logger.log(`Aggregating claims for voting round: ${votingRoundId}`)
+  claimAggregation(
+    rewardEpochDuration: RewardEpochDuration,
+    votingRoundId: number,
+    logger: Console | SimpleFileLogger
+  ) {
+    logger.log(`Aggregating claims for voting round: ${votingRoundId}`);
     if (votingRoundId === rewardEpochDuration.startVotingRoundId) {
-      aggregateRewardClaimsInStorage(
-        rewardEpochDuration.rewardEpochId,
-        votingRoundId,
-        votingRoundId,
-        true
-      );
+      aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId, votingRoundId, true);
     } else {
       aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId - 1, votingRoundId, true);
     }
   }
 
-  async calculateClaimsAndAggregate(rewardEpochDuration: RewardEpochDuration, votingRoundId: number, aggregateClaims: boolean, retryDelayMs: number, logger: Console | SimpleFileLogger) {
+  async calculateClaimsAndAggregate(
+    rewardEpochDuration: RewardEpochDuration,
+    votingRoundId: number,
+    aggregateClaims: boolean,
+    retryDelayMs: number,
+    logger: Console | SimpleFileLogger
+  ) {
     let done = false;
     while (!done) {
       try {
@@ -159,7 +171,14 @@ export class CalculatorService {
     }
   }
 
-  async batchCalculate(options: OptionalCommandOptions, rewardEpochDuration: RewardEpochDuration, end: number, aggregateClaims: boolean, useExpectedEndIfNoSigningPolicyAfter: boolean, logger: Console | SimpleFileLogger) {
+  async batchCalculate(
+    options: OptionalCommandOptions,
+    rewardEpochDuration: RewardEpochDuration,
+    end: number,
+    aggregateClaims: boolean,
+    useExpectedEndIfNoSigningPolicyAfter: boolean,
+    logger: Console | SimpleFileLogger
+  ) {
     logger.log("Using parallel processing");
     logger.log(options);
     logger.log("-------------------");
@@ -167,7 +186,11 @@ export class CalculatorService {
       maxWorkers: options.numberOfWorkers,
     });
     const promises = [];
-    for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= end; votingRoundId += options.batchSize) {
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId <= end;
+      votingRoundId += options.batchSize
+    ) {
       const endBatch = Math.min(votingRoundId + options.batchSize - 1, end);
       let loggerFile;
       if (options.calculationFolder !== undefined) {
@@ -184,7 +207,7 @@ export class CalculatorService {
         endVotingRoundId: endBatch,
         loggerFile,
         isWorker: true,
-        useExpectedEndIfNoSigningPolicyAfter
+        useExpectedEndIfNoSigningPolicyAfter,
       };
       // logger.log(batchOptions);
       promises.push(pool.exec("run", [batchOptions]));
@@ -224,7 +247,9 @@ export class CalculatorService {
       startRewardEpochId = latestRewardEpochId - 1;
       endRewardEpochId = latestRewardEpochId - 1;
     } else {
-      throw new Error(`Invalid parameter options. Either rewardEpochId should be provided or a pair of startRewardEpochId and rpc should be provided, or none`);
+      throw new Error(
+        `Invalid parameter options. Either rewardEpochId should be provided or a pair of startRewardEpochId and rpc should be provided, or none`
+      );
     }
     let rewardEpochId = startRewardEpochId;
 
@@ -304,7 +329,14 @@ export class CalculatorService {
         }
         // first try to do batch calculations
         if (options.batchSize !== undefined && options.batchSize > 0 && !forceSkipBatchCalculation) {
-          await this.batchCalculate(options, rewardEpochDuration, lastBatchCalculationVotingRoundId, isIncrementalMode, isIncrementalMode, logger);
+          await this.batchCalculate(
+            options,
+            rewardEpochDuration,
+            lastBatchCalculationVotingRoundId,
+            isIncrementalMode,
+            isIncrementalMode,
+            logger
+          );
         }
         // then proceed to incremental, if needed
         if (isIncrementalMode || options.batchSize === undefined) {
@@ -315,11 +347,16 @@ export class CalculatorService {
             serialStart = Math.max(lastBatchCalculationVotingRoundId, start);
           }
           for (let votingRoundId = serialStart; votingRoundId <= serialEnd; votingRoundId++) {
-            await this.calculateClaimsAndAggregate(rewardEpochDuration, votingRoundId, options.aggregateClaims, options.retryDelayMs, logger);
+            await this.calculateClaimsAndAggregate(
+              rewardEpochDuration,
+              votingRoundId,
+              options.aggregateClaims,
+              options.retryDelayMs,
+              logger
+            );
           }
         }
       }
-
 
       if (!isIncrementalMode && options.aggregateClaims) {
         for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {

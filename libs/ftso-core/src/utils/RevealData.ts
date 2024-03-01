@@ -27,7 +27,7 @@ export namespace RevealData {
       random: encoded.slice(0, 66),
       feeds,
       pricesWithDecimals: FeedValueEncoder.decode("0x" + encoded.slice(66), feeds),
-      encodedValues: "0x" + encoded.slice(66).padEnd(8 * feeds.length, "0"),
+      encodedValues: "0x" + encoded.slice(66),
     };
   }
 

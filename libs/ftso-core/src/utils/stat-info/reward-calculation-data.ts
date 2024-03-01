@@ -9,7 +9,6 @@ import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClie
 import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
 import { hashToPrivateScalar } from "ccxt/js/src/static_dependencies/noble-curves/abstract/modular";
 
-
 export interface RevealRecords {
   submitAddress: string;
   data: IRevealData;
@@ -49,7 +48,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     voterMedianVotingWeights,
     randomGenerationBenchingWindow: data.dataForCalculations.randomGenerationBenchingWindow,
     benchingWindowRevealOffenders: [...data.dataForCalculations.benchingWindowRevealOffenders],
-  }
+  };
   return result;
 }
 
@@ -75,7 +74,6 @@ export function serializeDataForRewardCalculation(
   rewardCalculationData: DataForRewardCalculation,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
-  
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   if (!fs.existsSync(rewardEpochFolder)) {
     fs.mkdirSync(rewardEpochFolder);

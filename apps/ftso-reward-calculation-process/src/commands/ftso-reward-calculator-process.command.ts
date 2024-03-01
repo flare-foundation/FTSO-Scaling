@@ -41,7 +41,8 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
 
   @Option({
     flags: "-n, --endRewardEpochId [number]",
-    description: "End reward epoch id. If provided the limited range [startRewardEpochId, endRewardEpochId] will be used for reward epoch calculation. If only startEpochId is provided, incremental calculation for current reward epoch is assumed.",
+    description:
+      "End reward epoch id. If provided the limited range [startRewardEpochId, endRewardEpochId] will be used for reward epoch calculation. If only startEpochId is provided, incremental calculation for current reward epoch is assumed.",
   })
   parseEndRewardEpochId(val: string): number {
     return Number(val);
@@ -119,5 +120,4 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   parseRetryDelayMs(val: string): number {
     return Number(val);
   }
-
 }

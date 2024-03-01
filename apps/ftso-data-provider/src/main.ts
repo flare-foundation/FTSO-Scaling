@@ -2,10 +2,15 @@ import { NestFactory } from "@nestjs/core";
 import { FtsoDataProviderModule } from "./ftso-data-provider.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
-import { Logger } from "@nestjs/common";
+import { LogLevel, Logger } from "@nestjs/common";
 
 async function bootstrap() {
-  const app = await NestFactory.create(FtsoDataProviderModule);
+  let logLevels: LogLevel[] = ["log"];
+  if (process.env.LOG_LEVEL == "debug") {
+    logLevels = ["verbose"];
+  }
+
+  const app = await NestFactory.create(FtsoDataProviderModule, { logger: logLevels });
   app.use(helmet());
   const basePath = process.env.DATA_PROVIDER_CLIENT_BASE_PATH ?? "";
 
