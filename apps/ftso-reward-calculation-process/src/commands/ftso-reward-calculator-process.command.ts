@@ -1,7 +1,4 @@
 import { Command, CommandRunner, Option } from "nest-commander";
-import Web3 from "web3";
-import { CONTRACTS } from "../../../../libs/ftso-core/src/configs/networks";
-import { ABICache } from "../../../../libs/ftso-core/src/utils/ABICache";
 import { CalculatorService, OptionalCommandOptions } from "../services/calculator.service";
 @Command({
   name: "ftso-reward-calculation-process",
@@ -20,14 +17,6 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
    */
   async run(inputs: string[], options: OptionalCommandOptions): Promise<void> {
     try {
-      if (options.rewardEpochId === undefined && options.rpcUrl !== undefined) {
-        const web3 = new Web3(options.rpcUrl);
-        const abiCache = new ABICache();
-        const abi = abiCache.contractNameToAbi.get("FlareSystemsManager");
-        const flareSystemsManager = new web3.eth.Contract(abi, CONTRACTS.FlareSystemsManager.address);
-        const rewardEpochId = await flareSystemsManager.methods.getCurrentRewardEpochId().call();
-        options.rewardEpochId = parseInt(rewardEpochId as any) - 1;
-      }
       await this.calculator.run(options);
     } catch (e) {
       console.log(e);
@@ -39,6 +28,22 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
     description: "Reward epoch id",
   })
   parseRewardEpochId(val: string): number {
+    return Number(val);
+  }
+
+  @Option({
+    flags: "-d, --startRewardEpochId [number]",
+    description: "Start reward epoch id",
+  })
+  parseStartRewardEpochId(val: string): number {
+    return Number(val);
+  }
+
+  @Option({
+    flags: "-n, --endRewardEpochId [number]",
+    description: "End reward epoch id. If provided the limited range [startRewardEpochId, endRewardEpochId] will be used for reward epoch calculation. If only startEpochId is provided, incremental calculation for current reward epoch is assumed.",
+  })
+  parseEndRewardEpochId(val: string): number {
     return Number(val);
   }
 
@@ -107,10 +112,12 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
-    flags: "-u, --rpcUrl [string]",
-    description: "RPC url for network to get current reward epoch if reward epoch id is not provided",
+    flags: "-m, --retryDelayMs [number]",
+    description: "Retry delay in ms for incremental reward claims calculation",
+    defaultValue: "10000",
   })
-  parseRpcUrl(val: string): string {
-    return val;
+  parseRetryDelayMs(val: string): number {
+    return Number(val);
   }
+
 }

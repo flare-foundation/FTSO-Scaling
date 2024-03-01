@@ -133,7 +133,7 @@ export class IndexerClient {
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.
    */
-  private async queryEvents(
+  public async queryEvents(
     smartContract: ContractDefinitions,
     eventName: string,
     startTime: number,
@@ -154,7 +154,7 @@ export class IndexerClient {
   /**
    * Queries indexer database for transactions on a smart contract based on function signature in a given timestamp range.
    */
-  private async queryTransactions(
+  public async queryTransactions(
     smartContract: ContractDefinitions,
     functionName: ContractMethodNames,
     startTime: number,

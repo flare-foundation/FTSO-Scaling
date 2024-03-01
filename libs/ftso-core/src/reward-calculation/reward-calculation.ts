@@ -37,6 +37,7 @@ import {
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
 import { destroyStorage } from "../utils/stat-info/storage";
+import { serializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -149,9 +150,8 @@ export async function partialRewardClaimsForVotingRound(
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
   }
-
-  const rewardDataForCalculations = rewardDataForCalculationResponse.data;
-
+  
+  const rewardDataForCalculations = rewardDataForCalculationResponse.data;  
   const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
 
   const voterWeights = rewardEpoch.getVotersWeights();
@@ -168,6 +168,7 @@ export async function partialRewardClaimsForVotingRound(
       ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
     ];
     serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
+    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations);
   }
 
   // feedName => medianResult

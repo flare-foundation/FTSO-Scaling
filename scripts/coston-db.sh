@@ -43,4 +43,7 @@ yarn nest build ftso-reward-calculation-process
 # node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r $REWARD_EPOCH_ID -i -a -c -b 10 -w 24
 
 # calculate all for the last finished reward epoch id
-node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -i -a -c -b 10 -w 24 -u https://coston-api.flare.network/ext/bc/C/rpc
+node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -i -a -c -b 10 -w 24 -d 2353 -m 10000
+
+
+# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -i -a -c -b 10 -w 24

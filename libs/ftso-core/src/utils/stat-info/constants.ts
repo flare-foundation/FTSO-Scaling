@@ -4,6 +4,7 @@ export const AGGREGATED_CLAIMS_FILE = "aggregated-claims.json";
 export const FEED_VALUES_FILE = "feed-values.json";
 export const STATUS_FILE = "calculation-status.json";
 export const REWARD_EPOCH_INFO_FILE = "reward-epoch-info.json";
+export const REWARD_CALCULATION_DATA_FILE = "reward-calculation-data.json";
 
 export const OFFER_DISTRIBUTION_PROGRESS_FILE = "offer-distribution-progress.json";
 export const FEED_CALCULATION_PROGRESS_FILE = "feed-calculation-progress.json";
