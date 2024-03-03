@@ -60,19 +60,6 @@ if (process.env.FORCE_NOW) {
   FakeTimers.install({ now: newNow });
 }
 
-export class SimpleFileLogger {
-  private file: string;
-
-  constructor(file: string) {
-    this.file = file;
-    writeFileSync(this.file, "");
-  }
-  log(message: any) {
-    const processedMessage = JSON.stringify(message, null, 2);
-    appendFileSync(this.file, processedMessage + "\n");
-  }
-}
-
 @Injectable()
 export class CalculatorService {
   private readonly logger = new Logger(CalculatorService.name);
@@ -126,13 +113,13 @@ export class CalculatorService {
   claimAggregation(
     rewardEpochDuration: RewardEpochDuration,
     votingRoundId: number,
-    logger: Console | SimpleFileLogger
+    logger: Logger
   ) {
     logger.log(`Aggregating claims for voting round: ${votingRoundId}`);
     if (votingRoundId === rewardEpochDuration.startVotingRoundId) {
       aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId, votingRoundId, true);
     } else {
-      aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId - 1, votingRoundId, true);
+      aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId - 1, votingRoundId, false);
     }
   }
 
@@ -141,7 +128,7 @@ export class CalculatorService {
     votingRoundId: number,
     aggregateClaims: boolean,
     retryDelayMs: number,
-    logger: Console | SimpleFileLogger
+    logger: Logger
   ) {
     let done = false;
     while (!done) {
@@ -162,10 +149,10 @@ export class CalculatorService {
         }
         done = true;
       } catch (e) {
-        console.error(`Error while calculating reward claims for voting round ${votingRoundId}: ${e}`);
+        logger.error(`Error while calculating reward claims for voting round ${votingRoundId}: ${e}`);
         // TODO: calculate expected time when data should be ready. If not, keep delaying for 10s
         const delay = retryDelayMs ?? 10000;
-        console.log(`Sleeping for ${delay / 1000}s before retrying...`);
+        logger.log(`Sleeping for ${delay / 1000}s before retrying...`);
         await sleepFor(delay);
       }
     }
@@ -177,7 +164,7 @@ export class CalculatorService {
     end: number,
     aggregateClaims: boolean,
     useExpectedEndIfNoSigningPolicyAfter: boolean,
-    logger: Console | SimpleFileLogger
+    logger: Logger
   ) {
     logger.log("Using parallel processing");
     logger.log(options);
@@ -214,7 +201,7 @@ export class CalculatorService {
     }
     await Promise.all(promises);
     await pool.terminate();
-    console.log("Batch done", aggregateClaims);
+    logger.log("Batch done", aggregateClaims, end);
     if (aggregateClaims) {
       for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= end; votingRoundId++) {
         this.claimAggregation(rewardEpochDuration, votingRoundId, logger);
@@ -227,7 +214,7 @@ export class CalculatorService {
    * Calculation can be quite intensive.
    */
   async run(options: OptionalCommandOptions): Promise<void> {
-    const logger = options.loggerFile ? new SimpleFileLogger(options.loggerFile) : console;
+    const logger = new Logger();
     logger.log(options);
 
     let startRewardEpochId;
@@ -259,13 +246,13 @@ export class CalculatorService {
     while (true) {
       if (endRewardEpochId && rewardEpochId > endRewardEpochId) {
         // all done, finish
-        console.log("ALL DONE", rewardEpochId, startRewardEpochId, endRewardEpochId);
+        logger.log("ALL DONE", rewardEpochId, startRewardEpochId, endRewardEpochId);
         return;
       }
       if (rewardEpochCalculationStatusExists(rewardEpochId)) {
         const status = deserializeRewardEpochCalculationStatus(rewardEpochId);
         if (status.calculationStatus === RewardCalculationStatus.DONE) {
-          console.log("Skipping reward epoch", rewardEpochId, "as it is already done");
+          logger.log("Skipping reward epoch", rewardEpochId, "as it is already done");
           rewardEpochId++;
           continue;
         }
@@ -273,7 +260,7 @@ export class CalculatorService {
       const latestRewardEpochId = await this.latestRewardEpochStart();
       const isIncrementalMode = !options.isWorker && rewardEpochId === latestRewardEpochId;
       if (isIncrementalMode) {
-        console.log("Incremental mode");
+        logger.log("Incremental mode");
       }
       let rewardEpochDuration;
       if (options.initialize) {
@@ -369,7 +356,7 @@ export class CalculatorService {
         recordProgress(rewardEpochId);
 
         rewardEpochId++;
-        console.log("Incrementing reward epoch id to", rewardEpochId);
+        logger.log("Incrementing reward epoch id to", rewardEpochId);
         continue;
       }
       recordProgress(rewardEpochId);

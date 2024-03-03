@@ -193,6 +193,21 @@ export class IndexerClient {
   }
 
   /**
+   * Returns the lowest timestamp in the indexer database + 1, which is considered as a 
+   * secure lowest timestamp.
+   */
+  public async secureLowestTimestamp(): Promise<number> {
+    const queryFirst = this.entityManager
+      .createQueryBuilder(TLPState, "state")
+      .andWhere("state.name = :name", { name: FIRST_DATABASE_INDEX_STATE });
+    const firstState = await queryFirst.getOne();
+    if (!firstState) {
+      throw new Error("Critical error: First state not found in the indexer database");
+    }
+    return firstState.block_timestamp + 1;
+  }
+
+  /**
    * Checks the indexer database for a given endTime possibly with given timeout.
    * If the database contains a block with timestamp strictly greater than endTime, it returns OK.
    * If  the database does not contain a block with timestamp strictly greater than endTime, and

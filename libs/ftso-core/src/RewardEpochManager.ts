@@ -38,7 +38,8 @@ export class RewardEpochManager {
     if (rewardEpoch && rewardEpoch.startVotingRoundId <= votingEpochId) {
       return rewardEpoch;
     }
-    const lowestExpectedIndexerHistoryTime = Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
+    const lowestExpectedIndexerHistoryTime = await this.indexerClient.secureLowestTimestamp();    
+    //Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
     const signingPolicyInitializedEvents = await this.indexerClient.getLatestSigningPolicyInitializedEvents(
       lowestExpectedIndexerHistoryTime
     );
@@ -52,7 +53,7 @@ export class RewardEpochManager {
       i--;
     }
     if (i < 0) {
-      // no such signing policy in requiredHistoryTimeSec window
+      // no such signing policy in database
       throw new Error(
         `Critical error: Signing policy not found after ${lowestExpectedIndexerHistoryTime} - most likely the indexer has too short history`
       );
@@ -168,7 +169,8 @@ export class RewardEpochManager {
     rewardEpochId: number,
     useExpectedEndIfNoSigningPolicyAfter = false
   ): Promise<RewardEpochDuration> {
-    const lowestExpectedIndexerHistoryTime = Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
+    const lowestExpectedIndexerHistoryTime = await this.indexerClient.secureLowestTimestamp();
+    //Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
     const signingPolicyInitializedEventsResponse = await this.indexerClient.getLatestSigningPolicyInitializedEvents(
       lowestExpectedIndexerHistoryTime
     );

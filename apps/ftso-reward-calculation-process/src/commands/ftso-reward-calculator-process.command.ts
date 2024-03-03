@@ -1,10 +1,12 @@
 import { Command, CommandRunner, Option } from "nest-commander";
 import { CalculatorService, OptionalCommandOptions } from "../services/calculator.service";
+import { Logger } from "@nestjs/common";
 @Command({
   name: "ftso-reward-calculation-process",
   options: {},
 })
 export class FtsoRewardCalculationProcessCommand extends CommandRunner {
+  private logger = new Logger(FtsoRewardCalculationProcessCommand.name);
   constructor(private calculator: CalculatorService) {
     super();
   }
@@ -19,7 +21,7 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
     try {
       await this.calculator.run(options);
     } catch (e) {
-      console.log(e);
+      this.logger.error(e);
     }
   }
 
