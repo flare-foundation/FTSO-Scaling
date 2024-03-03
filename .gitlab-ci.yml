@@ -6,7 +6,7 @@ workflow:
 
 .test:
   stage: test
-  image: node:18
+  image: node:20
   cache:
     - key:
         files:
