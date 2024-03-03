@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import FakeTimers from "@sinonjs/fake-timers";
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import path from "path/posix";
 import { EntityManager } from "typeorm";
 import * as workerPool from "workerpool";
@@ -9,15 +9,21 @@ import { DataManager } from "../../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
 import {
+  BURN_ADDRESS,
   CONTRACTS,
   EPOCH_SETTINGS,
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../../libs/ftso-core/src/configs/networks";
+import { RewardEpochStarted } from "../../../../libs/ftso-core/src/events";
 import {
   aggregateRewardClaimsInStorage,
   initializeRewardEpochStorage,
   partialRewardClaimsForVotingRound,
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
+import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
+import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
+import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils/stat-info/final-reward-claims";
 import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
@@ -30,10 +36,8 @@ import {
   serializeRewardEpochInfo,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/storage";
-import { RewardEpochStarted } from "../../../../libs/ftso-core/src/events";
-import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
-import { ILogger } from "../../../../libs/ftso-core/src/utils/ILogger";
-import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
+import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
+import { serializeRewardDistributionData } from "../../../../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
 
 export interface OptionalCommandOptions {
   rewardEpochId?: number;
@@ -324,6 +328,7 @@ export class CalculatorService {
             isIncrementalMode,
             logger
           );
+          recordProgress(rewardEpochId);
         }
         // then proceed to incremental, if needed
         if (isIncrementalMode || options.batchSize === undefined) {
@@ -341,6 +346,7 @@ export class CalculatorService {
               options.retryDelayMs,
               logger
             );
+            recordProgress(rewardEpochId);
           }
         }
       }
@@ -354,7 +360,10 @@ export class CalculatorService {
       if (end === rewardEpochDuration.endVotingRoundId && options.aggregateClaims) {
         setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
         recordProgress(rewardEpochId);
-
+        const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, end);
+        serializeFinalRewardClaims(rewardEpochId, lastClaims);
+        const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
+        serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
         rewardEpochId++;
         logger.log("Incrementing reward epoch id to", rewardEpochId);
         continue;

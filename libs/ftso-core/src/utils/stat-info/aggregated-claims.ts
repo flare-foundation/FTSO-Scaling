@@ -1,4 +1,4 @@
-import fs from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
 import { IRewardClaim } from "../RewardClaim";
@@ -18,11 +18,11 @@ export function serializeAggregatedClaimsForVotingRoundId(
 ): void {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
-  if (!fs.existsSync(votingRoundFolder)) {
-    fs.mkdirSync(votingRoundFolder);
+  if (!existsSync(votingRoundFolder)) {
+    mkdirSync(votingRoundFolder);
   }
   const claimsPath = path.join(votingRoundFolder, AGGREGATED_CLAIMS_FILE);
-  fs.writeFileSync(claimsPath, JSON.stringify(rewardClaims, bigIntReplacer));
+  writeFileSync(claimsPath, JSON.stringify(rewardClaims, bigIntReplacer));
 }
 
 /**
@@ -38,10 +38,10 @@ export function deserializeAggregatedClaimsForVotingRoundId(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const claimsPath = path.join(votingRoundFolder, AGGREGATED_CLAIMS_FILE);
-  if (!fs.existsSync(claimsPath)) {
+  if (!existsSync(claimsPath)) {
     return;
   }
-  return JSON.parse(fs.readFileSync(claimsPath, "utf8"), bigIntReviver);
+  return JSON.parse(readFileSync(claimsPath, "utf8"), bigIntReviver);
 }
 /**
  * Checks if aggregated claims for a given voting round exist on disk.
@@ -54,5 +54,5 @@ export function aggregatedClaimsForVotingRoundIdExist(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const claimsPath = path.join(votingRoundFolder, AGGREGATED_CLAIMS_FILE);
-  return fs.existsSync(claimsPath);
+  return existsSync(claimsPath);
 }

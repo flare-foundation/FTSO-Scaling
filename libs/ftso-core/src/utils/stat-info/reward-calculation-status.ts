@@ -1,4 +1,4 @@
-import fs from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { RewardEpoch } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
@@ -41,7 +41,7 @@ export function serializeRewardEpochCalculationStatus(
 ) {
   const rewardEpochFolder = path.join(calculationFolder, `${status.rewardEpochId}`);
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
-  fs.writeFileSync(statusFile, JSON.stringify(status));
+  writeFileSync(statusFile, JSON.stringify(status));
 }
 
 /**
@@ -53,10 +53,10 @@ export function deserializeRewardEpochCalculationStatus(
 ): RewardEpochCalculationStatus {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
-  if (!fs.existsSync(statusFile)) {
+  if (!existsSync(statusFile)) {
     return;
   }
-  return JSON.parse(fs.readFileSync(statusFile, "utf8"));
+  return JSON.parse(readFileSync(statusFile, "utf8"));
 }
 
 /**
@@ -68,7 +68,7 @@ export function rewardEpochCalculationStatusExists(
 ): boolean {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
-  return fs.existsSync(statusFile);
+  return existsSync(statusFile);
 }
 
 /**

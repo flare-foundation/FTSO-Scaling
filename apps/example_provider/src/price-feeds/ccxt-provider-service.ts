@@ -1,10 +1,10 @@
 import { Logger } from "@nestjs/common";
-import { FeedPriceData } from "../dto/provider-requests.dto";
 import ccxt, { Exchange, Ticker } from "ccxt";
-import { BaseDataFeed } from "./base-feed";
-import fs from "fs";
+import { readFileSync } from "fs";
 import { networks } from "../../../../libs/ftso-core/src/configs/networks";
 import { retry } from "../../../../libs/ftso-core/src/utils/retry";
+import { FeedPriceData } from "../dto/provider-requests.dto";
+import { BaseDataFeed } from "./base-feed";
 
 export const CCXT_FALLBACK_PRICE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
@@ -190,7 +190,7 @@ export class CcxtFeed implements BaseDataFeed {
     }
 
     try {
-      const jsonString = fs.readFileSync(configPath, "utf-8");
+      const jsonString = readFileSync(configPath, "utf-8");
       const config: FeedConfig[] = JSON.parse(jsonString);
 
       if (config.find(feed => feed.feed === "USDT") === undefined) {

@@ -1,4 +1,4 @@
-import fs from "fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
 import { IPartialRewardOfferForRound } from "../PartialRewardOffer";
@@ -26,17 +26,17 @@ export function serializeGranulatedPartialOfferMap(
   rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>>,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
-  if (!fs.existsSync(calculationFolder)) {
-    fs.mkdirSync(calculationFolder);
+  if (!existsSync(calculationFolder)) {
+    mkdirSync(calculationFolder);
   }
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochDuration.rewardEpochId}`);
-  if (fs.existsSync(rewardEpochFolder)) {
-    fs.rmSync(rewardEpochFolder, { recursive: true });
+  if (existsSync(rewardEpochFolder)) {
+    rmSync(rewardEpochFolder, { recursive: true });
   }
-  fs.mkdirSync(rewardEpochFolder);
+  mkdirSync(rewardEpochFolder);
   for (let i = rewardEpochDuration.startVotingRoundId; i <= rewardEpochDuration.endVotingRoundId; i++) {
     const votingRoundFolder = path.join(rewardEpochFolder, `${i}`);
-    fs.mkdirSync(votingRoundFolder);
+    mkdirSync(votingRoundFolder);
     const feedOffers = rewardOfferMap.get(i);
     if (!feedOffers) {
       throw new Error(`Critical error: No feed offers for voting round ${i}`);
@@ -53,7 +53,7 @@ export function serializeGranulatedPartialOfferMap(
       });
     }
     const offersPath = path.join(votingRoundFolder, OFFERS_FILE);
-    fs.writeFileSync(offersPath, JSON.stringify(offersPerVotingRound, bigIntReplacer));
+    writeFileSync(offersPath, JSON.stringify(offersPerVotingRound, bigIntReplacer));
   }
 }
 
@@ -70,10 +70,10 @@ export function deserializeGranulatedPartialOfferMap(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const offersPath = path.join(votingRoundFolder, OFFERS_FILE);
-  if (!fs.existsSync(offersPath)) {
+  if (!existsSync(offersPath)) {
     throw new Error(`Critical error: No granulated offers for voting round ${votingRoundId}`);
   }
-  const offersPerVotingRound: OffersPerVotingRound = JSON.parse(fs.readFileSync(offersPath, "utf8"), bigIntReviver);
+  const offersPerVotingRound: OffersPerVotingRound = JSON.parse(readFileSync(offersPath, "utf8"), bigIntReviver);
   const feedOffers = new Map<string, IPartialRewardOfferForRound[]>();
   for (const feedOffer of offersPerVotingRound.feedOffers) {
     feedOffers.set(feedOffer.feedName, feedOffer.offers);

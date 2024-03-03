@@ -1,13 +1,12 @@
-import fs from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path/posix";
+import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
+import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
 import { DataForRewardCalculation } from "../../data-calculation-interfaces";
+import { IRevealData } from "../RevealData";
 import { bigIntReplacer } from "../big-number-serialization";
 import { REWARD_CALCULATION_DATA_FILE } from "./constants";
-import { IRevealData } from "../RevealData";
-import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
-import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
-import { hashToPrivateScalar } from "ccxt/js/src/static_dependencies/noble-curves/abstract/modular";
 
 export interface RevealRecords {
   submitAddress: string;
@@ -75,8 +74,8 @@ export function serializeDataForRewardCalculation(
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
-  if (!fs.existsSync(rewardEpochFolder)) {
-    fs.mkdirSync(rewardEpochFolder);
+  if (!existsSync(rewardEpochFolder)) {
+    mkdirSync(rewardEpochFolder);
   }
   const votingRoundFolder = path.join(rewardEpochFolder, `${rewardCalculationData.dataForCalculations.votingRoundId}`);
   const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
@@ -95,5 +94,5 @@ export function serializeDataForRewardCalculation(
     finalizations: rewardCalculationData.finalizations,
     firstSuccessfulFinalization: rewardCalculationData.firstSuccessfulFinalization,
   };
-  fs.writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
+  writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }

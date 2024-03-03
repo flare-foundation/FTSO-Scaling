@@ -1,4 +1,4 @@
-import fs from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { ISigningPolicy } from "../../../../fsp-utils/src/SigningPolicy";
 import { RewardEpoch } from "../../RewardEpoch";
@@ -57,11 +57,11 @@ export function serializeRewardEpochInfo(
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
-  if (!fs.existsSync(rewardEpochFolder)) {
-    fs.mkdirSync(rewardEpochFolder);
+  if (!existsSync(rewardEpochFolder)) {
+    mkdirSync(rewardEpochFolder);
   }
   const rewardEpochInfoPath = path.join(rewardEpochFolder, REWARD_EPOCH_INFO_FILE);
-  fs.writeFileSync(rewardEpochInfoPath, JSON.stringify(rewardEpochInfo, bigIntReplacer));
+  writeFileSync(rewardEpochInfoPath, JSON.stringify(rewardEpochInfo, bigIntReplacer));
 }
 
 /**
@@ -75,8 +75,8 @@ export function deserializeRewardEpochInfo(
 ): RewardEpochInfo {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const rewardEpochInfoPath = path.join(rewardEpochFolder, REWARD_EPOCH_INFO_FILE);
-  if (!fs.existsSync(rewardEpochInfoPath)) {
+  if (!existsSync(rewardEpochInfoPath)) {
     return;
   }
-  return JSON.parse(fs.readFileSync(rewardEpochInfoPath, "utf8"));
+  return JSON.parse(readFileSync(rewardEpochInfoPath, "utf8"));
 }
