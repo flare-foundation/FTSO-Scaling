@@ -6,7 +6,7 @@ workflow:
 
 .test:
   stage: test
-  image: node:20.11.1
+  image: node:18
   cache:
     - key:
         files:
@@ -15,7 +15,6 @@ workflow:
         - node_modules/
       policy: pull
   before_script:
-    - yarn set version v1.22.21
     - yarn install --frozen-lockfile
 
 test-all:
