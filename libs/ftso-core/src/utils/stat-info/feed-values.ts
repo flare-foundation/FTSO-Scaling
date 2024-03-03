@@ -47,13 +47,13 @@ export function serializeFeedValuesForVotingRoundId(
     CONTRACTS.FtsoMerkleStructs.name,
     ContractMethodNames.feedStruct,
     0
-  );
+  ).abi;
 
   const randomValueAbi = EncodingUtils.instance.getFunctionInputAbiData(
     CONTRACTS.FtsoMerkleStructs.name,
     ContractMethodNames.randomStruct,
     0
-  );
+  ).abi;
   const randomResult = calculationResults.find(x => !(x as any).name) as RandomResult;
   const feedResults = calculationResults.filter(x => (x as any).name) as FeedResult[];
   if(!randomResult || feedResults.length + 1 !== calculationResults.length) {

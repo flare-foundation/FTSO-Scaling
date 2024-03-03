@@ -29,7 +29,7 @@ export function serializeRewardDistributionData(
       CONTRACTS.ProtocolMerkleStructs.name,
       ContractMethodNames.rewardClaimStruct,
       0
-   );
+   ).abi;
    const merkleTree = buildRewardClaimMerkleTree(rewardClaims);
    const merkleRoot = merkleTree.root;
    const rewardClaimsWithProof = rewardClaims.map(claim => getMerkleProof(claim, merkleTree));
