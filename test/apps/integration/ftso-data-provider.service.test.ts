@@ -98,7 +98,12 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     const reveal = (await service.getRevealData(votingRound, submissionAddress)).payload;
 
-    const expectedCommit = CommitData.hashForCommit(submissionAddress, reveal.random, reveal.encodedValues);
+    const expectedCommit = CommitData.hashForCommit(
+      submissionAddress,
+      votingRound,
+      reveal.random,
+      reveal.encodedValues
+    );
     expect(commit.commitHash).to.be.equal(expectedCommit);
   });
 

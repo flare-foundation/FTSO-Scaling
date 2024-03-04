@@ -31,10 +31,12 @@ export namespace CommitData {
     };
   }
 
-  export function hashForCommit(voter: Address, random: string, prices: string) {
-    const types = ["address", "uint256", "bytes"];
-    const values = [voter.toLowerCase(), random, prices];
+  export function hashForCommit(voter: Address, votingRoundId: number, random: string, prices: string): string {
+    const types = ["address", "uint32", "uint256", "bytes"];
+    const values = [voter.toLowerCase(), votingRoundId, random, prices];
     const encoded = encodeParameters(types, values);
-    return soliditySha3(encoded)!;
+    const hash = soliditySha3(encoded);
+    if (hash === undefined) throw new Error(`Unable to compute commit hash for ${votingRoundId}`);
+    return hash;
   }
 }

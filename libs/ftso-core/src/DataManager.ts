@@ -511,8 +511,12 @@ export class DataManager {
         this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
       }
     }
-    const validEligibleReveals = this.getValidReveals(eligibleCommits, eligibleReveals);
-    const revealOffenders = this.getRevealOffenders(eligibleCommits, eligibleReveals);
+    const validEligibleReveals = this.getValidReveals(
+      commitsAndReveals.votingRoundId,
+      eligibleCommits,
+      eligibleReveals
+    );
+    const revealOffenders = this.getRevealOffenders(commitsAndReveals.votingRoundId, eligibleCommits, eligibleReveals);
     const voterMedianVotingWeights = new Map<Address, bigint>();
     const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmitAddresses;
     for (const submitAddress of orderedVotersSubmissionAddresses) {
@@ -535,6 +539,7 @@ export class DataManager {
    * A reveal is considered valid if there exists a matching commit.
    */
   private getValidReveals(
+    votingRoundId: number,
     eligibleCommits: Map<Address, ICommitData>,
     eligibleReveals: Map<Address, IRevealData>
   ): Map<Address, IRevealData> {
@@ -546,7 +551,7 @@ export class DataManager {
         continue;
       }
 
-      const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
+      const commitHash = CommitData.hashForCommit(submitAddress, votingRoundId, reveal.random, reveal.encodedValues);
       if (commit.commitHash !== commitHash) {
         this.logger.warn(
           `Invalid reveal found for address ${submitAddress}, commit: ${commit.commitHash}, reveal: ${commitHash}`
@@ -563,6 +568,7 @@ export class DataManager {
    * Iterate over commits and check if they were revealed correctly, return those that were not.
    */
   private getRevealOffenders(
+    votingRoundId: number,
     availableCommits: Map<Address, ICommitData>,
     availableReveals: Map<Address, IRevealData>
   ): Set<Address> {
@@ -573,7 +579,7 @@ export class DataManager {
         revealOffenders.add(submitAddress);
         continue;
       }
-      const commitHash = CommitData.hashForCommit(submitAddress, reveal.random, reveal.encodedValues);
+      const commitHash = CommitData.hashForCommit(submitAddress, votingRoundId, reveal.random, reveal.encodedValues);
       if (commit.commitHash !== commitHash) {
         revealOffenders.add(submitAddress);
       }
@@ -616,7 +622,11 @@ export class DataManager {
       const feedOrder = (await rewardEpochManager.getRewardEpochForVotingEpochId(i, rewardEpochId + 1))
         .canonicalFeedOrder;
       const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals, feedOrder);
-      const revealOffenders = this.getRevealOffenders(commitsAndReveals.commits, commitsAndReveals.reveals);
+      const revealOffenders = this.getRevealOffenders(
+        commitsAndReveals.votingRoundId,
+        commitsAndReveals.commits,
+        commitsAndReveals.reveals
+      );
       for (const offender of revealOffenders) {
         randomOffenders.add(offender);
       }
