@@ -13,7 +13,7 @@ import {
 } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
-import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
+import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, GENESIS_REWARD_EPOCH_START_EVENT } from "./configs/networks";
 import { ContractMethodNames } from "./configs/contracts";
 import {
   DataForCalculations,
@@ -134,6 +134,7 @@ export class DataManager {
     const partialData = this.getDataForCalculationsPartial(votersToCommitsAndReveals, rewardEpoch);
     const benchingWindowRevealOffenders = await this.getBenchingWindowRevealOffenders(
       votingRoundId,
+      rewardEpoch.rewardEpochId,
       mappingsResponse.data.votingRoundIdToCommits,
       mappingsResponse.data.votingRoundIdToReveals,
       randomGenerationBenchingWindow,
@@ -553,12 +554,17 @@ export class DataManager {
    */
   private async getBenchingWindowRevealOffenders(
     votingRoundId: number,
+    rewardEpochId: number,
     votingRoundIdToCommits: Map<number, SubmissionData[]>,
     votingRoundIdToReveals: Map<number, SubmissionData[]>,
     randomGenerationBenchingWindow: number,
     rewardEpochManager: RewardEpochManager
   ) {
     const randomOffenders = new Set<Address>();
+    const genesisRewardEpoch = GENESIS_REWARD_EPOCH_START_EVENT();
+    if (rewardEpochId === genesisRewardEpoch.rewardEpochId + 1) {
+      return randomOffenders;
+    }
     for (let i = votingRoundId - randomGenerationBenchingWindow; i < votingRoundId; i++) {
       const commits = votingRoundIdToCommits.get(i) || [];
       const reveals = votingRoundIdToReveals.get(i) || [];

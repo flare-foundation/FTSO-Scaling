@@ -12,7 +12,7 @@ import { RewardEpochId, VotingEpochId } from "./voting-types";
  */
 export class RewardEpochManager {
   private readonly rewardEpochsCache = new Map<RewardEpochId, RewardEpoch>();
-  constructor(private readonly indexerClient: IndexerClient) {}
+  constructor(private readonly indexerClient: IndexerClient) { }
 
   /**
    * Returns a matching reward epoch for the given voting epoch.
@@ -38,7 +38,7 @@ export class RewardEpochManager {
     if (rewardEpoch && rewardEpoch.startVotingRoundId <= votingEpochId) {
       return rewardEpoch;
     }
-    const lowestExpectedIndexerHistoryTime = await this.indexerClient.secureLowestTimestamp();    
+    const lowestExpectedIndexerHistoryTime = await this.indexerClient.secureLowestTimestamp();
     //Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
     const signingPolicyInitializedEvents = await this.indexerClient.getLatestSigningPolicyInitializedEvents(
       lowestExpectedIndexerHistoryTime
@@ -76,7 +76,14 @@ export class RewardEpochManager {
       throw new Error("Critical error: Signing policy must be provided.");
     }
     const rewardEpochId = signingPolicyInitializedEvent.rewardEpochId;
-    const previousRewardEpochStartedEventResponseData = await this.getPreviousRewardEpochStartedEvent(rewardEpochId);
+    let previousRewardEpochStartedEventResponseData: RewardEpochStarted;
+    if(rewardEpochId > GENESIS_REWARD_EPOCH_START_EVENT().rewardEpochId + 1) {
+      previousRewardEpochStartedEventResponseData = await this.getPreviousRewardEpochStartedEvent(rewardEpochId);
+    } else if(rewardEpochId === GENESIS_REWARD_EPOCH_START_EVENT().rewardEpochId + 1) {
+      previousRewardEpochStartedEventResponseData = GENESIS_REWARD_EPOCH_START_EVENT();
+    } else {
+      throw new Error(`Critical error: previous reward epoch for reward epoch ${rewardEpochId} is below genesis reward epoch.`);
+    }
 
     const randomAcquisitionStartedEventResponse = await this.indexerClient.getRandomAcquisitionStarted(rewardEpochId);
     if (
@@ -149,8 +156,7 @@ export class RewardEpochManager {
         !previousRewardEpochStartedEventResponse.data
       ) {
         throw new Error(
-          `Critical error: Previous reward epoch ${
-            rewardEpochId - 1
+          `Critical error: Previous reward epoch ${rewardEpochId - 1
           } RewardEpochStarted event not found - most likely the indexer has too short history`
         );
       }

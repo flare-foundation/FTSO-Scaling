@@ -153,7 +153,7 @@ export class CalculatorService {
         }
         done = true;
       } catch (e) {
-        logger.error(`Error while calculating reward claims for voting round ${votingRoundId}: ${e}`);
+        logger.error(`Error while calculating reward claims for voting round ${votingRoundId} in reward epoch ${rewardEpochDuration.rewardEpochId}: ${e}`);
         // TODO: calculate expected time when data should be ready. If not, keep delaying for 10s
         const delay = retryDelayMs ?? 10000;
         logger.log(`Sleeping for ${delay / 1000}s before retrying...`);

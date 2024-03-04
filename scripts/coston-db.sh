@@ -12,7 +12,7 @@ export ES_VOTING_EPOCH_DURATION_SECONDS=90
 export ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID=0
 export ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS=240
 export FTSO_REVEAL_DEADLINE_SECONDS=30
-export INITIAL_REWARD_EPOCH_ID=0
+export INITIAL_REWARD_EPOCH_ID=2343
 
 export RANDOM_GENERATION_BENCHING_WINDOW=1
 export PENALTY_FACTOR=30
@@ -30,7 +30,8 @@ export DB_USERNAME=root
 export DB_PASSWORD=root
 export DB_NAME=flare_ftso_indexer
 
-export START_REWARD_EPOCH_ID=2363
+export START_REWARD_EPOCH_ID=2344
+# export START_REWARD_EPOCH_ID=2367
 
 # check here: https://coston-explorer.flare.network/address/0x6e5A85aB09c2056A9Af46c3Ca5a5A1E6752C8D79/read-contract#address-tabs
 # 9.  getCurrentRewardEpochId, and use one epoch less for test (required indexer history is 4 epochs/ 1 day)
