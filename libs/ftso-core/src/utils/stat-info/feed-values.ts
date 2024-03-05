@@ -56,7 +56,7 @@ export function serializeFeedValuesForVotingRoundId(
   ).abi;
   const randomResult = calculationResults.find(x => !(x as any).name) as RandomResult;
   const feedResults = calculationResults.filter(x => (x as any).name) as FeedResult[];
-  if(!randomResult || feedResults.length + 1 !== calculationResults.length) {
+  if (!randomResult || feedResults.length + 1 !== calculationResults.length) {
     throw new Error("Invalid calculation results!");
   }
   const merkleTree = new MerkleTree([
@@ -67,11 +67,11 @@ export function serializeFeedValuesForVotingRoundId(
   const randomValue = {
     body: randomResult,
     merkleProof: merkleTree.getProof(MerkleTreeStructs.hashRandomResult(randomResult)),
-  }
+  };
   const feedValues = feedResults.map(result => ({
     body: result,
     merkleProof: merkleTree.getProof(MerkleTreeStructs.hashPriceFeedResult(result)),
-  }));  
+  }));
 
   const result: FeedValuesForVotingRoundId = {
     votingRoundId,
@@ -80,6 +80,6 @@ export function serializeFeedValuesForVotingRoundId(
     merkleRoot,
     feedValueAbi,
     randomValueAbi,
-  }
+  };
   writeFileSync(feedValuesPath, JSON.stringify(result, bigIntReplacer));
 }

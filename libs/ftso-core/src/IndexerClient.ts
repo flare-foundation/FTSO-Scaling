@@ -193,7 +193,7 @@ export class IndexerClient {
   }
 
   /**
-   * Returns the lowest timestamp in the indexer database + 1, which is considered as a 
+   * Returns the lowest timestamp in the indexer database + 1, which is considered as a
    * secure lowest timestamp.
    */
   public async secureLowestTimestamp(): Promise<number> {
