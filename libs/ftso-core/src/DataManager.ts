@@ -572,7 +572,7 @@ export class DataManager {
     const genesisRewardEpoch = GENESIS_REWARD_EPOCH_START_EVENT();
     if (
       rewardEpochId === genesisRewardEpoch.rewardEpochId + 1 &&
-      votingRoundId - RANDOM_GENERATION_BENCHING_WINDOW() < startVotingRoundId
+      votingRoundId - randomGenerationBenchingWindow < startVotingRoundId
     ) {
       return randomOffenders;
     }
