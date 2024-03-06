@@ -15,7 +15,19 @@ const TEST_CONFIG: NetworkContractAddresses = {
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
 
-export type networks = "local-test" | "from-env" | "coston2";
+const COSTON_CONFIG: NetworkContractAddresses = {
+  FlareSystemsManager: { name: "FlareSystemsManager", address: "0x6e5A85aB09c2056A9Af46c3Ca5a5A1E6752C8D79" },
+  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x3692A549F0436EADCD77dCC254D7D3843537e6e0" },
+  RewardManager: { name: "RewardManager", address: "0xB5927e4A55125a5eED6E24AC11F418c916689D4C" },
+  Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
+  Relay: { name: "Relay", address: "0xf84B299803fe4184a7c9167514E5D4f19B3cD95b" },
+  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x99D17A3EF05fddF0C0d4E1c0D0Ba4f8aCc8e150a" },
+  VoterRegistry: { name: "VoterRegistry", address: "0xb9657EDCf84BCA4DE60b0f849f397C093459D0f8" },
+  FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
+  ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+};
+
+export type networks = "local-test" | "from-env" | "coston2" | "coston";
 
 const configs = () => {
   const network = process.env.NETWORK as networks;
@@ -23,6 +35,8 @@ const configs = () => {
     case "local-test":
     case "coston2":
       return TEST_CONFIG;
+    case "coston":
+      return COSTON_CONFIG;
     case "from-env": {
       console.log(
         `Loading contract addresses from environment variables, as specified in .env NETWORK: ${process.env.NETWORK}`
@@ -93,10 +107,17 @@ export const LAST_DATABASE_INDEX_STATE = "last_database_block";
 export const FIRST_DATABASE_INDEX_STATE = "first_database_block";
 
 const ftso2ProtocolId = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "coston":
+    case "from-env":
     case "local-test":
-    default:
+    case "coston2":
       return 100;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -114,9 +135,16 @@ const epochSettings = () => {
         Number(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS),
         Number(process.env.FTSO_REVEAL_DEADLINE_SECONDS)
       );
+    case "coston":
+      return new EpochSettings(
+        1658430000, // ES_FIRST_VOTING_ROUND_START_TS
+        90, //ES_VOTING_EPOCH_DURATION_SECONDS
+        0, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
+        240, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
+        30 //FTSO_REVEAL_DEADLINE_SECONDS
+      );
     case "coston2":
     case "local-test":
-    default:
       return new EpochSettings(
         1707110090, // ES_FIRST_VOTING_ROUND_START_TS
         20, //ES_VOTING_EPOCH_DURATION_SECONDS
@@ -124,6 +152,10 @@ const epochSettings = () => {
         5, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
         10 //FTSO_REVEAL_DEADLINE_SECONDS
       );
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -137,7 +169,8 @@ export const EPOCH_SETTINGS = () => {
 };
 
 const randomGenerationBenchingWindow = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env": {
       if (!process.env.RANDOM_GENERATION_BENCHING_WINDOW) {
         throw new Error("RANDOM_GENERATION_BENCHING_WINDOW value is not provided");
@@ -153,8 +186,14 @@ const randomGenerationBenchingWindow = () => {
       }
     }
     case "local-test":
-    default:
+    case "coston2":
       return 50;
+    case "coston":
+      return 20;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -168,26 +207,40 @@ export const RANDOM_GENERATION_BENCHING_WINDOW = () => {
 };
 
 const initialRewardEpochId = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env": {
       if (!process.env.INITIAL_REWARD_EPOCH_ID) {
         throw new Error("INITIAL_REWARD_EPOCH_ID value is not provided");
       }
       return parseInt(process.env.INITIAL_REWARD_EPOCH_ID);
     }
+    case "coston":
+      return 2343;
+    case "coston2":
     case "local-test":
-    default:
       return 0;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
 export const INITIAL_REWARD_EPOCH_ID = initialRewardEpochId();
 
 const burnAddress = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
     case "local-test":
-    default:
+    case "coston2":
+    case "coston":
       return "0x000000000000000000000000000000000000dEaD";
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -199,10 +252,17 @@ export const BURN_ADDRESS = burnAddress();
  * of the voting epoch votingRoundId. If value is bigger, it extends to ends of the next epochs accordingly.
  */
 const additionalRewardFinalizationWindows = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+    case "coston":
+    case "coston2":
     case "local-test":
-    default:
       return 0;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -254,12 +314,19 @@ function extractBigIntNonNegativeValueFromEnv(envVar: string): bigint {
  * the value is multiplied by this factor to get the penalty amount.
  */
 const penaltyFactor = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env":
       return extractBigIntNonNegativeValueFromEnv("PENALTY_FACTOR");
-    case "local-test":
-    default:
+    case "coston":
       return 30n;
+    case "coston2":
+    case "local-test":
+      return 30n;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -278,12 +345,19 @@ export const PENALTY_FACTOR = () => {
  * the signatures are rewarded if they are deposited before the timestamp of the first successful finalization.
  */
 const gracePeriodForSignaturesDurationSec = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env":
       return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC");
-    case "local-test":
-    default:
+    case "coston":
       return 10; // 10 seconds
+    case "coston2":
+    case "local-test":
+      return 10; // 10 seconds
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -304,12 +378,19 @@ export const GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC = () => {
  */
 
 const gracePeriodForFinalizationDurationSec = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env":
       return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC");
-    case "local-test":
-    default:
+    case "coston":
       return 20; // seconds
+    case "coston2":
+    case "local-test":
+      return 20; // seconds
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -345,12 +426,19 @@ export const TOTAL_PPM = 1000000n;
  * both get reward.
  */
 const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env":
       return extractIntegerNonNegativeValueFromEnv("MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS");
-    case "local-test":
-    default:
+    case "coston":
       return 3000;
+    case "coston2":
+    case "local-test":
+      return 3000;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 
@@ -368,12 +456,19 @@ export const MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS =
  * The share of weight that gets randomly selected for finalization reward.
  */
 const finalizationVoterSelectionThresholdWeightBips = () => {
-  switch (process.env.NETWORK) {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
     case "from-env":
       return extractIntegerNonNegativeValueFromEnv("FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS");
+    case "coston":
+      return 100;
+    case "coston2":
     case "local-test":
-    default:
       return 500;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
   }
 };
 

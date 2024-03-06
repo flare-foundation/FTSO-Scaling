@@ -39,7 +39,9 @@ export function deserializeAggregatedClaimsForVotingRoundId(
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const claimsPath = path.join(votingRoundFolder, AGGREGATED_CLAIMS_FILE);
   if (!existsSync(claimsPath)) {
-    return;
+    throw new Error(
+      `Aggregated claims for voting round ${votingRoundId} of reward epoch ${rewardEpochId} do not exist.`
+    );
   }
   return JSON.parse(readFileSync(claimsPath, "utf8"), bigIntReviver);
 }

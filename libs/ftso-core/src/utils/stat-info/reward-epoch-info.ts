@@ -76,7 +76,7 @@ export function deserializeRewardEpochInfo(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const rewardEpochInfoPath = path.join(rewardEpochFolder, REWARD_EPOCH_INFO_FILE);
   if (!existsSync(rewardEpochInfoPath)) {
-    return;
+    throw new Error(`Reward epoch info file not found at ${rewardEpochInfoPath}`);
   }
   return JSON.parse(readFileSync(rewardEpochInfoPath, "utf8"));
 }

@@ -54,7 +54,7 @@ export function deserializeRewardEpochCalculationStatus(
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
   if (!existsSync(statusFile)) {
-    return;
+    throw new Error(`Reward calculation status for epoch ${rewardEpochId} does not exist`);
   }
   return JSON.parse(readFileSync(statusFile, "utf8"));
 }

@@ -65,6 +65,8 @@ export enum ContractMethodNames {
   submit3 = "submit3",
   submitSignatures = "submitSignatures",
   relay = "relay",
+  signUptimeVote = "signUptimeVote",
+  signRewards = "signRewards",
 
   // Struct definitions helper methods (to extract abis)
   // FTSO merkle tree node definitions

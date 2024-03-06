@@ -39,7 +39,7 @@ export function deserializePartialClaimsForVotingRoundId(
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const claimsPath = path.join(votingRoundFolder, CLAIMS_FILE);
   if (!existsSync(claimsPath)) {
-    return;
+    throw new Error(`Claims file for voting round ${votingRoundId} does not exist.`);
   }
   return JSON.parse(readFileSync(claimsPath, "utf8"), bigIntReviver);
 }
