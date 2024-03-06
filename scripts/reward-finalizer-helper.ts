@@ -1,4 +1,37 @@
-// env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
+/*
+# Usage
+
+The tool bases on calculated data in the `calculations` folder. These can be calculated using the script
+
+./scripts/coston-db.sh
+
+For calculation of specific reward epoch set the parameters in the call in the script accordingly.
+Once the relevant reward epoch data are calculated, the tool can be used to:
+- check some reward distribution stats (option `stats`).
+
+      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
+
+- voting for uptim using dummy hash (vote for it). This option is currently used as real uptime voting is not enabled, but it will be in the future and 
+  it is needed as pre-condition for reward merkle root voting. (option `uptime`)
+
+      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts uptime <rewardEpochId> [endRewardEpochId]
+
+- voting for reward merkle root. (option `rewards`). The data is extracted from the calculation result in the file
+  `calculations/<reward epoch id>/reward-distribution-data.json`.
+
+      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts rewards <rewardEpochId> [endRewardEpochId]
+
+- check the finalization status of the reward epochs. (option `finalizations`)
+      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts finalizations <startRewardEpochId> [endRewardEpochId]
+
+Note the actions `uptime` and `rewards` need private key(s) since they are signing some data an sending to smart contracts on
+`Coston` blockchain. For that purpose, pack the private keys (comma separate, no spaces) into variable env variable 
+`PRIVATE_KEYS` and export it in terminal shell in which you are running a specific command.
+
+e.g. `export PRIVATE_KEYS=0x...1,0x...2,0x...3`
+
+Private keys must be in hex string, 0x-prefixed.
+*/
 import Web3 from "web3";
 import { ECDSASignature } from "../libs/fsp-utils/src/ECDSASignature";
 import { CONTRACTS, ZERO_BYTES32 } from "../libs/ftso-core/src/configs/networks";
@@ -137,7 +170,14 @@ async function sendUpTimeVotes(rewardEpochId: number) {
    }
    const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
    for (const privateKey of privateKeys) {
-      await sendFakeUptimeVote(rewardEpochId, privateKey);
+      try {
+         await sendFakeUptimeVote(rewardEpochId, privateKey);
+      } catch (e) {
+         const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+         console.error(`Error sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
+         console.dir(e);
+         break;
+      }
    }
 }
 
@@ -148,10 +188,16 @@ async function sendMerkleProofs(rewardEpochId: number) {
    }
    const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
    for (const privateKey of privateKeys) {
-      await sendMerkleRoot(rewardEpochId, distributionData.merkleRoot, distributionData.noOfWeightBasedClaims, privateKey);
+      try {
+         await sendMerkleRoot(rewardEpochId, distributionData.merkleRoot, distributionData.noOfWeightBasedClaims, privateKey);
+      } catch (e) {
+         const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+         console.error(`Error sending merkle root for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
+         console.dir(e);
+         break;
+      }
    }
 }
-
 
 export async function main() {
    const action = process.argv[2];
@@ -161,9 +207,15 @@ export async function main() {
    if (action === "uptime") {
       const rewardEpochId = Number(process.argv[3]);
       if (!rewardEpochId) {
-         throw new Error("usage: node reward-finalizer-helper.js uptime <rewardEpochId>");
+         throw new Error("usage: node reward-finalizer-helper.js uptime <rewardEpochId> [endRewardEpochId]");
       }
-      await sendUpTimeVotes(rewardEpochId);
+      let endRewardEpochId = rewardEpochId;
+      if (process.argv[4]) {
+         endRewardEpochId = Number(process.argv[4]);
+      }
+      for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
+         await sendUpTimeVotes(currentRewardEpochId);
+      }
    }
    if (action === "stats") {
       const rewardEpochId = Number(process.argv[3]);
@@ -172,7 +224,7 @@ export async function main() {
       }
       printClaimSummary(rewardEpochId);
       const check = verifyMerkleProofs(rewardEpochId);
-      if(check) {
+      if (check) {
          console.log("Merkle proofs are valid");
       } else {
          console.error("Merkle proofs are invalid");
@@ -180,10 +232,36 @@ export async function main() {
    }
    if (action === "rewards") {
       const rewardEpochId = Number(process.argv[3]);
-      if (rewardEpochId === undefined ) {
-         throw new Error("usage: node reward-finalizer-helper.js rewards <rewardEpochId>");
+      if (rewardEpochId === undefined) {
+         throw new Error("usage: node reward-finalizer-helper.js rewards <rewardEpochId> [endRewardEpochId]");
       }
-      await sendMerkleProofs(rewardEpochId);
+      let endRewardEpochId = rewardEpochId;
+      if (process.argv[4]) {
+         endRewardEpochId = Number(process.argv[4]);
+      }
+      for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
+         try {
+            await sendMerkleProofs(currentRewardEpochId);
+         } catch (e) {
+            console.error(`Error sending merkle proofs for epoch ${currentRewardEpochId}: ${e}`);
+         }
+      }
+   }
+
+   if (action === "finalizations") {
+      const startRewardEpochId = Number(process.argv[3]);
+      let endRewardEpochId = startRewardEpochId;
+      if (process.argv[4]) {
+         endRewardEpochId = Number(process.argv[4]);
+      }
+      console.log(`Rw.ep.id | Uptime | Rewards`)
+      for (let currentRewardEpochId = startRewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
+         const uptimeVoteHash = await flareSystemsManager.methods.uptimeVoteHash(currentRewardEpochId).call();
+         const rewardsHash = await flareSystemsManager.methods.rewardsHash(currentRewardEpochId).call();
+         const isUptimeHash = uptimeVoteHash && (uptimeVoteHash as any as string) !== ZERO_BYTES32;
+         const isRewardsHash = rewardsHash && (rewardsHash as any as string) !== ZERO_BYTES32;
+         console.log(`${currentRewardEpochId.toString().padEnd(10)} ${(isUptimeHash ? " OK " : " - ").padEnd(9)} ${(isRewardsHash ? "OK " : " - ").padEnd(9)}`);
+      }
    }
 }
 
