@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { ContractMethodNames } from "../../configs/contracts";
-import { CALCULATIONS_FOLDER, CONTRACTS } from "../../configs/networks";
+import { CALCULATIONS_FOLDER, CONTRACTS, ZERO_BYTES32 } from "../../configs/networks";
 import { buildRewardClaimMerkleTree, getMerkleProof } from "../../reward-calculation/reward-merkle-tree";
 import { EncodingUtils } from "../EncodingUtils";
 import { ClaimType, IRewardClaim, IRewardClaimWithProof } from "../RewardClaim";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_DISTRIBUTION_DATA_FILE } from "./constants";
+import Web3 from "web3";
 
 export interface IRewardDistributionData {
   rewardEpochId: number;
@@ -32,7 +33,7 @@ export function serializeRewardDistributionData(
     0
   ).abi;
   const merkleTree = buildRewardClaimMerkleTree(rewardClaims);
-  const merkleRoot = merkleTree.root;
+  const merkleRoot = merkleTree.root ?? Web3.utils.keccak256(ZERO_BYTES32);
   const rewardClaimsWithProof = rewardClaims.map(claim => getMerkleProof(claim, merkleTree));
   const noOfWeightBasedClaims = rewardClaims.filter(
     claim =>
