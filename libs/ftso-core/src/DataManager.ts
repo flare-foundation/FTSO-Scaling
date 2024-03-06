@@ -13,14 +13,13 @@ import {
 } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
+import { ContractMethodNames } from "./configs/contracts";
 import {
   ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
   EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
   GENESIS_REWARD_EPOCH_START_EVENT,
-  RANDOM_GENERATION_BENCHING_WINDOW,
 } from "./configs/networks";
-import { ContractMethodNames } from "./configs/contracts";
 import {
   DataForCalculations,
   DataForCalculationsPartial,
@@ -121,8 +120,6 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
-    // this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
-    // this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
@@ -147,7 +144,6 @@ export class DataManager {
       randomGenerationBenchingWindow,
       this.rewardEpochManager
     );
-    // this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
     return {
       status: mappingsResponse.status,
       data: {
@@ -531,8 +527,8 @@ export class DataManager {
   }
 
   /**
-   * Construct a set of submission addresses that incorrectly revealed or did not reveal at all.
-   * Iterate over commits and check if they were revealed correctly., return those that were not.
+   * Construct a set of submitAddresses that incorrectly revealed or did not reveal at all.
+   * Iterate over commits and check if they were revealed correctly, return those that were not.
    */
   private getRevealOffenders(
     availableCommits: Map<Address, ICommitData>,
@@ -554,10 +550,10 @@ export class DataManager {
   }
 
   /**
-   * Get set of all reveal offenders in benching window for voting round id
+   * Get set of all submitAddresses of reveal offenders in benching window for voting round id
    * The interval of voting rounds is defined as [@param votingRoundId - @param randomGenerationBenchingWindow, @param votingRoundId - 1]
    * A reveal offender is any voter (eligible or not), which has committed but did not reveal for a specific voting round,
-   * or has provided invalid reveal (not matching to the commit)
+   * or has provided invalid reveal (not matching to the commit).
    */
   private async getBenchingWindowRevealOffenders(
     votingRoundId: number,
@@ -577,7 +573,7 @@ export class DataManager {
       rewardEpochId === genesisRewardEpoch.rewardEpochId + 1 &&
       votingRoundId - randomGenerationBenchingWindow < startVotingRoundId
     ) {
-      firstBenchingRound = startVotingRoundId;
+      firstBenchingRound = startVotingRoundId; // there are no offenders before the start of the rewardEpoch 1
     }
     for (let i = firstBenchingRound; i < votingRoundId; i++) {
       const commits = votingRoundIdToCommits.get(i) || [];
@@ -628,7 +624,7 @@ export class DataManager {
   }
 
   /**
-   * Creates a mapper form voter address to last commit data message for FTSO protocol and matching voting round id
+   * Creates a mapper from voter submitAddress to last commit data message for FTSO protocol and matching voting round id
    * from the given submission data array.
    * ASSUMPTION 1: submissions in submissionDataArray are all for the same votingRoundId
    * ASSUMPTION 2: submissions in submissionDataArray are all commit transactions that happen in this votingRoundId
@@ -652,7 +648,7 @@ export class DataManager {
   }
 
   /**
-   * Create a mapper form voter address to last reveal data message for FTSO protocol and matching voting round id
+   * Create a mapper from voter submitAddress to last reveal data message for FTSO protocol and matching voting round id
    * from the given submission data array.
    * ASSUMPTION 1: submissions in submissionDataArray are all for the same votingRoundId
    * ASSUMPTION 2: submissions in submissionDataArray are all reveal transactions that happen in this votingRoundId
