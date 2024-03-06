@@ -570,13 +570,16 @@ export class DataManager {
   ) {
     const randomOffenders = new Set<Address>();
     const genesisRewardEpoch = GENESIS_REWARD_EPOCH_START_EVENT();
+
+    let firstBenchingRound = votingRoundId - randomGenerationBenchingWindow;
+
     if (
       rewardEpochId === genesisRewardEpoch.rewardEpochId + 1 &&
-      votingRoundId - RANDOM_GENERATION_BENCHING_WINDOW() < startVotingRoundId
+      votingRoundId - randomGenerationBenchingWindow < startVotingRoundId
     ) {
-      return randomOffenders;
+      firstBenchingRound = startVotingRoundId;
     }
-    for (let i = votingRoundId - randomGenerationBenchingWindow; i < votingRoundId; i++) {
+    for (let i = firstBenchingRound; i < votingRoundId; i++) {
       const commits = votingRoundIdToCommits.get(i) || [];
       const reveals = votingRoundIdToReveals.get(i) || [];
       if (!commits || commits.length === 0) {
