@@ -13,6 +13,7 @@ import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManag
 import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
 import {
   CONTRACTS,
+  EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../libs/ftso-core/src/configs/networks";
@@ -28,6 +29,8 @@ import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
+
+import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -64,15 +67,11 @@ export class FtsoDataProviderService {
     submissionAddress: string
   ): Promise<IPayloadMessage<ICommitData> | undefined> {
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
-    const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
-    this.logger.debug(
-      `Getting commit for voting round ${votingRoundId}: ${submissionAddress} ${revealData.random} ${revealData.encodedValues}`
-    );
+    const revealData = await this.calculateOrGetReveal(votingRoundId, rewardEpoch, submissionAddress);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
     const commitData: ICommitData = {
       commitHash: hash,
     };
-    this.votingRoundToRevealData.set(votingRoundId, revealData);
     this.logger.log(`Commit for voting round ${votingRoundId}: ${hash}`);
     const msg: IPayloadMessage<ICommitData> = {
       protocolId: FTSO2_PROTOCOL_ID,
@@ -80,6 +79,30 @@ export class FtsoDataProviderService {
       payload: commitData,
     };
     return msg;
+  }
+
+  private async calculateOrGetReveal(votingRoundId: number, rewardEpoch: RewardEpoch, submissionAddress: string) {
+    const currentVotingRound = EPOCH_SETTINGS.votingEpochForTime(Date.now());
+    if (votingRoundId != currentVotingRound) {
+      throw new Error(
+        `Can only compute data for the current voting round: ${currentVotingRound}, requested: ${votingRoundId}`
+      );
+    }
+
+    const cached = this.votingRoundToRevealData.get(votingRoundId);
+    if (cached !== undefined) {
+      this.logger.debug(
+        `Returning cached voting round data for ${votingRoundId}: ${submissionAddress} ${cached.random} ${cached.encodedValues}`
+      );
+      return cached;
+    }
+
+    const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
+    this.logger.debug(
+      `Got fresh voting round data for ${votingRoundId}: ${submissionAddress} ${revealData.random} ${revealData.encodedValues}`
+    );
+    this.votingRoundToRevealData.set(votingRoundId, revealData);
+    return revealData;
   }
 
   async getRevealData(votingRoundId: number): Promise<IPayloadMessage<IRevealData> | undefined> {
