@@ -1,3 +1,6 @@
+import * as dotenv from "dotenv";
+dotenv.config();
+
 import { NestFactory } from "@nestjs/core";
 import { RandomExampleProviderModule } from "./example-provider.module";
 import { DocumentBuilder, SwaggerDocumentOptions, SwaggerModule } from "@nestjs/swagger";
@@ -26,7 +29,7 @@ async function bootstrap() {
   const PORT = process.env.PRICE_PROVIDER_CLIENT_PORT ? parseInt(process.env.PRICE_PROVIDER_CLIENT_PORT) : 3101;
   console.log(`Your example price provider for FTSO is available on PORT: ${PORT}`);
   console.log(`Open link: http://localhost:${PORT}/api-doc`);
-  await app.listen(PORT);
+  await app.listen(PORT, "0.0.0.0");
 }
 
 void bootstrap();
