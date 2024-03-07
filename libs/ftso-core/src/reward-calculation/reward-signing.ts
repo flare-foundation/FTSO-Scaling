@@ -116,7 +116,7 @@ export function calculateSigningRewards(
   for (const signature of rewardEligibleSignatures) {
     const weight = BigInt(signature.messages.weight!);
     let amount = 0n;
-    if (weight > 0) {
+    if (weight > 0n) {
       // avoiding case when 0 weight voter is the last one
       amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
     }

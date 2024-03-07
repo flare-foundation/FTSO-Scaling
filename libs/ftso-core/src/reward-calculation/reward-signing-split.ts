@@ -23,9 +23,9 @@ export function generateSigningWeightBasedClaimsForVoter(
   function addInfo(text: string) {
     return addLog
       ? {
-          info: `${info}: ${text}`,
-          votingRoundId,
-        }
+        info: `${info}: ${text}`,
+        votingRoundId,
+      }
       : {};
   }
 
@@ -66,7 +66,10 @@ export function generateSigningWeightBasedClaimsForVoter(
   for (let i = 0; i < voterWeights.nodeIds.length; i++) {
     const nodeId = voterWeights.nodeIds[i].toLowerCase();
     const weight = voterWeights.nodeWeights[i];
-    const nodeCommunityReward = (weight * undistributedStakedAmount) / undistributedStakedWeight;
+    let nodeCommunityReward = 0n;
+    if (weight > 0n) {
+      nodeCommunityReward = (weight * undistributedStakedAmount) / undistributedStakedWeight;
+    }
     undistributedStakedAmount -= nodeCommunityReward;
     undistributedStakedWeight -= weight;
     // No fees are considered here. Also - no staking fee data on C-chain.
