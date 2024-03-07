@@ -32,9 +32,9 @@ export function calculateSigningRewards(
   function addInfo(text: string) {
     return addLog
       ? {
-          info: `${RewardTypePrefix.SIGNING}: ${text}`,
-          votingRoundId,
-        }
+        info: `${RewardTypePrefix.SIGNING}: ${text}`,
+        votingRoundId,
+      }
       : {};
   }
 
@@ -115,7 +115,11 @@ export function calculateSigningRewards(
   }
   for (const signature of rewardEligibleSignatures) {
     const weight = BigInt(signature.messages.weight!);
-    const amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+    let amount = 0n;
+    if (weight > 0) {
+      // avoiding case when 0 weight voter is the last one
+      amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+    }
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
 
