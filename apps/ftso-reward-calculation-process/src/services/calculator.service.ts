@@ -284,7 +284,10 @@ export class CalculatorService {
         rewardEpochDuration.startVotingRoundId
       );
       if (options.initialize) {
-        const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, isIncrementalMode ? undefined : rewardEpochDuration.endVotingRoundId);
+        const rewardEpochInfo = getRewardEpochInfo(
+          rewardEpoch,
+          isIncrementalMode ? undefined : rewardEpochDuration.endVotingRoundId
+        );
         serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
         setRewardCalculationStatus(
           rewardEpochId,

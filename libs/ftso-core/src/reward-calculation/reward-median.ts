@@ -178,7 +178,14 @@ export function calculateMedianRewardClaims(
     if (voterRecord.weight === 0n) {
       continue;
     }
-    const reward = (voterRecord.weight * availableReward) / availableWeight;
+    let reward = 0n;
+    if (voterRecord.weight > 0n) {
+      // sanity check
+      if (availableWeight === 0n) {
+        throw new Error("Critical: reward-median: availableWeight must be non-zero");
+      }
+      reward = (voterRecord.weight * availableReward) / availableWeight;
+    }
     availableReward = availableReward - reward;
     availableWeight = availableWeight - voterRecord.weight;
 
