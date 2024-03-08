@@ -42,15 +42,11 @@ Also, option `winit` needs one private key, which is taken as the first private 
 import Web3 from "web3";
 import { ECDSASignature } from "../libs/fsp-utils/src/ECDSASignature";
 import { CONTRACTS, ZERO_BYTES32 } from "../libs/ftso-core/src/configs/networks";
-import { FullVoterRegistrationInfo } from "../libs/ftso-core/src/events";
 import { ABICache } from "../libs/ftso-core/src/utils/ABICache";
-import { verifyWithMerkleProof } from "../libs/ftso-core/src/utils/MerkleTree";
-import { ClaimType, IRewardClaimWithProof, RewardClaim } from "../libs/ftso-core/src/utils/RewardClaim";
+import { ClaimType, IRewardClaimWithProof } from "../libs/ftso-core/src/utils/RewardClaim";
 import { deserializeRewardDistributionData } from "../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
-import { deserializeRewardEpochInfo } from "../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
-import { TestVoter } from "../test/utils/basic-generators";
-import { claimSummary } from "../test/utils/reward-claim-summaries";
 import { readFileSync } from "fs";
+import { printClaimSummary, verifyMerkleProofs } from "./stats-utils";
 
 const COSTON_RPC = "https://coston-api.flare.network/ext/bc/C/rpc";
 
@@ -128,50 +124,6 @@ async function sendMerkleRoot(rewardEpochId: number, rewardsHash: string, noOfWe
    const signed = await wallet.signTransaction(tx);
    const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
    console.log(`Merkle root for epoch ${rewardEpochId} from ${wallet.address} sent`);
-}
-
-function fullVoterRegInfoToTestVoterPartial(regInfo: FullVoterRegistrationInfo): TestVoter {
-   const result: TestVoter = {
-      identityAddress: regInfo.voterRegistered.voter,
-      signingAddress: regInfo.voterRegistered.signingPolicyAddress,
-      signingPrivateKey: undefined,
-      submitAddress: regInfo.voterRegistered.submitAddress,
-      submitSignaturesAddress: regInfo.voterRegistered.submitSignaturesAddress,
-      delegationAddress: regInfo.voterRegistrationInfo.delegationAddress,
-      registrationWeight: undefined,
-      wNatCappedWeight: undefined,
-      // Unused
-      wNatWeight: undefined,
-      nodeIds: [],
-      nodeWeights: [],
-      delegationFeeBIPS: regInfo.voterRegistrationInfo.delegationFeeBIPS,
-   }
-   return result;
-}
-
-function getVotersData(rewardEpochId: number): TestVoter[] {
-   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
-   return rewardEpochInfo.voterRegistrationInfo.map(regInfo => fullVoterRegInfoToTestVoterPartial(regInfo));
-}
-
-function printClaimSummary(rewardEpochId: number) {
-   const distributionData = deserializeRewardDistributionData(rewardEpochId);
-   const mergedClaims = distributionData.rewardClaims.map((claim) => claim.body);
-   const voters = getVotersData(rewardEpochId);
-   claimSummary(voters, mergedClaims, console)
-}
-
-function verifyMerkleProofs(rewardEpochId: number) {
-   const distributionData = deserializeRewardDistributionData(rewardEpochId);
-   for (let claimWithProof of distributionData.rewardClaims) {
-      const leaf = RewardClaim.hashRewardClaim(claimWithProof.body);
-      const result = verifyWithMerkleProof(leaf, claimWithProof.merkleProof, distributionData.merkleRoot);
-      if (!result) {
-         console.error(`Merkle proof verification failed for claim ${claimWithProof}`);
-         return false;
-      }
-   }
-   return true;
 }
 
 async function sendUpTimeVotes(rewardEpochId: number) {
