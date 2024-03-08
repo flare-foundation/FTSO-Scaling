@@ -141,7 +141,7 @@ const epochSettings = () => {
         90, //ES_VOTING_EPOCH_DURATION_SECONDS
         0, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
         240, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
-        30 //FTSO_REVEAL_DEADLINE_SECONDS
+        45 //FTSO_REVEAL_DEADLINE_SECONDS
       );
     case "coston2":
     case "local-test":
