@@ -21,7 +21,7 @@ export interface RewardEpochInfo {
   endVotingRoundId?: number;
 }
 
-export function getRewardEpochInfo(rewardEpoch: RewardEpoch): RewardEpochInfo {
+export function getRewardEpochInfo(rewardEpoch: RewardEpoch, endVotingRoundId?: number): RewardEpochInfo {
   const voterRegistrationInfo: FullVoterRegistrationInfo[] = [];
   for (let signingAddress of rewardEpoch.signingPolicy.voters) {
     const identityAddress = rewardEpoch.signingAddressToVoter.get(signingAddress.toLowerCase());
@@ -42,6 +42,7 @@ export function getRewardEpochInfo(rewardEpoch: RewardEpoch): RewardEpochInfo {
     expectedStartVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpoch.rewardEpochId),
     expectedEndVotingRoundId:
       EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpoch.rewardEpochId + 1) - 1,
+    endVotingRoundId,
   };
   return result;
 }

@@ -521,7 +521,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       useExpectedEndIfNoSigningPolicyAfter
     );
 
-    const rewardEpochInfo = getRewardEpochInfo(rewardEpoch);
+    const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, rewardEpochDuration.endVotingRoundId);
     serializeRewardEpochInfo(rewardEpoch.rewardEpochId, rewardEpochInfo);
 
     const serializeResults = true;
