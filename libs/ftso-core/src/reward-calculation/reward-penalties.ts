@@ -36,9 +36,23 @@ export function calculatePenalties(
       throw new Error("Critical error: Illegal offender");
     }
     const voterWeight = medianRewardDistributionWeight(voterWeights);
-    const penalty = (-voterWeight * offer.amount * penaltyFactor) / totalWeight;
+    let penalty = 0n;
+    if (voterWeight > 0n) {
+      // sanity check
+      if (totalWeight === 0n) {
+        throw new Error("Critical error: reward-penalities: totalWeight must be non-zero");
+      }
+      penalty = (-voterWeight * offer.amount * penaltyFactor) / totalWeight;
+    }
     penaltyClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(penalty, voterWeights, offer.votingRoundId, penaltyType, addLog)
+      ...generateSigningWeightBasedClaimsForVoter(
+        penalty,
+        offer.claimBackAddress,
+        voterWeights,
+        offer.votingRoundId,
+        penaltyType,
+        addLog
+      )
     );
   }
   return penaltyClaims;

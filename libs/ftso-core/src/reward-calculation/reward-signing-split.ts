@@ -15,6 +15,7 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
  */
 export function generateSigningWeightBasedClaimsForVoter(
   amount: bigint,
+  claimBackAddress: string,
   voterWeights: VoterWeights,
   votingRoundId: number,
   info: RewardTypePrefix,
@@ -23,9 +24,9 @@ export function generateSigningWeightBasedClaimsForVoter(
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `${info}: ${text}`,
-        votingRoundId,
-      }
+          info: `${info}: ${text}`,
+          votingRoundId,
+        }
       : {};
   }
 
@@ -35,6 +36,17 @@ export function generateSigningWeightBasedClaimsForVoter(
     stakedWeight += voterWeights.nodeWeights[i];
   }
   const totalWeight = voterWeights.cappedDelegationWeight + stakedWeight;
+  if (totalWeight === 0n) {
+    // this should never happen.
+    return [
+      {
+        beneficiary: claimBackAddress.toLowerCase(),
+        amount: amount,
+        claimType: ClaimType.DIRECT,
+        ...addInfo("No voter weight"),
+      },
+    ];
+  }
   const stakingAmount = (amount * stakedWeight) / totalWeight;
   const delegationAmount = amount - stakingAmount;
   const delegationFee = (delegationAmount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
@@ -68,6 +80,10 @@ export function generateSigningWeightBasedClaimsForVoter(
     const weight = voterWeights.nodeWeights[i];
     let nodeCommunityReward = 0n;
     if (weight > 0n) {
+      // sanity check
+      if (undistributedStakedWeight === 0n) {
+        throw new Error("Critical error: reward-signing-split: undistributedStakedWeight must be non-zero");
+      }
       nodeCommunityReward = (weight * undistributedStakedAmount) / undistributedStakedWeight;
     }
     undistributedStakedAmount -= nodeCommunityReward;

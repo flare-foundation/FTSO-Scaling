@@ -32,9 +32,9 @@ export function calculateSigningRewards(
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `${RewardTypePrefix.SIGNING}: ${text}`,
-        votingRoundId,
-      }
+          info: `${RewardTypePrefix.SIGNING}: ${text}`,
+          votingRoundId,
+        }
       : {};
   }
 
@@ -117,6 +117,10 @@ export function calculateSigningRewards(
     const weight = BigInt(signature.messages.weight!);
     let amount = 0n;
     if (weight > 0n) {
+      // sanity check
+      if (undistributedSigningRewardWeight === 0n) {
+        throw new Error("Critical error: reward-signing: undistributedSigningRewardWeight must be non-zero");
+      }
       // avoiding case when 0 weight voter is the last one
       amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
     }
@@ -132,6 +136,7 @@ export function calculateSigningRewards(
     resultClaims.push(
       ...generateSigningWeightBasedClaimsForVoter(
         amount,
+        offer.claimBackAddress,
         voterWeights,
         offer.votingRoundId,
         RewardTypePrefix.SIGNING,

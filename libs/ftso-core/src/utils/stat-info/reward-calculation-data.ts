@@ -97,13 +97,19 @@ export function serializeDataForRewardCalculation(
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }
 
-export function deserializeDataForRewardCalculation(rewardEpochId: number, votingRoundId: number): SDataForRewardCalculation {
+export function deserializeDataForRewardCalculation(
+  rewardEpochId: number,
+  votingRoundId: number
+): SDataForRewardCalculation {
   const rewardEpochFolder = path.join(CALCULATIONS_FOLDER(), `${rewardEpochId}`);
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
   if (!existsSync(rewardCalculationsDataPath)) {
     throw new Error(`Reward calculation data for epoch ${rewardEpochId} does not exist.`);
   }
-  const data = JSON.parse(readFileSync(rewardCalculationsDataPath, "utf-8"), bigIntReviver) as SDataForRewardCalculation;
+  const data = JSON.parse(
+    readFileSync(rewardCalculationsDataPath, "utf-8"),
+    bigIntReviver
+  ) as SDataForRewardCalculation;
   return data;
 }

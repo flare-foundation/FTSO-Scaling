@@ -388,7 +388,16 @@ export class DataManager {
     for (const [hash, sigMap] of signatureMap.entries()) {
       const values = [...sigMap.values()];
       DataManager.sortSubmissionDataArray(values);
-      result.set(hash, values);
+      // consider only the first sent signature of a sender as rewardable
+      const existingSenderAddresses = new Set<Address>();
+      const filteredSignatureSubmissions: GenericSubmissionData<ISignaturePayload>[] = [];
+      for (const submission of values) {
+        if (!existingSenderAddresses.has(submission.submitAddress.toLowerCase())) {
+          filteredSignatureSubmissions.push(submission);
+          existingSenderAddresses.add(submission.submitAddress.toLowerCase());
+        }
+      }
+      result.set(hash, filteredSignatureSubmissions);
     }
     return result;
   }
@@ -451,7 +460,17 @@ export class DataManager {
         this.logger.warn(`Unparsable or non-finalisable finalization message: ${errorString(e)}`);
       }
     }
-    return finalizations;
+    // consider only the first sent successful finalization
+    // note that finalizations are already sorted according to the blockchain order
+    let filteredFinalizations: ParsedFinalizationData[] = [];
+    const encounteredSenderAddresses = new Set<Address>();
+    for (let finalization of finalizations) {
+      if (!encounteredSenderAddresses.has(finalization.submitAddress.toLowerCase())) {
+        filteredFinalizations.push(finalization);
+        encounteredSenderAddresses.add(finalization.submitAddress.toLowerCase());
+      }
+    }
+    return filteredFinalizations;
   }
 
   /**

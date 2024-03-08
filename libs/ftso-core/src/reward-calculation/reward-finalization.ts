@@ -18,9 +18,9 @@ export function calculateFinalizationRewardClaims(
   function addInfo(text: string) {
     return addLog
       ? {
-        info: `${RewardTypePrefix.FINALIZATION}: ${text}`,
-        votingRoundId: offer.votingRoundId,
-      }
+          info: `${RewardTypePrefix.FINALIZATION}: ${text}`,
+          votingRoundId: offer.votingRoundId,
+        }
       : {};
   }
 
@@ -83,6 +83,10 @@ export function calculateFinalizationRewardClaims(
     const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
     let amount = 0n;
     if (weight > 0n) {
+      // sanity check
+      if (undistributedSigningRewardWeight === 0n) {
+        throw new Error("Critical: reward-finalization: undistributedSigningRewardWeight must be non-zero");
+      }
       amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
     }
 
@@ -91,6 +95,7 @@ export function calculateFinalizationRewardClaims(
     resultClaims.push(
       ...generateSigningWeightBasedClaimsForVoter(
         amount,
+        offer.claimBackAddress,
         voterWeight,
         offer.votingRoundId,
         RewardTypePrefix.FINALIZATION,

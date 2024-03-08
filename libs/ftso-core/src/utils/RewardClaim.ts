@@ -84,6 +84,9 @@ export namespace RewardClaim {
       beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);
       const sign = claim.amount < 0n ? -1 : 1;
       let mergedClaim = claimTypeBySign.get(sign);
+      if(typeof claim.amount !== "bigint") {
+        throw new Error(`Claim amount is not a "bigint": ${claim}`);
+      }
       if (!mergedClaim) {
         mergedClaim = {
           beneficiary,
@@ -91,7 +94,7 @@ export namespace RewardClaim {
           claimType: claim.claimType,
         };
         claimTypeBySign.set(sign, mergedClaim);
-      } else {
+      } else {        
         mergedClaim.amount += claim.amount;
       }
     }
