@@ -1,11 +1,11 @@
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
 import { DataForRewardCalculation } from "../../data-calculation-interfaces";
 import { IRevealData } from "../RevealData";
-import { bigIntReplacer } from "../big-number-serialization";
+import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_CALCULATION_DATA_FILE } from "./constants";
 
 export interface RevealRecords {
@@ -95,4 +95,15 @@ export function serializeDataForRewardCalculation(
     firstSuccessfulFinalization: rewardCalculationData.firstSuccessfulFinalization,
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
+}
+
+export function deserializeDataForRewardCalculation(rewardEpochId: number, votingRoundId: number): SDataForRewardCalculation {
+  const rewardEpochFolder = path.join(CALCULATIONS_FOLDER(), `${rewardEpochId}`);
+  const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
+  const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
+  if (!existsSync(rewardCalculationsDataPath)) {
+    throw new Error(`Reward calculation data for epoch ${rewardEpochId} does not exist.`);
+  }
+  const data = JSON.parse(readFileSync(rewardCalculationsDataPath, "utf-8"), bigIntReviver) as SDataForRewardCalculation;
+  return data;
 }
