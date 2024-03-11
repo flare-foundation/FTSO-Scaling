@@ -48,7 +48,7 @@ export class FtsoDataProviderService {
   constructor(manager: EntityManager, configService: ConfigService) {
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
-    this.indexerClient = new IndexerClient(manager, required_history_sec);
+    this.indexerClient = new IndexerClient(manager, required_history_sec, new Logger(IndexerClient.name));
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);

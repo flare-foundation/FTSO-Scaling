@@ -25,6 +25,8 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "./events";
+import { ILogger } from "./utils/ILogger";
+import { errorString } from "./utils/error";
 
 /**
  * Generic object for submission data and finalization data.
@@ -132,7 +134,11 @@ export enum BlockAssuranceResult {
  * the protocol data provider to function properly.
  */
 export class IndexerClient {
-  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) {}
+  constructor(
+    private readonly entityManager: EntityManager,
+    public readonly requiredHistoryTimeSec: number,
+    private readonly logger: ILogger
+  ) {}
 
   private readonly encoding = EncodingUtils.instance;
 
@@ -477,20 +483,26 @@ export class IndexerClient {
       };
     }
     const transactionsResults = await this.queryTransactions(CONTRACTS.Submission, functionName, startTime, endTime);
-    const submits: SubmissionData[] = transactionsResults.map(tx => {
-      const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
-      const messages = decodePayloadMessageCalldata(tx);
-      return {
-        submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
-        votingEpochIdFromTimestamp: votingEpochId,
-        transactionIndex: tx.transaction_index,
-        timestamp,
-        blockNumber: tx.block_number,
-        messages,
-      };
-    });
+
+    const submits: SubmissionData[] = [];
+    for (const tx of transactionsResults) {
+      try {
+        const timestamp = tx.timestamp;
+        const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
+        const messages = decodePayloadMessageCalldata(tx);
+        submits.push({
+          submitAddress: "0x" + tx.from_address,
+          relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
+          votingEpochIdFromTimestamp: votingEpochId,
+          transactionIndex: tx.transaction_index,
+          timestamp,
+          blockNumber: tx.block_number,
+          messages,
+        });
+      } catch (e) {
+        this.logger.warn(`Error processing submission transaction ${tx.hash}, will ignore: ${errorString(e)}`);
+      }
+    }
 
     return {
       status: ensureRange,

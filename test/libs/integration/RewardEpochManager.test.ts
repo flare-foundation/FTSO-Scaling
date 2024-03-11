@@ -43,7 +43,7 @@ describe("RewardEpochManager", () => {
     const rewardEpochId = 1;
     await setUpRewardEpoch(rewardEpochId);
 
-    const epochManager = new RewardEpochManager(new IndexerClient(em, indexerHistorySec));
+    const epochManager = new RewardEpochManager(new IndexerClient(em, indexerHistorySec, console));
     const votingRound = epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const rewardEpoch = await epochManager.getRewardEpoch(votingRound);
 
