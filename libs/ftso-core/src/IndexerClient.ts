@@ -19,6 +19,7 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "./events";
+import { ILogger } from "./utils/ILogger";
 
 /**
  * Generic object for submission data and finalization data.
@@ -126,7 +127,11 @@ export enum BlockAssuranceResult {
  * the protocol data provider to function properly.
  */
 export class IndexerClient {
-  constructor(private readonly entityManager: EntityManager, public readonly requiredHistoryTimeSec: number) {}
+  constructor(
+    private readonly entityManager: EntityManager,
+    public readonly requiredHistoryTimeSec: number,
+    private readonly logger: ILogger
+  ) {}
 
   private readonly encoding = EncodingUtils.instance;
 
@@ -464,20 +469,27 @@ export class IndexerClient {
       };
     }
     const transactionsResults = await this.queryTransactions(CONTRACTS.Submission, functionName, startTime, endTime);
-    const submits: SubmissionData[] = transactionsResults.map(tx => {
-      const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
-      const messages = decodePayloadMessageCalldata(tx);
-      return {
-        submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
-        votingEpochIdFromTimestamp: votingEpochId,
-        transactionIndex: tx.transaction_index,
-        timestamp,
-        blockNumber: tx.block_number,
-        messages,
-      };
-    });
+    const submits: SubmissionData[] = [];
+    for (const tx of transactionsResults) {
+      try {
+        const timestamp = tx.timestamp;
+        const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
+        const messages = decodePayloadMessageCalldata(tx);
+        const sData: SubmissionData = {
+          submitAddress: "0x" + tx.from_address,
+          relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
+          votingEpochIdFromTimestamp: votingEpochId,
+          transactionIndex: tx.transaction_index,
+          timestamp,
+          blockNumber: tx.block_number,
+          messages,
+        };
+        submits.push(sData);
+      } catch (e) {
+        // log unparsable data
+        this.logger.warn(e.message);
+      }
+    }
 
     return {
       status: ensureRange,

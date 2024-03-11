@@ -144,8 +144,7 @@ describe(`RelayMessage`, async () => {
     expect(RelayMessage.equals(relayMessage8, relayMessage8)).to.be.true;
     expect(RelayMessage.equals(relayMessage, relayMessage8)).to.be.false;
     expect(RelayMessage.equals(relayMessage9, relayMessage8)).to.be.false;
-
-  })
+  });
 
   it("Should encode and verify", async () => {
     const merkleRoot = ethers.hexlify(ethers.randomBytes(32));
@@ -166,5 +165,4 @@ describe(`RelayMessage`, async () => {
     };
     expect(() => RelayMessage.encode(relayMessage, true)).to.throw("Invalid relay message: threshold not met");
   });
-
 });

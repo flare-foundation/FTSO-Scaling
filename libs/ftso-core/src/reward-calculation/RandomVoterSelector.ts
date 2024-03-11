@@ -135,7 +135,7 @@ export class RandomVoterSelector {
     address: Address
   ): number {
     const initialSeed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
-    let selection = this.randomSelectThresholdWeightVoters(initialSeed);
+    const selection = this.randomSelectThresholdWeightVoters(initialSeed);
     const result = voters.filter(voter => selection.includes(voter));
     for (let i = 0; i < result.length; i++) {
       if (result[i].toLowerCase() === address.toLowerCase()) {

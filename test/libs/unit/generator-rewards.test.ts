@@ -4,18 +4,42 @@ import { DataSource, EntityManager } from "typeorm";
 import { DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { BURN_ADDRESS, EPOCH_SETTINGS, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
+import {
+  BURN_ADDRESS,
+  EPOCH_SETTINGS,
+  RANDOM_GENERATION_BENCHING_WINDOW,
+} from "../../../libs/ftso-core/src/configs/networks";
 import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
-import { aggregateRewardClaimsInStorage, initializeRewardEpochStorage, partialRewardClaimsForVotingRound, rewardClaimsForRewardEpoch } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import {
+  aggregateRewardClaimsInStorage,
+  initializeRewardEpochStorage,
+  partialRewardClaimsForVotingRound,
+  rewardClaimsForRewardEpoch,
+} from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
-import { ClaimType, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/ftso-core/src/utils/RewardClaim";
+import {
+  ClaimType,
+  IPartialRewardClaim,
+  IRewardClaim,
+  RewardClaim,
+} from "../../../libs/ftso-core/src/utils/RewardClaim";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
-import { RewardDataSimulationScenario, generateRewardEpochDataForRewardCalculation, happyRewardDataSimulationScenario, voterFeedValue } from "../../utils/generators-rewards";
+import {
+  RewardDataSimulationScenario,
+  generateRewardEpochDataForRewardCalculation,
+  happyRewardDataSimulationScenario,
+  voterFeedValue,
+} from "../../utils/generators-rewards";
 import { getTestFile } from "../../utils/getTestFile";
 import { printSummary } from "../../utils/indexer-db-summary";
-import { calculateVoterClaimSummaries, claimSummary, offersSummary, votersSummary } from "../../utils/reward-claim-summaries";
+import {
+  calculateVoterClaimSummaries,
+  claimSummary,
+  offersSummary,
+  votersSummary,
+} from "../../utils/reward-claim-summaries";
 import {
   defaultSigningPolicyProtocolSettings,
   realtimeShorterEpochSettings,
@@ -27,15 +51,24 @@ import {
 } from "../../utils/test-epoch-settings";
 
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
-import { ProgressType, printProgress, rewardCalculationProgress } from "../../../libs/ftso-core/src/utils/stat-info/progress";
-import { RewardCalculationStatus, setRewardCalculationStatus } from "../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
-import { getRewardEpochInfo, serializeRewardEpochInfo } from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import {
+  ProgressType,
+  printProgress,
+  rewardCalculationProgress,
+} from "../../../libs/ftso-core/src/utils/stat-info/progress";
+import {
+  RewardCalculationStatus,
+  setRewardCalculationStatus,
+} from "../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
+import {
+  getRewardEpochInfo,
+  serializeRewardEpochInfo,
+} from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../libs/ftso-core/src/utils/stat-info/storage";
-
 
 // Ensure that the networks are not loaded
 
-let useEmptyLogger = true;
+const useEmptyLogger = true;
 const logger = useEmptyLogger ? emptyLogger : console;
 
 function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mergedClaims: IRewardClaim[]) {
@@ -59,39 +92,53 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
   // no direct claims
   expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
   // zero burn value
-  expect((claims as IPartialRewardClaim[]).filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length).to.equal(0);
+  expect(
+    (claims as IPartialRewardClaim[]).filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length
+  ).to.equal(0);
 
-  const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.FINALIZATION));
-  expect(finalizationClaims.length).to.equal(60);   // 5 voting rounds x 4 claims x 3 offers x 1 finalizer 
+  const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c =>
+    c.info.startsWith(RewardTypePrefix.FINALIZATION)
+  );
+  expect(finalizationClaims.length).to.equal(60); // 5 voting rounds x 4 claims x 3 offers x 1 finalizer
   const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
   expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
 
   const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
   // console.dir(finalizationClaims)
-  expect(signatureClaims.length).to.equal(600);  // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
+  expect(signatureClaims.length).to.equal(600); // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
   for (const voter of voters) {
     // all voters have fees in merged claims
-    const feeClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE);
+    const feeClaim = (mergedClaims as IRewardClaim[]).find(
+      c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE
+    );
     expect(feeClaim).to.not.be.undefined;
     expect(Number(feeClaim.amount)).gt(0);
     // all voters have delegation rewards in merged claims
-    const delegationClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT);
+    const delegationClaim = (mergedClaims as IRewardClaim[]).find(
+      c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT
+    );
     expect(delegationClaim).to.not.be.undefined;
     expect(Number(delegationClaim.amount)).gt(0);
     // all nodes of voters have staking rewards in merged claims
     for (const nodeId of voter.nodeIds) {
-      const stakingClaim = (mergedClaims as IRewardClaim[]).find(c => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR);
+      const stakingClaim = (mergedClaims as IRewardClaim[]).find(
+        c => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR
+      );
       expect(stakingClaim).to.not.be.undefined;
       expect(Number(stakingClaim.amount)).gt(0);
     }
     // each voter has a signature claims for each voting round
-    const signatureFeeClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase());
-    expect(signatureFeeClaim.length).to.equal(15);  // 3 offers x 5 voting rounds
+    const signatureFeeClaim = signatureClaims.filter(
+      c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase()
+    );
+    expect(signatureFeeClaim.length).to.equal(15); // 3 offers x 5 voting rounds
     for (const c of signatureFeeClaim) {
       expect(Number(c.amount)).gt(0);
       expect(c.claimType).to.equal(ClaimType.FEE);
     }
-    const signatureDelegationClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase());
+    const signatureDelegationClaim = signatureClaims.filter(
+      c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase()
+    );
     expect(signatureDelegationClaim.length).to.equal(15); // 3 offers x 5 voting rounds
     for (const c of signatureDelegationClaim) {
       expect(Number(c.amount)).gt(0);
@@ -107,12 +154,15 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
     }
   }
   // no double signing penalties
-  const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS));
+  const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c =>
+    c.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)
+  );
   expect(doubleSignerClaims.length).to.equal(0);
   // no reveal offender penalties Reveal offenders
-  const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS));
+  const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c =>
+    c.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)
+  );
   expect(revealOffenderClaims.length).to.equal(0);
-
 }
 
 describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
@@ -142,10 +192,10 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       { name: "0x464c520055534454", decimals: 5 }, // FLR USDT 0.02042
     ];
 
-    voters = generateVoters(numberOfVoters)
+    voters = generateVoters(numberOfVoters);
     offerAmount = BigInt(1000000);
     rewardEpochId = 1;
-  })
+  });
 
   after(() => {
     resetEpochSettings();
@@ -162,7 +212,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     await dataSource.destroy();
   });
 
-
   it("should happy path scenario work", async () => {
     await generateRewardEpochDataForRewardCalculation(
       clock,
@@ -177,10 +226,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
@@ -211,14 +261,14 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       noSignatureSubmitters: [
         {
           voterIndices: [firstVoterIndex],
-          votingRoundIds: [1005, 1006, 1007, 1008, 1009]
-        }
+          votingRoundIds: [1005, 1006, 1007, 1008, 1009],
+        },
       ],
       noGracePeriodFinalizers: [
         {
           voterIndices: [firstVoterIndex],
-          votingRoundIds: [1005, 1006, 1007, 1008, 1009]
-        }
+          votingRoundIds: [1005, 1006, 1007, 1008, 1009],
+        },
       ],
       outsideGracePeriodFinalizers: [],
       doubleSigners: [],
@@ -238,10 +288,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
@@ -266,14 +317,19 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
 
     // extract signing claims
     const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
-    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.FINALIZATION));
-    expect(signatureClaims.length).to.equal(540);  // 3 offers x 9 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
+    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c =>
+      c.info.startsWith(RewardTypePrefix.FINALIZATION)
+    );
+    expect(signatureClaims.length).to.equal(540); // 3 offers x 9 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
     const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
     expect(feeFinalizationClams.length).to.equal(12); // 3 offers x 4 voting rounds (1 finalizer per voting round, amoung them is the first voter)
-    expect(claims.length).to.equal(960 - 60 - 12 + 3);   // 60 less signature claims + 12 less finalization claims, but 3 additional burn claims
+    expect(claims.length).to.equal(960 - 60 - 12 + 3); // 60 less signature claims + 12 less finalization claims, but 3 additional burn claims
     // exacty 1/5 of finalization rewards should be burned
     const finalizationTotalAmount = finalizationClaims.map(c => c.amount).reduce((a, b) => a + b, BigInt(0));
-    const finalizationBurnAmount = finalizationClaims.filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).map(c => c.amount).reduce((a, b) => a + b, BigInt(0));
+    const finalizationBurnAmount = finalizationClaims
+      .filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase())
+      .map(c => c.amount)
+      .reduce((a, b) => a + b, BigInt(0));
     expect(finalizationBurnAmount * 5n).to.equal(finalizationTotalAmount);
 
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
@@ -302,8 +358,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       revealOffenders: [
         {
           voterIndices: [lastVoterIndex],
-          votingRoundIds: [1005]
-        }
+          votingRoundIds: [1005],
+        },
       ],
       independentFinalizersOutsideGracePeriod: [],
     };
@@ -320,10 +376,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
@@ -342,7 +399,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       addLog
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
-    expect(claimSummaries.length).to.equal(numberOfVoters);  // no burn claims
+    expect(claimSummaries.length).to.equal(numberOfVoters); // no burn claims
     expect(claimSummaries[lastVoterIndex].revealWithdrawalFeePenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[lastVoterIndex].revealWithdrawalDelegationPenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[lastVoterIndex].revealWithdrawalNodeIdPenalties.length).to.equal(6); // 3 offers x 2 nodes
@@ -363,8 +420,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       doubleSigners: [
         {
           voterIndices: [secondLastVoterIndex],
-          votingRoundIds: [1005]
-        }
+          votingRoundIds: [1005],
+        },
       ],
       revealOffenders: [],
       independentFinalizersOutsideGracePeriod: [],
@@ -382,10 +439,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
@@ -404,7 +462,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       addLog
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
-    expect(claimSummaries.length).to.equal(numberOfVoters);  // no burn claims, just negative specific claims
+    expect(claimSummaries.length).to.equal(numberOfVoters); // no burn claims, just negative specific claims
     expect(claimSummaries[secondLastVoterIndex].doubleSigningFeePenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[secondLastVoterIndex].doubleSigningDelegationPenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[secondLastVoterIndex].doubleSigningNodeIdPenalties.length).to.equal(6); // 3 offers x 2 nodes
@@ -426,8 +484,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       noGracePeriodFinalizers: [
         {
           voterIndices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-          votingRoundIds: [1005]
-        }
+          votingRoundIds: [1005],
+        },
       ],
       outsideGracePeriodFinalizers: [],
       doubleSigners: [],
@@ -436,8 +494,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         {
           votingRoundIds: [1005],
           voterIndex: 0,
-          address: externalVoter
-        }
+          address: externalVoter,
+        },
       ],
     };
     await generateRewardEpochDataForRewardCalculation(
@@ -453,10 +511,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
@@ -475,14 +534,13 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       addLog
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
-    expect(claimSummaries.length).to.equal(numberOfVoters + 1);  // 1 external voter
+    expect(claimSummaries.length).to.equal(numberOfVoters + 1); // 1 external voter
     expect(claimSummaries[numberOfVoters].externalVoter.toLowerCase()).to.equal(externalVoter.toLowerCase());
     expect(claimSummaries[numberOfVoters].directClaims.length).to.equal(3);
-    let aSet = new Set(claimSummaries[numberOfVoters].directClaims.map(c => c.votingRoundId));
+    const aSet = new Set(claimSummaries[numberOfVoters].directClaims.map(c => c.votingRoundId));
     expect(aSet.size).to.equal(1);
     expect(aSet.has(1005)).to.be.true;
   });
-
 
   it("should happy path scenario work with storage", async () => {
     const progressEnabled = false;
@@ -499,10 +557,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       logger
     );
     await printSummary(entityManager, voters, undefined, logger);
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
     const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
 
@@ -526,13 +585,17 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
 
     const serializeResults = true;
     const claims: IPartialRewardClaim[] = [];
-    for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId <= rewardEpochDuration.endVotingRoundId;
+      votingRoundId++
+    ) {
       const rewardClaims = await partialRewardClaimsForVotingRound(
         rewardEpochId,
         votingRoundId,
         RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
-        undefined,  // should be read from calculations folder
+        undefined, // should be read from calculations folder
         merge,
         addLog,
         serializeResults
@@ -548,7 +611,10 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       rewardEpochDuration.endVotingRoundId,
       true
     );
-    let alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, rewardEpochDuration.endVotingRoundId);
+    let alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(
+      rewardEpochId,
+      rewardEpochDuration.endVotingRoundId
+    );
     expect(RewardClaim.compareRewardClaims(mergedClaims, alternativeMergedClaims)).to.be.true;
 
     destroyStorage(rewardEpochId);
@@ -567,17 +633,26 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     }
 
     serializeRewardEpochInfo(rewardEpoch.rewardEpochId, rewardEpochInfo);
-    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.PENDING, rewardEpoch, rewardEpochDuration.endVotingRoundId);
+    setRewardCalculationStatus(
+      rewardEpochId,
+      RewardCalculationStatus.PENDING,
+      rewardEpoch,
+      rewardEpochDuration.endVotingRoundId
+    );
     logStatus(ProgressType.CLAIM_CALCULATION);
     setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.IN_PROGRESS);
     logStatus();
-    for (let votingRoundId = rewardEpochDuration.startVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId <= rewardEpochDuration.endVotingRoundId;
+      votingRoundId++
+    ) {
       await partialRewardClaimsForVotingRound(
         rewardEpochId,
         votingRoundId,
         RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
-        undefined,  // should be read from calculations folder
+        undefined, // should be read from calculations folder
         merge,
         addLog,
         serializeResults
@@ -586,7 +661,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     }
     logStatus();
 
-    const halfVotingRoundId = Math.floor((rewardEpochDuration.startVotingRoundId + rewardEpochDuration.endVotingRoundId) / 2);
+    const halfVotingRoundId = Math.floor(
+      (rewardEpochDuration.startVotingRoundId + rewardEpochDuration.endVotingRoundId) / 2
+    );
     aggregateRewardClaimsInStorage(
       rewardEpoch.rewardEpochId,
       rewardEpochDuration.startVotingRoundId,
@@ -594,16 +671,19 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       true
     );
     logStatus();
-    for (let votingRoundId = halfVotingRoundId; votingRoundId <= rewardEpochDuration.endVotingRoundId; votingRoundId++) {
-      aggregateRewardClaimsInStorage(
-        rewardEpoch.rewardEpochId,
-        votingRoundId - 1,
-        votingRoundId
-      );
+    for (
+      let votingRoundId = halfVotingRoundId;
+      votingRoundId <= rewardEpochDuration.endVotingRoundId;
+      votingRoundId++
+    ) {
+      aggregateRewardClaimsInStorage(rewardEpoch.rewardEpochId, votingRoundId - 1, votingRoundId);
       logStatus();
     }
     logStatus();
-    alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, rewardEpochDuration.endVotingRoundId);
+    alternativeMergedClaims = deserializeAggregatedClaimsForVotingRoundId(
+      rewardEpochId,
+      rewardEpochDuration.endVotingRoundId
+    );
     expect(RewardClaim.compareRewardClaims(mergedClaims, alternativeMergedClaims)).to.be.true;
 
     offersSummary(rewardEpoch.rewardOffers, logger);
@@ -612,6 +692,4 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
 
     happyPathChecks(voters, claims, mergedClaims);
   });
-
-
 });

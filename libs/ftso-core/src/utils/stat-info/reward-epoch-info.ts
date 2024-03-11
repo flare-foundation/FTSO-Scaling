@@ -23,7 +23,7 @@ export interface RewardEpochInfo {
 
 export function getRewardEpochInfo(rewardEpoch: RewardEpoch, endVotingRoundId?: number): RewardEpochInfo {
   const voterRegistrationInfo: FullVoterRegistrationInfo[] = [];
-  for (let signingAddress of rewardEpoch.signingPolicy.voters) {
+  for (const signingAddress of rewardEpoch.signingPolicy.voters) {
     const identityAddress = rewardEpoch.signingAddressToVoter.get(signingAddress.toLowerCase());
     if (!identityAddress) {
       throw new Error(`Critical error: No identity address for signing address ${signingAddress}`);

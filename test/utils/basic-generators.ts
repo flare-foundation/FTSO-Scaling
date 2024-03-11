@@ -1,4 +1,4 @@
-// IMPORTANT: This file should never import networks.ts 
+// IMPORTANT: This file should never import networks.ts
 import { utils } from "web3";
 import { encodeParameter, encodeParameters } from "web3-eth-abi";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
@@ -6,7 +6,6 @@ import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/or
 import { Bytes20 } from "../../libs/ftso-core/src/voting-types";
 import { encodingUtils, web3 } from "./generators";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
-
 
 export interface TestVoter {
   identityAddress: string;
@@ -62,7 +61,7 @@ export function generateState(name: string, id: number, blockNumber?: number, ti
 }
 
 export function generateEvent(
-  contract: { name: string; address: string; },
+  contract: { name: string; address: string },
   eventName: string,
   eventData: any,
   blockNumber: number,

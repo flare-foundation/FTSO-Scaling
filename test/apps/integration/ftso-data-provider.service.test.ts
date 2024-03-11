@@ -18,10 +18,7 @@ import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/Enc
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateTx, generateVoters } from "../../utils/basic-generators";
 import { MockIndexerDB } from "../../utils/db";
-import {
-  currentTimeSec,
-  generateRewardEpochEvents,
-} from "../../utils/generators";
+import { currentTimeSec, generateRewardEpochEvents } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
 

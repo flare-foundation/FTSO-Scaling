@@ -40,7 +40,7 @@ export function calculateSigningRewards(
 
   const votingRoundId = data.dataForCalculations.votingRoundId;
   let rewardEligibleSignatures: GenericSubmissionData<ISignaturePayload>[] = [];
-  let doubleSigners = calculateDoubleSigners(
+  const doubleSigners = calculateDoubleSigners(
     data.dataForCalculations.votingRoundId,
     FTSO2_PROTOCOL_ID,
     data.signatures
