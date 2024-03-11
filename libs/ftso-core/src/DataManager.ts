@@ -626,8 +626,12 @@ export class DataManager {
           message.protocolId === FTSO2_PROTOCOL_ID &&
           message.votingRoundId === submission.votingEpochIdFromTimestamp
         ) {
-          const commit = CommitData.decode(message.payload);
-          voterToLastCommit.set(submission.submitAddress, commit);
+          try {
+            const commit = CommitData.decode(message.payload);
+            voterToLastCommit.set(submission.submitAddress, commit);
+          } catch (e) {
+            this.logger.warn(`Unparsable commit message: ${message.payload}, error: ${errorString(e)}`);
+          }
         }
       }
     }
@@ -654,8 +658,12 @@ export class DataManager {
           message.protocolId === FTSO2_PROTOCOL_ID &&
           message.votingRoundId + 1 === submission.votingEpochIdFromTimestamp
         ) {
-          const reveal = RevealData.decode(message.payload, feedOrder);
-          voterToLastReveal.set(submission.submitAddress, reveal);
+          try {
+            const reveal = RevealData.decode(message.payload, feedOrder);
+            voterToLastReveal.set(submission.submitAddress, reveal);
+          } catch (e) {
+            this.logger.warn(`Unparsable reveal message: ${message.payload}, error: ${errorString(e)}`);
+          }
         }
       }
     }
