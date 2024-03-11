@@ -1,9 +1,24 @@
 import { EntityManager } from "typeorm";
 import Web3 from "web3";
-import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "../../apps/ftso-data-provider/src/response-encoders";
+import {
+  encodeCommitPayloadMessage,
+  encodeRevealPayloadMessage,
+} from "../../apps/ftso-data-provider/src/response-encoders";
 import { IPayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
 import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningPolicy";
-import { BURN_ADDRESS, CONTRACTS, EPOCH_SETTINGS, FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, FIRST_DATABASE_INDEX_STATE, FTSO2_PROTOCOL_ID, GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, LAST_CHAIN_INDEX_STATE, LAST_DATABASE_INDEX_STATE, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
+import {
+  BURN_ADDRESS,
+  CONTRACTS,
+  EPOCH_SETTINGS,
+  FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
+  FIRST_DATABASE_INDEX_STATE,
+  FTSO2_PROTOCOL_ID,
+  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
+  GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC,
+  LAST_CHAIN_INDEX_STATE,
+  LAST_DATABASE_INDEX_STATE,
+  ZERO_BYTES32,
+} from "../../libs/ftso-core/src/configs/networks";
 
 import FakeTimers from "@sinonjs/fake-timers";
 import { ContractMethodNames } from "../../libs/ftso-core/src/configs/contracts";
@@ -13,7 +28,7 @@ import {
   SigningPolicyInitialized,
   VotePowerBlockSelected,
   VoterRegistered,
-  VoterRegistrationInfo
+  VoterRegistrationInfo,
 } from "../../libs/ftso-core/src/events";
 import { TLPEvents, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
 import { RandomVoterSelector } from "../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
@@ -31,7 +46,10 @@ import { FSPSettings } from "./test-epoch-settings";
 export const encodingUtils = EncodingUtils.instance;
 export const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
 export const sigReveal = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);
-export const sigSignature = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submitSignatures);
+export const sigSignature = encodingUtils.getFunctionSignature(
+  CONTRACTS.Submission.name,
+  ContractMethodNames.submitSignatures
+);
 export const relaySignature = encodingUtils.getFunctionSignature(CONTRACTS.Relay.name, ContractMethodNames.relay);
 
 export interface IndexerPosition<T> {
@@ -50,8 +68,11 @@ export function voterFeedValue(votingRoundId: number, voterIndex: number, feedSe
 }
 
 export function offersForFeeds(
-  rewardEpochId: number, feeds: Feed[], amount: bigint,
-  startBlock: number, startTime: number,
+  rewardEpochId: number,
+  feeds: Feed[],
+  amount: bigint,
+  startBlock: number,
+  startTime: number,
   maxBlocks: number = 100
 ): IndexerPosition<TLPEvents> {
   const events: TLPEvents[] = [];
@@ -59,8 +80,7 @@ export function offersForFeeds(
   let block = startBlock;
   let timestamp = startTime;
   for (const [i, feed] of feeds.entries()) {
-    
-    let event = generateEvent(
+    const event = generateEvent(
       CONTRACTS.FtsoRewardOffersManager,
       "RewardsOffered",
       {
@@ -77,7 +97,7 @@ export function offersForFeeds(
       timestamp
     );
     events.push(event);
-    if(block < maxBlock) {
+    if (block < maxBlock) {
       block++;
       timestamp++;
     }
@@ -119,7 +139,7 @@ export const happyRewardDataSimulationScenario: RewardDataSimulationScenario = {
   doubleSigners: [],
   revealOffenders: [],
   independentFinalizersOutsideGracePeriod: [],
-}
+};
 
 // Sequence:
 // - 0: RewardEpochStarted r - 1
@@ -147,7 +167,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   voters: TestVoter[],
   valueFunction: (votingRoundId: number, voterIndex: number, feedSequence: Feed[]) => number[],
   scenario: RewardDataSimulationScenario,
-  logger: ILogger = emptyLogger,
+  logger: ILogger = emptyLogger
 ) {
   const previousRewardEpochId = rewardEpochId - 1;
   const previousRewardEpochStartSec = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
@@ -186,14 +206,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   }
 
   async function mineFakeTransaction() {
-    const tx = generateTx(
-      BURN_ADDRESS,
-      BURN_ADDRESS,
-      sigReveal,
-      block,
-      timestamp,
-      sigReveal
-    );
+    const tx = generateTx(BURN_ADDRESS, BURN_ADDRESS, sigReveal, block, timestamp, sigReveal);
     mineBlock();
     await entityManager.save([tx]);
     await updateUpperState();
@@ -201,9 +214,11 @@ export async function generateRewardEpochDataForRewardCalculation(
 
   function generateSigningPolicy(voters: TestVoter[], rewardEpochId: number) {
     const weightSum = voters.reduce((sum, v) => sum + Number(v.registrationWeight), 0);
-    const newWeightsNormalized = voters.map(v => Math.floor(Number(v.registrationWeight) / weightSum * (2 ** 16 - 1)));
+    const newWeightsNormalized = voters.map(v =>
+      Math.floor((Number(v.registrationWeight) / weightSum) * (2 ** 16 - 1))
+    );
     const newWeightSum = newWeightsNormalized.reduce((sum, w) => sum + w, 0);
-    const threshold = Math.floor(fspSettings.signingPolicyThresholdPPM * newWeightSum / 1000000);
+    const threshold = Math.floor((fspSettings.signingPolicyThresholdPPM * newWeightSum) / 1000000);
     const signingPolicy: ISigningPolicy = {
       rewardEpochId,
       startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId),
@@ -323,9 +338,15 @@ export async function generateRewardEpochDataForRewardCalculation(
   // mine few fake transactions before the start of the previous reward epoch
   await mineFakeTransaction();
   // put it even lower, so we have enough history
-  const rewardEpochDurationSec = EPOCH_SETTINGS().votingEpochDurationSeconds * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs;
+  const rewardEpochDurationSec =
+    EPOCH_SETTINGS().votingEpochDurationSeconds * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs;
   // set state to ensure sufficient indexer history
-  const lowerState = generateState(FIRST_DATABASE_INDEX_STATE, 0, block - rewardEpochDurationSec, timestamp - rewardEpochDurationSec);
+  const lowerState = generateState(
+    FIRST_DATABASE_INDEX_STATE,
+    0,
+    block - rewardEpochDurationSec,
+    timestamp - rewardEpochDurationSec
+  );
   await entityManager.save([lowerState]);
 
   await mineFakeTransaction();
@@ -350,7 +371,7 @@ export async function generateRewardEpochDataForRewardCalculation(
       block,
       timestamp
     )
-  )
+  );
 
   await mineFakeTransaction();
 
@@ -378,7 +399,7 @@ export async function generateRewardEpochDataForRewardCalculation(
   update(offersPos);
   await mineFakeTransaction();
   await mineFakeTransaction();
-  const votePowerBlock = block;  // some choice of vote power block
+  const votePowerBlock = block; // some choice of vote power block
   await mineFakeTransaction();
   await mineFakeTransaction();
 
@@ -409,7 +430,7 @@ export async function generateRewardEpochDataForRewardCalculation(
       new VotePowerBlockSelected({
         rewardEpochId: rewardEpochId,
         votePowerBlock,
-        timestamp
+        timestamp,
       }),
       block,
       timestamp
@@ -493,15 +514,14 @@ export async function generateRewardEpochDataForRewardCalculation(
       block,
       timestamp
     )
-  )
+  );
   mineBlock();
 
   await entityManager.save(entities);
   await updateUpperState();
   entities = [];
 
-
-  // votingRoundId => voterIndex => 
+  // votingRoundId => voterIndex =>
   const commitMap = new Map<number, Map<number, IRevealData>>();
 
   function insertIntoRevealsMap(votingRoundId: number, voterIndex: number, value: IRevealData) {
@@ -521,7 +541,9 @@ export async function generateRewardEpochDataForRewardCalculation(
     }
     const newTimestamp = EPOCH_SETTINGS().votingEpochStartSec(votingRoundId) + offset;
     if (timestamp > newTimestamp) {
-      throw new Error(`moveToVotingRoundOffset::Timestamp is too high. Current: ${timestamp}, desired: ${newTimestamp}`);
+      throw new Error(
+        `moveToVotingRoundOffset::Timestamp is too high. Current: ${timestamp}, desired: ${newTimestamp}`
+      );
     }
     moveTo(newTimestamp);
   }
@@ -536,12 +558,12 @@ export async function generateRewardEpochDataForRewardCalculation(
   const voterIndexToMiniFinalizer = new Map<number, MiniFinalizer>();
   for (let voterIndex = 0; voterIndex < voters.length; voterIndex++) {
     const voter = voters[voterIndex];
-    const calculator = new MiniFtsoCalculator(voterIndex, voter.signingPrivateKey, entityManager, logger)
+    const calculator = new MiniFtsoCalculator(voterIndex, voter.signingPrivateKey, entityManager, logger);
     voterIndexToMiniFTSOCalculator.set(voterIndex, calculator);
     const finalizer = new MiniFinalizer(voter, voterIndex, voterSelector, entityManager, logger);
     voterIndexToMiniFinalizer.set(voterIndex, finalizer);
   }
-  logger.log(`STARTING WITH: ${signingPolicy.startVotingRoundId}`)
+  logger.log(`STARTING WITH: ${signingPolicy.startVotingRoundId}`);
   // move to the start of the reward epoch
 
   const lastVotingEpochId = signingPolicy.startVotingRoundId + EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs - 1;
@@ -580,15 +602,18 @@ export async function generateRewardEpochDataForRewardCalculation(
     const signatureStartOffset = EPOCH_SETTINGS().revealDeadlineSeconds + 1;
 
     // const signatureDuration = Math.floor(EPOCH_SETTINGS().votingEpochDurationSeconds * 0.2);
-    const finalizationStartOffset = EPOCH_SETTINGS().revealDeadlineSeconds + 1 + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
+    const finalizationStartOffset =
+      EPOCH_SETTINGS().revealDeadlineSeconds + 1 + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
     const finalizationStartDeadline = EPOCH_SETTINGS().votingEpochStartSec(votingEpochId) + finalizationStartOffset;
-    const finalizationEndGracePeriodOffset = EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC() + 1;
+    const finalizationEndGracePeriodOffset =
+      EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC() + 1;
     const lastFinalizationTimeOutsideGracePeriod = EPOCH_SETTINGS().votingEpochEndSec(votingEpochId) - 1;
 
     // REVEALS
     if (votingEpochId > signingPolicy.startVotingRoundId) {
       logger.log(`REVEALS ${votingEpochId - 1}`);
-      const lastRevealTime = EPOCH_SETTINGS().votingEpochStartSec(votingEpochId) + EPOCH_SETTINGS().revealDeadlineSeconds - 2;
+      const lastRevealTime =
+        EPOCH_SETTINGS().votingEpochStartSec(votingEpochId) + EPOCH_SETTINGS().revealDeadlineSeconds - 2;
       if (timestamp >= lastRevealTime) {
         throw new Error("Last reveal time too late");
       }
@@ -640,7 +665,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         }
         const voter = voters[voterIndex];
         const calculator = voterIndexToMiniFTSOCalculator.get(voterIndex);
-        if(scenario.useFixedCalculationResult && !fixedCalculationResult) {
+        if (scenario.useFixedCalculationResult && !fixedCalculationResult) {
           fixedCalculationResult = await calculator.prepareCalculationResultData(votingEpochId - 1);
         }
         const payload = await calculator.getSignaturePayload(votingEpochId - 1, false, fixedCalculationResult);
@@ -671,7 +696,6 @@ export async function generateRewardEpochDataForRewardCalculation(
         if (timestamp < finalizationStartDeadline - 1) {
           mineBlock();
         }
-        
       }
       // Generate calculation data per each voter
       // Calculate medians
@@ -744,10 +768,10 @@ export async function generateRewardEpochDataForRewardCalculation(
       }
 
       // Finalizations by independent addresses
-      let independentFinalizers = getIndependentFinalizersOutsideGracePeriod(votingEpochId - 1);
+      const independentFinalizers = getIndependentFinalizersOutsideGracePeriod(votingEpochId - 1);
       // use the first finalizer
       const finalizer = voterIndexToMiniFinalizer.get(0);
-      for (let address of independentFinalizers) {
+      for (const address of independentFinalizers) {
         // override the sending address
         const tx = await finalizer.processFinalization(votingEpochId - 1, block, timestamp, address);
         if (tx) {
@@ -781,11 +805,15 @@ export async function generateRewardEpochDataForRewardCalculation(
           random: Web3.utils.randomHex(32),
           feeds,
           prices: feedValues,
-          encodedValues: feedEncoded
+          encodedValues: feedEncoded,
         };
         insertIntoRevealsMap(votingEpochId, voterIndex, voterRevealData);
 
-        const hash = CommitData.hashForCommit(voter.submitAddress, voterRevealData.random, voterRevealData.encodedValues);
+        const hash = CommitData.hashForCommit(
+          voter.submitAddress,
+          voterRevealData.random,
+          voterRevealData.encodedValues
+        );
         const commitData: ICommitData = {
           commitHash: hash,
         };
@@ -820,6 +848,3 @@ export async function generateRewardEpochDataForRewardCalculation(
   moveToVotingEpochOffset(lastVotingEpochId + 2, 1);
   mineFakeTransaction();
 }
-
-
-

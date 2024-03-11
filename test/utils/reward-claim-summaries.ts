@@ -5,7 +5,13 @@ import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 import { TestVoter } from "./basic-generators";
 
-function claimListSummary(beneficiary: string, voterIndex: number, type: "node" | "delegation" | "signing" | "identity" | "none", claims: IRewardClaim[], padding = 6) {
+function claimListSummary(
+  beneficiary: string,
+  voterIndex: number,
+  type: "node" | "delegation" | "signing" | "identity" | "none",
+  claims: IRewardClaim[],
+  padding = 6
+) {
   const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
   const fee = (feeClaim ? Number(feeClaim.amount) : 0).toString().padStart(padding);
   const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
@@ -31,7 +37,9 @@ function claimListSummary(beneficiary: string, voterIndex: number, type: "node" 
   if (beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
     addressText = "BURN ADDR ";
   }
-  return `${indexValue.padStart(5)} ${addressText}: FEE: ${fee}|  WNAT: ${wnat}|  MIRROR: ${mirror}|  DIRECT: ${direct}|  CCHAIN: ${cchain}`;
+  return `${indexValue.padStart(
+    5
+  )} ${addressText}: FEE: ${fee}|  WNAT: ${wnat}|  MIRROR: ${mirror}|  DIRECT: ${direct}|  CCHAIN: ${cchain}`;
 }
 
 export interface VoterClaimSummary {
@@ -71,7 +79,7 @@ function initializeEmptyVoterClaimSummary(): VoterClaimSummary {
     revealWithdrawalFeePenalties: [],
     revealWithdrawalDelegationPenalties: [],
     revealWithdrawalNodeIdPenalties: [],
-    directClaims: []
+    directClaims: [],
   };
 }
 
@@ -97,7 +105,7 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
     voterIndexToSummary.set(i, voterSummary);
   }
 
-  for (let claim of claims) {
+  for (const claim of claims) {
     const isVoterClaim = false;
     const beneficiary = claim.beneficiary.toLowerCase();
     let voterIndex = identityAddressToVoterIndex.get(beneficiary);
@@ -120,16 +128,20 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
           voterIndexToSummary.get(voterIndex).revealWithdrawalFeePenalties.push(claim);
           continue;
         } else {
-          throw new Error(`Unknown claim info: ${claim.info}, identityAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
+          throw new Error(
+            `Unknown claim info: ${claim.info}, identityAddress: ${beneficiary}, voterIndex: ${voterIndex}`
+          );
         }
       } else if (claim.claimType === ClaimType.DIRECT) {
-        let summary = externalAddressToSummary.get(beneficiary) || initializeEmptyVoterClaimSummary();
+        const summary = externalAddressToSummary.get(beneficiary) || initializeEmptyVoterClaimSummary();
         summary.directClaims.push(claim);
         summary.externalVoter = beneficiary;
         externalAddressToSummary.set(beneficiary, summary);
         continue;
       } else {
-        throw new Error(`Invalid claim type ${claim.claimType} for identity address: ${claim.claimType}, voterIndex: ${voterIndex}`);
+        throw new Error(
+          `Invalid claim type ${claim.claimType} for identity address: ${claim.claimType}, voterIndex: ${voterIndex}`
+        );
       }
     }
     voterIndex = delegationAddressToVoterIndex.get(beneficiary);
@@ -150,7 +162,9 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
         voterIndexToSummary.get(voterIndex).revealWithdrawalDelegationPenalties.push(claim);
         continue;
       } else {
-        throw new Error(`Unknown claim info: ${claim.info}, delegationAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
+        throw new Error(
+          `Unknown claim info: ${claim.info}, delegationAddress: ${beneficiary}, voterIndex: ${voterIndex}`
+        );
       }
     }
     voterIndex = nodeIdToVoterIndex.get(beneficiary);
@@ -180,8 +194,10 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
       throw new Error(`Unknown claim info: ${claim.info}, signingAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
     }
 
-    if(claim.claimType !== ClaimType.DIRECT) {
-      throw new Error(`Unknown claim info: ${claim.info}, beneficiary: ${beneficiary} not a voter, but claim is not DIRECT`);
+    if (claim.claimType !== ClaimType.DIRECT) {
+      throw new Error(
+        `Unknown claim info: ${claim.info}, beneficiary: ${beneficiary} not a voter, but claim is not DIRECT`
+      );
     }
     // DIRECT claim by external voter
     const summary = externalAddressToSummary.get(beneficiary) || initializeEmptyVoterClaimSummary();
@@ -194,13 +210,13 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
   for (let i = 0; i < voters.length; i++) {
     result.push(voterIndexToSummary.get(i));
   }
-  for (let summary of externalAddressToSummary.values()) {
+  for (const summary of externalAddressToSummary.values()) {
     result.push(summary);
   }
   return result;
 }
 /**
- * Calculates and possibly prints out the summary of the rewards per voter 
+ * Calculates and possibly prints out the summary of the rewards per voter
  */
 export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger: ILogger = emptyLogger) {
   const voterToClaimMap = new Map<string, IRewardClaim[]>();
@@ -271,7 +287,7 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
   logger.log("STAKING REWARDS");
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
-    for (let nodeId of voter.nodeIds) {
+    for (const nodeId of voter.nodeIds) {
       unusedBeneficiaries.delete(nodeId);
       const claimList = voterToClaimMap.get(nodeId) || [];
       if (claimList.length > 0) {
@@ -324,15 +340,15 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
       }
     }
     if (claim.claimType === ClaimType.FEE) {
-      let currentAmount = voterIndexToFees.get(voterIndex) || 0n;
+      const currentAmount = voterIndexToFees.get(voterIndex) || 0n;
       voterIndexToFees.set(voterIndex, currentAmount + claim.amount);
     }
     if (claim.claimType === ClaimType.WNAT) {
-      let currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
+      const currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
       voterIndexToParticipationRewards.set(voterIndex, currentAmount + claim.amount);
     }
     if (claim.claimType === ClaimType.MIRROR) {
-      let currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
+      const currentAmount = voterIndexToParticipationRewards.get(voterIndex) || 0n;
       voterIndexToParticipationRewards.set(voterIndex, currentAmount + claim.amount);
     }
   }
@@ -342,13 +358,21 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
     const partVal = voterIndexToParticipationRewards.get(i) || 0n;
     let percentage = 0;
     if (feeVal + partVal > 0) {
-      percentage = Number(feeVal * 10000n / (feeVal + partVal)) / 100;
+      percentage = Number((feeVal * 10000n) / (feeVal + partVal)) / 100;
     }
-    logger.log(`Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${feeVal}, part: ${partVal}, pct: ${percentage}`);
+    logger.log(
+      `Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${feeVal}, part: ${partVal}, pct: ${percentage}`
+    );
   }
 }
 function voterSummary(voterIndex: number, voter: TestVoter): string {
-  return `Voter: ${voterIndex} feePCT: ${voter.delegationFeeBIPS} del: ${voter.delegationAddress.toLowerCase().slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress.toLowerCase().slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${voter.registrationWeight}`;
+  return `Voter: ${voterIndex} feePCT: ${voter.delegationFeeBIPS} del: ${voter.delegationAddress
+    .toLowerCase()
+    .slice(0, 10)} sign: ${voter.signingAddress.toLowerCase().slice(0, 10)} sub: ${voter.submitAddress
+    .toLowerCase()
+    .slice(0, 10)} sigSub: ${voter.submitSignaturesAddress.toLowerCase().slice(0, 10)} weight: ${
+    voter.registrationWeight
+  }`;
 }
 
 export function votersSummary(voters: TestVoter[], logger: ILogger = emptyLogger) {
@@ -362,11 +386,11 @@ export function votersSummary(voters: TestVoter[], logger: ILogger = emptyLogger
 export function offersSummary(offers: RewardOffers, logger: ILogger = emptyLogger) {
   logger.log("OFFERS SUMMARY:");
   let totalOffers = 0n;
-  for (let offer of offers.rewardOffers) {
+  for (const offer of offers.rewardOffers) {
     totalOffers += offer.amount;
   }
   let totalInflationOffers = 0n;
-  for (let offer of offers.inflationOffers) {
+  for (const offer of offers.inflationOffers) {
     totalInflationOffers += offer.amount;
   }
   logger.log(`Community offers: ${offers.rewardOffers.length}, total: ${totalOffers}`);

@@ -31,11 +31,11 @@ export interface SDataForCalculation {
 
 export function prepareDataForCalculations(rewardEpochId: number, data: DataForRewardCalculation): SDataForCalculation {
   const validEligibleReveals: RevealRecords[] = [];
-  for (let [submitAddress, revealData] of data.dataForCalculations.validEligibleReveals.entries()) {
+  for (const [submitAddress, revealData] of data.dataForCalculations.validEligibleReveals.entries()) {
     validEligibleReveals.push({ submitAddress, data: revealData });
   }
   const voterMedianVotingWeights: VoterWeightData[] = [];
-  for (let [submitAddress, weight] of data.dataForCalculations.voterMedianVotingWeights.entries()) {
+  for (const [submitAddress, weight] of data.dataForCalculations.voterMedianVotingWeights.entries()) {
     voterMedianVotingWeights.push({ submitAddress, weight });
   }
   const result: SDataForCalculation = {
@@ -81,7 +81,7 @@ export function serializeDataForRewardCalculation(
   const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
 
   const hashSignatures: HashSignatures[] = [];
-  for (let [hash, signatures] of rewardCalculationData.signatures.entries()) {
+  for (const [hash, signatures] of rewardCalculationData.signatures.entries()) {
     const hashRecord: HashSignatures = {
       hash,
       signatures,

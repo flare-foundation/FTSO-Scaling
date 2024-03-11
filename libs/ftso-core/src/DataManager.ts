@@ -192,7 +192,8 @@ export class DataManager {
       votingRoundId,
       dataForCalculationsResponse.data.rewardEpoch,
       signaturesResponse.data.signatures,
-      FTSO2_PROTOCOL_ID
+      FTSO2_PROTOCOL_ID,
+      this.logger
     );
     const finalizations = this.extractFinalizations(
       votingRoundId,
@@ -344,43 +345,48 @@ export class DataManager {
     votingRoundId: number,
     rewardEpoch: RewardEpoch,
     submissions: SubmissionData[],
-    protocolId = FTSO2_PROTOCOL_ID
+    protocolId = FTSO2_PROTOCOL_ID,
+    logger: ILogger
   ): Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> {
     const signatureMap = new Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>();
     for (const submission of submissions) {
       for (const message of submission.messages) {
-        const signaturePayload = SignaturePayload.decode(message.payload);
-        if (
-          signaturePayload.message.votingRoundId === votingRoundId &&
-          signaturePayload.message.protocolId === protocolId
-        ) {
-          const messageHash = ProtocolMessageMerkleRoot.hash(signaturePayload.message);
-          signaturePayload.messageHash = messageHash;
-          const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
-          if (!rewardEpoch.isEligibleSignerAddress(signer)) {
-            continue;
-          }
-          signaturePayload.signer = signer;
-          signaturePayload.weight = rewardEpoch.signerToSigningWeight(signer);
-          signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(signer);
+        try {
+          const signaturePayload = SignaturePayload.decode(message.payload);
           if (
-            signaturePayload.weight === undefined ||
-            signaturePayload.signer === undefined ||
-            signaturePayload.index === undefined
+            signaturePayload.message.votingRoundId === votingRoundId &&
+            signaturePayload.message.protocolId === protocolId
           ) {
-            // assert: this should never happen
-            throw new Error(
-              `Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`
-            );
+            const messageHash = ProtocolMessageMerkleRoot.hash(signaturePayload.message);
+            signaturePayload.messageHash = messageHash;
+            const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
+            if (!rewardEpoch.isEligibleSignerAddress(signer)) {
+              continue;
+            }
+            signaturePayload.signer = signer;
+            signaturePayload.weight = rewardEpoch.signerToSigningWeight(signer);
+            signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(signer);
+            if (
+              signaturePayload.weight === undefined ||
+              signaturePayload.signer === undefined ||
+              signaturePayload.index === undefined
+            ) {
+              // assert: this should never happen
+              throw new Error(
+                `Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`
+              );
+            }
+            const signatures =
+              signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
+            const submissionData: GenericSubmissionData<ISignaturePayload> = {
+              ...submission,
+              messages: signaturePayload,
+            };
+            signatureMap.set(messageHash, signatures);
+            signatures.set(signer, submissionData);
           }
-          const signatures =
-            signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
-          const submissionData: GenericSubmissionData<ISignaturePayload> = {
-            ...submission,
-            messages: signaturePayload,
-          };
-          signatureMap.set(messageHash, signatures);
-          signatures.set(signer, submissionData);
+        } catch (e) {
+          logger.warn(`Issues with parsing submission message: ${e.message}`);
         }
       }
     }
@@ -428,43 +434,47 @@ export class DataManager {
         if (calldata.length < 10) {
           continue;
         }
-        const relayMessage = RelayMessage.decode(calldata.slice(8));
-        // ignore irrelevant messages
-        if (
-          !relayMessage.protocolMessageMerkleRoot ||
-          relayMessage.protocolMessageMerkleRoot.protocolId !== protocolId ||
-          relayMessage.protocolMessageMerkleRoot.votingRoundId !== votingRoundId ||
-          relayMessage.signingPolicy.rewardEpochId !== rewardEpoch.rewardEpochId
-        ) {
-          continue;
+        try {
+          const relayMessage = RelayMessage.decode(calldata.slice(8));
+          // ignore irrelevant messages
+          if (
+            !relayMessage.protocolMessageMerkleRoot ||
+            relayMessage.protocolMessageMerkleRoot.protocolId !== protocolId ||
+            relayMessage.protocolMessageMerkleRoot.votingRoundId !== votingRoundId ||
+            relayMessage.signingPolicy.rewardEpochId !== rewardEpoch.rewardEpochId
+          ) {
+            continue;
+          }
+          // TODO: Check if the signing policy is correct
+          const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
+          const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
+          if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
+            throw new Error(
+              `Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`
+            );
+          }
+          const finalization: ParsedFinalizationData = {
+            ...submission,
+            messages: relayMessage,
+          };
+          // Verify the relay message by trying to encode it with verification.
+          // If it excepts it is non-finalisable
+          RelayMessage.encode(relayMessage, true);
+          // The message is eligible for consideration.
+          finalizations.push(finalization);
+        } catch (e) {
+          this.logger.log(`Unparsable relay message. Ignored: ${e.message}`);
         }
-        // TODO: Check if the signing policy is correct
-        const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
-        const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
-        if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
-          throw new Error(
-            `Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`
-          );
-        }
-        const finalization: ParsedFinalizationData = {
-          ...submission,
-          messages: relayMessage,
-        };
-        // Verify the relay message by trying to encode it with verification.
-        // If it excepts it is non-finalisable
-        RelayMessage.encode(relayMessage, true);
-        // The message is eligible for consideration.
-        finalizations.push(finalization);
       } catch (e) {
         // ignore unparsable message
-        this.logger.warn(`Unparsable or non-finalisable finalization message: ${errorString(e)}`);
+        this.logger.warn(`Unparsable or non-finalisable finalization message: ${e.message}`);
       }
     }
     // consider only the first sent successful finalization
     // note that finalizations are already sorted according to the blockchain order
-    let filteredFinalizations: ParsedFinalizationData[] = [];
+    const filteredFinalizations: ParsedFinalizationData[] = [];
     const encounteredSenderAddresses = new Set<Address>();
-    for (let finalization of finalizations) {
+    for (const finalization of finalizations) {
       if (!encounteredSenderAddresses.has(finalization.submitAddress.toLowerCase())) {
         filteredFinalizations.push(finalization);
         encounteredSenderAddresses.add(finalization.submitAddress.toLowerCase());
@@ -649,6 +659,7 @@ export class DataManager {
    * ASSUMPTION 2: submissions in submissionDataArray are all commit transactions that happen in this votingRoundId
    * ASSUMPTION 3: submissionDataArray is ordered in the blockchain chronological order
    * NOTICE: actually assumes, but does not check
+   * The function must not revert, it ignores unparsable messages and logs them.
    */
   private getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map<Address, ICommitData> {
     const voterToLastCommit = new Map<Address, ICommitData>();
@@ -658,8 +669,12 @@ export class DataManager {
           message.protocolId === FTSO2_PROTOCOL_ID &&
           message.votingRoundId === submission.votingEpochIdFromTimestamp
         ) {
-          const commit = CommitData.decode(message.payload);
-          voterToLastCommit.set(submission.submitAddress, commit);
+          try {
+            const commit = CommitData.decode(message.payload);
+            voterToLastCommit.set(submission.submitAddress, commit);
+          } catch (e) {
+            this.logger.warn(`Unparsable message payload. Ignored. ${e.message}`);
+          }
         }
       }
     }
@@ -674,6 +689,7 @@ export class DataManager {
    * ASSUMPTION 3: submissions in submissionDataArray all reveal transactions that happen in the correct time window (before reveal deadline)
    * ASSUMPTION 4: submissionDataArray is ordered in the blockchain chronological order
    * NOTICE: actually assumes, but does not check
+   * The function must not revert, it ignores unparsable messages and logs them.
    * @param submissionDataArray
    * @param feedOrder
    * @returns
@@ -686,8 +702,12 @@ export class DataManager {
           message.protocolId === FTSO2_PROTOCOL_ID &&
           message.votingRoundId + 1 === submission.votingEpochIdFromTimestamp
         ) {
-          const reveal = RevealData.decode(message.payload, feedOrder);
-          voterToLastReveal.set(submission.submitAddress, reveal);
+          try {
+            const reveal = RevealData.decode(message.payload, feedOrder);
+            voterToLastReveal.set(submission.submitAddress, reveal);
+          } catch (e) {
+            this.logger.warn(`Unparsable reveal message. Ignoring: ${e.message}`);
+          }
         }
       }
     }

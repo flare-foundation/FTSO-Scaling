@@ -80,7 +80,7 @@ export class CalculatorService {
     this.entityManager = manager;
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
-    this.indexerClient = new IndexerClient(manager, required_history_sec);
+    this.indexerClient = new IndexerClient(manager, required_history_sec, this.logger);
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);
   }
@@ -298,8 +298,8 @@ export class CalculatorService {
         setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.IN_PROGRESS);
         recordProgress(rewardEpochId);
       }
-      let start = options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
-      let end = options.endVotingRoundId ?? rewardEpochDuration.endVotingRoundId;
+      const start = options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
+      const end = options.endVotingRoundId ?? rewardEpochDuration.endVotingRoundId;
       if (start < rewardEpochDuration.startVotingRoundId || start > rewardEpochDuration.endVotingRoundId) {
         throw new Error(`Invalid start voting round id: ${start}`);
       }

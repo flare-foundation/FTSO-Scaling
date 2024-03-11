@@ -2,12 +2,19 @@ import { EntityManager } from "typeorm";
 import Web3 from "web3";
 import { ECDSASignature } from "../../../libs/fsp-utils/src/ECDSASignature";
 import { PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
-import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import {
+  IProtocolMessageMerkleRoot,
+  ProtocolMessageMerkleRoot,
+} from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { ISignaturePayload, SignaturePayload } from "../../../libs/fsp-utils/src/SignaturePayload";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/configs/networks";
+import {
+  EPOCH_SETTINGS,
+  FTSO2_PROTOCOL_ID,
+  RANDOM_GENERATION_BENCHING_WINDOW,
+} from "../../../libs/ftso-core/src/configs/networks";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { EpochResult } from "../../../libs/ftso-core/src/voting-types";
@@ -32,11 +39,11 @@ export class MiniFtsoCalculator {
     this.voterIndex = voterIndex;
     this.privateKey = privateKey;
     this.logger = logger;
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
-    this.indexerClient = new IndexerClient(manager, requiredHistoryTimeSec);
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    this.indexerClient = new IndexerClient(manager, requiredHistoryTimeSec, this.logger);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
-
   }
 
   async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {
@@ -72,8 +79,12 @@ export class MiniFtsoCalculator {
     }
   }
 
-  public async getSignaturePayload(votingRoundId: number, doubleSignRandom = false, providedEpochResult?: EpochResult): Promise<string> {
-    let result = providedEpochResult ?? await this.prepareCalculationResultData(votingRoundId);
+  public async getSignaturePayload(
+    votingRoundId: number,
+    doubleSignRandom = false,
+    providedEpochResult?: EpochResult
+  ): Promise<string> {
+    const result = providedEpochResult ?? (await this.prepareCalculationResultData(votingRoundId));
     const merkleRoot = doubleSignRandom ? Web3.utils.randomHex(32) : result.merkleTree.root;
 
     const message: IProtocolMessageMerkleRoot = {
@@ -82,19 +93,19 @@ export class MiniFtsoCalculator {
       isSecureRandom: result.randomData.isSecure,
       merkleRoot,
     };
-    let messageToSign = ProtocolMessageMerkleRoot.encode(message);
-    let unsignedMessage = "";
-    const messageHash = web3.utils.keccak256(messageToSign)
+    const messageToSign = ProtocolMessageMerkleRoot.encode(message);
+    const unsignedMessage = "";
+    const messageHash = web3.utils.keccak256(messageToSign);
     const signaturePayload = {
       type: "0x00",
       message,
       signature: await ECDSASignature.signMessageHash(messageHash, this.privateKey),
-      unsignedMessage
+      unsignedMessage,
     } as ISignaturePayload;
     return PayloadMessage.encode({
       protocolId: message.protocolId,
       votingRoundId: message.votingRoundId,
-      payload: SignaturePayload.encode(signaturePayload)
-    })
+      payload: SignaturePayload.encode(signaturePayload),
+    });
   }
 }

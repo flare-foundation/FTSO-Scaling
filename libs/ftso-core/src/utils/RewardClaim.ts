@@ -84,7 +84,7 @@ export namespace RewardClaim {
       beneficiaryClaimsByTypeAndSign.set(claim.claimType, claimTypeBySign);
       const sign = claim.amount < 0n ? -1 : 1;
       let mergedClaim = claimTypeBySign.get(sign);
-      if(typeof claim.amount !== "bigint") {
+      if (typeof claim.amount !== "bigint") {
         throw new Error(`Claim amount is not a "bigint": ${claim}`);
       }
       if (!mergedClaim) {
@@ -94,7 +94,7 @@ export namespace RewardClaim {
           claimType: claim.claimType,
         };
         claimTypeBySign.set(sign, mergedClaim);
-      } else {        
+      } else {
         mergedClaim.amount += claim.amount;
       }
     }
@@ -201,7 +201,7 @@ export namespace RewardClaim {
     }
     let initialTotalAmount = 0n;
     const rewardEpochId = claims[0].rewardEpochId;
-    const negativeClaims = new Map<string, Map<Number, IRewardClaim>>();
+    const negativeClaims = new Map<string, Map<number, IRewardClaim>>();
     // assemble map of negative claims
     for (const claim of claims) {
       if (claim.rewardEpochId != rewardEpochId) {
@@ -264,7 +264,7 @@ export namespace RewardClaim {
     }
     // Perform the final merge, merging together all burn claims.
     let finalTotalAmount = 0n;
-    for (let claim of finalClaims) {
+    for (const claim of finalClaims) {
       if (claim.amount <= 0) {
         throw new Error(`Negative or zero claim amount: ${claim.amount}`);
       }
@@ -277,7 +277,7 @@ export namespace RewardClaim {
     const tmp = merge(finalClaims);
     const result = convertToRewardClaims(rewardEpochId, tmp);
     finalTotalAmount = 0n;
-    for (let claim of tmp) {
+    for (const claim of tmp) {
       if (claim.amount <= 0) {
         throw new Error(`2 -Negative or zero claim amount: ${claim.amount}`);
       }

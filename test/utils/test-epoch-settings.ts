@@ -1,5 +1,5 @@
-// IMPORTANT: This file should never import networks.ts. 
-// The functions in this file are intended to be used in tests only and should be executed 
+// IMPORTANT: This file should never import networks.ts.
+// The functions in this file are intended to be used in tests only and should be executed
 // before network.ts is imported. This is to ensure that the environment variables are set properly.
 export interface EpochSettingsConfig {
   firstVotingRoundStartTs: number;
@@ -113,4 +113,4 @@ export const rewardSettingsForRealtimeShorterEpochSettings = {
   GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC: 20,
   MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS: 3000,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS: 500,
-}
+};

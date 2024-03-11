@@ -36,8 +36,9 @@ export class MiniFinalizer {
     public entityManager: EntityManager,
     public logger: ILogger
   ) {
-    const requiredHistoryTimeSec = 2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
-    this.indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec);
+    const requiredHistoryTimeSec =
+      2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
+    this.indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, this.logger);
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
   }
@@ -94,20 +95,20 @@ export class MiniFinalizer {
       }
       const signaturePayloads = this.results.get(entry.votingRoundId)?.get(entry.protocolId)?.get(entry.messageHash);
 
-      const signatures: IECDSASignatureWithIndex[] = signaturePayloads.map((signaturePayload) => {
+      const signatures: IECDSASignatureWithIndex[] = signaturePayloads.map(signaturePayload => {
         return {
           r: signaturePayload.signature.r,
           s: signaturePayload.signature.s,
           v: signaturePayload.signature.v,
-          index: signaturePayload.index
-        }
+          index: signaturePayload.index,
+        };
       });
       const messageData = signaturePayloads[0].message;
       const relayMessage: IRelayMessage = {
         signingPolicy: matchingSigningPolicy,
         signatures,
         protocolMessageMerkleRoot: messageData,
-      }
+      };
       let selectionIndex = -1;
       if (!overrideAddress) {
         selectionIndex = this.voterSelector.inSelectionList(
@@ -121,8 +122,8 @@ export class MiniFinalizer {
       if (!overrideAddress && selectionIndex < 0) {
         return;
       }
-      if(overrideAddress) {
-        selectionIndex = revertOnOverrideAddress ? 1 : 0;  // if no revert, act like a first finalizer
+      if (overrideAddress) {
+        selectionIndex = revertOnOverrideAddress ? 1 : 0; // if no revert, act like a first finalizer
       }
       try {
         // reverts if not enough signature weight
@@ -155,7 +156,7 @@ export class MiniFinalizer {
       EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
       upToTime,
       undefined,
-      true  // query even if range check fails (it will fail)
+      true // query even if range check fails (it will fail)
     );
 
     if (!submitSignaturesSubmissionResponse.data) {
@@ -164,12 +165,18 @@ export class MiniFinalizer {
     }
     const signatures = submitSignaturesSubmissionResponse.data;
     DataManager.sortSubmissionDataArray(signatures);
-    const finalizationMap = DataManager.extractSignatures(votingRoundId, rewardEpoch, signatures, protocolId);
+    const finalizationMap = DataManager.extractSignatures(
+      votingRoundId,
+      rewardEpoch,
+      signatures,
+      protocolId,
+      this.logger
+    );
     if (!finalizationMap) {
       return;
     }
     for (const submissionList of finalizationMap.values()) {
-      const signaturePayloads = submissionList.map((submission) => submission.messages);
+      const signaturePayloads = submissionList.map(submission => submission.messages);
       this.processSignaturePayloads(signaturePayloads, rewardEpoch.signingPolicy);
     }
   }
@@ -200,7 +207,7 @@ export class MiniFinalizer {
         this.results.get(votingRoundId)!.get(protocolId)!.set(messageHash, []);
         this.weights.get(votingRoundId)!.get(protocolId)!.set(messageHash, 0);
       }
-      let sortedList = this.results.get(votingRoundId)!.get(protocolId)!.get(messageHash)!;
+      const sortedList = this.results.get(votingRoundId)!.get(protocolId)!.get(messageHash)!;
       const inserted = SignaturePayload.insertInSigningPolicySortedList(sortedList, augPayload);
 
       if (inserted) {
@@ -227,11 +234,10 @@ export class MiniFinalizer {
           this.queue.push({
             votingRoundId,
             protocolId,
-            messageHash
+            messageHash,
           });
         }
       }
     }
   }
-
 }
