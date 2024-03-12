@@ -25,7 +25,7 @@ export class FtsoRewardingService extends BaseRewardingService {
     this.entityManager = manager;
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
-    this.indexerClient = new IndexerClient(manager, required_history_sec, this.logger);
+    this.indexerClient = new IndexerClient(manager, required_history_sec, new Logger(IndexerClient.name));
     this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
   }

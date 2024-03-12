@@ -1,8 +1,8 @@
 import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
-import { RewardEpochDuration } from "./utils/RewardEpochDuration";
-import { EPOCH_SETTINGS, INITIAL_REWARD_EPOCH_ID, GENESIS_REWARD_EPOCH_START_EVENT } from "./configs/networks";
+import { EPOCH_SETTINGS, GENESIS_REWARD_EPOCH_START_EVENT, INITIAL_REWARD_EPOCH_ID } from "./configs/networks";
 import { RewardEpochStarted, SigningPolicyInitialized } from "./events";
+import { RewardEpochDuration } from "./utils/RewardEpochDuration";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
 
 /**
@@ -12,7 +12,10 @@ import { RewardEpochId, VotingEpochId } from "./voting-types";
  */
 export class RewardEpochManager {
   private readonly rewardEpochsCache = new Map<RewardEpochId, RewardEpoch>();
-  constructor(private readonly indexerClient: IndexerClient) {}
+  startVotingRoundIds: number[] = [];
+  startVotingRoundIdToRewardEpoch: Map<number, RewardEpoch> = new Map();
+
+  constructor(private readonly indexerClient: IndexerClient) { }
 
   /**
    * Returns a matching reward epoch for the given voting epoch.
@@ -25,7 +28,10 @@ export class RewardEpochManager {
    * @param votingEpochId
    * @returns
    */
-  async getRewardEpochForVotingEpochId(votingEpochId: VotingEpochId): Promise<RewardEpoch | undefined> {
+  async getRewardEpochForVotingEpochId(
+    votingEpochId: VotingEpochId,
+    nextRewardEpochIdHint?: number
+  ): Promise<RewardEpoch | undefined> {
     const currentVotingEpochId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
     if (votingEpochId > currentVotingEpochId) {
       return undefined; // future voting epoch
@@ -34,19 +40,34 @@ export class RewardEpochManager {
     const expectedRewardEpochId = EPOCH_SETTINGS().expectedRewardEpochForVotingEpoch(votingEpochId);
 
     // Try with expected reward epoch
-    const rewardEpoch = this.rewardEpochsCache.get(expectedRewardEpochId);
+    let rewardEpoch = this.rewardEpochsCache.get(expectedRewardEpochId);
     if (rewardEpoch && rewardEpoch.startVotingRoundId <= votingEpochId) {
       return rewardEpoch;
     }
+
+    // try with contiguous range
+    rewardEpoch = this.findRewardEpochId(votingEpochId);
+    if (rewardEpoch && rewardEpoch.startVotingRoundId <= votingEpochId) {
+      return rewardEpoch;
+    }
+
     const lowestExpectedIndexerHistoryTime = await this.indexerClient.secureLowestTimestamp();
     //Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
     const signingPolicyInitializedEvents = await this.indexerClient.getLatestSigningPolicyInitializedEvents(
       lowestExpectedIndexerHistoryTime
     );
     // With a limited history the number of possible events is small. Therefore linear search is ok.
+    let hintRewardEpochData: SigningPolicyInitialized | undefined;
+
     let i = signingPolicyInitializedEvents.data!.length - 1;
     while (i >= 0) {
       const signingPolicyInitializedEvent = signingPolicyInitializedEvents.data![i];
+      if (
+        nextRewardEpochIdHint !== undefined &&
+        signingPolicyInitializedEvent.rewardEpochId === nextRewardEpochIdHint
+      ) {
+        hintRewardEpochData = signingPolicyInitializedEvent;
+      }
       if (signingPolicyInitializedEvent.startVotingRoundId <= votingEpochId) {
         break;
       }
@@ -57,6 +78,10 @@ export class RewardEpochManager {
       throw new Error(
         `Critical error: Signing policy not found after ${lowestExpectedIndexerHistoryTime} - most likely the indexer has too short history`
       );
+    }
+    // console.dir(signingPolicyInitializedEvents.data[i]);
+    if (hintRewardEpochData !== undefined) {
+      await this.initializeRewardEpoch(hintRewardEpochData);
     }
     return this.initializeRewardEpoch(signingPolicyInitializedEvents.data[i]);
   }
@@ -141,6 +166,23 @@ export class RewardEpochManager {
     );
 
     this.rewardEpochsCache.set(rewardEpochId, rewardEpoch);
+    this.startVotingRoundIdToRewardEpoch.set(rewardEpoch.startVotingRoundId, rewardEpoch);
+    if (this.startVotingRoundIds.length === 0) {
+      this.startVotingRoundIds.push(rewardEpoch.startVotingRoundId);
+    } else {
+      if (rewardEpoch.startVotingRoundId > this.startVotingRoundIds[this.startVotingRoundIds.length - 1]) {
+        // must exist
+        const lastRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(this.startVotingRoundIds[this.startVotingRoundIds.length - 1])!;
+        if (rewardEpoch.rewardEpochId === lastRewardEpoch.rewardEpochId + 1) {
+          this.startVotingRoundIds.push(rewardEpoch.startVotingRoundId);
+        }
+      } else if (rewardEpoch.startVotingRoundId < this.startVotingRoundIds[0]) {
+        const firstRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(this.startVotingRoundIds[0])!;
+        if (firstRewardEpoch.rewardEpochId - 1 === rewardEpoch.rewardEpochId) {
+          this.startVotingRoundIds.unshift(rewardEpoch.startVotingRoundId);
+        }
+      }
+    }
     return rewardEpoch;
   }
 
@@ -216,5 +258,34 @@ export class RewardEpochManager {
         };
       }
     }
+  }
+
+  /**
+   * Tries to find the reward epoch for the given voting round id in the contiguous cache.
+   */
+  private findRewardEpochId(votingRoundId: number): RewardEpoch | undefined {
+    if (this.startVotingRoundIds.length < 2) {
+      return undefined;
+    }
+    if (votingRoundId < this.startVotingRoundIds[0]) {
+      return undefined;
+    }
+    // last one in cache, we do not have guarantee that it is the correct one.
+    if (votingRoundId >= this.startVotingRoundIds[this.startVotingRoundIds.length - 1]) {
+      return undefined;
+    }
+    // binary search
+    let low = 0;
+    let high = this.startVotingRoundIds.length;
+    // invariant startVotingRoundIds[low] >= votingRoundId
+    while (high - low > 1) {
+      const mid = Math.floor((low + high) / 2);
+      if (votingRoundId < this.startVotingRoundIds[mid]) {
+        high = mid;
+      } else {
+        low = mid;
+      }
+    }
+    return this.startVotingRoundIdToRewardEpoch.get(this.startVotingRoundIds[low]);
   }
 }

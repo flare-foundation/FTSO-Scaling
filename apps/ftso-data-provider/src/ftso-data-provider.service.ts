@@ -38,7 +38,7 @@ export class FtsoDataProviderService {
   private readonly priceProviderClient: Api<unknown>;
   private readonly votingRoundToRevealData: LRUCache<number, IRevealData>;
 
-  private readonly rewardEpochManger: RewardEpochManager;
+  private readonly rewardEpochManager: RewardEpochManager;
   private readonly dataManager: DataManager;
   private readonly encodingUtils = EncodingUtils.instance;
 
@@ -48,10 +48,10 @@ export class FtsoDataProviderService {
   constructor(manager: EntityManager, configService: ConfigService) {
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
-    this.indexerClient = new IndexerClient(manager, required_history_sec, this.logger);
-    this.rewardEpochManger = new RewardEpochManager(this.indexerClient);
+    this.indexerClient = new IndexerClient(manager, required_history_sec, new Logger(IndexerClient.name));
+    this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
-    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManger, this.logger);
+    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);
     this.votingRoundToRevealData = new LRUCache({
       max: configService.get<number>("voting_round_history_size"),
     });
@@ -63,7 +63,7 @@ export class FtsoDataProviderService {
     votingRoundId: number,
     submissionAddress: string
   ): Promise<IPayloadMessage<ICommitData> | undefined> {
-    const rewardEpoch = await this.rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
+    const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     this.logger.debug(
       `Getting commit for voting round ${votingRoundId}: ${submissionAddress} ${revealData.random} ${revealData.encodedValues}`

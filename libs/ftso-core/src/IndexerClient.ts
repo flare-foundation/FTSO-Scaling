@@ -20,6 +20,7 @@ import {
   VoterRegistrationInfo,
 } from "./events";
 import { ILogger } from "./utils/ILogger";
+import { errorString } from "./utils/error";
 
 /**
  * Generic object for submission data and finalization data.
@@ -131,7 +132,7 @@ export class IndexerClient {
     private readonly entityManager: EntityManager,
     public readonly requiredHistoryTimeSec: number,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   private readonly encoding = EncodingUtils.instance;
 
@@ -475,7 +476,7 @@ export class IndexerClient {
         const timestamp = tx.timestamp;
         const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
         const messages = decodePayloadMessageCalldata(tx);
-        const sData: SubmissionData = {
+        submits.push({
           submitAddress: "0x" + tx.from_address,
           relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
           votingEpochIdFromTimestamp: votingEpochId,
@@ -483,11 +484,9 @@ export class IndexerClient {
           timestamp,
           blockNumber: tx.block_number,
           messages,
-        };
-        submits.push(sData);
+        });
       } catch (e) {
-        // log unparsable data
-        this.logger.warn(e.message);
+        this.logger.warn(`Error processing submission transaction ${tx.hash}, will ignore: ${e.message}`);
       }
     }
 

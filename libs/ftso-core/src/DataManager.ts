@@ -610,7 +610,8 @@ export class DataManager {
       if (!commits || commits.length === 0) {
         continue;
       }
-      const feedOrder = (await rewardEpochManager.getRewardEpochForVotingEpochId(i)).canonicalFeedOrder;
+      const feedOrder = (await rewardEpochManager.getRewardEpochForVotingEpochId(i, rewardEpochId + 1))
+        .canonicalFeedOrder;
       const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals, feedOrder);
       const revealOffenders = this.getRevealOffenders(commitsAndReveals.commits, commitsAndReveals.reveals);
       for (const offender of revealOffenders) {
