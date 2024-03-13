@@ -1,3 +1,4 @@
+/* eslint-disable no-inner-declarations */
 /*
 # Usage
 
@@ -79,257 +80,306 @@ const rewardManager = new web3.eth.Contract(rewardManagerAbi, CONTRACTS.RewardMa
 // )
 
 async function sendFakeUptimeVote(rewardEpochId: number, signingPrivateKey: string) {
-   // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _uptimeVoteHash));   
-   const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
-   console.log(`Sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}`);
-   const fakeVoteHash = web3.utils.keccak256(ZERO_BYTES32);
-   const message = "0x" + rewardEpochId.toString(16).padStart(64, "0") + fakeVoteHash.slice(2);
-   const messageHash = web3.utils.keccak256(message);
-   const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
-   let gasPrice = await web3.eth.getGasPrice();
-   const nonce = await web3.eth.getTransactionCount(wallet.address);
-   gasPrice = gasPrice * 120n / 100n; // bump gas price by 20%
-   let tx = {
-      from: wallet.address,
-      to: CONTRACTS.FlareSystemsManager.address,
-      data: flareSystemsManager.methods.signUptimeVote(rewardEpochId, fakeVoteHash, signature).encodeABI(),
-      value: "0",
-      gas: "500000",
-      gasPrice,
-      nonce: Number(nonce).toString(),
-   };
-   const signed = await wallet.signTransaction(tx);
-   const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-   console.log(`Uptime vote for epoch ${rewardEpochId} from ${wallet.address} sent`);
+  // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _uptimeVoteHash));
+  const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
+  console.log(`Sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}`);
+  const fakeVoteHash = web3.utils.keccak256(ZERO_BYTES32);
+  const message = "0x" + rewardEpochId.toString(16).padStart(64, "0") + fakeVoteHash.slice(2);
+  const messageHash = web3.utils.keccak256(message);
+  const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
+  let gasPrice = await web3.eth.getGasPrice();
+  const nonce = await web3.eth.getTransactionCount(wallet.address);
+  gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
+  const tx = {
+    from: wallet.address,
+    to: CONTRACTS.FlareSystemsManager.address,
+    data: flareSystemsManager.methods.signUptimeVote(rewardEpochId, fakeVoteHash, signature).encodeABI(),
+    value: "0",
+    gas: "500000",
+    gasPrice,
+    nonce: Number(nonce).toString(),
+  };
+  const signed = await wallet.signTransaction(tx);
+  const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+  console.log(`Uptime vote for epoch ${rewardEpochId} from ${wallet.address} sent`);
 }
 
-async function sendMerkleRoot(rewardEpochId: number, rewardsHash: string, noOfWeightBasedClaims: number, signingPrivateKey: string) {
-   // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _noOfWeightBasedClaims, _rewardsHash));
-   const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
-   console.log(`Sending merkle root for epoch ${rewardEpochId} from ${wallet.address}`);
-   const message = "0x" + rewardEpochId.toString(16).padStart(64, "0") + noOfWeightBasedClaims.toString(16).padStart(64, "0") + rewardsHash.slice(2);
-   const messageHash = web3.utils.keccak256(message);
-   const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
-   let gasPrice = await web3.eth.getGasPrice();
-   const nonce = await web3.eth.getTransactionCount(wallet.address);
-   gasPrice = gasPrice * 120n / 100n; // bump gas price by 20%
-   let tx = {
-      from: wallet.address,
-      to: CONTRACTS.FlareSystemsManager.address,
-      data: flareSystemsManager.methods.signRewards(rewardEpochId, noOfWeightBasedClaims, rewardsHash, signature).encodeABI(),
-      gas: "500000",
-      gasPrice,
-      nonce: Number(nonce).toString(),
-   };
-   const signed = await wallet.signTransaction(tx);
-   const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-   console.log(`Merkle root for epoch ${rewardEpochId} from ${wallet.address} sent`);
+async function sendMerkleRoot(
+  rewardEpochId: number,
+  rewardsHash: string,
+  noOfWeightBasedClaims: number,
+  signingPrivateKey: string
+) {
+  // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _noOfWeightBasedClaims, _rewardsHash));
+  const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
+  console.log(`Sending merkle root for epoch ${rewardEpochId} from ${wallet.address}`);
+  const message =
+    "0x" +
+    rewardEpochId.toString(16).padStart(64, "0") +
+    noOfWeightBasedClaims.toString(16).padStart(64, "0") +
+    rewardsHash.slice(2);
+  const messageHash = web3.utils.keccak256(message);
+  const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
+  let gasPrice = await web3.eth.getGasPrice();
+  const nonce = await web3.eth.getTransactionCount(wallet.address);
+  gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
+  const tx = {
+    from: wallet.address,
+    to: CONTRACTS.FlareSystemsManager.address,
+    data: flareSystemsManager.methods
+      .signRewards(rewardEpochId, noOfWeightBasedClaims, rewardsHash, signature)
+      .encodeABI(),
+    gas: "500000",
+    gasPrice,
+    nonce: Number(nonce).toString(),
+  };
+  const signed = await wallet.signTransaction(tx);
+  const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+  console.log(`Merkle root for epoch ${rewardEpochId} from ${wallet.address} sent`);
 }
 
 async function sendUpTimeVotes(rewardEpochId: number) {
-   if (!process.env.PRIVATE_KEYS) {
-      throw new Error("PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed.");
-   }
-   const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
-   for (const privateKey of privateKeys) {
-      try {
-         await sendFakeUptimeVote(rewardEpochId, privateKey);
-      } catch (e) {
-         const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
-         console.error(`Error sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
-         console.dir(e);
-         break;
-      }
-   }
+  if (!process.env.PRIVATE_KEYS) {
+    throw new Error(
+      "PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed."
+    );
+  }
+  const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
+  for (const privateKey of privateKeys) {
+    try {
+      await sendFakeUptimeVote(rewardEpochId, privateKey);
+    } catch (e) {
+      const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+      console.error(`Error sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
+      console.dir(e);
+      break;
+    }
+  }
 }
 
 async function sendMerkleProofs(rewardEpochId: number) {
-   const distributionData = deserializeRewardDistributionData(rewardEpochId);
-   if (!process.env.PRIVATE_KEYS) {
-      throw new Error("PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed.");
-   }
-   const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
-   for (const privateKey of privateKeys) {
-      try {
-         await sendMerkleRoot(rewardEpochId, distributionData.merkleRoot, distributionData.noOfWeightBasedClaims, privateKey);
-      } catch (e) {
-         const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
-         console.error(`Error sending merkle root for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
-         console.dir(e);
-         break;
-      }
-   }
+  const distributionData = deserializeRewardDistributionData(rewardEpochId);
+  if (!process.env.PRIVATE_KEYS) {
+    throw new Error(
+      "PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed."
+    );
+  }
+  const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
+  for (const privateKey of privateKeys) {
+    try {
+      await sendMerkleRoot(
+        rewardEpochId,
+        distributionData.merkleRoot,
+        distributionData.noOfWeightBasedClaims,
+        privateKey
+      );
+    } catch (e) {
+      const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+      console.error(`Error sending merkle root for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
+      console.dir(e);
+      break;
+    }
+  }
 }
 
 export async function main() {
-   const action = process.argv[2];
-   if (!action) {
-      throw new Error("Action is required");
-   }
-   if (action === "uptime") {
-      if (!process.argv[3]) {
-         throw new Error("usage: node reward-finalizer-helper.js uptime <rewardEpochId> [endRewardEpochId]");
-      }
-      const rewardEpochId = Number(process.argv[3]);
-      let endRewardEpochId = rewardEpochId;
-      if (process.argv[4]) {
-         endRewardEpochId = Number(process.argv[4]);
-      }
-      for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
-         await sendUpTimeVotes(currentRewardEpochId);
-      }
-   }
-   if (action === "stats") {
-      if (!process.argv[3]) {
-         throw new Error("usage: node reward-finalizer-helper.js stats <rewardEpochId>");
-      }
-      const rewardEpochId = Number(process.argv[3]);
-      printClaimSummary(rewardEpochId);
-      const check = verifyMerkleProofs(rewardEpochId);
-      if (check) {
-         console.log("Merkle proofs are valid");
-      } else {
-         console.error("Merkle proofs are invalid");
-      }
-   }
-   if (action === "rewards") {
-      if (!process.argv[3]) {
-         throw new Error("usage: node reward-finalizer-helper.js rewards <rewardEpochId> [endRewardEpochId]");
-      }
-      const rewardEpochId = Number(process.argv[3]);
+  const action = process.argv[2];
+  if (!action) {
+    throw new Error("Action is required");
+  }
+  if (action === "uptime") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js uptime <rewardEpochId> [endRewardEpochId]");
+    }
+    const rewardEpochId = Number(process.argv[3]);
+    let endRewardEpochId = rewardEpochId;
+    if (process.argv[4]) {
+      endRewardEpochId = Number(process.argv[4]);
+    }
+    for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
+      await sendUpTimeVotes(currentRewardEpochId);
+    }
+  }
+  if (action === "stats") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js stats <rewardEpochId>");
+    }
+    const rewardEpochId = Number(process.argv[3]);
+    printClaimSummary(rewardEpochId);
+    const check = verifyMerkleProofs(rewardEpochId);
+    if (check) {
+      console.log("Merkle proofs are valid");
+    } else {
+      console.error("Merkle proofs are invalid");
+    }
+  }
+  if (action === "rewards") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js rewards <rewardEpochId> [endRewardEpochId]");
+    }
+    const rewardEpochId = Number(process.argv[3]);
 
-      let endRewardEpochId = rewardEpochId;
-      if (process.argv[4]) {
-         endRewardEpochId = Number(process.argv[4]);
+    let endRewardEpochId = rewardEpochId;
+    if (process.argv[4]) {
+      endRewardEpochId = Number(process.argv[4]);
+    }
+    for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
+      try {
+        await sendMerkleProofs(currentRewardEpochId);
+      } catch (e) {
+        console.error(`Error sending merkle proofs for epoch ${currentRewardEpochId}: ${e}`);
       }
-      for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
-         try {
-            await sendMerkleProofs(currentRewardEpochId);
-         } catch (e) {
-            console.error(`Error sending merkle proofs for epoch ${currentRewardEpochId}: ${e}`);
-         }
-      }
-   }
+    }
+  }
 
-   if (action === "finalizations") {
-      if (!process.argv[3]) {
-         throw new Error("usage: node reward-finalizer-helper.js finalizations <rewardEpochId> [endRewardEpochId]");
-      }
-      const startRewardEpochId = Number(process.argv[3]);
-      let endRewardEpochId = startRewardEpochId;
-      if (process.argv[4]) {
-         endRewardEpochId = Number(process.argv[4]);
-      }
-      console.log(`Rw.ep.id | Uptime | Rewards`)
-      for (let currentRewardEpochId = startRewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
-         const uptimeVoteHash = await flareSystemsManager.methods.uptimeVoteHash(currentRewardEpochId).call();
-         const rewardsHash = await flareSystemsManager.methods.rewardsHash(currentRewardEpochId).call();
-         const isUptimeHash = uptimeVoteHash && (uptimeVoteHash as any as string) !== ZERO_BYTES32;
-         const isRewardsHash = rewardsHash && (rewardsHash as any as string) !== ZERO_BYTES32;
-         console.log(`${currentRewardEpochId.toString().padEnd(10)} ${(isUptimeHash ? " OK " : " - ").padEnd(9)} ${(isRewardsHash ? "OK " : " - ").padEnd(9)}`);
-      }
-   }
-   if (action === "winit") {
-      if (!process.argv[3]) {
-         throw new Error("usage: node reward-finalizer-helper.js winit <rewardEpochId> [batchSize] [offset] [noBatches]");
-      }
-      const rewardEpochId = Number(process.argv[3]);
-      let batchSize = 10;
-      if (process.argv[4]) {
-         batchSize = Number(process.argv[4]);
-      }
-      let offset = 0;
-      if (process.argv[5]) {
-         offset = Number(process.argv[5]);
-      }
-      let numBatches: number | undefined;
-      if (process.argv[6]) {
-         numBatches = Number(process.argv[6]);
-      }
-      const distributionData = deserializeRewardDistributionData(rewardEpochId);
-      if (!process.env.PRIVATE_KEYS) {
-         throw new Error("PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed.");
-      }
-      const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
-      if (privateKeys.length === 0) {
-         throw new Error("No private keys found in PRIVATE_KEYS env variable");
-      }
-      const wallet = web3.eth.accounts.privateKeyToAccount(privateKeys[0]);
+  if (action === "finalizations") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js finalizations <rewardEpochId> [endRewardEpochId]");
+    }
+    const startRewardEpochId = Number(process.argv[3]);
+    let endRewardEpochId = startRewardEpochId;
+    if (process.argv[4]) {
+      endRewardEpochId = Number(process.argv[4]);
+    }
+    console.log(`Rw.ep.id | Uptime | Rewards`);
+    for (
+      let currentRewardEpochId = startRewardEpochId;
+      currentRewardEpochId <= endRewardEpochId;
+      currentRewardEpochId++
+    ) {
+      const uptimeVoteHash = await flareSystemsManager.methods.uptimeVoteHash(currentRewardEpochId).call();
+      const rewardsHash = await flareSystemsManager.methods.rewardsHash(currentRewardEpochId).call();
+      const isUptimeHash = uptimeVoteHash && (uptimeVoteHash as any as string) !== ZERO_BYTES32;
+      const isRewardsHash = rewardsHash && (rewardsHash as any as string) !== ZERO_BYTES32;
+      console.log(
+        `${currentRewardEpochId.toString().padEnd(10)} ${(isUptimeHash ? " OK " : " - ").padEnd(9)} ${(isRewardsHash
+          ? "OK "
+          : " - "
+        ).padEnd(9)}`
+      );
+    }
+  }
+  if (action === "winit") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js winit <rewardEpochId> [batchSize] [offset] [noBatches]");
+    }
+    const rewardEpochId = Number(process.argv[3]);
+    let batchSize = 10;
+    if (process.argv[4]) {
+      batchSize = Number(process.argv[4]);
+    }
+    let offset = 0;
+    if (process.argv[5]) {
+      offset = Number(process.argv[5]);
+    }
+    let numBatches: number | undefined;
+    if (process.argv[6]) {
+      numBatches = Number(process.argv[6]);
+    }
+    const distributionData = deserializeRewardDistributionData(rewardEpochId);
+    if (!process.env.PRIVATE_KEYS) {
+      throw new Error(
+        "PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed."
+      );
+    }
+    const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
+    if (privateKeys.length === 0) {
+      throw new Error("No private keys found in PRIVATE_KEYS env variable");
+    }
+    const wallet = web3.eth.accounts.privateKeyToAccount(privateKeys[0]);
 
-      async function sendBatch(batch: IRewardClaimWithProof[]) {
-         const data = rewardManager.methods.initialiseWeightBasedClaims(batch).encodeABI();
-         let gasPrice = await web3.eth.getGasPrice();
-         const nonce = await web3.eth.getTransactionCount(wallet.address);
-         gasPrice = gasPrice * 120n / 100n; // bump gas price by 20%
-         let tx = {
-            from: wallet.address,
-            to: CONTRACTS.FlareSystemsManager.address,
-            data,
-            value: "0",
-            gas: "2000000",
-            gasPrice,
-            nonce: Number(nonce).toString(),
-         };
-         const signed = await wallet.signTransaction(tx);
-         const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-      }
+    async function sendBatch(batch: IRewardClaimWithProof[]) {
+      const data = rewardManager.methods.initialiseWeightBasedClaims(batch).encodeABI();
+      let gasPrice = await web3.eth.getGasPrice();
+      const nonce = await web3.eth.getTransactionCount(wallet.address);
+      gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
+      const tx = {
+        from: wallet.address,
+        to: CONTRACTS.FlareSystemsManager.address,
+        data,
+        value: "0",
+        gas: "2000000",
+        gasPrice,
+        nonce: Number(nonce).toString(),
+      };
+      const signed = await wallet.signTransaction(tx);
+      const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+    }
 
-      const weightBasedClaims = distributionData.rewardClaims.filter(claimWithProof => claimWithProof.body.claimType === ClaimType.WNAT || claimWithProof.body.claimType === ClaimType.MIRROR || claimWithProof.body.claimType === ClaimType.CCHAIN);
-      console.log(`Total weight based claims: ${weightBasedClaims.length}`)
-      for (let start = offset, numberOfBatches = 0; start < weightBasedClaims.length; start += batchSize, numberOfBatches++) {
-         if (numBatches !== undefined && numberOfBatches >= numBatches) {
-            break;
-         }
-         let batch = weightBasedClaims.slice(start, start + batchSize);
-         try {
-            const data = rewardManager.methods.initialiseWeightBasedClaims(batch).encodeABI();
-            let gasPrice = await web3.eth.getGasPrice();
-            const nonce = await web3.eth.getTransactionCount(wallet.address);
-            gasPrice = gasPrice * 120n / 100n; // bump gas price by 20%
-            let tx = {
-               from: wallet.address,
-               to: CONTRACTS.FlareSystemsManager.address,
-               data,
-               value: "0",
-               gas: "2000000",
-               gasPrice,
-               nonce: Number(nonce).toString(),
-            };
-            const signed = await wallet.signTransaction(tx);
-            const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-         } catch (e) {
-            console.log(`Batch ${start} to ${start + batchSize} failed`);
-            console.error(`Error sending merkle proofs for epoch ${rewardEpochId}: ${e}`);
-            console.dir(e);
-         }
+    const weightBasedClaims = distributionData.rewardClaims.filter(
+      claimWithProof =>
+        claimWithProof.body.claimType === ClaimType.WNAT ||
+        claimWithProof.body.claimType === ClaimType.MIRROR ||
+        claimWithProof.body.claimType === ClaimType.CCHAIN
+    );
+    console.log(`Total weight based claims: ${weightBasedClaims.length}`);
+    for (
+      let start = offset, numberOfBatches = 0;
+      start < weightBasedClaims.length;
+      start += batchSize, numberOfBatches++
+    ) {
+      if (numBatches !== undefined && numberOfBatches >= numBatches) {
+        break;
       }
-      rewardManager
-   }
+      const batch = weightBasedClaims.slice(start, start + batchSize);
+      try {
+        const data = rewardManager.methods.initialiseWeightBasedClaims(batch).encodeABI();
+        let gasPrice = await web3.eth.getGasPrice();
+        const nonce = await web3.eth.getTransactionCount(wallet.address);
+        gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
+        const tx = {
+          from: wallet.address,
+          to: CONTRACTS.FlareSystemsManager.address,
+          data,
+          value: "0",
+          gas: "2000000",
+          gasPrice,
+          nonce: Number(nonce).toString(),
+        };
+        const signed = await wallet.signTransaction(tx);
+        const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+      } catch (e) {
+        console.log(`Batch ${start} to ${start + batchSize} failed`);
+        console.error(`Error sending merkle proofs for epoch ${rewardEpochId}: ${e}`);
+        console.dir(e);
+      }
+    }
+    rewardManager;
+  }
 
-   if (action === "uninitialized") {
-      if (!process.argv[3]) {
-         throw new Error("usage: node reward-finalizer-helper.js uninitialized <rewardEpochId>");
+  if (action === "uninitialized") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js uninitialized <rewardEpochId>");
+    }
+    const rewardEpochId = Number(process.argv[3]);
+    const distributionData = deserializeRewardDistributionData(rewardEpochId);
+    const weightBasedClaims = distributionData.rewardClaims.filter(
+      claimWithProof =>
+        claimWithProof.body.claimType === ClaimType.WNAT ||
+        claimWithProof.body.claimType === ClaimType.MIRROR ||
+        claimWithProof.body.claimType === ClaimType.CCHAIN
+    );
+    let uninitializedCount = 0;
+    for (const claimWithProof of weightBasedClaims) {
+      const claim = claimWithProof.body;
+      const state = (await rewardManager.methods
+        .getUnclaimedRewardState(claim.beneficiary, claim.rewardEpochId, claim.claimType)
+        .call()) as any;
+      if (!state.initialised) {
+        uninitializedCount++;
+        console.dir(claim);
       }
-      const rewardEpochId = Number(process.argv[3]);
-      const distributionData = deserializeRewardDistributionData(rewardEpochId);
-      const weightBasedClaims = distributionData.rewardClaims.filter(claimWithProof => claimWithProof.body.claimType === ClaimType.WNAT || claimWithProof.body.claimType === ClaimType.MIRROR || claimWithProof.body.claimType === ClaimType.CCHAIN);
-      let uninitializedCount = 0;
-      for (let claimWithProof of weightBasedClaims) {
-         const claim = claimWithProof.body;
-         const state = (await rewardManager.methods.getUnclaimedRewardState(claim.beneficiary, claim.rewardEpochId, claim.claimType).call()) as any;
-         if (!state.initialised) {
-            uninitializedCount++;
-            console.dir(claim);
-         }
-      }
-      console.log(`Total weight based claims: ${weightBasedClaims.length}, Uninitialized: ${uninitializedCount}`);
-   }
+    }
+    console.log(`Total weight based claims: ${weightBasedClaims.length}, Uninitialized: ${uninitializedCount}`);
+  }
 }
 
-main().then(() => {
-   console.dir("Done")
-   process.exit(0);
-}).catch((e) => {
-   console.error(e);
-   process.exit(1);
-});
+main()
+  .then(() => {
+    console.dir("Done");
+    process.exit(0);
+  })
+  .catch(e => {
+    console.error(e);
+    process.exit(1);
+  });
