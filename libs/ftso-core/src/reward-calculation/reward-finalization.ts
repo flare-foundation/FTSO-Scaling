@@ -58,12 +58,11 @@ export function calculateFinalizationRewardClaims(
   }
   const rewardEpoch = data.dataForCalculations.rewardEpoch;
   let undistributedAmount = offer.amount;
-  let undistributedSigningRewardWeight = 0n;
+  // The reward should be distributed equally among all the eligible finalizers.
+  // Note that each finalizer was chosen by probability corresponding to its relative weight.
+  // Consequently, the real weight should not be taken into account here.
+  let undistributedSigningRewardWeight = BigInt(eligibleFinalizationRewardVotersInGracePeriod.size);
 
-  for (const signingAddress of eligibleFinalizationRewardVotersInGracePeriod) {
-    const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
-    undistributedSigningRewardWeight += weight;
-  }
   const resultClaims: IPartialRewardClaim[] = [];
   for (const finalization of gracePeriodFinalizations) {
     if (!eligibleFinalizationRewardVotersInGracePeriod.has(finalization.submitAddress.toLowerCase())) {
@@ -80,18 +79,14 @@ export function calculateFinalizationRewardClaims(
 
     const voterWeight = rewardEpoch.getVotersWeights().get(submitAddress);
 
-    const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
-    let amount = 0n;
-    if (weight > 0n) {
-      // sanity check
-      if (undistributedSigningRewardWeight === 0n) {
-        throw new Error("Critical: reward-finalization: undistributedSigningRewardWeight must be non-zero");
-      }
-      amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+    // sanity check
+    if (undistributedSigningRewardWeight === 0n) {
+      throw new Error("Critical: reward-finalization: undistributedSigningRewardWeight must be non-zero");
     }
+    const amount = undistributedAmount / undistributedSigningRewardWeight;
 
     undistributedAmount -= amount;
-    undistributedSigningRewardWeight -= weight;
+    undistributedSigningRewardWeight -= 1n;
     resultClaims.push(
       ...generateSigningWeightBasedClaimsForVoter(
         amount,
