@@ -1,4 +1,4 @@
-import { finalizationSummary, printFinalizationSummary } from "../finalization-stats";
+import { printSignatureSummary, signatureSummary } from "../signature-stats";
 
 async function main() {
   if (!process.argv[2]) {
@@ -6,12 +6,12 @@ async function main() {
   }
   const rewardEpochId = parseInt(process.argv[2]);
   if (!process.argv[3]) {
-    throw new Error("no finalizationGracePeriodEndOffset");
+    throw new Error("no signatureGracePeriodEndOffset");
   }
-  const finalizationGracePeriodEndOffset = parseInt(process.argv[3]);
+  const signatureGracePeriodEndOffset = parseInt(process.argv[3]);
   const endVotingRoundId = process.argv[4] ? parseInt(process.argv[4]) : undefined;
-  const data = await finalizationSummary(rewardEpochId, finalizationGracePeriodEndOffset, endVotingRoundId);
-  printFinalizationSummary(data);
+  const data = await signatureSummary(rewardEpochId, signatureGracePeriodEndOffset, endVotingRoundId);
+  printSignatureSummary(data);
 }
 
 main()
