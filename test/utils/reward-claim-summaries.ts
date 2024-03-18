@@ -10,18 +10,18 @@ function claimListSummary(
   voterIndex: number,
   type: "node" | "delegation" | "signing" | "identity" | "none",
   claims: IRewardClaim[],
-  padding = 6
+  padding = 10
 ) {
   const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
-  const fee = (feeClaim ? Number(feeClaim.amount) : 0).toString().padStart(padding);
+  const fee = (feeClaim ? flrFormat(feeClaim.amount) : 0).toString().padStart(padding);
   const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
-  const wnat = (wnatClaim ? Number(wnatClaim.amount) : 0).toString().padStart(padding);
+  const wnat = (wnatClaim ? flrFormat(wnatClaim.amount) : 0).toString().padStart(padding);
   const mirrorClaim = claims.find(c => c.claimType === ClaimType.MIRROR);
-  const mirror = (mirrorClaim ? Number(mirrorClaim.amount) : 0).toString().padStart(padding);
+  const mirror = (mirrorClaim ? flrFormat(mirrorClaim.amount) : 0).toString().padStart(padding);
   const directClaim = claims.find(c => c.claimType === ClaimType.DIRECT);
-  const direct = (directClaim ? Number(directClaim.amount) : 0).toString().padStart(padding);
+  const direct = (directClaim ? flrFormat(directClaim.amount) : 0).toString().padStart(padding);
   const cchainClaim = claims.find(c => c.claimType === ClaimType.CCHAIN);
-  const cchain = (cchainClaim ? Number(cchainClaim.amount) : 0).toString().padStart(padding);
+  const cchain = (cchainClaim ? flrFormat(cchainClaim.amount) : 0).toString().padStart(padding);
 
   let indexValue = "-";
   if (type === "node") {
@@ -106,7 +106,6 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
   }
 
   for (const claim of claims) {
-    const isVoterClaim = false;
     const beneficiary = claim.beneficiary.toLowerCase();
     let voterIndex = identityAddressToVoterIndex.get(beneficiary);
     if (voterIndex !== undefined) {
@@ -215,6 +214,10 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
   }
   return result;
 }
+
+export function flrFormat(value: bigint, decimals = 3) {
+  return (Number(value) / 10 ** 18).toFixed(decimals);
+}
 /**
  * Calculates and possibly prints out the summary of the rewards per voter
  */
@@ -262,8 +265,8 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
     }
   }
   logger.log("CLAIM SUMMARY");
-  logger.log("Total value: ", totalValue.toString());
-  logger.log("Burned value:", burned.toString());
+  logger.log(`Total value: ${flrFormat(totalValue)}(${totalValue.toString()})`);
+  logger.log(`Burned value: ${flrFormat(burned)} (${burned.toString()})`);
   logger.log("VOTER FEES (by identity address):");
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];
@@ -361,7 +364,9 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
       percentage = Number((feeVal * 10000n) / (feeVal + partVal)) / 100;
     }
     logger.log(
-      `Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${feeVal}, part: ${partVal}, pct: ${percentage}`
+      `Voter: ${i} fee: ${voters[i].delegationFeeBIPS} feeVal: ${flrFormat(feeVal)}, part: ${flrFormat(
+        partVal
+      )}, pct: ${percentage}`
     );
   }
 }

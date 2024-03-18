@@ -278,8 +278,6 @@ export function generateRewardEpoch() {
   const rewardEpochId = 513;
   const rewardEpochIdHex = (id: number) => Web3.utils.padLeft(Web3.utils.numberToHex(id), 6);
 
-  const epochSettings = new EpochSettings(10002, 90, 1, 3600, 30);
-
   const rawPreviousEpochStarted = {
     rewardEpochId: rewardEpochIdHex(rewardEpochId - 1),
     startVotingRoundId: "0x00100000",

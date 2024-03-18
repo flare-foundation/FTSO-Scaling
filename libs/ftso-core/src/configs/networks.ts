@@ -29,7 +29,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
 
 export type networks = "local-test" | "from-env" | "coston2" | "coston";
 
-const configs = () => {
+const contracts = () => {
   const network = process.env.NETWORK as networks;
   switch (network) {
     case "local-test":
@@ -96,7 +96,7 @@ const configs = () => {
   }
 };
 
-export const CONTRACTS = configs();
+export const CONTRACTS = contracts();
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";

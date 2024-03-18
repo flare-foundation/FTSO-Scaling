@@ -20,7 +20,6 @@ import {
   VoterRegistrationInfo,
 } from "./events";
 import { ILogger } from "./utils/ILogger";
-import { errorString } from "./utils/error";
 
 /**
  * Generic object for submission data and finalization data.
@@ -132,7 +131,7 @@ export class IndexerClient {
     private readonly entityManager: EntityManager,
     public readonly requiredHistoryTimeSec: number,
     private readonly logger: ILogger
-  ) { }
+  ) {}
 
   private readonly encoding = EncodingUtils.instance;
 

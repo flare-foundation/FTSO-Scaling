@@ -29,6 +29,10 @@ import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api } from "./price-provider-api/generated/provider-api";
 
+import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
+
+type RoundAndAddress = string;
+
 @Injectable()
 export class FtsoDataProviderService {
   private readonly logger = new Logger(FtsoDataProviderService.name);
@@ -36,7 +40,7 @@ export class FtsoDataProviderService {
   // connections to the indexer and price provider
   private readonly indexerClient: IndexerClient;
   private readonly priceProviderClient: Api<unknown>;
-  private readonly votingRoundToRevealData: LRUCache<number, IRevealData>;
+  private readonly votingRoundData: LRUCache<RoundAndAddress, IRevealData>;
 
   private readonly rewardEpochManager: RewardEpochManager;
   private readonly dataManager: DataManager;
@@ -52,7 +56,7 @@ export class FtsoDataProviderService {
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
     this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);
-    this.votingRoundToRevealData = new LRUCache({
+    this.votingRoundData = new LRUCache({
       max: configService.get<number>("voting_round_history_size"),
     });
   }
@@ -64,15 +68,11 @@ export class FtsoDataProviderService {
     submissionAddress: string
   ): Promise<IPayloadMessage<ICommitData> | undefined> {
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
-    const revealData = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
-    this.logger.debug(
-      `Getting commit for voting round ${votingRoundId}: ${submissionAddress} ${revealData.random} ${revealData.encodedValues}`
-    );
+    const revealData = await this.calculateOrGetRoundData(votingRoundId, submissionAddress, rewardEpoch);
     const hash = CommitData.hashForCommit(submissionAddress, revealData.random, revealData.encodedValues);
     const commitData: ICommitData = {
       commitHash: hash,
     };
-    this.votingRoundToRevealData.set(votingRoundId, revealData);
     this.logger.log(`Commit for voting round ${votingRoundId}: ${hash}`);
     const msg: IPayloadMessage<ICommitData> = {
       protocolId: FTSO2_PROTOCOL_ID,
@@ -82,10 +82,30 @@ export class FtsoDataProviderService {
     return msg;
   }
 
-  async getRevealData(votingRoundId: number): Promise<IPayloadMessage<IRevealData> | undefined> {
+  private async calculateOrGetRoundData(votingRoundId: number, submissionAddress: string, rewardEpoch: RewardEpoch) {
+    const cached = this.votingRoundData.get(combine(votingRoundId, submissionAddress));
+    if (cached !== undefined) {
+      this.logger.debug(
+        `Returning cached voting round data for ${votingRoundId}: ${submissionAddress} ${cached.random} ${cached.encodedValues}`
+      );
+      return cached;
+    }
+
+    const data = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
+    this.logger.debug(
+      `Got fresh voting round data for ${votingRoundId}: ${submissionAddress} ${data.random} ${data.encodedValues}`
+    );
+    this.votingRoundData.set(combine(votingRoundId, submissionAddress), data);
+    return data;
+  }
+
+  async getRevealData(
+    votingRoundId: number,
+    submissionAddress: string
+  ): Promise<IPayloadMessage<IRevealData> | undefined> {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
-    const revealData = this.votingRoundToRevealData.get(votingRoundId);
+    const revealData = this.votingRoundData.get(combine(votingRoundId, submissionAddress));
     if (revealData === undefined) {
       // we do not have reveal data. Either we committed and restarted the client, hence lost the reveal data irreversibly
       // or we did not commit at all.
@@ -214,4 +234,8 @@ export class FtsoDataProviderService {
       encodedValues: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
     };
   }
+}
+
+function combine(round: number, address: string): RoundAndAddress {
+  return [round, address].toString();
 }

@@ -96,7 +96,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     const commit = (await service.getCommitData(votingRound, submissionAddress)).payload;
 
-    const reveal = (await service.getRevealData(votingRound)).payload;
+    const reveal = (await service.getRevealData(votingRound, submissionAddress)).payload;
 
     const expectedCommit = CommitData.hashForCommit(submissionAddress, reveal.random, reveal.encodedValues);
     expect(commit.commitHash).to.be.equal(expectedCommit);
@@ -137,7 +137,9 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     clock.tick(EPOCH_SETTINGS().votingEpochDurationSeconds * 1000);
 
     for (let i = 0; i < voters.length; i++) {
-      const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound));
+      const encodedReveal = encodeRevealPayloadMessage(
+        await services[i].getRevealData(votingRound, voters[i].submitAddress)
+      );
       const revealPayload = sigReveal + unPrefix0x(encodedReveal);
       const revealTx = generateTx(
         voters[i].submitAddress,
@@ -235,7 +237,9 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       for (let i = 0; i < voters.length; i++) {
         if (i < missedRevealers) continue;
 
-        const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound));
+        const encodedReveal = encodeRevealPayloadMessage(
+          await services[i].getRevealData(votingRound, voters[i].submitAddress)
+        );
         const revealPayload = sigReveal + unPrefix0x(encodedReveal);
         const revealTx = generateTx(
           voters[i].submitAddress,
@@ -261,7 +265,9 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       clock.tick(EPOCH_SETTINGS().votingEpochStartMs(votingRound + 2) - clock.now + 1);
 
       for (let i = 0; i < voters.length; i++) {
-        const encodedReveal = encodeRevealPayloadMessage(await services[i].getRevealData(votingRound + 1));
+        const encodedReveal = encodeRevealPayloadMessage(
+          await services[i].getRevealData(votingRound + 1, voters[i].submitAddress)
+        );
         const revealPayload = sigReveal + unPrefix0x(encodedReveal);
         const revealTx = generateTx(
           voters[i].submitAddress,

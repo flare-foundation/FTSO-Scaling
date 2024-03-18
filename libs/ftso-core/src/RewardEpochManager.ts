@@ -15,7 +15,7 @@ export class RewardEpochManager {
   startVotingRoundIds: number[] = [];
   startVotingRoundIdToRewardEpoch: Map<number, RewardEpoch> = new Map();
 
-  constructor(private readonly indexerClient: IndexerClient) { }
+  constructor(private readonly indexerClient: IndexerClient) {}
 
   /**
    * Returns a matching reward epoch for the given voting epoch.
@@ -52,7 +52,6 @@ export class RewardEpochManager {
     }
 
     const lowestExpectedIndexerHistoryTime = await this.indexerClient.secureLowestTimestamp();
-    //Math.floor(Date.now() / 1000) - this.indexerClient.requiredHistoryTimeSec;
     const signingPolicyInitializedEvents = await this.indexerClient.getLatestSigningPolicyInitializedEvents(
       lowestExpectedIndexerHistoryTime
     );
@@ -172,7 +171,9 @@ export class RewardEpochManager {
     } else {
       if (rewardEpoch.startVotingRoundId > this.startVotingRoundIds[this.startVotingRoundIds.length - 1]) {
         // must exist
-        const lastRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(this.startVotingRoundIds[this.startVotingRoundIds.length - 1])!;
+        const lastRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(
+          this.startVotingRoundIds[this.startVotingRoundIds.length - 1]
+        )!;
         if (rewardEpoch.rewardEpochId === lastRewardEpoch.rewardEpochId + 1) {
           this.startVotingRoundIds.push(rewardEpoch.startVotingRoundId);
         }

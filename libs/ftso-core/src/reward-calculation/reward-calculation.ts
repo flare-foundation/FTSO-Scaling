@@ -168,7 +168,7 @@ export async function partialRewardClaimsForVotingRound(
       ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
     ];
     serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
-    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations);
+    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData);
   }
 
   // feedName => medianResult
