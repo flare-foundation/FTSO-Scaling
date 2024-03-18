@@ -120,6 +120,8 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
+    this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
+    this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
@@ -144,6 +146,8 @@ export class DataManager {
       randomGenerationBenchingWindow,
       this.rewardEpochManager
     );
+
+    this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
     return {
       status: mappingsResponse.status,
       data: {
