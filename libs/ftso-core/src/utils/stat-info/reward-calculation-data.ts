@@ -7,6 +7,8 @@ import { DataForRewardCalculation } from "../../data-calculation-interfaces";
 import { IRevealData } from "../RevealData";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_CALCULATION_DATA_FILE } from "./constants";
+import { Feed, MedianCalculationResult, MedianCalculationSummary, RandomCalculationResult } from "../../voting-types";
+import { ValueWithDecimals } from "../FeedValueEncoder";
 
 export interface RevealRecords {
   submitAddress: string;
@@ -27,6 +29,7 @@ export interface SDataForCalculation {
   voterMedianVotingWeights: VoterWeightData[];
   randomGenerationBenchingWindow: number;
   benchingWindowRevealOffenders: string[];
+  feedOrder: Feed[];
 }
 
 export function prepareDataForCalculations(rewardEpochId: number, data: DataForRewardCalculation): SDataForCalculation {
@@ -47,6 +50,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     voterMedianVotingWeights,
     randomGenerationBenchingWindow: data.dataForCalculations.randomGenerationBenchingWindow,
     benchingWindowRevealOffenders: [...data.dataForCalculations.benchingWindowRevealOffenders],
+    feedOrder: data.dataForCalculations.feedOrder,
   };
   return result;
 }
@@ -56,11 +60,33 @@ export interface HashSignatures {
   signatures: GenericSubmissionData<ISignaturePayload>[];
 }
 
+export interface SimplifiedMedianCalculationResult {
+  readonly feedValues: readonly ValueWithDecimals[];
+  readonly summary: MedianCalculationSummary;
+}
+
+/**
+ * Encapsulates the result of random calculation for a specific voting round.
+ */
+export interface SimplifiedRandomCalculationResult {
+  readonly random: bigint;
+  readonly isSecure: boolean;
+}
+
 export interface SDataForRewardCalculation {
   dataForCalculations: SDataForCalculation;
   signatures: HashSignatures[];
   finalizations: ParsedFinalizationData[];
   firstSuccessfulFinalization?: ParsedFinalizationData;
+  medianSummaries: MedianCalculationSummary[];
+  randomResult: SimplifiedRandomCalculationResult;
+}
+
+function simplifyRandomCalculationResult(randomResult: RandomCalculationResult): SimplifiedRandomCalculationResult {
+  return {
+    random: randomResult.random,
+    isSecure: randomResult.isSecure,
+  };
 }
 
 /**
@@ -71,6 +97,8 @@ export interface SDataForRewardCalculation {
 export function serializeDataForRewardCalculation(
   rewardEpochId: number,
   rewardCalculationData: DataForRewardCalculation,
+  medianResults: MedianCalculationResult[],
+  randomResult: RandomCalculationResult,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
@@ -93,6 +121,8 @@ export function serializeDataForRewardCalculation(
     signatures: hashSignatures,
     finalizations: rewardCalculationData.finalizations,
     firstSuccessfulFinalization: rewardCalculationData.firstSuccessfulFinalization,
+    medianSummaries: medianResults.map(res => res.data),
+    randomResult: simplifyRandomCalculationResult(randomResult),
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }
