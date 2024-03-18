@@ -84,7 +84,7 @@ export function printFeedSummary(feedData: RewardEpochDataFeeds) {
     console.log(
       `${feedDataEntry.votingRoundId}: ${feedDataEntry.medianSummary.finalMedianPrice.value} (${
         feedDataEntry.medianSummary.quartile1Price.value
-      }, ${feedDataEntry.medianSummary.quartile1Price.value}), ${flrFormat(
+      }, ${feedDataEntry.medianSummary.quartile3Price.value}), ${flrFormat(
         feedDataEntry.medianSummary.participatingWeight
       )} | ${votes}`
     );
