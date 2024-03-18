@@ -106,7 +106,6 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
   }
 
   for (const claim of claims) {
-    const isVoterClaim = false;
     const beneficiary = claim.beneficiary.toLowerCase();
     let voterIndex = identityAddressToVoterIndex.get(beneficiary);
     if (voterIndex !== undefined) {

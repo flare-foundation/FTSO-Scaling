@@ -28,7 +28,6 @@ import {
 import { CommitData, ICommitData } from "./utils/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./utils/RevealData";
-import { errorString } from "./utils/error";
 import { Address, Feed, MessageHash } from "./voting-types";
 
 /**

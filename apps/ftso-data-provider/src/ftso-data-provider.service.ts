@@ -13,7 +13,6 @@ import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManag
 import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
 import {
   CONTRACTS,
-  EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../libs/ftso-core/src/configs/networks";
