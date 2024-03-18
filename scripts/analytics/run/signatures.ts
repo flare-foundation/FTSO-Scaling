@@ -1,3 +1,4 @@
+import { EPOCH_SETTINGS, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC } from "../../../libs/ftso-core/src/configs/networks";
 import { printSignatureSummary, signatureSummary } from "../signature-stats";
 
 async function main() {
@@ -5,10 +6,18 @@ async function main() {
     throw new Error("no rewardEpochId");
   }
   const rewardEpochId = parseInt(process.argv[2]);
+  let signatureGracePeriodEndOffset;
   if (!process.argv[3]) {
-    throw new Error("no signatureGracePeriodEndOffset");
+    if (process.env.NETWORK === "coston") {
+      signatureGracePeriodEndOffset =
+        EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
+    } else {
+      throw new Error("no signatureGracePeriodEndOffset");
+    }
+  } else {
+    signatureGracePeriodEndOffset = parseInt(process.argv[3]);
   }
-  const signatureGracePeriodEndOffset = parseInt(process.argv[3]);
+  console.log("signatureGracePeriodEndOffset", signatureGracePeriodEndOffset);
   const endVotingRoundId = process.argv[4] ? parseInt(process.argv[4]) : undefined;
   const data = await signatureSummary(rewardEpochId, signatureGracePeriodEndOffset, endVotingRoundId);
   printSignatureSummary(data);

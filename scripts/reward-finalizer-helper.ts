@@ -12,7 +12,7 @@ Once the relevant reward epoch data are calculated, the tool can be used to:
 
       env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
 
-- voting for uptim using dummy hash (vote for it). This option is currently used as real uptime voting is not enabled, but it will be in the future and 
+- voting for uptime using dummy hash (vote for it). This option is currently used as real uptime voting is not enabled, but it will be in the future and 
   it is needed as pre-condition for reward merkle root voting. (option `uptime`)
 
       env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts uptime <rewardEpochId> [endRewardEpochId]

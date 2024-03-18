@@ -7,6 +7,7 @@ export interface ShortRewardEpochInfo {
   expectedStartVotingRoundId: number;
   expectedEndVotingRoundId: number;
   numberOfVoters: number;
+  weights: number[];
 }
 
 export function shortRewardEpochInfo(rewardEpochId: number): ShortRewardEpochInfo {
@@ -18,6 +19,7 @@ export function shortRewardEpochInfo(rewardEpochId: number): ShortRewardEpochInf
     expectedStartVotingRoundId: info.expectedStartVotingRoundId,
     expectedEndVotingRoundId: info.expectedEndVotingRoundId,
     numberOfVoters: info.voterRegistrationInfo.length,
+    weights: info.signingPolicy.weights,
   };
   return result;
 }
@@ -49,7 +51,7 @@ export function printShortRewardEpochSummaries(summaries: ShortRewardEpochInfo[]
         delayStartString ? " exp: " + summary.expectedStartVotingRoundId : ""
       }${delayStartString} end: ${summary.endVotingRoundId}${
         delayEndString ? " exp:" + summary.expectedEndVotingRoundId : ""
-      }${delayEndString}, Number of Voters: ${summary.numberOfVoters}`
+      }${delayEndString}, Number of Voters: ${summary.numberOfVoters}, Weights: ${summary.weights.join(",")}`
     );
   }
 }
