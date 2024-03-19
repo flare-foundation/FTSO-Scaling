@@ -2,6 +2,7 @@ import { Logger } from "@nestjs/common";
 import { FeedPriceData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
 
+/** Safe default value that will not overflow for all default feeds. */
 const DEFAULT_PRICE = 0.01;
 
 export class FixedFeed implements BaseDataFeed {
