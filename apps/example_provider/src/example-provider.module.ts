@@ -21,8 +21,9 @@ import { FixedFeed } from "./price-feeds/fixed-feed";
           priceFeed = new RandomFeed();
         } else {
           // Ccxt service
-          const priceFeed = new CcxtFeed();
-          await priceFeed.start();
+          const ccxtFeed = new CcxtFeed();
+          await ccxtFeed.start();
+          priceFeed = ccxtFeed;
         }
 
         const service = new ExampleProviderService(priceFeed);
