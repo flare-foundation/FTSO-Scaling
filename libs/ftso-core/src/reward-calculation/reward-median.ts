@@ -44,18 +44,12 @@ export function calculateMedianRewardClaims(
   /**
    * Randomization for border cases
    *  a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
-   * @param feedName
-   * @param votingRoundId
-   * @param voterAddress
-   * @returns
    */
-  function randomSelect(feedName: string, votingRoundId: number, voterAddress: Address): boolean {
-    const prefixedFeedName = feedName.startsWith("0x") ? feedName : "0x" + feedName;
+  function randomSelect(feedId: string, votingRoundId: number, voterAddress: Address): boolean {
+    const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
       BigInt(
-        soliditySha3(
-          encodeParameters(["bytes8", "uint256", "address"], [prefixedFeedName, votingRoundId, voterAddress])
-        )!
+        soliditySha3(encodeParameters(["bytes8", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
       ) %
         2n ===
       1n
@@ -118,7 +112,7 @@ export function calculateMedianRewardClaims(
       weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)!),
       iqr:
         (value > lowIQR && value < highIQR) ||
-        ((value === lowIQR || value === highIQR) && randomSelect(offer.feedName, votingRoundId, submitAddress)),
+        ((value === lowIQR || value === highIQR) && randomSelect(offer.feedId, votingRoundId, submitAddress)),
       pct: value > lowPCT && value < highPCT,
     };
 
@@ -201,7 +195,7 @@ export function calculateMedianRewardClaims(
   }
   // Assert
   if (totalReward !== offer.amount) {
-    throw new Error(`Total reward for ${offer.feedName} is not equal to the offer amount`);
+    throw new Error(`Total reward for ${offer.feedId} is not equal to the offer amount`);
   }
 
   return rewardClaims;

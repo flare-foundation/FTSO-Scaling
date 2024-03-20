@@ -325,50 +325,50 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
     it("should sort correctly", () => {
       const feedWithTypeAndValueArray: FeedWithTypeAndValue[] = [
         {
-          name: "0x464C520055534454", // FLR USDT
+          id: "0x464C520055534454", // FLR USDT
           decimals: 6,
           isInflation: true,
           flrValue: 1000n,
         },
         {
-          name: "0x4254430055534454", // BTC USDT
+          id: "0x4254430055534454", // BTC USDT
           decimals: 4,
           isInflation: true,
           flrValue: 1000n,
         },
         {
-          name: "0x5852500055534454", // XRP USDT
+          id: "0x5852500055534454", // XRP USDT
           decimals: 8,
           isInflation: true,
           flrValue: 1000n,
         },
         {
-          name: "0x4554480055534454", // ETH USDT
+          id: "0x4554480055534454", // ETH USDT
           decimals: 6,
           isInflation: true,
           flrValue: 1000n,
         },
         // Non inflation
         {
-          name: "0x474F4C4455534400", // GOLDUSD
+          id: "0x474F4C4455534400", // GOLDUSD
           decimals: 8,
           isInflation: false,
           flrValue: 10000n,
         },
         {
-          name: "0x4141504C00000000", // AAPL
+          id: "0x4141504C00000000", // AAPL
           decimals: 8,
           isInflation: false,
           flrValue: 100n,
         },
         {
-          name: "0x54534C4100000000", // TSLA
+          id: "0x54534C4100000000", // TSLA
           decimals: 8,
           isInflation: false,
           flrValue: 100n,
         },
         {
-          name: "0x5041483300000000", // PAH3
+          id: "0x5041483300000000", // PAH3
           decimals: 8,
           isInflation: false,
           flrValue: 1000n,
@@ -390,7 +390,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
 
       expect(sorted.length).to.equal(8);
       for (let i = 0; i < sorted.length; i++) {
-        expect(sorted[i].name).to.equal(expectedOrder[i]);
+        expect(sorted[i].id).to.equal(expectedOrder[i]);
       }
     });
   });
@@ -401,7 +401,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         inflationOffers: [
           {
             rewardEpochId: 1,
-            feedNames: ["0x4254430055534454", "0x4554480055534454", "0x464c520055534454", "0x5852500055534454"],
+            feedIds: ["0x4254430055534454", "0x4554480055534454", "0x464c520055534454", "0x5852500055534454"],
             decimals: [6, 6, 6, 6],
             amount: 1000n,
             minRewardedTurnoutBIPS: 100,
@@ -413,7 +413,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         rewardOffers: [
           {
             rewardEpochId: 1,
-            feedName: "0x474F4C4455534400",
+            feedId: "0x474F4C4455534400",
             decimals: 4,
             amount: 10000n,
             minRewardedTurnoutBIPS: 100,
@@ -423,7 +423,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x5041483300000000",
+            feedId: "0x5041483300000000",
             decimals: 2,
             amount: 1000n,
             minRewardedTurnoutBIPS: 100,
@@ -433,7 +433,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x4141504C00000000",
+            feedId: "0x4141504C00000000",
             decimals: 2,
             amount: 100n,
             minRewardedTurnoutBIPS: 100,
@@ -443,7 +443,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x54534C4100000000",
+            feedId: "0x54534C4100000000",
             decimals: 2,
             amount: 100n,
             minRewardedTurnoutBIPS: 100,
@@ -471,7 +471,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
 
       expect(feedSequence.length).to.equal(8);
       for (let i = 0; i < feedSequence.length; i++) {
-        expect(feedSequence[i].name).to.equal(expectedOrder[i]);
+        expect(feedSequence[i].id).to.equal(expectedOrder[i]);
       }
     });
 
@@ -480,7 +480,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         inflationOffers: [
           {
             rewardEpochId: 1,
-            feedNames: ["0x4254430055534454", "0x4554480055534454", "0x464c520055534454"],
+            feedIds: ["0x4254430055534454", "0x4554480055534454", "0x464c520055534454"],
             decimals: [6, 6, 6, 6],
             amount: 1000n,
             minRewardedTurnoutBIPS: 100,
@@ -490,7 +490,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedNames: ["0x464c520055534454", "0x5852500055534454"],
+            feedIds: ["0x464c520055534454", "0x5852500055534454"],
             decimals: [6, 6, 6, 6],
             amount: 1000n,
             minRewardedTurnoutBIPS: 100,
@@ -502,7 +502,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         rewardOffers: [
           {
             rewardEpochId: 1,
-            feedName: "0x474F4C4455534400",
+            feedId: "0x474F4C4455534400",
             decimals: 4,
             amount: 10000n,
             minRewardedTurnoutBIPS: 100,
@@ -512,7 +512,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x5041483300000000",
+            feedId: "0x5041483300000000",
             decimals: 2,
             amount: 1000n,
             minRewardedTurnoutBIPS: 100,
@@ -522,7 +522,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x4141504C00000000",
+            feedId: "0x4141504C00000000",
             decimals: 2,
             amount: 100n,
             minRewardedTurnoutBIPS: 100,
@@ -532,7 +532,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x54534C4100000000",
+            feedId: "0x54534C4100000000",
             decimals: 2,
             amount: 100n,
             minRewardedTurnoutBIPS: 100,
@@ -560,7 +560,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
 
       expect(feedSequence.length).to.equal(8);
       for (let i = 0; i < feedSequence.length; i++) {
-        expect(feedSequence[i].name).to.equal(expectedOrder[i].toLowerCase());
+        expect(feedSequence[i].id).to.equal(expectedOrder[i].toLowerCase());
       }
     });
 
@@ -570,7 +570,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         rewardOffers: [
           {
             rewardEpochId: 1,
-            feedName: "0x464c520055534454",
+            feedId: "0x464c520055534454",
             decimals: 4,
             amount: 10000n,
             minRewardedTurnoutBIPS: 100,
@@ -580,7 +580,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x464c520055534454",
+            feedId: "0x464c520055534454",
             decimals: 4,
             amount: 10000n,
             minRewardedTurnoutBIPS: 100,
@@ -590,7 +590,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x464c520055534454",
+            feedId: "0x464c520055534454",
             decimals: 4,
             amount: 10000n,
             minRewardedTurnoutBIPS: 100,
@@ -600,7 +600,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
           },
           {
             rewardEpochId: 1,
-            feedName: "0x5347420055534454",
+            feedId: "0x5347420055534454",
             decimals: 4,
             amount: 20000n,
             minRewardedTurnoutBIPS: 100,
@@ -613,8 +613,8 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
 
       const feedSequence = rewardEpochFeedSequence(rewardOffers);
       expect(feedSequence.length).to.equal(2);
-      expect(feedSequence[0].name).to.equal("0x464c520055534454");
-      expect(feedSequence[1].name).to.equal("0x5347420055534454");
+      expect(feedSequence[0].id).to.equal("0x464c520055534454");
+      expect(feedSequence[1].id).to.equal("0x5347420055534454");
     });
   });
 });

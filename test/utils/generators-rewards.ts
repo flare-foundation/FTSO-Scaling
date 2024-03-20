@@ -85,7 +85,7 @@ export function offersForFeeds(
       "RewardsOffered",
       {
         rewardEpochId,
-        feedName: feed.name,
+        feedId: feed.id,
         decimals: feed.decimals,
         amount,
         minRewardedTurnoutBIPS: 100,

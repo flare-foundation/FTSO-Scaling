@@ -24,9 +24,9 @@ import { generateRandomAddress } from "../../utils/testRandom";
 
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const feeds: Feed[] = [
-    { name: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
-    { name: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
-    { name: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
+    { id: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
+    { id: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
+    { id: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
   ];
   const samplePrices = [38573.26, 2175.12, 0.02042];
 
@@ -86,7 +86,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     mock.onPost(/preparePriceFeeds/).reply(200, {
       votingRoundId: 1,
-      feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
+      feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
     });
 
     const service = new FtsoDataProviderService(db.em, configService);
@@ -115,7 +115,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     // All voters return the same prices at the moment
     mock.onPost(/preparePriceFeeds/).reply(200, {
       votingRoundId: 1,
-      feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
+      feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
     });
 
     const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
@@ -193,11 +193,11 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
       mock.onPost(/preparePriceFeeds/).reply(200, {
         votingRoundId: 1,
-        feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
+        feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
       });
       mock.onPost(/preparePriceFeeds/).reply(200, {
         votingRoundId: 2,
-        feedPriceData: feeds.map((f, id) => ({ feed: f.name, price: samplePrices[id] })),
+        feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
       });
 
       const services = voters.map(() => new FtsoDataProviderService(db.em, configService));

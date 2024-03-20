@@ -218,7 +218,7 @@ export class FtsoDataProviderService {
     const pricesRes = await retry(
       async () =>
         await this.priceProviderClient.priceProviderApi.getPriceFeeds(votingRoundId, {
-          feeds: supportedFeeds.map(feed => feed.name),
+          feeds: supportedFeeds.map(feed => feed.id),
         })
     );
 

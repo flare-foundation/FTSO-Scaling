@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseIntPipe, Post, Inject, Logger } from
 import { ApiTags } from "@nestjs/swagger";
 import { PriceFeedResponse, PriceFeedsRequest, PriceFeedsResponse } from "./dto/provider-requests.dto";
 import { ExampleProviderService } from "./example-provider-service";
-import { fromHex } from "./price-feeds/ccxt-provider-service";
+import { decodeFeed } from "./price-feeds/ccxt-provider-service";
 
 @ApiTags("Price Provider API")
 @Controller()
@@ -17,7 +17,9 @@ export class ExampleProviderController {
   ): Promise<PriceFeedsResponse> {
     const prices = await this.priceProviderService.getPrices(body.feeds);
     this.logger.log(
-      `Prices for voting round ${votingRoundId}: ${JSON.stringify(prices)}, feeds: ${body.feeds.map(f => fromHex(f))}`
+      `Prices for voting round ${votingRoundId}: ${JSON.stringify(prices)}, feeds: ${JSON.stringify(
+        body.feeds.map(f => decodeFeed(f))
+      )}`
     );
     return {
       votingRoundId,
@@ -31,7 +33,7 @@ export class ExampleProviderController {
     @Param("feed") feed: string
   ): Promise<PriceFeedResponse> {
     const prices = await this.priceProviderService.getPrice(feed);
-    this.logger.log(`Price for voting round ${votingRoundId}: ${JSON.stringify(prices)}, feed: ${fromHex(feed)}`);
+    this.logger.log(`Price for voting round ${votingRoundId}: ${JSON.stringify(prices)}, feed: ${decodeFeed(feed)}`);
 
     return {
       votingRoundId,

@@ -9,7 +9,7 @@ describe(`PartialRewardOffer, ${getTestFile(__filename)}`, function () {
   //To be reviewed
   const rawRewardOffer = {
     rewardEpochId: "0x11",
-    feedName: "0xaaaaaaaaaaaaaaaa",
+    feedId: "0xaaaaaaaaaaaaaaaa",
     decimals: "0x12",
     amount: "0x10000000000",
     minRewardedTurnoutBIPS: "0x010000",
@@ -20,7 +20,7 @@ describe(`PartialRewardOffer, ${getTestFile(__filename)}`, function () {
 
   const rawInflationRewardOffer = {
     rewardEpochId: "0x11",
-    feedNames: "0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb",
+    feedIds: "0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb",
     decimals: "0x1212",
     amount: "0x10000000001",
     minRewardedTurnoutBIPS: "0x010000",

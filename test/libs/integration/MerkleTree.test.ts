@@ -27,7 +27,7 @@ describe("MerkleTree", () => {
       const delta2 = random.nextInt(0, 1000);
       const median: MedianCalculationResult = {
         votingRoundId: VOTING_ROUND_ID,
-        feed: { name: i.toString(16).padEnd(16, "0"), decimals: 5 },
+        feed: { id: i.toString(16).padEnd(16, "0"), decimals: 5 },
         votersSubmitAddresses: [], // Used in calculation, not needed for merkle tree
         feedValues: [], // Used in calculation, not needed for merkle tree
         data: {

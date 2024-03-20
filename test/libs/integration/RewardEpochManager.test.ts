@@ -16,9 +16,9 @@ import { generateState, generateVoters, TestVoter } from "../../utils/basic-gene
 
 describe("RewardEpochManager", () => {
   const feeds: Feed[] = [
-    { name: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
-    { name: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
-    { name: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
+    { id: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
+    { id: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
+    { id: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
   ];
   const voters: TestVoter[] = generateVoters(4);
   const offerCount = 2;

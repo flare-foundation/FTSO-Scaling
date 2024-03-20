@@ -24,20 +24,20 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
 
   const inflationOffers: InflationRewardsOffered[] = [];
 
-  let feedNames: string[] = [];
+  let feedIds: string[] = [];
   for (let j = 0; j < 4; j++) {
-    feedNames.push(`USD C${j}`);
+    feedIds.push(`USD C${j}`);
   }
 
-  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+  inflationOffers.push(generateInflationRewardOffer(feedIds, rewardEpochId));
 
-  feedNames = [];
+  feedIds = [];
 
   for (let j = 3; j < 11; j++) {
-    feedNames.push(`USD C${j}`);
+    feedIds.push(`USD C${j}`);
   }
 
-  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+  inflationOffers.push(generateInflationRewardOffer(feedIds, rewardEpochId));
 
   const rewardOffers: RewardOffers = {
     inflationOffers,
@@ -59,13 +59,13 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   });
 
   it("should have offers for each feed each round", function () {
-    const feedName3 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C3"), 16).slice(0, 18);
-    const feedName4 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C4"), 16).slice(0, 18);
-    const feedName10 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C10"), 16).slice(0, 18);
+    const feedId3 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C3"), 16).slice(0, 18);
+    const feedId4 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C4"), 16).slice(0, 18);
+    const feedId10 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C10"), 16).slice(0, 18);
 
-    expect(granulatedPartialOffers.get(5893).get(feedName3).length).to.eq(3);
-    expect(granulatedPartialOffers.get(5893).get(feedName4).length).to.eq(2);
-    expect(granulatedPartialOffers.get(5893).get(feedName10).length).to.eq(1);
+    expect(granulatedPartialOffers.get(5893).get(feedId3).length).to.eq(3);
+    expect(granulatedPartialOffers.get(5893).get(feedId4).length).to.eq(2);
+    expect(granulatedPartialOffers.get(5893).get(feedId10).length).to.eq(1);
   });
 
   it("should split reward by types", function () {

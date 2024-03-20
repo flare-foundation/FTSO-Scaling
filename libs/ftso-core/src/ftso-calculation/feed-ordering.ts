@@ -19,32 +19,32 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
   const feedValues = new Map<string, FeedWithTypeAndValue>();
 
   for (const inflationOffer of rewardOffers.inflationOffers) {
-    for (let i = 0; i < inflationOffer.feedNames.length; i++) {
-      const feedName = inflationOffer.feedNames[i].toLowerCase();
-      let feedValueType = feedValues.get(feedName);
+    for (let i = 0; i < inflationOffer.feedIds.length; i++) {
+      const feedId = inflationOffer.feedIds[i].toLowerCase();
+      let feedValueType = feedValues.get(feedId);
       if (feedValueType === undefined) {
         feedValueType = {
-          name: feedName,
+          id: feedId,
           decimals: inflationOffer.decimals[i],
           isInflation: true,
           flrValue: 0n, // irrelevant for inflation offers
         };
-        feedValues.set(feedValueType.name, feedValueType);
+        feedValues.set(feedValueType.id, feedValueType);
       }
     }
   }
 
   for (const communityOffer of rewardOffers.rewardOffers) {
-    const feedName = communityOffer.feedName.toLowerCase();
-    let feedValueType = feedValues.get(feedName);
+    const feedId = communityOffer.feedId.toLowerCase();
+    let feedValueType = feedValues.get(feedId);
     if (feedValueType === undefined) {
       feedValueType = {
-        name: communityOffer.feedName.toLowerCase(),
+        id: communityOffer.feedId.toLowerCase(),
         decimals: communityOffer.decimals,
         isInflation: false,
         flrValue: 0n,
       };
-      feedValues.set(feedValueType.name, feedValueType);
+      feedValues.set(feedValueType.id, feedValueType);
     }
     feedValueType.flrValue += feedValueType.flrValue + communityOffer.amount;
   }
@@ -53,7 +53,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
 
   return feedSequence.map(feedValueType => {
     return {
-      name: feedValueType.name,
+      id: feedValueType.id,
       decimals: feedValueType.decimals,
     };
   });
@@ -73,16 +73,16 @@ export function sortFeedWithValuesToCanonicalOrder(feeds: FeedWithTypeAndValue[]
       return 1;
     }
     if (a.isInflation && b.isInflation) {
-      if (a.name < b.name) {
+      if (a.id < b.id) {
         return -1;
       }
-      if (a.name > b.name) {
+      if (a.id > b.id) {
         return 1;
       }
       return 0; // should not happen
     }
     // None is from inflation.
-    // Sort decreasing by value and on same value increasing by feedName
+    // Sort decreasing by value and on same value increasing by feedId
     if (a.flrValue > b.flrValue) {
       return -1;
     }
@@ -90,10 +90,10 @@ export function sortFeedWithValuesToCanonicalOrder(feeds: FeedWithTypeAndValue[]
       return 1;
     }
     // values are same, sort lexicographically
-    if (a.name < b.name) {
+    if (a.id < b.id) {
       return -1;
     }
-    if (a.name > b.name) {
+    if (a.id > b.id) {
       return 1;
     }
     return 0; // Should not happen, Offers for same feed should be merged

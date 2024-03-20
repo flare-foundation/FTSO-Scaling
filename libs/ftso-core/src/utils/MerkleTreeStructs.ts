@@ -45,9 +45,9 @@ export namespace MerkleTreeStructs {
   export function fromMedianCalculationResult(medianCalculationResult: MedianCalculationResult): FeedResult {
     return {
       votingRoundId: medianCalculationResult.votingRoundId,
-      name: medianCalculationResult.feed.name.startsWith("0x")
-        ? medianCalculationResult.feed.name
-        : "0x" + medianCalculationResult.feed.name,
+      name: medianCalculationResult.feed.id.startsWith("0x")
+        ? medianCalculationResult.feed.id
+        : "0x" + medianCalculationResult.feed.id,
       value: medianCalculationResult.data.finalMedianPrice.value,
       turnoutBIPS: Number(
         (medianCalculationResult.data.participatingWeight * 10000n) / medianCalculationResult.totalVotingWeight

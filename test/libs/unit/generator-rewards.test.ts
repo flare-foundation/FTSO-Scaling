@@ -187,9 +187,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     logger.dir(rewardSettingsForRealtimeShorterEpochSettings);
     numberOfVoters = 10;
     feeds = [
-      { name: "0x4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
-      { name: "0x4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
-      { name: "0x464c520055534454", decimals: 5 }, // FLR USDT 0.02042
+      { id: "0x4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
+      { id: "0x4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
+      { id: "0x464c520055534454", decimals: 5 }, // FLR USDT 0.02042
     ];
 
     voters = generateVoters(numberOfVoters);

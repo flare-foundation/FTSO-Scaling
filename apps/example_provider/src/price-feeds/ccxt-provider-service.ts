@@ -5,13 +5,36 @@ import { networks } from "../../../../libs/ftso-core/src/configs/networks";
 import { retry } from "../../../../libs/ftso-core/src/utils/retry";
 import { FeedPriceData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
+import { FeedType } from "../../../../libs/ftso-core/src/voting-types";
 
 export const CCXT_FALLBACK_PRICE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
 const RETRY_BACKOFF_MS = 10_000;
 
+export class FeedId {
+  constructor(readonly type: FeedType, readonly name: string) {}
+
+  toHex(): string {
+    const typeHex = this.type.valueOf().toString(16).padStart(2, "0");
+    const nameBuf = Buffer.from(this.name, "utf8");
+    return typeHex + nameBuf.toString("hex").padEnd(40, "0");
+  }
+
+  toString(): string {
+    return `(${this.type} ${this.name})`;
+  }
+
+  equals(other: FeedId): boolean {
+    return this.type === other.type && this.name === other.name;
+  }
+
+  static fromHex(hex: string): FeedId {
+    return decodeFeed(hex);
+  }
+}
+
 interface FeedConfig {
-  feed: string;
+  feed: FeedId;
   sources: {
     exchange: string;
     symbol: string;
@@ -24,6 +47,7 @@ interface PriceInfo {
   exchange: string;
 }
 
+const usdtToUsdFeedId = new FeedId(FeedType.Crypto, "USDT/USD");
 export class CcxtFeed implements BaseDataFeed {
   private readonly logger = new Logger(CcxtFeed.name);
   protected initialized = false;
@@ -68,7 +92,7 @@ export class CcxtFeed implements BaseDataFeed {
   }
 
   async getPrice(hexFeed: string): Promise<FeedPriceData> {
-    const decodedFeed = decodeFeed(hexFeed);
+    const decodedFeed = FeedId.fromHex(hexFeed);
     const price = await this.getFeedPrice(decodedFeed);
     return {
       feed: hexFeed,
@@ -106,10 +130,10 @@ export class CcxtFeed implements BaseDataFeed {
     }
   }
 
-  private async getFeedPrice(decodedFeed: string): Promise<number> {
-    const config = this.config.find(config => config.feed === decodedFeed);
+  private async getFeedPrice(feedId: FeedId): Promise<number> {
+    const config = this.config.find(config => config.feed.equals(feedId));
     if (!config) {
-      this.logger.warn(`No config found for ${decodedFeed}`);
+      this.logger.warn(`No config found for ${feedId}`);
       return undefined;
     }
 
@@ -122,7 +146,7 @@ export class CcxtFeed implements BaseDataFeed {
       if (info === undefined) continue;
 
       if (source.symbol.endsWith("USDT")) {
-        if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice("USDT");
+        if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice(usdtToUsdFeedId);
         prices.push(info.price * usdtToUsd);
       } else {
         prices.push(info.price);
@@ -130,18 +154,18 @@ export class CcxtFeed implements BaseDataFeed {
     }
 
     if (prices.length === 0) {
-      this.logger.warn(`No prices found for ${decodedFeed}`);
-      return this.getFallbackPrice(decodedFeed);
+      this.logger.warn(`No prices found for ${feedId}`);
+      return this.getFallbackPrice(usdtToUsdFeedId);
     }
 
     const result = prices.reduce((a, b) => a + b, 0) / prices.length;
     return result;
   }
 
-  private async getFallbackPrice(decodedFeed: string): Promise<number> {
-    const config = this.config.find(config => config.feed === decodedFeed);
+  private async getFallbackPrice(feedId: FeedId): Promise<number> {
+    const config = this.config.find(config => config.feed.equals(feedId));
     if (!config) {
-      this.logger.warn(`No config found for ${decodedFeed}`);
+      this.logger.warn(`No config found for ${feedId}`);
       return undefined;
     }
 
@@ -156,7 +180,7 @@ export class CcxtFeed implements BaseDataFeed {
         ticker = await retry(async () => await exchange.fetchTicker(symbol), RETRY_BACKOFF_MS);
         let price;
         if (source.symbol.endsWith("USDT")) {
-          if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice("USDT");
+          if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice(usdtToUsd);
           price = ticker.last * usdtToUsd;
         } else {
           price = ticker.last;
@@ -170,7 +194,7 @@ export class CcxtFeed implements BaseDataFeed {
       }
     }
 
-    this.logger.error(`No fallback price found for ${decodedFeed}`);
+    this.logger.error(`No fallback price found for ${feedId}`);
     return undefined;
   }
 
@@ -191,11 +215,20 @@ export class CcxtFeed implements BaseDataFeed {
 
     try {
       const jsonString = readFileSync(configPath, "utf-8");
-      const config: FeedConfig[] = JSON.parse(jsonString);
+      const config: FeedConfig[] = JSON.parse(jsonString, (key, value) => {
+        if (key === "feed") {
+          return new FeedId(value.type, value.name);
+        }
+        return value;
+      });
 
-      if (config.find(feed => feed.feed === "USDT") === undefined) {
+      if (config.find(feed => feed.feed.equals(usdtToUsdFeedId)) === undefined) {
         throw new Error("Must provide USDT feed sources, as it is used for USD conversion.");
       }
+
+      config.forEach(feed => {
+        console.log(feed.feed.toHex());
+      });
 
       return config;
     } catch (err) {
@@ -207,13 +240,17 @@ export class CcxtFeed implements BaseDataFeed {
 
 // Helpers
 
-function decodeFeed(hexFeed: string): string {
-  hexFeed = unPrefix0x(hexFeed);
-  if (hexFeed.length !== 16) {
-    throw new Error(`Invalid feed string: ${hexFeed}`);
+export function decodeFeed(feedIdHex: string): FeedId {
+  feedIdHex = unPrefix0x(feedIdHex);
+  if (feedIdHex.length !== 42) {
+    throw new Error(`Invalid feed string: ${feedIdHex}`);
   }
 
-  return fromHex(hexFeed);
+  const type = parseInt(feedIdHex.slice(0, 2));
+  const feedType = FeedType[FeedType[type] as keyof typeof FeedType];
+
+  const nameBuf = Buffer.from(feedIdHex.slice(2), "hex");
+  return new FeedId(feedType, nameBuf.toString("utf8").replaceAll("\0", ""));
 }
 
 function unPrefix0x(tx: string) {
@@ -225,17 +262,4 @@ function unPrefix0x(tx: string) {
     return tx.slice(3);
   }
   return tx;
-}
-
-export function fromHex(hexString: string) {
-  let decoded = "";
-  for (let i = 0; i < hexString.length; i += 2) {
-    const charCode = parseInt(hexString.substr(i, 2), 16);
-    if (charCode === 0 || charCode > 112) {
-      continue;
-    } else {
-      decoded += String.fromCharCode(charCode);
-    }
-  }
-  return decodeURIComponent(decoded);
 }
