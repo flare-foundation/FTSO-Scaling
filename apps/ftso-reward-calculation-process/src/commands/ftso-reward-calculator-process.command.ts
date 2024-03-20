@@ -3,7 +3,7 @@ import { CalculatorService, OptionalCommandOptions } from "../services/calculato
 import { Logger } from "@nestjs/common";
 @Command({
   name: "ftso-reward-calculation-process",
-  options: {},
+  options: { isDefault: true },
 })
 export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   private logger = new Logger(FtsoRewardCalculationProcessCommand.name);
