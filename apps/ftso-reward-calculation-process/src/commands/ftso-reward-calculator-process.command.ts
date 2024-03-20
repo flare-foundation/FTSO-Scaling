@@ -99,6 +99,14 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
+    flags: "-o, --recoveryMode [boolean]",
+    description: "Calculates in recovery mode (using the last known state)",
+  })
+  parseRecoveryMode(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
     flags: "-b, --batchSize [number]",
     description: "Batch size for multithreaded reward claims calculation",
   })

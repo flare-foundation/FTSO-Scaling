@@ -1,3 +1,5 @@
+
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { globSync } from "glob";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
@@ -12,7 +14,6 @@ import {
   OFFER_DISTRIBUTION_PROGRESS_FILE,
 } from "./constants";
 import { RewardCalculationStatus, deserializeRewardEpochCalculationStatus } from "./reward-calculation-status";
-import { writeFileSync } from "fs";
 
 export enum ProgressType {
   OFFER_DISTRIBUTION = "OFFER_DISTRIBUTION",
@@ -66,7 +67,7 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(progressType);
+      ((_: never): void => { })(progressType);
   }
 }
 
@@ -110,10 +111,14 @@ export function rewardCalculationProgress(
   }
 
   if (!config.sequentialCount) {
-    return {
+    const newStatus = {
       ...tmpResult,
       progress: status.startVotingRoundId + result.length - 1,
     };
+    if (result.length === status.endVotingRoundId - status.startVotingRoundId + 1) {
+      newStatus.status = RewardCalculationStatus.DONE;
+    }
+    return newStatus;
   }
   // sequential count
   if (result[0] !== status.startVotingRoundId) {
@@ -129,10 +134,14 @@ export function rewardCalculationProgress(
     }
     progress = votingRoundId;
   }
-  return {
+  const newStatus = {
     ...tmpResult,
     progress,
   };
+  if (result.length === status.endVotingRoundId - status.startVotingRoundId + 1) {
+    newStatus.status = RewardCalculationStatus.DONE;
+  }
+  return newStatus;
 }
 
 /**
@@ -143,7 +152,7 @@ export function printProgress(progress: ProgressReport): string {
   if (progress.progress !== undefined) {
     value =
       ((progress.progress - progress.startVotingRoundId) / (progress.endVotingRoundId - progress.startVotingRoundId)) *
-        100 +
+      100 +
       "%";
   }
   return `${progress.type} (${progress.status}): ${value}`;
@@ -183,4 +192,15 @@ export function recordProgress(rewardEpochId: number, calculationFolder = CALCUL
   writeFileSync(statusFileProgressClaimCalculation, JSON.stringify(progressClaimCalculation));
   const statusFileProgressClaimAggregation = path.join(rewardEpochFolder, CLAIM_AGGREGATION_PROGRESS_FILE);
   writeFileSync(statusFileProgressClaimAggregation, JSON.stringify(progressClaimAggregation));
+}
+
+export function getAggregationProgress(
+  rewardEpochId: number,
+  calculationFolder = CALCULATIONS_FOLDER()
+): ProgressReport | undefined {
+  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const statusFileProgressClaimAggregation = path.join(rewardEpochFolder, CLAIM_AGGREGATION_PROGRESS_FILE);
+  if (existsSync(statusFileProgressClaimAggregation)) {
+    return JSON.parse(readFileSync(statusFileProgressClaimAggregation).toString()) as ProgressReport;
+  }
 }

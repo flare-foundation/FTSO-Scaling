@@ -24,7 +24,7 @@ import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/Reward
 import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
 import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils/stat-info/final-reward-claims";
-import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
+import { getAggregationProgress, recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
   deserializeRewardEpochCalculationStatus,
@@ -57,6 +57,7 @@ export interface OptionalCommandOptions {
   loggerFile?: string;
   calculationFolder?: string;
   isWorker?: boolean;
+  recoveryMode?: boolean;
 }
 
 if (process.env.FORCE_NOW) {
@@ -218,7 +219,6 @@ export class CalculatorService {
   async run(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     logger.log(options);
-
     let startRewardEpochId;
     let endRewardEpochId;
     if (options.startRewardEpochId !== undefined && options.rewardEpochId === undefined) {
@@ -242,21 +242,40 @@ export class CalculatorService {
     }
     let rewardEpochId = startRewardEpochId;
 
-    // Each rund of the loop is one reward epoch calculation
+    // Each round of the loop is one reward epoch calculation
     // If calculation range is limited, then the loop breaks.
     // If not, the loop enters incremental calculation waiting for new voting rounds to be finalized.
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (endRewardEpochId && rewardEpochId > endRewardEpochId) {
         // all done, finish
         logger.log("ALL DONE", rewardEpochId, startRewardEpochId, endRewardEpochId);
         return;
       }
+      let skipInitializationForRecovery = false;
+      let recoveryStartVotingRoundId: number | undefined = undefined;
+
       if (rewardEpochCalculationStatusExists(rewardEpochId)) {
         const status = deserializeRewardEpochCalculationStatus(rewardEpochId);
         if (status.calculationStatus === RewardCalculationStatus.DONE) {
           logger.log("Skipping reward epoch", rewardEpochId, "as it is already done");
           rewardEpochId++;
           continue;
+        }
+        // recovery mode works only for incremental calculation
+        if (options.recoveryMode && options.batchSize === undefined) {
+          const aggregationProgress = getAggregationProgress(rewardEpochId);
+          if (
+            aggregationProgress &&
+            aggregationProgress.status === RewardCalculationStatus.IN_PROGRESS &&
+            aggregationProgress.progress !== undefined
+          ) {
+            skipInitializationForRecovery = true;
+            recoveryStartVotingRoundId = aggregationProgress.progress;
+          }
+          logger.log(
+            `Recovery mode: reward epoch ${rewardEpochId}, starting from voting round ${recoveryStartVotingRoundId}`
+          );
         }
       }
       const latestRewardEpochId = await this.latestRewardEpochStart();
@@ -265,7 +284,7 @@ export class CalculatorService {
         logger.log("Incremental mode");
       }
       let rewardEpochDuration;
-      if (options.initialize) {
+      if (options.initialize && !skipInitializationForRecovery) {
         logger.log("Initializing reward epoch storage");
         destroyStorage(rewardEpochId);
         rewardEpochDuration = await initializeRewardEpochStorage(
@@ -283,7 +302,7 @@ export class CalculatorService {
       const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(
         rewardEpochDuration.startVotingRoundId
       );
-      if (options.initialize) {
+      if (options.initialize && !skipInitializationForRecovery) {
         const rewardEpochInfo = getRewardEpochInfo(
           rewardEpoch,
           isIncrementalMode ? undefined : rewardEpochDuration.endVotingRoundId
@@ -298,7 +317,7 @@ export class CalculatorService {
         setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.IN_PROGRESS);
         recordProgress(rewardEpochId);
       }
-      const start = options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
+      const start = recoveryStartVotingRoundId ?? options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
       const end = options.endVotingRoundId ?? rewardEpochDuration.endVotingRoundId;
       if (start < rewardEpochDuration.startVotingRoundId || start > rewardEpochDuration.endVotingRoundId) {
         throw new Error(`Invalid start voting round id: ${start}`);
