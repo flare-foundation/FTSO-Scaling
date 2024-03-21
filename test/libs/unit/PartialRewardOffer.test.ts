@@ -3,12 +3,13 @@ import { getTestFile } from "../../utils/getTestFile";
 import Web3 from "web3";
 import { InflationRewardsOffered, RewardsOffered } from "../../../libs/ftso-core/src/events";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { toFeedId } from "../../utils/generators";
 
 describe(`PartialRewardOffer, ${getTestFile(__filename)}`, function () {
   //To be reviewed
   const rawRewardOffer = {
     rewardEpochId: "0x11",
-    feedId: "0x01baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac",
+    feedId: toFeedId("aa"),
     decimals: "0x12",
     amount: "0x10000000000",
     minRewardedTurnoutBIPS: "0x010000",
@@ -19,7 +20,7 @@ describe(`PartialRewardOffer, ${getTestFile(__filename)}`, function () {
 
   const rawInflationRewardOffer = {
     rewardEpochId: "0x11",
-    feedIds: "0x01baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac01baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad",
+    feedIds: "0x" + toFeedId("aa", true) + toFeedId("bb", true),
     decimals: "0x1212",
     amount: "0x10000000001",
     minRewardedTurnoutBIPS: "0x010000",

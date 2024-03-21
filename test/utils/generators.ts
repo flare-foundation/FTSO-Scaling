@@ -193,12 +193,6 @@ export function generateAddress(name: string) {
   return Web3.utils.keccak256(name).slice(0, 42);
 }
 
-export function generateFeedId(name: string) {
-  name = name.slice(0, 19);
-
-  return FEED_TYPE_CRYPTO + Web3.utils.padRight(Web3.utils.utf8ToHex(name), 40);
-}
-
 /**
  * @param feedName has to be a string of length up to 20
  */
@@ -213,7 +207,7 @@ export function generateRewardsOffer(
 
   const rawRewardsOffered = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
-    feedId: generateFeedId(feedName),
+    feedId: toFeedId(feedName),
     decimals: "0x02",
     amount: Web3.utils.numberToHex(value),
     minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
@@ -229,7 +223,7 @@ export function generateRewardsOffer(
  * Generate an inflation reward offer for given feeds
  */
 export function generateInflationRewardOffer(feedNames: string[], rewardEpochId: number) {
-  const unprefixedFeedsInHex = feedNames.map(name => generateFeedId(name).slice(2, 44));
+  const unprefixedFeedsInHex = feedNames.map(name => toFeedId(name, true));
 
   const rawInflationRewardOffer = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),

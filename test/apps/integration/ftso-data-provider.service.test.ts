@@ -22,12 +22,13 @@ import { currentTimeSec, generateRewardEpochEvents, toFeedId } from "../../utils
 import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
 
+export const testFeeds: Feed[] = [
+  { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26
+  { id: toFeedId("ETH/USD", true), decimals: 2 }, // ETH USDT 2,175.12
+  { id: toFeedId("FRL/USD", true), decimals: 5 }, // FLR USDT 0.02042
+];
+
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
-  const feeds: Feed[] = [
-    { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26
-    { id: toFeedId("ETH/USD", true), decimals: 2 }, // ETH USDT 2,175.12
-    { id: toFeedId("FRL/USD", true), decimals: 5 }, // FLR USDT 0.02042
-  ];
   const samplePrices = [38573.26, 2175.12, 0.02042];
 
   const offerCount = 2;
@@ -84,9 +85,9 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     const rewardEpochId = 1;
     await setUpRewardEpoch(rewardEpochId, voters);
 
-    mock.onPost(/preparePriceFeeds/).reply(200, {
+    mock.onPost(/feed-values/).reply(200, {
       votingRoundId: 1,
-      feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
+      data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
     });
 
     const service = new FtsoDataProviderService(db.em, configService);
@@ -113,9 +114,9 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     await setUpRewardEpoch(rewardEpochId, voters);
 
     // All voters return the same prices at the moment
-    mock.onPost(/preparePriceFeeds/).reply(200, {
+    mock.onPost(/feed-values/).reply(200, {
       votingRoundId: 1,
-      feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
+      data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
     });
 
     const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
@@ -191,13 +192,13 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       const rewardEpochId = 1;
       await setUpRewardEpoch(rewardEpochId, voters);
 
-      mock.onPost(/preparePriceFeeds/).reply(200, {
+      mock.onPost(/feed-values/).reply(200, {
         votingRoundId: 1,
-        feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
+        data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
       });
-      mock.onPost(/preparePriceFeeds/).reply(200, {
+      mock.onPost(/feed-values/).reply(200, {
         votingRoundId: 2,
-        feedPriceData: feeds.map((f, id) => ({ feed: f.id, price: samplePrices[id] })),
+        data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
       });
 
       const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
@@ -297,7 +298,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
-    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), feeds, offerCount, rewardEpochId, voters);
+    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
 
     await db.addEvent(epochEvents);
 

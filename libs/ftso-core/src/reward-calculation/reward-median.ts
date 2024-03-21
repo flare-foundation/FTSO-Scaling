@@ -49,7 +49,7 @@ export function calculateMedianRewardClaims(
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
       BigInt(
-        soliditySha3(encodeParameters(["bytes8", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
+        soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
       ) %
         2n ===
       1n
