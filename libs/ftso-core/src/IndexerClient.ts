@@ -328,7 +328,6 @@ export class IndexerClient {
       startTime,
       endTime
     );
-    this.logger.debug(`Inflation offer raw events: ${inflationOffersResults.map(event => JSON.stringify(event))}`);
     const inflationOffers = inflationOffersResults.map(event => InflationRewardsOffered.fromRawEvent(event));
 
     return {
