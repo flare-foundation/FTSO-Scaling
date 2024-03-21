@@ -25,6 +25,7 @@ import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
 export const encodingUtils = EncodingUtils.instance;
 const burnAddress = generateRandomAddress();
 export const web3 = new Web3("https://dummy");
+const FEED_TYPE_CRYPTO = "0x01";
 
 // TODO: fix event timings
 export function generateRewardEpochEvents(
@@ -104,7 +105,7 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
         "InflationRewardsOffered",
         {
           rewardEpochId,
-          feedNames: "0x" + feeds.map(f => f.name).join(""),
+          feedIds: "0x" + feeds.map(f => f.id).join(""),
           decimals: "0x" + feeds.map(f => f.decimals.toString(16).padStart(2, "0")).join(""),
           amount: BigInt(1000),
           minRewardedTurnoutBIPS: 100,
@@ -124,7 +125,7 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
           "RewardsOffered",
           {
             rewardEpochId,
-            feedName: "0x" + feed.name,
+            feedId: "0x" + feed.id,
             decimals: feed.decimals,
             amount: BigInt(1000),
             minRewardedTurnoutBIPS: 100,
@@ -192,30 +193,21 @@ export function generateAddress(name: string) {
   return Web3.utils.keccak256(name).slice(0, 42);
 }
 
-export function generateFeedName(name: string) {
-  name = name.slice(0, 7);
-
-  return Web3.utils.padRight(Web3.utils.utf8ToHex(name), 16);
-}
-
 /**
- * @param feed has to be a string of length 8
- * @param rewardEpochId
- * @param claimBack
- * @returns
+ * @param feedName has to be a string of length up to 20
  */
 export function generateRewardsOffer(
-  feed: string,
+  feedName: string,
   rewardEpochId: number,
   claimBack: string,
   value: number,
   secondaryBandWidthPPM: number = 2000
 ) {
-  feed = feed.slice(0, 7);
+  feedName = feedName.slice(0, 19);
 
   const rawRewardsOffered = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
-    feedName: generateFeedName(feed),
+    feedId: toFeedId(feedName),
     decimals: "0x02",
     amount: Web3.utils.numberToHex(value),
     minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
@@ -230,17 +222,17 @@ export function generateRewardsOffer(
 /**
  * Generate an inflation reward offer for given feeds
  */
-export function generateInflationRewardOffer(feeds: string[], rewardEpochId: number) {
-  const unprefixedFeedsInHex = feeds.map(feed => generateFeedName(feed).slice(2, 18));
+export function generateInflationRewardOffer(feedNames: string[], rewardEpochId: number) {
+  const unprefixedFeedsInHex = feedNames.map(name => toFeedId(name, true));
 
   const rawInflationRewardOffer = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
-    feedNames: "0x" + unprefixedFeedsInHex.join(""),
-    decimals: "0x" + "02".repeat(feeds.length),
+    feedIds: "0x" + unprefixedFeedsInHex.join(""),
+    decimals: "0x" + "02".repeat(feedNames.length),
     amount: "0x10000000001",
     minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
     primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
-    secondaryBandWidthPPMs: "0x" + "0007d0".repeat(feeds.length),
+    secondaryBandWidthPPMs: "0x" + "0007d0".repeat(feedNames.length),
     mode: "0x00",
   };
 
@@ -302,20 +294,20 @@ export function generateRewardEpoch() {
 
   const inflationOffers: InflationRewardsOffered[] = [];
 
-  let feedNames: string[] = [];
+  let feedIds: string[] = [];
   for (let j = 0; j < 3; j++) {
-    feedNames.push(`USD C${j}`);
+    feedIds.push(`USD C${j}`);
   }
 
-  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+  inflationOffers.push(generateInflationRewardOffer(feedIds, rewardEpochId));
 
-  feedNames = [];
+  feedIds = [];
 
   for (let j = 3; j < 11; j++) {
-    feedNames.push(`USD C${j}`);
+    feedIds.push(`USD C${j}`);
   }
 
-  inflationOffers.push(generateInflationRewardOffer(feedNames, rewardEpochId));
+  inflationOffers.push(generateInflationRewardOffer(feedIds, rewardEpochId));
 
   const rewardOffers: RewardOffers = {
     inflationOffers,
@@ -412,7 +404,7 @@ export function generateMedianCalculationResult(
   const data = calculateMedian(voters, feedValues, weights, 2);
 
   const feed: Feed = {
-    name: generateFeedName(feedName),
+    id: toFeedId(feedName),
     decimals: 2,
   };
 
@@ -427,4 +419,10 @@ export function generateMedianCalculationResult(
   };
 
   return medianCalculationResult;
+}
+
+export function toFeedId(feedName: string, unprefixed: boolean = false) {
+  const feedIdHex = FEED_TYPE_CRYPTO + Web3.utils.utf8ToHex(feedName).slice(2).padEnd(40, "0");
+  if (unprefixed) return feedIdHex.slice(2);
+  else return feedIdHex;
 }

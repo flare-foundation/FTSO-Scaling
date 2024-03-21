@@ -85,7 +85,7 @@ export function offersForFeeds(
       "RewardsOffered",
       {
         rewardEpochId,
-        feedName: feed.name,
+        feedId: feed.id,
         decimals: feed.decimals,
         amount,
         minRewardedTurnoutBIPS: 100,
@@ -811,6 +811,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
         const hash = CommitData.hashForCommit(
           voter.submitAddress,
+          votingEpochId,
           voterRevealData.random,
           voterRevealData.encodedValues
         );

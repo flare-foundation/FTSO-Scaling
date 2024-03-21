@@ -5,8 +5,8 @@ import { Address } from "../voting-types";
 export interface IPartialRewardOfferForEpoch {
   // reward epoch id
   rewardEpochId: number;
-  // feed name - i.e. base/quote symbol
-  feedName: string;
+  // hex encoded feed id
+  feedId: string;
   // number of decimals (negative exponent)
   decimals: number;
   // amount (in wei) of reward in native coin
@@ -32,7 +32,7 @@ export namespace PartialRewardOffer {
   export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOfferForEpoch {
     return {
       rewardEpochId: rewardOffer.rewardEpochId,
-      feedName: rewardOffer.feedName.startsWith("0x") ? rewardOffer.feedName : "0x" + rewardOffer.feedName,
+      feedId: rewardOffer.feedId.startsWith("0x") ? rewardOffer.feedId : "0x" + rewardOffer.feedId,
       decimals: rewardOffer.decimals,
       amount: rewardOffer.amount,
       minRewardedTurnoutBIPS: rewardOffer.minRewardedTurnoutBIPS,
@@ -52,12 +52,12 @@ export namespace PartialRewardOffer {
     inflationRewardOffer: InflationRewardsOffered
   ): IPartialRewardOfferForEpoch[] {
     const rewardOffers: IPartialRewardOfferForEpoch[] = [];
-    const sharePerOne: bigint = inflationRewardOffer.amount / BigInt(inflationRewardOffer.feedNames.length);
-    const remainder: bigint = inflationRewardOffer.amount % BigInt(inflationRewardOffer.feedNames.length);
-    for (let i = 0; i < inflationRewardOffer.feedNames.length; i++) {
+    const sharePerOne: bigint = inflationRewardOffer.amount / BigInt(inflationRewardOffer.feedIds.length);
+    const remainder: bigint = inflationRewardOffer.amount % BigInt(inflationRewardOffer.feedIds.length);
+    for (let i = 0; i < inflationRewardOffer.feedIds.length; i++) {
       rewardOffers.push({
         rewardEpochId: inflationRewardOffer.rewardEpochId,
-        feedName: inflationRewardOffer.feedNames[i],
+        feedId: inflationRewardOffer.feedIds[i],
         decimals: inflationRewardOffer.decimals[i],
         amount: sharePerOne + (i < remainder ? 1n : 0n),
         minRewardedTurnoutBIPS: inflationRewardOffer.minRewardedTurnoutBIPS,

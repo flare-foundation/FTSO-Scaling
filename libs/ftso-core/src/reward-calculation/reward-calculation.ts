@@ -60,7 +60,7 @@ export async function rewardClaimsForRewardEpoch(
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
   // Partial offer generation from reward offers
-  // votingRoundId => feedName => partialOffer
+  // votingRoundId => feedId => partialOffer
   const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
     startVotingRoundId,
     endVotingRoundId,
@@ -106,7 +106,7 @@ export async function initializeRewardEpochStorage(
   );
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
   // Partial offer generation from reward offers
-  // votingRoundId => feedName => partialOffer
+  // votingRoundId => feedId => partialOffer
   const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
     rewardEpochDuration.startVotingRoundId,
     rewardEpochDuration.endVotingRoundId,
@@ -160,11 +160,10 @@ export async function partialRewardClaimsForVotingRound(
   const medianResults: MedianCalculationResult[] = calculateMedianResults(
     rewardDataForCalculations.dataForCalculations
   );
-
-  // feedName => medianResult
+  // feedId => medianResult
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of medianResults) {
-    medianCalculationMap.set(medianResult.feed.name, medianResult);
+    medianCalculationMap.set(medianResult.feed.id, medianResult);
   }
 
   // Select eligible voters for finalization rewards
@@ -196,8 +195,8 @@ export async function partialRewardClaimsForVotingRound(
   }
 
   // Calculate reward claims for each feed offer
-  for (const [feedName, offers] of feedOffers.entries()) {
-    const medianResult = medianCalculationMap.get(feedName);
+  for (const [feedId, offers] of feedOffers.entries()) {
+    const medianResult = medianCalculationMap.get(feedId);
     if (medianResult === undefined) {
       // This should never happen
       throw new Error("Critical error: Median result is undefined");

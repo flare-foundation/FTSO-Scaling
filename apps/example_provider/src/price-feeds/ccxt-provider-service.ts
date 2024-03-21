@@ -3,15 +3,16 @@ import ccxt, { Exchange, Ticker } from "ccxt";
 import { readFileSync } from "fs";
 import { networks } from "../../../../libs/ftso-core/src/configs/networks";
 import { retry } from "../../../../libs/ftso-core/src/utils/retry";
-import { FeedPriceData } from "../dto/provider-requests.dto";
+import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
+import { FeedType } from "../../../../libs/ftso-core/src/voting-types";
 
 export const CCXT_FALLBACK_PRICE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
 const RETRY_BACKOFF_MS = 10_000;
 
 interface FeedConfig {
-  feed: string;
+  feed: FeedId;
   sources: {
     exchange: string;
     symbol: string;
@@ -23,6 +24,8 @@ interface PriceInfo {
   time: number;
   exchange: string;
 }
+
+const usdtToUsdFeedId: FeedId = { type: FeedType.Crypto.valueOf(), name: "USDT/USD" };
 
 export class CcxtFeed implements BaseDataFeed {
   private readonly logger = new Logger(CcxtFeed.name);
@@ -62,17 +65,16 @@ export class CcxtFeed implements BaseDataFeed {
     void this.watchTrades(exchangeToSymbols);
   }
 
-  async getPrices(hexFeeds: string[]): Promise<FeedPriceData[]> {
-    const promises = hexFeeds.map(feed => this.getPrice(feed));
+  async getValues(feeds: FeedId[]): Promise<FeedValueData[]> {
+    const promises = feeds.map(feed => this.getValue(feed));
     return Promise.all(promises);
   }
 
-  async getPrice(hexFeed: string): Promise<FeedPriceData> {
-    const decodedFeed = decodeFeed(hexFeed);
-    const price = await this.getFeedPrice(decodedFeed);
+  async getValue(feed: FeedId): Promise<FeedValueData> {
+    const price = await this.getFeedPrice(feed);
     return {
-      feed: hexFeed,
-      price: price,
+      feed: feed,
+      value: price,
     };
   }
 
@@ -106,10 +108,10 @@ export class CcxtFeed implements BaseDataFeed {
     }
   }
 
-  private async getFeedPrice(decodedFeed: string): Promise<number> {
-    const config = this.config.find(config => config.feed === decodedFeed);
+  private async getFeedPrice(feedId: FeedId): Promise<number> {
+    const config = this.config.find(config => feedsEqual(config.feed, feedId));
     if (!config) {
-      this.logger.warn(`No config found for ${decodedFeed}`);
+      this.logger.warn(`No config found for ${JSON.stringify(feedId)}`);
       return undefined;
     }
 
@@ -122,7 +124,7 @@ export class CcxtFeed implements BaseDataFeed {
       if (info === undefined) continue;
 
       if (source.symbol.endsWith("USDT")) {
-        if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice("USDT");
+        if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice(usdtToUsdFeedId);
         prices.push(info.price * usdtToUsd);
       } else {
         prices.push(info.price);
@@ -130,18 +132,18 @@ export class CcxtFeed implements BaseDataFeed {
     }
 
     if (prices.length === 0) {
-      this.logger.warn(`No prices found for ${decodedFeed}`);
-      return this.getFallbackPrice(decodedFeed);
+      this.logger.warn(`No prices found for ${JSON.stringify(feedId)}`);
+      return this.getFallbackPrice(usdtToUsdFeedId);
     }
 
     const result = prices.reduce((a, b) => a + b, 0) / prices.length;
     return result;
   }
 
-  private async getFallbackPrice(decodedFeed: string): Promise<number> {
-    const config = this.config.find(config => config.feed === decodedFeed);
+  private async getFallbackPrice(feedId: FeedId): Promise<number> {
+    const config = this.config.find(config => feedsEqual(config.feed, feedId));
     if (!config) {
-      this.logger.warn(`No config found for ${decodedFeed}`);
+      this.logger.warn(`No config found for ${JSON.stringify(feedId)}`);
       return undefined;
     }
 
@@ -156,7 +158,7 @@ export class CcxtFeed implements BaseDataFeed {
         ticker = await retry(async () => await exchange.fetchTicker(symbol), RETRY_BACKOFF_MS);
         let price;
         if (source.symbol.endsWith("USDT")) {
-          if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice("USDT");
+          if (usdtToUsd === undefined) usdtToUsd = await this.getFeedPrice(usdtToUsd);
           price = ticker.last * usdtToUsd;
         } else {
           price = ticker.last;
@@ -170,7 +172,7 @@ export class CcxtFeed implements BaseDataFeed {
       }
     }
 
-    this.logger.error(`No fallback price found for ${decodedFeed}`);
+    this.logger.error(`No fallback price found for ${JSON.stringify(feedId)}`);
     return undefined;
   }
 
@@ -193,9 +195,13 @@ export class CcxtFeed implements BaseDataFeed {
       const jsonString = readFileSync(configPath, "utf-8");
       const config: FeedConfig[] = JSON.parse(jsonString);
 
-      if (config.find(feed => feed.feed === "USDT") === undefined) {
+      if (config.find(feed => feedsEqual(feed.feed, usdtToUsdFeedId)) === undefined) {
         throw new Error("Must provide USDT feed sources, as it is used for USD conversion.");
       }
+
+      config.forEach(feed => {
+        console.log(feed.feed);
+      });
 
       return config;
     } catch (err) {
@@ -205,37 +211,6 @@ export class CcxtFeed implements BaseDataFeed {
   }
 }
 
-// Helpers
-
-function decodeFeed(hexFeed: string): string {
-  hexFeed = unPrefix0x(hexFeed);
-  if (hexFeed.length !== 16) {
-    throw new Error(`Invalid feed string: ${hexFeed}`);
-  }
-
-  return fromHex(hexFeed);
-}
-
-function unPrefix0x(tx: string) {
-  if (!tx) {
-    return "0x0";
-  } else if (tx.startsWith("0x") || tx.startsWith("0X")) {
-    return tx.slice(2);
-  } else if (tx.startsWith("-0x") || tx.startsWith("-0X")) {
-    return tx.slice(3);
-  }
-  return tx;
-}
-
-export function fromHex(hexString: string) {
-  let decoded = "";
-  for (let i = 0; i < hexString.length; i += 2) {
-    const charCode = parseInt(hexString.substr(i, 2), 16);
-    if (charCode === 0 || charCode > 112) {
-      continue;
-    } else {
-      decoded += String.fromCharCode(charCode);
-    }
-  }
-  return decodeURIComponent(decoded);
+function feedsEqual(a: FeedId, b: FeedId): boolean {
+  return a.type === b.type && a.name === b.name;
 }

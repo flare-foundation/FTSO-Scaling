@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/feed-values/{votingRoundId}": {
+      "post": {
+        "operationId": "getFeedValues",
+        "parameters": [{ "name": "votingRoundId", "required": true, "in": "path", "schema": { "type": "number" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeedValuesRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeedValuesResponse" } } }
+          }
+        },
+        "tags": ["Feed Value Provider API"]
+      }
+    },
+    "/feed-value/{votingRoundId}/{feed}": {
+      "get": {
+        "operationId": "getFeedValue",
+        "parameters": [
+          { "name": "votingRoundId", "required": true, "in": "path", "schema": { "type": "number" } },
+          { "required": true, "name": "type", "in": "query", "schema": { "type": "number" } },
+          { "required": true, "name": "name", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeedValueResponse" } } }
+          }
+        },
+        "tags": ["Feed Value Provider API"]
+      }
+    }
+  },
+  "info": {
+    "title": "Simple Feed Value Provider API interface",
+    "description": "This server is used by the FTSO protocol data provider.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "FeedId": {
+        "type": "object",
+        "properties": { "type": { "type": "number" }, "name": { "type": "string" } },
+        "required": ["type", "name"]
+      },
+      "FeedValuesRequest": {
+        "type": "object",
+        "properties": { "feeds": { "type": "array", "items": { "$ref": "#/components/schemas/FeedId" } } },
+        "required": ["feeds"]
+      },
+      "FeedValueData": {
+        "type": "object",
+        "properties": {
+          "feed": { "$ref": "#/components/schemas/FeedId" },
+          "value": { "type": "number", "description": "Value in base units as float" }
+        },
+        "required": ["feed", "value"]
+      },
+      "FeedValuesResponse": {
+        "type": "object",
+        "properties": {
+          "votingRoundId": { "type": "number" },
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/FeedValueData" } }
+        },
+        "required": ["votingRoundId", "data"]
+      },
+      "FeedValueResponse": {
+        "type": "object",
+        "properties": {
+          "votingRoundId": { "type": "number" },
+          "data": { "$ref": "#/components/schemas/FeedValueData" }
+        },
+        "required": ["votingRoundId", "data"]
+      }
+    }
+  }
+}

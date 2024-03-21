@@ -1,6 +1,6 @@
 [
   {
-    "feed": "FLR",
+    "feed": { "type": 1, "name": "FLR/USD" },
     "sources": [
       {
         "exchange": "coinbasepro",
@@ -25,7 +25,7 @@
     ]
   },
   {
-    "feed": "SGB",
+    "feed": { "type": 1, "name": "SGB/USD" },
     "sources": [
       {
         "exchange": "gate",
@@ -38,7 +38,7 @@
     ]
   },
   {
-    "feed": "XRP",
+    "feed": { "type": 1, "name": "XRP/USD" },
     "sources": [
       {
         "exchange": "bitget",
@@ -75,7 +75,7 @@
     ]
   },
   {
-    "feed": "LTC",
+    "feed": { "type": 1, "name": "LTC/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -112,7 +112,7 @@
     ]
   },
   {
-    "feed": "XLM",
+    "feed": { "type": 1, "name": "XLM/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -153,7 +153,7 @@
     ]
   },
   {
-    "feed": "DOGE",
+    "feed": { "type": 1, "name": "DOGE/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -195,7 +195,7 @@
     ]
   },
   {
-    "feed": "ADA",
+    "feed": { "type": 1, "name": "ADA/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -237,7 +237,7 @@
     ]
   },
   {
-    "feed": "ALGO",
+    "feed": { "type": 1, "name": "ALGO/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -271,7 +271,7 @@
     ]
   },
   {
-    "feed": "BTC",
+    "feed": { "type": 1, "name": "BTC/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -312,7 +312,7 @@
     ]
   },
   {
-    "feed": "ETH",
+    "feed": { "type": 1, "name": "ETH/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -353,7 +353,7 @@
     ]
   },
   {
-    "feed": "FIL",
+    "feed": { "type": 1, "name": "FIL/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -390,7 +390,7 @@
     ]
   },
   {
-    "feed": "ARB",
+    "feed": { "type": 1, "name": "ARB/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -427,7 +427,7 @@
     ]
   },
   {
-    "feed": "AVAX",
+    "feed": { "type": 1, "name": "AVAX/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -468,7 +468,7 @@
     ]
   },
   {
-    "feed": "BNB",
+    "feed": { "type": 1, "name": "BNB/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -493,7 +493,7 @@
     ]
   },
   {
-    "feed": "MATIC",
+    "feed": { "type": 1, "name": "MATIC/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -530,7 +530,7 @@
     ]
   },
   {
-    "feed": "SOL",
+    "feed": { "type": 1, "name": "SOL/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -571,7 +571,7 @@
     ]
   },
   {
-    "feed": "USDC",
+    "feed": { "type": 1, "name": "USDC/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -596,7 +596,7 @@
     ]
   },
   {
-    "feed": "USDT",
+    "feed": { "type": 1, "name": "USDT/USD" },
     "sources": [
       {
         "exchange": "coinbasepro",
@@ -605,7 +605,7 @@
     ]
   },
   {
-    "feed": "XDC",
+    "feed": { "type": 1, "name": "XDC/USD" },
     "sources": [
       {
         "exchange": "bitget",
@@ -622,7 +622,7 @@
     ]
   },
   {
-    "feed": "TRX",
+    "feed": { "type": 1, "name": "TRX/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -647,7 +647,7 @@
     ]
   },
   {
-    "feed": "DOT",
+    "feed": { "type": 1, "name": "DOT/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -688,7 +688,7 @@
     ]
   },
   {
-    "feed": "LINK",
+    "feed": { "type": 1, "name": "LINK/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -729,7 +729,7 @@
     ]
   },
   {
-    "feed": "TON",
+    "feed": { "type": 1, "name": "TON/USD" },
     "sources": [
       {
         "exchange": "gate",
@@ -746,7 +746,7 @@
     ]
   },
   {
-    "feed": "ICP",
+    "feed": { "type": 1, "name": "ICP/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -787,7 +787,7 @@
     ]
   },
   {
-    "feed": "SHIB",
+    "feed": { "type": 1, "name": "SHIB/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -828,7 +828,7 @@
     ]
   },
   {
-    "feed": "DAI",
+    "feed": { "type": 1, "name": "DAI/USD" },
     "sources": [
       {
         "exchange": "bitget",
@@ -857,7 +857,7 @@
     ]
   },
   {
-    "feed": "BCH",
+    "feed": { "type": 1, "name": "BCH/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -894,7 +894,7 @@
     ]
   },
   {
-    "feed": "ATOM",
+    "feed": { "type": 1, "name": "ATOM/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -935,7 +935,7 @@
     ]
   },
   {
-    "feed": "UNI",
+    "feed": { "type": 1, "name": "UNI/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -972,7 +972,7 @@
     ]
   },
   {
-    "feed": "LEO",
+    "feed": { "type": 1, "name": "LEO/USD" },
     "sources": [
       {
         "exchange": "gate",
@@ -985,7 +985,7 @@
     ]
   },
   {
-    "feed": "ETC",
+    "feed": { "type": 1, "name": "ETC/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -1022,7 +1022,7 @@
     ]
   },
   {
-    "feed": "INJ",
+    "feed": { "type": 1, "name": "INJ/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -1059,7 +1059,7 @@
     ]
   },
   {
-    "feed": "EUR",
+    "feed": { "type": 2, "name": "EUR/USD" },
     "sources": [
       {
         "exchange": "binance",

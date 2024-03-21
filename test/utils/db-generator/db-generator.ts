@@ -3,7 +3,6 @@ import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
 import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../basic-generators";
-import { generateFeedName } from "../generators";
 import { generateRewardEpochDataForRewardCalculation } from "../generators-rewards";
 import { setupEnvVariables, setupEpochSettings } from "../test-epoch-settings";
 import { RewardEpochDataGenerationConfig } from "./interfaces";
@@ -11,6 +10,7 @@ import FakeTimers from "@sinonjs/fake-timers";
 import { printSummary } from "../indexer-db-summary";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import { existsSync, rmSync } from "fs";
+import { toFeedId } from "../generators";
 
 async function initializeConfig(config: RewardEpochDataGenerationConfig) {
   const logger = config.logger ?? emptyLogger;
@@ -30,14 +30,14 @@ export function generateFeeds(numberOfFeeds: number): Feed[] {
   for (let i = 0; i < numberOfFeeds; i++) {
     const feedName = `feed${i}`;
     const feedDecimals = 5;
-    feeds.push({ name: generateFeedName(feedName), decimals: feedDecimals });
+    feeds.push({ id: toFeedId(feedName), decimals: feedDecimals });
   }
   return feeds;
 }
 
 export async function runDBGenerator(config: RewardEpochDataGenerationConfig) {
   const clock = FakeTimers.install({ now: Date.now() });
-  initializeConfig(config);
+  await initializeConfig(config);
   const feeds = generateFeeds(config.numberOfFeeds);
   const voters = generateVoters(config.numberOfVoters);
 

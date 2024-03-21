@@ -1,5 +1,5 @@
 import { Logger } from "@nestjs/common";
-import { FeedPriceData } from "../dto/provider-requests.dto";
+import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
 
 /** Safe default value that will not overflow for all default feeds. */
@@ -11,15 +11,15 @@ export class FixedFeed implements BaseDataFeed {
   constructor() {
     this.logger.warn(`Initializing FixedFeed, will return ${DEFAULT_PRICE} for all feeds.`);
   }
-  async getPrice(feed: string): Promise<FeedPriceData> {
+  async getValue(feed: FeedId): Promise<FeedValueData> {
     return {
       feed,
-      price: DEFAULT_PRICE,
+      value: DEFAULT_PRICE,
     };
   }
 
-  async getPrices(feeds: string[]): Promise<FeedPriceData[]> {
-    const promises = feeds.map(feed => this.getPrice(feed));
+  async getValues(feeds: FeedId[]): Promise<FeedValueData[]> {
+    const promises = feeds.map(feed => this.getValue(feed));
     return Promise.all(promises);
   }
 }

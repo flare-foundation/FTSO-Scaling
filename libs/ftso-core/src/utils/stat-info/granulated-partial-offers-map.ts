@@ -7,7 +7,7 @@ import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { OFFERS_FILE } from "./constants";
 
 export interface FeedOffers {
-  readonly feedName: string;
+  readonly feedId: string;
   readonly offers: IPartialRewardOfferForRound[];
 }
 export interface OffersPerVotingRound {
@@ -46,9 +46,9 @@ export function serializeGranulatedPartialOfferMap(
       feedOffers: [],
     };
 
-    for (const [feedName, offers] of feedOffers.entries()) {
+    for (const [feedId, offers] of feedOffers.entries()) {
       offersPerVotingRound.feedOffers.push({
-        feedName,
+        feedId: feedId,
         offers,
       });
     }
@@ -76,7 +76,7 @@ export function deserializeGranulatedPartialOfferMap(
   const offersPerVotingRound: OffersPerVotingRound = JSON.parse(readFileSync(offersPath, "utf8"), bigIntReviver);
   const feedOffers = new Map<string, IPartialRewardOfferForRound[]>();
   for (const feedOffer of offersPerVotingRound.feedOffers) {
-    feedOffers.set(feedOffer.feedName, feedOffer.offers);
+    feedOffers.set(feedOffer.feedId, feedOffer.offers);
   }
   return feedOffers;
 }

@@ -32,7 +32,7 @@ export function distributeInflationRewardOfferToFeeds(
  * Given all reward offers for reward epoch it splits them into partial reward offers for voting rounds and feeds.
  * First inflation reward offers are used to generate partial reward offers for feeds.
  * Then each reward offer is split to partial reward offers for each voting round.
- * A map: votingRoundId => feedName => partialRewardOffer[] is returned containing all partial reward offers.
+ * A map: votingRoundId => feedId => partialRewardOffer[] is returned containing all partial reward offers.
  */
 export function granulatedPartialOfferMap(
   startVotingRoundId: number,
@@ -54,12 +54,12 @@ export function granulatedPartialOfferMap(
     );
     for (const votingEpochRewardOffer of votingEpochRewardOffers) {
       const votingRoundId = votingEpochRewardOffer.votingRoundId!;
-      const feedName = votingEpochRewardOffer.feedName;
+      const feedId = votingEpochRewardOffer.feedId;
       const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
       rewardOfferMap.set(votingRoundId, feedOffers);
-      const feedNameOffers = feedOffers.get(feedName) || [];
-      feedOffers.set(feedName, feedNameOffers);
-      feedNameOffers.push(votingEpochRewardOffer);
+      const feedIdOffers = feedOffers.get(feedId) || [];
+      feedOffers.set(feedId, feedIdOffers);
+      feedIdOffers.push(votingEpochRewardOffer);
     }
   }
   return rewardOfferMap;

@@ -3,6 +3,7 @@ import { MerkleTree } from "../../../libs/ftso-core/src/utils/MerkleTree";
 import { MerkleTreeStructs, TreeResult } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 import { MedianCalculationResult, RandomCalculationResult } from "../../../libs/ftso-core/src/voting-types";
 import Prando from "prando";
+import { toFeedId } from "../../utils/generators";
 
 describe("MerkleTree", () => {
   const random = new Prando(42);
@@ -27,7 +28,7 @@ describe("MerkleTree", () => {
       const delta2 = random.nextInt(0, 1000);
       const median: MedianCalculationResult = {
         votingRoundId: VOTING_ROUND_ID,
-        feed: { name: i.toString(16).padEnd(16, "0"), decimals: 5 },
+        feed: { id: toFeedId(i.toString()), decimals: 5 },
         votersSubmitAddresses: [], // Used in calculation, not needed for merkle tree
         feedValues: [], // Used in calculation, not needed for merkle tree
         data: {

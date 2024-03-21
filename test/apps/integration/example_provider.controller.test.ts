@@ -4,8 +4,9 @@ import { ExampleProviderController } from "../../../apps/example_provider/src/ex
 import { CcxtFeed, CCXT_FALLBACK_PRICE } from "../../../apps/example_provider/src/price-feeds/ccxt-provider-service";
 import { RandomFeed } from "../../../apps/example_provider/src/price-feeds/random-feed";
 import { sleepFor } from "../../../libs/ftso-core/src/utils/retry";
+import { FeedId } from "../../../apps/example_provider/src/dto/provider-requests.dto";
 
-const BTC_USD = "4254430000000000";
+const BTC_USD: FeedId = { type: 1, name: "4254430000000000" };
 
 describe("ExampleProviderController Random", () => {
   let exampleProviderController: ExampleProviderController;
@@ -18,7 +19,7 @@ describe("ExampleProviderController Random", () => {
 
   describe("Example Random provider test ", () => {
     it('return the voting round id that was provided"', async () => {
-      const feedRes = await exampleProviderController.getPriceFeed(123, BTC_USD);
+      const feedRes = await exampleProviderController.getFeedValue(123, BTC_USD);
       expect(feedRes.votingRoundId).to.be.equal(123);
     });
   });
@@ -41,16 +42,16 @@ describe.skip("ExampleProviderController CCXT", () => {
 
   describe("Example CCXT provider test ", () => {
     it('return the voting round id that was provided"', async () => {
-      const feedRes = await exampleProviderController.getPriceFeed(123, BTC_USD);
+      const feedRes = await exampleProviderController.getFeedValue(123, BTC_USD);
       expect(feedRes.votingRoundId).to.be.equal(123);
     });
 
     it("should get BTC USD price", async () => {
-      const feedRes = await exampleProviderController.getPriceFeed(123, BTC_USD);
+      const feedRes = await exampleProviderController.getFeedValue(123, BTC_USD);
       expect(feedRes.votingRoundId).to.be.equal(123);
-      expect(feedRes.feedPriceData.price).to.be.greaterThan(0);
-      expect(feedRes.feedPriceData.feed).to.be.equal(BTC_USD);
-      expect(feedRes.feedPriceData.price).not.to.be.equal(CCXT_FALLBACK_PRICE);
+      expect(feedRes.data.value).to.be.greaterThan(0);
+      expect(feedRes.data.feed).to.be.equal(BTC_USD);
+      expect(feedRes.data.value).not.to.be.equal(CCXT_FALLBACK_PRICE);
     });
 
     it.skip("should return all coston prices", async () => {
@@ -89,13 +90,15 @@ describe.skip("ExampleProviderController CCXT", () => {
         "INJ",
         "EUR",
       ];
-      const encoded = feeds.map(feed => Buffer.from(feed).toString("hex").padEnd(16, "0"));
+      const feedIds: FeedId[] = feeds.map(feed => {
+        return { type: 1, name: `${feed}/USD` };
+      });
 
       await sleepFor(40_000);
 
-      const bulkRes = await exampleProviderController.getPriceFeeds(123, { feeds: encoded });
-      for (const [i, price] of bulkRes.feedPriceData.entries()) {
-        console.log(`Feed ${feeds[i]} price: ${price.price}`);
+      const bulkRes = await exampleProviderController.getFeedValues(123, { feeds: feedIds });
+      for (const [i, price] of bulkRes.data.entries()) {
+        console.log(`Feed ${feeds[i]} price: ${price.value}`);
       }
     });
   });

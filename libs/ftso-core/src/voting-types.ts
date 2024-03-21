@@ -51,11 +51,19 @@ export interface MedianCalculationSummary {
  */
 export interface Feed {
   /**
-   *  8 characters/bytes or 16 hex chars (18 if 0x prefix)
+   *  Hex-encoded feed id. 21 characters/bytes or 42 hex chars (44 if 0x prefix)
    */
-  name: string;
+  id: string;
   /**
    * int8 (solidity int8) the number of decimals in the price.
    */
   decimals: number;
+}
+
+export enum FeedType {
+  None = 0,
+  Crypto = 1,
+  FX = 2,
+  Commodity = 3,
+  Stock = 4,
 }

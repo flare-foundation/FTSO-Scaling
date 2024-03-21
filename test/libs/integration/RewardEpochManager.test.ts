@@ -11,15 +11,10 @@ import { generateRewardEpochEvents } from "../../utils/generators";
 import { getDataSource } from "../../utils/db";
 import { DataSource, EntityManager } from "typeorm";
 import { expect } from "chai";
-import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateState, generateVoters, TestVoter } from "../../utils/basic-generators";
+import { testFeeds } from "../../apps/integration/ftso-data-provider.service.test";
 
 describe("RewardEpochManager", () => {
-  const feeds: Feed[] = [
-    { name: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
-    { name: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
-    { name: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
-  ];
   const voters: TestVoter[] = generateVoters(4);
   const offerCount = 2;
   const indexerHistorySec = 1000;
@@ -53,7 +48,7 @@ describe("RewardEpochManager", () => {
   });
 
   async function setUpRewardEpoch(rewardEpochId: number) {
-    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), feeds, offerCount, rewardEpochId, voters);
+    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
     await em.save(epochEvents);
 
     const lowerState = generateState(FIRST_DATABASE_INDEX_STATE, 0);

@@ -7,9 +7,8 @@ import {
   granulatedPartialOfferMap,
   splitRewardOfferByTypes,
 } from "../../../libs/ftso-core/src/reward-calculation/reward-offers";
-import { generateAddress, generateInflationRewardOffer, generateRewardsOffer } from "../../utils/generators";
+import { generateAddress, generateInflationRewardOffer, generateRewardsOffer, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
-import Web3 from "web3";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
 
 describe(`Reward offers, ${getTestFile(__filename)}`, function () {
@@ -59,13 +58,13 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   });
 
   it("should have offers for each feed each round", function () {
-    const feedName3 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C3"), 16).slice(0, 18);
-    const feedName4 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C4"), 16).slice(0, 18);
-    const feedName10 = Web3.utils.padRight(Web3.utils.utf8ToHex("USD C10"), 16).slice(0, 18);
+    const feedId3 = toFeedId("USD C3");
+    const feedId4 = toFeedId("USD C4");
+    const feedId10 = toFeedId("USD C10");
 
-    expect(granulatedPartialOffers.get(5893).get(feedName3).length).to.eq(3);
-    expect(granulatedPartialOffers.get(5893).get(feedName4).length).to.eq(2);
-    expect(granulatedPartialOffers.get(5893).get(feedName10).length).to.eq(1);
+    expect(granulatedPartialOffers.get(5893).get(feedId3).length).to.eq(3);
+    expect(granulatedPartialOffers.get(5893).get(feedId4).length).to.eq(2);
+    expect(granulatedPartialOffers.get(5893).get(feedId10).length).to.eq(1);
   });
 
   it("should split reward by types", function () {
