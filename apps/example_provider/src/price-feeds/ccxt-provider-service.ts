@@ -111,7 +111,7 @@ export class CcxtFeed implements BaseDataFeed {
   private async getFeedPrice(feedId: FeedId): Promise<number> {
     const config = this.config.find(config => feedsEqual(config.feed, feedId));
     if (!config) {
-      this.logger.warn(`No config found for ${feedId}`);
+      this.logger.warn(`No config found for ${JSON.stringify(feedId)}`);
       return undefined;
     }
 
@@ -132,7 +132,7 @@ export class CcxtFeed implements BaseDataFeed {
     }
 
     if (prices.length === 0) {
-      this.logger.warn(`No prices found for ${feedId}`);
+      this.logger.warn(`No prices found for ${JSON.stringify(feedId)}`);
       return this.getFallbackPrice(usdtToUsdFeedId);
     }
 
@@ -143,7 +143,7 @@ export class CcxtFeed implements BaseDataFeed {
   private async getFallbackPrice(feedId: FeedId): Promise<number> {
     const config = this.config.find(config => feedsEqual(config.feed, feedId));
     if (!config) {
-      this.logger.warn(`No config found for ${feedId}`);
+      this.logger.warn(`No config found for ${JSON.stringify(feedId)}`);
       return undefined;
     }
 
@@ -172,7 +172,7 @@ export class CcxtFeed implements BaseDataFeed {
       }
     }
 
-    this.logger.error(`No fallback price found for ${feedId}`);
+    this.logger.error(`No fallback price found for ${JSON.stringify(feedId)}`);
     return undefined;
   }
 
