@@ -28,16 +28,17 @@ test-all:
   needs: []
   image: node:18
   cache:
-    - key:
-        files:
-          - yarn.lock
-      paths:
-        - node_modules/
-      policy: pull
+  - key:
+      files:
+      - yarn.lock
+    paths:
+    - node_modules
+    - .yarn-cache
+    policy: pull-push
   before_script:
-    - yarn install --frozen-lockfile
+  - yarn install --frozen-lockfile --cache-folder .yarn-cache
   script:
-    - yarn test:all
+  - yarn test:all
 
 # TODO: enable coverage reports
 # test-coverage:
