@@ -18,15 +18,15 @@ import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/Enc
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateTx, generateVoters } from "../../utils/basic-generators";
 import { MockIndexerDB } from "../../utils/db";
-import { currentTimeSec, generateRewardEpochEvents } from "../../utils/generators";
+import { currentTimeSec, generateRewardEpochEvents, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
 
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   const feeds: Feed[] = [
-    { id: "4254430055534454", decimals: 2 }, // BTC USDT 38,573.26
-    { id: "4554480055534454", decimals: 2 }, // ETH USDT 2,175.12
-    { id: "464c520055534454", decimals: 5 }, // FLR USDT 0.02042
+    { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26
+    { id: toFeedId("ETH/USD", true), decimals: 2 }, // ETH USDT 2,175.12
+    { id: toFeedId("FRL/USD", true), decimals: 5 }, // FLR USDT 0.02042
   ];
   const samplePrices = [38573.26, 2175.12, 0.02042];
 

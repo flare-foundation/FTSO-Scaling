@@ -13,9 +13,9 @@
               "type": "uint32"
             },
             {
-              "internalType": "bytes8",
-              "name": "name",
-              "type": "bytes8"
+              "internalType": "bytes21",
+              "name": "id",
+              "type": "bytes21"
             },
             {
               "internalType": "int32",
@@ -60,9 +60,9 @@
                   "type": "uint32"
                 },
                 {
-                  "internalType": "bytes8",
-                  "name": "name",
-                  "type": "bytes8"
+                  "internalType": "bytes21",
+                  "name": "id",
+                  "type": "bytes21"
                 },
                 {
                   "internalType": "int32",

@@ -387,7 +387,7 @@ export function generateVotersWeights(numberOfVoters: number) {
 
 export function generateMedianCalculationResult(
   numberOfVoters: number,
-  feedId: string,
+  feedName: string,
   votingRoundId: number,
   lowTurnout = false
 ) {
@@ -410,7 +410,7 @@ export function generateMedianCalculationResult(
   const data = calculateMedian(voters, feedValues, weights, 2);
 
   const feed: Feed = {
-    id: generateFeedId(feedId),
+    id: toFeedId(feedName),
     decimals: 2,
   };
 
@@ -425,4 +425,10 @@ export function generateMedianCalculationResult(
   };
 
   return medianCalculationResult;
+}
+
+export function toFeedId(feedName: string, unprefixed: boolean = false) {
+  const feedIdHex = FEED_TYPE_CRYPTO + Web3.utils.utf8ToHex(feedName).slice(2).padEnd(40, "0");
+  if (unprefixed) return feedIdHex.slice(2);
+  else return feedIdHex;
 }
