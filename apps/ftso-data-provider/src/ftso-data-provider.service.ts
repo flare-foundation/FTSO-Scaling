@@ -27,7 +27,7 @@ import { retry } from "../../../libs/ftso-core/src/utils/retry";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { EpochResult, Feed } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
-import { Api } from "./price-provider-api/generated/provider-api";
+import { Api, FeedId } from "./feed-value-provider-api/generated/provider-api";
 
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 
@@ -96,7 +96,7 @@ export class FtsoDataProviderService {
       return cached;
     }
 
-    const data = await this.getPricesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
+    const data = await this.getFeedValuesForEpoch(votingRoundId, rewardEpoch.canonicalFeedOrder);
     this.logger.debug(
       `Got fresh voting round data for ${votingRoundId}: ${submissionAddress} ${data.random} ${data.encodedValues}`
     );
@@ -214,33 +214,57 @@ export class FtsoDataProviderService {
 
   // Internal methods
 
-  private async getPricesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
-    const pricesRes = await retry(
+  private async getFeedValuesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
+    const valuesRes = await retry(
       async () =>
-        await this.priceProviderClient.priceProviderApi.getPriceFeeds(votingRoundId, {
-          feeds: supportedFeeds.map(feed => feed.id),
+        await this.priceProviderClient.feedValueProviderApi.getFeedValues(votingRoundId, {
+          feeds: supportedFeeds.map(feed => decodeFeed(feed.id)),
         })
     );
 
-    if (pricesRes.status < 200 || pricesRes.status >= 300) {
-      throw new Error(`Failed to get prices for epoch ${votingRoundId}: ${pricesRes.data}`);
+    if (valuesRes.status < 200 || valuesRes.status >= 300) {
+      throw new Error(`Failed to get prices for epoch ${votingRoundId}: ${valuesRes.data}`);
     }
 
-    const prices = pricesRes.data;
+    const values = valuesRes.data;
 
-    // transfer prices to 4 byte hex strings and concatenate them
-    // make sure that the order of prices is in line with protocol definition
-    const extractedPrices = prices.feedPriceData.map(pri => pri.price);
+    // transfer values to 4 byte hex strings and concatenate them
+    // make sure that the order of values is in line with protocol definition
+    const extractedValues = values.data.map(d => d.value);
 
     return {
-      prices: extractedPrices,
+      prices: extractedValues,
       feeds: supportedFeeds,
       random: Bytes32.random().toString(),
-      encodedValues: FeedValueEncoder.encode(extractedPrices, supportedFeeds),
+      encodedValues: FeedValueEncoder.encode(extractedValues, supportedFeeds),
     };
   }
 }
 
+// Helpers
+
 function combine(round: number, address: string): RoundAndAddress {
   return [round, address].toString();
+}
+
+function decodeFeed(feedIdHex: string): FeedId {
+  feedIdHex = unPrefix0x(feedIdHex);
+  if (feedIdHex.length !== 42) {
+    throw new Error(`Invalid feed string: ${feedIdHex}`);
+  }
+
+  const type = parseInt(feedIdHex.slice(0, 2));
+  const name = Buffer.from(feedIdHex.slice(2), "hex").toString("utf8").replaceAll("\0", "");
+  return { type, name };
+}
+
+function unPrefix0x(tx: string) {
+  if (!tx) {
+    return "0x0";
+  } else if (tx.startsWith("0x") || tx.startsWith("0X")) {
+    return tx.slice(2);
+  } else if (tx.startsWith("-0x") || tx.startsWith("-0X")) {
+    return tx.slice(3);
+  }
+  return tx;
 }

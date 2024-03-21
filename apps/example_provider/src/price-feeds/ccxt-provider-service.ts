@@ -3,35 +3,13 @@ import ccxt, { Exchange, Ticker } from "ccxt";
 import { readFileSync } from "fs";
 import { networks } from "../../../../libs/ftso-core/src/configs/networks";
 import { retry } from "../../../../libs/ftso-core/src/utils/retry";
-import { FeedPriceData } from "../dto/provider-requests.dto";
+import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
 import { FeedType } from "../../../../libs/ftso-core/src/voting-types";
 
 export const CCXT_FALLBACK_PRICE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
 const RETRY_BACKOFF_MS = 10_000;
-
-export class FeedId {
-  constructor(readonly type: FeedType, readonly name: string) {}
-
-  toHex(): string {
-    const typeHex = this.type.valueOf().toString(16).padStart(2, "0");
-    const nameBuf = Buffer.from(this.name, "utf8");
-    return typeHex + nameBuf.toString("hex").padEnd(40, "0");
-  }
-
-  toString(): string {
-    return `(${this.type} ${this.name})`;
-  }
-
-  equals(other: FeedId): boolean {
-    return this.type === other.type && this.name === other.name;
-  }
-
-  static fromHex(hex: string): FeedId {
-    return decodeFeed(hex);
-  }
-}
 
 interface FeedConfig {
   feed: FeedId;
@@ -47,7 +25,8 @@ interface PriceInfo {
   exchange: string;
 }
 
-const usdtToUsdFeedId = new FeedId(FeedType.Crypto, "USDT/USD");
+const usdtToUsdFeedId: FeedId = { type: FeedType.Crypto.valueOf(), name: "USDT/USD" };
+
 export class CcxtFeed implements BaseDataFeed {
   private readonly logger = new Logger(CcxtFeed.name);
   protected initialized = false;
@@ -86,17 +65,16 @@ export class CcxtFeed implements BaseDataFeed {
     void this.watchTrades(exchangeToSymbols);
   }
 
-  async getPrices(hexFeeds: string[]): Promise<FeedPriceData[]> {
-    const promises = hexFeeds.map(feed => this.getPrice(feed));
+  async getValues(feeds: FeedId[]): Promise<FeedValueData[]> {
+    const promises = feeds.map(feed => this.getValue(feed));
     return Promise.all(promises);
   }
 
-  async getPrice(hexFeed: string): Promise<FeedPriceData> {
-    const decodedFeed = FeedId.fromHex(hexFeed);
-    const price = await this.getFeedPrice(decodedFeed);
+  async getValue(feed: FeedId): Promise<FeedValueData> {
+    const price = await this.getFeedPrice(feed);
     return {
-      feed: hexFeed,
-      price: price,
+      feed: feed,
+      value: price,
     };
   }
 
@@ -131,7 +109,7 @@ export class CcxtFeed implements BaseDataFeed {
   }
 
   private async getFeedPrice(feedId: FeedId): Promise<number> {
-    const config = this.config.find(config => config.feed.equals(feedId));
+    const config = this.config.find(config => feedsEqual(config.feed, feedId));
     if (!config) {
       this.logger.warn(`No config found for ${feedId}`);
       return undefined;
@@ -163,7 +141,7 @@ export class CcxtFeed implements BaseDataFeed {
   }
 
   private async getFallbackPrice(feedId: FeedId): Promise<number> {
-    const config = this.config.find(config => config.feed.equals(feedId));
+    const config = this.config.find(config => feedsEqual(config.feed, feedId));
     if (!config) {
       this.logger.warn(`No config found for ${feedId}`);
       return undefined;
@@ -215,19 +193,14 @@ export class CcxtFeed implements BaseDataFeed {
 
     try {
       const jsonString = readFileSync(configPath, "utf-8");
-      const config: FeedConfig[] = JSON.parse(jsonString, (key, value) => {
-        if (key === "feed") {
-          return new FeedId(value.type, value.name);
-        }
-        return value;
-      });
+      const config: FeedConfig[] = JSON.parse(jsonString);
 
-      if (config.find(feed => feed.feed.equals(usdtToUsdFeedId)) === undefined) {
+      if (config.find(feed => feedsEqual(feed.feed, usdtToUsdFeedId)) === undefined) {
         throw new Error("Must provide USDT feed sources, as it is used for USD conversion.");
       }
 
       config.forEach(feed => {
-        console.log(feed.feed.toHex());
+        console.log(feed.feed);
       });
 
       return config;
@@ -238,28 +211,6 @@ export class CcxtFeed implements BaseDataFeed {
   }
 }
 
-// Helpers
-
-export function decodeFeed(feedIdHex: string): FeedId {
-  feedIdHex = unPrefix0x(feedIdHex);
-  if (feedIdHex.length !== 42) {
-    throw new Error(`Invalid feed string: ${feedIdHex}`);
-  }
-
-  const type = parseInt(feedIdHex.slice(0, 2));
-  const feedType = FeedType[FeedType[type] as keyof typeof FeedType];
-
-  const nameBuf = Buffer.from(feedIdHex.slice(2), "hex");
-  return new FeedId(feedType, nameBuf.toString("utf8").replaceAll("\0", ""));
-}
-
-function unPrefix0x(tx: string) {
-  if (!tx) {
-    return "0x0";
-  } else if (tx.startsWith("0x") || tx.startsWith("0X")) {
-    return tx.slice(2);
-  } else if (tx.startsWith("-0x") || tx.startsWith("-0X")) {
-    return tx.slice(3);
-  }
-  return tx;
+function feedsEqual(a: FeedId, b: FeedId): boolean {
+  return a.type === b.type && a.name === b.name;
 }

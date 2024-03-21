@@ -1,18 +1,18 @@
-import { FeedPriceData } from "../dto/provider-requests.dto";
+import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
 
 const baseValue = 0.05;
 
 export class RandomFeed implements BaseDataFeed {
-  async getPrice(feed: string): Promise<FeedPriceData> {
+  async getValue(feed: FeedId): Promise<FeedValueData> {
     return {
       feed,
-      price: baseValue * (0.5 + Math.random()),
+      value: baseValue * (0.5 + Math.random()),
     };
   }
 
-  async getPrices(feeds: string[]): Promise<FeedPriceData[]> {
-    const promises = feeds.map(feed => this.getPrice(feed));
+  async getValues(feeds: FeedId[]): Promise<FeedValueData[]> {
+    const promises = feeds.map(feed => this.getValue(feed));
     return Promise.all(promises);
   }
 }

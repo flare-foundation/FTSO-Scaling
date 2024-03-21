@@ -1,10 +1,10 @@
-const { generateApi } = require("swagger-typescript-api");
-const path = require("path");
+import { generateApi } from "swagger-typescript-api";
+import path from "path";
 
 // NOTE: its assumed that this scrypt is run from the root of the project
 
-const input = path.resolve(process.cwd(), "./apps/ftso-data-provider/src/price-provider-api/api-spec.json");
-const output = path.resolve(process.cwd(), "./apps/ftso-data-provider/src/price-provider-api/generated");
+const input = path.resolve(process.cwd(), "./apps/ftso-data-provider/src/feed-value-provider-api/api-spec.json");
+const output = path.resolve(process.cwd(), "./apps/ftso-data-provider/src/feed-value-provider-api/generated");
 
 console.log(`Generating API from ${input} to ${output}`);
 
@@ -37,7 +37,7 @@ generateApi({
   enumKeySuffix: "",
   addReadonly: false,
   sortTypes: false,
-  sortRouters: false,
+  sortRoutes: false,
   extractingOptions: {
     requestBodySuffix: ["Payload", "Body", "Input"],
     requestParamsSuffix: ["Params"],
