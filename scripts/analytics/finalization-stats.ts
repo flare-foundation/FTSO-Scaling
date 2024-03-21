@@ -8,8 +8,14 @@ export interface FinalizerInfo {
   relativeTimestamp: number;
 }
 
+export interface SelectedVoter {
+  voterIndex: number;
+  address: string;
+}
+
 export interface FinalizationDataForVotingRound {
   votingRoundId: number;
+  selectedVoters: SelectedVoter[];
   data: FinalizerInfo[];
 }
 
@@ -43,8 +49,16 @@ export async function finalizationSummary(
       };
     });
     finalizerInfos.sort((a, b) => a.relativeTimestamp - b.relativeTimestamp);
+    const selectedVoters = roundData.eligibleFinalizers.map(address => {
+      const voterIndex = signingAddressToVoterId.get(address);
+      return {
+        voterIndex,
+        address,
+      } as SelectedVoter;
+    });
     result.push({
       votingRoundId,
+      selectedVoters,
       data: finalizerInfos,
     });
   }
@@ -56,7 +70,9 @@ export async function finalizationSummary(
 
 export function printFinalizationSummary(finalizations: FinalizationData) {
   for (const finVotingRoundId of finalizations.finalizationData) {
-    let finalizationString = `${finVotingRoundId.votingRoundId}:`;
+    let finalizationString = `${finVotingRoundId.votingRoundId}: [${finVotingRoundId.selectedVoters
+      .map(voter => voter.voterIndex)
+      .join(", ")}]`;
     for (const finalizerInfo of finVotingRoundId.data) {
       finalizationString += ` ${finalizerInfo.voterIndex ?? finalizerInfo.address.slice(0, 10)}${
         finalizerInfo.successful ? "F" : ""
@@ -64,4 +80,8 @@ export function printFinalizationSummary(finalizations: FinalizationData) {
     }
     console.log(finalizationString);
   }
+  console.log("------ Interpretation ------");
+  console.log(
+    `voting round id: [selected finalizers] ...finalizerIndexOrAddress[F-first finalizer][G-in grace period](relative timestamp sec)`
+  );
 }

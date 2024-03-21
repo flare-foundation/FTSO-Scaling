@@ -80,4 +80,8 @@ export function printSignatureSummary(data: SignatureData) {
     }
     console.log(signerString);
   }
+  console.log("------ Interpretation ------");
+  console.log(
+    `voting round id: ...finalizerIndexOrAddress[G-in grace period][X-not matching finalized merkle root](relative timestamp in sec)`
+  );
 }
