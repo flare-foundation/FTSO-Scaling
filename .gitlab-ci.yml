@@ -4,21 +4,6 @@ workflow:
       when: never
     - when: always
 
-test-all:
-  stage: test
-  image: node:18
-  cache:
-    - key:
-        files:
-          - yarn.lock
-      paths:
-        - node_modules/
-      policy: pull
-  before_script:
-    - yarn install --frozen-lockfile
-  script:
-    - yarn test:all
-
 build-container:
   stage: build
   needs: []
@@ -38,6 +23,21 @@ build-container:
     variables:
       CTS_BUILD_TAG: $CI_COMMIT_REF_SLUG
 
+test-all:
+  stage: test
+  needs: []
+  image: node:18
+  cache:
+    - key:
+        files:
+          - yarn.lock
+      paths:
+        - node_modules/
+      policy: pull
+  before_script:
+    - yarn install --frozen-lockfile
+  script:
+    - yarn test:all
 
 # TODO: enable coverage reports
 # test-coverage:
