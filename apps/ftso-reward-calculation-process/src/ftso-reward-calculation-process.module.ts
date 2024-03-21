@@ -3,8 +3,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import configuration, { IConfig } from "./config/configuration";
 
-import { FtsoRewardCalculationProcessCommand } from "./commands/ftso-reward-calculator-process.command";
 import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
+import { FtsoRewardCalculationProcessCommand } from "./commands/ftso-reward-calculator-process.command";
 import { CalculatorService } from "./services/calculator.service";
 
 const IMPORTS_ARRAY = [

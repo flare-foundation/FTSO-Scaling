@@ -80,6 +80,7 @@ export interface SDataForRewardCalculation {
   firstSuccessfulFinalization?: ParsedFinalizationData;
   medianSummaries: MedianCalculationSummary[];
   randomResult: SimplifiedRandomCalculationResult;
+  eligibleFinalizers: string[];
 }
 
 function simplifyRandomCalculationResult(randomResult: RandomCalculationResult): SimplifiedRandomCalculationResult {
@@ -99,6 +100,7 @@ export function serializeDataForRewardCalculation(
   rewardCalculationData: DataForRewardCalculation,
   medianResults: MedianCalculationResult[],
   randomResult: RandomCalculationResult,
+  eligibleFinalizationRewardVotersInGracePeriod: string[],
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
@@ -123,6 +125,7 @@ export function serializeDataForRewardCalculation(
     firstSuccessfulFinalization: rewardCalculationData.firstSuccessfulFinalization,
     medianSummaries: medianResults.map(res => res.data),
     randomResult: simplifyRandomCalculationResult(randomResult),
+    eligibleFinalizers: eligibleFinalizationRewardVotersInGracePeriod,
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }

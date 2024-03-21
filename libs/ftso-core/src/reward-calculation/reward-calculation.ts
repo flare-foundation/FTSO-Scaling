@@ -161,16 +161,6 @@ export async function partialRewardClaimsForVotingRound(
     rewardDataForCalculations.dataForCalculations
   );
 
-  if (serializeResults) {
-    const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
-    const calculationResults = [
-      MerkleTreeStructs.fromRandomCalculationResult(randomData),
-      ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
-    ];
-    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
-    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData);
-  }
-
   // feedName => medianResult
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of medianResults) {
@@ -192,6 +182,18 @@ export async function partialRewardClaimsForVotingRound(
   const eligibleFinalizationRewardVotersInGracePeriod = new Set(
     randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
   );
+
+  if (serializeResults) {
+    const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
+    const calculationResults = [
+      MerkleTreeStructs.fromRandomCalculationResult(randomData),
+      ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+    ];
+    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
+    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
+      ...eligibleFinalizationRewardVotersInGracePeriod,
+    ]);
+  }
 
   // Calculate reward claims for each feed offer
   for (const [feedName, offers] of feedOffers.entries()) {
