@@ -811,6 +811,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
         const hash = CommitData.hashForCommit(
           voter.submitAddress,
+          votingEpochId,
           voterRevealData.random,
           voterRevealData.encodedValues
         );
