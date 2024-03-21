@@ -4,7 +4,7 @@ workflow:
       when: never
     - when: always
 
-.test:
+test-all:
   stage: test
   image: node:18
   cache:
@@ -16,14 +16,11 @@ workflow:
       policy: pull
   before_script:
     - yarn install --frozen-lockfile
-
-test-all:
-  extends: .test
   script:
     - yarn test:all
 
 # TODO: enable coverage reports
 # test-coverage:
-#   extends: .test
+#   extends: test-all
 #   script:
 #     - yarn test:coverage
