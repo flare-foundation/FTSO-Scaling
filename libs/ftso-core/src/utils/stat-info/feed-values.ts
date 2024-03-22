@@ -54,8 +54,8 @@ export function serializeFeedValuesForVotingRoundId(
     ContractMethodNames.randomStruct,
     0
   ).abi;
-  const randomResult = calculationResults.find(x => !(x as any).name) as RandomResult;
-  const feedResults = calculationResults.filter(x => (x as any).name) as FeedResult[];
+  const randomResult = calculationResults.find(x => !(x as any).id) as RandomResult;
+  const feedResults = calculationResults.filter(x => (x as any).id) as FeedResult[];
   if (!randomResult || feedResults.length + 1 !== calculationResults.length) {
     throw new Error("Invalid calculation results!");
   }
