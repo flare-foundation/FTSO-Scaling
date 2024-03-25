@@ -1,12 +1,14 @@
 import { ethers } from "ethers";
-import { CONTRACTS, ContractMethodNames } from "../configs/networks";
+import { CONTRACTS } from "../configs/networks";
+import { ContractMethodNames } from "../configs/contracts";
 import { MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 import { EncodingUtils } from "./EncodingUtils";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
+// Needs to be kept in sync with IFtsoFeedPublisher.Feed struct in smart contracts
 export interface FeedResult {
   readonly votingRoundId: number;
-  readonly name: string; // Needs to be 0x-prefixed for abi encoding
+  readonly id: string; // Needs to be 0x-prefixed for abi encoding
   readonly value: number;
   readonly turnoutBIPS: number;
   readonly decimals: number;
@@ -44,7 +46,9 @@ export namespace MerkleTreeStructs {
   export function fromMedianCalculationResult(medianCalculationResult: MedianCalculationResult): FeedResult {
     return {
       votingRoundId: medianCalculationResult.votingRoundId,
-      name: "0x" + medianCalculationResult.feed.name,
+      id: medianCalculationResult.feed.id.startsWith("0x")
+        ? medianCalculationResult.feed.id
+        : "0x" + medianCalculationResult.feed.id,
       value: medianCalculationResult.data.finalMedianPrice.value,
       turnoutBIPS: Number(
         (medianCalculationResult.data.participatingWeight * 10000n) / medianCalculationResult.totalVotingWeight

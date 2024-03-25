@@ -29,15 +29,58 @@
       "request": "launch",
       "name": "Test FTSO reward logic",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["test", "test/libs/unit/ftso-calculation-logic.test.ts"]
+      "runtimeArgs": ["test", "test/libs/unit/generator-rewards.test.ts"]
     },
-
     {
       "type": "node",
       "request": "launch",
       "name": "Test Integration",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["test:integration"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test basic generation",
+      "runtimeExecutable": "yarn",
+      "env": {
+        "NETWORK": "local-test"
+      },
+      "runtimeArgs": ["ts-node", "test/utils/db-generator/instances/full-reward-epoch-100-voters.ts"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Calculation process",
+      "runtimeExecutable": "yarn",
+      "env": {
+        "NETWORK": "from-env",
+        "FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS": "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF",
+        "FTSO_CA_FTSO_REWARD_OFFERS_MANAGER_ADDRESS": "0x8456161947DFc1fC159A0B26c025cD2b4bba0c3e",
+        "FTSO_CA_REWARD_MANAGER_ADDRESS": "0x22474D350EC2dA53D717E30b96e9a2B7628Ede5b",
+        "FTSO_CA_SUBMISSION_ADDRESS": "0x18b9306737eaf6E8FC8e737F488a1AE077b18053",
+        "FTSO_CA_RELAY_ADDRESS": "0x5A0773Ff307Bf7C71a832dBB5312237fD3437f9F",
+        "FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS": "0x58F132FBB86E21545A4Bace3C19f1C05d86d7A22",
+        "FTSO_CA_VOTER_REGISTRY_ADDRESS": "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d",
+        "EPOCH_SETTINGS": "1704250616,90,1000,3360,30",
+        "ES_FIRST_VOTING_ROUND_START_TS": "1704250616",
+        "ES_VOTING_EPOCH_DURATION_SECONDS": "90",
+        "ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID":"1000",
+        "ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS":"3360",
+        "FTSO_REVEAL_DEADLINE_SECONDS":"30",
+        "RANDOM_GENERATION_BENCHING_WINDOW": "1",
+        "PENALTY_FACTOR": "30",
+        "GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC": "10",
+        "GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC": "20",
+        "MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS": "3000",
+        "FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS": "100",
+        "DB_SQLITE3_PATH": "test-db/full-test-done.db",
+        "DB_REQUIRED_INDEXER_HISTORY_TIME_SEC": "604800",
+        "VOTING_ROUND_HISTORY_SIZE": "10000",
+        "INDEXER_TOP_TIMEOUT": "1000",
+        "FORCE_NOW": "1704945457"
+      },
+      "runtimeArgs": ["nest", "start", "ftso-reward-calculation-process"]
     }
   ]
 }

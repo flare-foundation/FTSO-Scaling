@@ -2,13 +2,11 @@ import { BURN_ADDRESS } from "../configs/networks";
 import { InflationRewardsOffered, RewardsOffered } from "../events";
 import { Address } from "../voting-types";
 
-export interface IPartialRewardOffer {
+export interface IPartialRewardOfferForEpoch {
   // reward epoch id
-  rewardEpochId?: number;
-  // voting round id
-  votingRoundId?: number;
-  // feed name - i.e. base/quote symbol
-  feedName: string;
+  rewardEpochId: number;
+  // hex encoded feed id
+  feedId: string;
   // number of decimals (negative exponent)
   decimals: number;
   // amount (in wei) of reward in native coin
@@ -25,11 +23,16 @@ export interface IPartialRewardOffer {
   isInflation: boolean;
 }
 
+export interface IPartialRewardOfferForRound extends IPartialRewardOfferForEpoch {
+  // voting round id
+  votingRoundId: number;
+}
+
 export namespace PartialRewardOffer {
-  export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOffer {
+  export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOfferForEpoch {
     return {
       rewardEpochId: rewardOffer.rewardEpochId,
-      feedName: rewardOffer.feedName,
+      feedId: rewardOffer.feedId.startsWith("0x") ? rewardOffer.feedId : "0x" + rewardOffer.feedId,
       decimals: rewardOffer.decimals,
       amount: rewardOffer.amount,
       minRewardedTurnoutBIPS: rewardOffer.minRewardedTurnoutBIPS,
@@ -47,14 +50,14 @@ export namespace PartialRewardOffer {
    */
   export function fromInflationRewardOfferedEquallyDistributed(
     inflationRewardOffer: InflationRewardsOffered
-  ): IPartialRewardOffer[] {
-    const rewardOffers: IPartialRewardOffer[] = [];
-    const sharePerOne: bigint = inflationRewardOffer.amount / BigInt(inflationRewardOffer.feedNames.length);
-    const remainder: bigint = inflationRewardOffer.amount % BigInt(inflationRewardOffer.feedNames.length);
-    for (let i = 0; i < inflationRewardOffer.feedNames.length; i++) {
+  ): IPartialRewardOfferForEpoch[] {
+    const rewardOffers: IPartialRewardOfferForEpoch[] = [];
+    const sharePerOne: bigint = inflationRewardOffer.amount / BigInt(inflationRewardOffer.feedIds.length);
+    const remainder: bigint = inflationRewardOffer.amount % BigInt(inflationRewardOffer.feedIds.length);
+    for (let i = 0; i < inflationRewardOffer.feedIds.length; i++) {
       rewardOffers.push({
         rewardEpochId: inflationRewardOffer.rewardEpochId,
-        feedName: inflationRewardOffer.feedNames[i],
+        feedId: inflationRewardOffer.feedIds[i],
         decimals: inflationRewardOffer.decimals[i],
         amount: sharePerOne + (i < remainder ? 1n : 0n),
         minRewardedTurnoutBIPS: inflationRewardOffer.minRewardedTurnoutBIPS,
@@ -77,9 +80,9 @@ export namespace PartialRewardOffer {
   export function splitToVotingRoundsEqually(
     startVotingRoundId: number,
     endVotingRoundId: number,
-    rewardOffer: IPartialRewardOffer
-  ): IPartialRewardOffer[] {
-    const offers: IPartialRewardOffer[] = [];
+    rewardOffer: IPartialRewardOfferForEpoch
+  ): IPartialRewardOfferForRound[] {
+    const offers: IPartialRewardOfferForRound[] = [];
     const numberOfRounds = BigInt(endVotingRoundId - startVotingRoundId + 1);
     const sharePerOne: bigint = rewardOffer.amount / numberOfRounds;
     const remainder: bigint = rewardOffer.amount % numberOfRounds;
@@ -88,7 +91,7 @@ export namespace PartialRewardOffer {
       offers.push({
         ...rewardOffer,
         votingRoundId: i,
-        amount: sharePerOne + (i < remainder ? 1n : 0n),
+        amount: sharePerOne + (i - startVotingRoundId < remainder ? 1n : 0n),
       });
     }
     return offers;

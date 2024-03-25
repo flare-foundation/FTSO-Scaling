@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { AbiEventFragment, AbiFunctionFragment, AbiInput } from "web3";
 import { encodeEventSignature, encodeFunctionSignature } from "web3-eth-abi";
-import { ContractDefinitionsNames, ContractMethodNames } from "../configs/networks";
+import { ContractDefinitionsNames, ContractMethodNames } from "../configs/contracts";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,

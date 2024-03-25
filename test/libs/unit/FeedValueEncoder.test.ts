@@ -4,8 +4,8 @@ import { Feed } from "../../../libs/ftso-core/src/voting-types";
 
 describe("FeedValueEncoder", () => {
   const feeds: Feed[] = [
-    { name: "0000000000000000", decimals: 2 },
-    { name: "0000000000000001", decimals: 3 },
+    { id: "0000000000000000", decimals: 2 },
+    { id: "0000000000000001", decimals: 3 },
   ];
 
   it("should encode and decode correctly", () => {

@@ -1,6 +1,6 @@
 [
   {
-    "feed": "BTC",
+    "feed": { "type": 1, "name": "BTC/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -17,7 +17,7 @@
     ]
   },
   {
-    "feed": "ETH",
+    "feed": { "type": 1, "name": "ETH/USD" },
     "sources": [
       {
         "exchange": "binance",
@@ -35,7 +35,7 @@
   },
 
   {
-    "feed": "USDT",
+    "feed": { "type": 1, "name": "USDT/USD" },
     "sources": [
       {
         "exchange": "coinbasepro",

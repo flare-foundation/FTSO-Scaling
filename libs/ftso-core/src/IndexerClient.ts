@@ -5,14 +5,8 @@ import { Address, VotingEpochId } from "./voting-types";
 
 import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
 import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
-import {
-  CONTRACTS,
-  ContractDefinitions,
-  ContractMethodNames,
-  EPOCH_SETTINGS,
-  FIRST_DATABASE_INDEX_STATE,
-  LAST_DATABASE_INDEX_STATE,
-} from "./configs/networks";
+import { CONTRACTS, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./configs/networks";
+import { ContractDefinitions, ContractMethodNames } from "./configs/contracts";
 import {
   FullVoterRegistrationInfo,
   InflationRewardsOffered,
@@ -26,7 +20,6 @@ import {
   VoterRegistrationInfo,
 } from "./events";
 import { ILogger } from "./utils/ILogger";
-import { errorString } from "./utils/error";
 
 /**
  * Generic object for submission data and finalization data.
@@ -145,7 +138,7 @@ export class IndexerClient {
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.
    */
-  private async queryEvents(
+  public async queryEvents(
     smartContract: ContractDefinitions,
     eventName: string,
     startTime: number,
@@ -166,7 +159,7 @@ export class IndexerClient {
   /**
    * Queries indexer database for transactions on a smart contract based on function signature in a given timestamp range.
    */
-  private async queryTransactions(
+  public async queryTransactions(
     smartContract: ContractDefinitions,
     functionName: ContractMethodNames,
     startTime: number,
@@ -202,6 +195,21 @@ export class IndexerClient {
       return BlockAssuranceResult.NOT_OK;
     }
     return BlockAssuranceResult.OK;
+  }
+
+  /**
+   * Returns the lowest timestamp in the indexer database + 1, which is considered as a
+   * secure lowest timestamp.
+   */
+  public async secureLowestTimestamp(): Promise<number> {
+    const queryFirst = this.entityManager
+      .createQueryBuilder(TLPState, "state")
+      .andWhere("state.name = :name", { name: FIRST_DATABASE_INDEX_STATE });
+    const firstState = await queryFirst.getOne();
+    if (!firstState) {
+      throw new Error("Critical error: First state not found in the indexer database");
+    }
+    return firstState.block_timestamp + 1;
   }
 
   /**
@@ -258,7 +266,7 @@ export class IndexerClient {
    */
   public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<IndexerResponse<RewardEpochStarted>> {
     const eventName = RewardEpochStarted.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId);
+    const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId);
     const status = await this.ensureLowerBlock(startTime);
     let data: RewardEpochStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
@@ -279,7 +287,7 @@ export class IndexerClient {
    */
   public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<IndexerResponse<RandomAcquisitionStarted>> {
     const eventName = RandomAcquisitionStarted.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
+    const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
     const status = await this.ensureLowerBlock(startTime);
     let data: RandomAcquisitionStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
@@ -338,35 +346,12 @@ export class IndexerClient {
    */
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
     const eventName = VotePowerBlockSelected.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
+    const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
     const status = await this.ensureLowerBlock(startTime);
     let data: VotePowerBlockSelected | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
       const events = result.map(event => VotePowerBlockSelected.fromRawEvent(event));
-      data = events.find(event => event.rewardEpochId === rewardEpochId);
-    }
-    return {
-      status,
-      data,
-    };
-  }
-
-  /**
-   * Extracts SigningPolicyInitialized event on Relay contract for a specific @param rewardEpochId from the indexer database,
-   * if the event is already indexed. Otherwise returns undefined.
-   * This event is a high boundary event for the end of voter registration for rewardEpochId.
-   */
-  public async getSigningPolicyInitializedEvent(
-    rewardEpochId: number
-  ): Promise<IndexerResponse<SigningPolicyInitialized>> {
-    const eventName = SigningPolicyInitialized.eventName;
-    const startTime = EPOCH_SETTINGS.expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const status = await this.ensureLowerBlock(startTime);
-    let data: SigningPolicyInitialized | undefined;
-    if (status === BlockAssuranceResult.OK) {
-      const result = await this.queryEvents(CONTRACTS.Relay, eventName, startTime);
-      const events = result.map(event => SigningPolicyInitialized.fromRawEvent(event));
       data = events.find(event => event.rewardEpochId === rewardEpochId);
     }
     return {
@@ -473,26 +458,26 @@ export class IndexerClient {
     functionName: ContractMethodNames,
     startTime: number,
     endTime: number,
-    endTimeout?: number
+    endTimeout?: number,
+    queryResultsEvenIfRangeCheckFails?: boolean
   ): Promise<IndexerResponse<SubmissionData[]>> {
     const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
-    if (ensureRange === BlockAssuranceResult.NOT_OK) {
+    if (!queryResultsEvenIfRangeCheckFails && ensureRange === BlockAssuranceResult.NOT_OK) {
       return {
         status: ensureRange,
         data: [],
       };
     }
     const transactionsResults = await this.queryTransactions(CONTRACTS.Submission, functionName, startTime, endTime);
-
     const submits: SubmissionData[] = [];
     for (const tx of transactionsResults) {
       try {
         const timestamp = tx.timestamp;
-        const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
+        const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
         const messages = decodePayloadMessageCalldata(tx);
         submits.push({
           submitAddress: "0x" + tx.from_address,
-          relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
+          relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
           votingEpochIdFromTimestamp: votingEpochId,
           transactionIndex: tx.transaction_index,
           timestamp,
@@ -500,7 +485,7 @@ export class IndexerClient {
           messages,
         });
       } catch (e) {
-        this.logger.warn(`Error processing submission transaction ${tx.hash}, will ignore: ${errorString(e)}`);
+        this.logger.warn(`Error processing submission transaction ${tx.hash}, will ignore: ${e.message}`);
       }
     }
 
@@ -533,10 +518,10 @@ export class IndexerClient {
     );
     const finalizations: FinalizationData[] = transactionsResults.map(tx => {
       const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS.votingEpochForTimeSec(timestamp);
+      const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
       return {
         submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS.votingEpochStartSec(votingEpochId),
+        relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
         votingEpochIdFromTimestamp: votingEpochId,
         transactionIndex: tx.transaction_index,
         timestamp,

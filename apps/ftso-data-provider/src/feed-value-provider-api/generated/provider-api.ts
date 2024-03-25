@@ -9,24 +9,29 @@
  * ---------------------------------------------------------------
  */
 
-export interface PriceFeedsRequest {
-  feeds: string[];
+export interface FeedId {
+  type: number;
+  name: string;
 }
 
-export interface FeedPriceData {
-  feed: string;
-  /** price in base units as float */
-  price: number;
+export interface FeedValuesRequest {
+  feeds: FeedId[];
 }
 
-export interface PriceFeedsResponse {
+export interface FeedValueData {
+  feed: FeedId;
+  /** Value in base units as float */
+  value: number;
+}
+
+export interface FeedValuesResponse {
   votingRoundId: number;
-  feedPriceData: FeedPriceData[];
+  data: FeedValueData[];
 }
 
-export interface PriceFeedResponse {
+export interface FeedValueResponse {
   votingRoundId: number;
-  feedPriceData: FeedPriceData;
+  data: FeedValueData;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
@@ -161,25 +166,25 @@ export class HttpClient<SecurityDataType = unknown> {
 }
 
 /**
- * @title Simple Pricer Provider API interface
+ * @title Simple Feed Value Provider API interface
  * @version 1.0
  * @contact
  *
  * This server is used by the FTSO protocol data provider.
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
-  priceProviderApi = {
+  feedValueProviderApi = {
     /**
      * No description
      *
-     * @tags Price Provider API
-     * @name GetPriceFeeds
-     * @request POST:/preparePriceFeeds/{votingRoundId}
-     * @response `201` `PriceFeedsResponse`
+     * @tags Feed Value Provider API
+     * @name GetFeedValues
+     * @request POST:/feed-values/{votingRoundId}
+     * @response `201` `FeedValuesResponse`
      */
-    getPriceFeeds: (votingRoundId: number, data: PriceFeedsRequest, params: RequestParams = {}) =>
-      this.request<PriceFeedsResponse, any>({
-        path: `/preparePriceFeeds/${votingRoundId}`,
+    getFeedValues: (votingRoundId: number, data: FeedValuesRequest, params: RequestParams = {}) =>
+      this.request<FeedValuesResponse, any>({
+        path: `/feed-values/${votingRoundId}`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -190,15 +195,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Price Provider API
-     * @name GetPriceFeed
-     * @request GET:/preparePriceFeed/{votingRoundId}/{feed}
-     * @response `200` `PriceFeedResponse`
+     * @tags Feed Value Provider API
+     * @name GetFeedValue
+     * @request GET:/feed-value/{votingRoundId}/{feed}
+     * @response `200` `FeedValueResponse`
      */
-    getPriceFeed: (votingRoundId: number, feed: string, params: RequestParams = {}) =>
-      this.request<PriceFeedResponse, any>({
-        path: `/preparePriceFeed/${votingRoundId}/${feed}`,
+    getFeedValue: (
+      votingRoundId: number,
+      feed: string,
+      query: {
+        type: number;
+        name: string;
+      },
+      params: RequestParams = {}
+    ) =>
+      this.request<FeedValueResponse, any>({
+        path: `/feed-value/${votingRoundId}/${feed}`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

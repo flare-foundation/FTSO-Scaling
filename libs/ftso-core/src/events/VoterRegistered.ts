@@ -17,8 +17,8 @@ export class VoterRegistered extends RawEventConstructible {
     this.signingPolicyAddress = data.signingPolicyAddress.toLowerCase();
     this.submitAddress = data.submitAddress.toLowerCase();
     this.submitSignaturesAddress = data.submitSignaturesAddress.toLowerCase();
-    this.publicKeyPart1 = Bytes32.fromHexString(data.publicKeyPart1);
-    this.publicKeyPart2 = Bytes32.fromHexString(data.publicKeyPart2);
+    this.publicKeyPart1 = data.publicKeyPart1;
+    this.publicKeyPart2 = data.publicKeyPart2;
     this.registrationWeight = BigInt(data.registrationWeight);
   }
 

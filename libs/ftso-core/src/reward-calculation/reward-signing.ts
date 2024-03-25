@@ -1,17 +1,18 @@
 import { ProtocolMessageMerkleRoot } from "../../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../fsp-utils/src/SignaturePayload";
-import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { GenericSubmissionData } from "../IndexerClient";
-import { RewardEpoch } from "../RewardEpoch";
-import { EPOCH_SETTINGS } from "../configs/networks";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
-import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
-import { Address } from "../voting-types";
 import {
+  EPOCH_SETTINGS,
+  FTSO2_PROTOCOL_ID,
   MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
-  SIGNING_REWARD_SPLIT_BIPS_TO_STAKE,
   TOTAL_BIPS,
-} from "./reward-constants";
+} from "../configs/networks";
+import { DataForRewardCalculation } from "../data-calculation-interfaces";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
+import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { RewardTypePrefix } from "./RewardTypePrefix";
+import { calculateDoubleSigners } from "./reward-double-signers";
+import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
 
 /**
@@ -24,13 +25,28 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
  * TODO: think through whether to reward only in grace period or up to the end of the voting epoch id of votingRoundId + 1.
  */
 export function calculateSigningRewards(
-  offer: IPartialRewardOffer,
-  data: DataForRewardCalculation
+  offer: IPartialRewardOfferForRound,
+  data: DataForRewardCalculation,
+  addLog = false
 ): IPartialRewardClaim[] {
+  function addInfo(text: string) {
+    return addLog
+      ? {
+          info: `${RewardTypePrefix.SIGNING}: ${text}`,
+          votingRoundId,
+        }
+      : {};
+  }
+
   const votingRoundId = data.dataForCalculations.votingRoundId;
   let rewardEligibleSignatures: GenericSubmissionData<ISignaturePayload>[] = [];
+  const doubleSigners = calculateDoubleSigners(
+    data.dataForCalculations.votingRoundId,
+    FTSO2_PROTOCOL_ID,
+    data.signatures
+  );
   if (!data.firstSuccessfulFinalization) {
-    const deadlineTimestamp = EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1);
+    const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
     const signatures = mostFrequentHashSignaturesBeforeDeadline(
       votingRoundId,
       data.signatures,
@@ -42,21 +58,28 @@ export function calculateSigningRewards(
         beneficiary: offer.claimBackAddress.toLowerCase(),
         amount: offer.amount,
         claimType: ClaimType.DIRECT,
+        ...addInfo("No most frequent signatures"),
       };
       return [backClaim];
     }
+    rewardEligibleSignatures = signatures.filter(
+      signature => !doubleSigners.has(signature.messages.signer!.toLowerCase())
+    );
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
       data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
     );
-    const signatures = data.signatures.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
+    let signatures = data.signatures.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
+    // filter out double signers
+    signatures = signatures.filter(signature => !doubleSigners.has(signature.messages.signer!.toLowerCase()));
+
     // rewarded:
     // - all signatures in grace period (no matter of finalization timestamp)
     // - signatures outside grace period but before timestamp of first successful finalization, if the timestamp is still within before the
     //   end of the voting epoch id = votingRoundId + 1
     const deadlineTimestamp = Math.min(
       data.firstSuccessfulFinalization.timestamp,
-      EPOCH_SETTINGS.votingEpochEndSec(votingRoundId + 1)
+      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1)
     );
     rewardEligibleSignatures = signatures.filter(
       signature =>
@@ -68,6 +91,17 @@ export function calculateSigningRewards(
   for (const signature of rewardEligibleSignatures) {
     undistributedSigningRewardWeight += BigInt(signature.messages.weight!);
   }
+
+  if (undistributedSigningRewardWeight === 0n) {
+    const backClaim: IPartialRewardClaim = {
+      beneficiary: offer.claimBackAddress.toLowerCase(),
+      amount: offer.amount,
+      claimType: ClaimType.DIRECT,
+      ...addInfo("no weight of eligible signers"),
+    };
+    return [backClaim];
+  }
+
   let undistributedAmount = offer.amount;
   const resultClaims: IPartialRewardClaim[] = [];
   // sort signatures according to signing policy order (index in signing policy)
@@ -81,83 +115,50 @@ export function calculateSigningRewards(
   }
   for (const signature of rewardEligibleSignatures) {
     const weight = BigInt(signature.messages.weight!);
-    const amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+    let amount = 0n;
+    if (weight > 0n) {
+      // sanity check
+      if (undistributedSigningRewardWeight === 0n) {
+        throw new Error("Critical error: reward-signing: undistributedSigningRewardWeight must be non-zero");
+      }
+      // avoiding case when 0 weight voter is the last one
+      amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+    }
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
+
+    const submitAddress = data.dataForCalculations.rewardEpoch.signingAddressToSubmitAddress.get(
+      signature.messages.signer!
+    );
+
+    const voterWeights = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
+
     resultClaims.push(
-      ...generateSigningRewardClaimsForVoter(amount, signature.messages.signer!, data.dataForCalculations.rewardEpoch)
+      ...generateSigningWeightBasedClaimsForVoter(
+        amount,
+        offer.claimBackAddress,
+        voterWeights,
+        offer.votingRoundId,
+        RewardTypePrefix.SIGNING,
+        addLog
+      )
     );
   }
   // assert check for undistributed amount
   if (undistributedAmount !== 0n) {
-    throw new Error("Critical error: Undistributed amount is not zero");
+    throw new Error(`Critical error: Undistributed amount is not zero: ${undistributedAmount} of ${offer.amount}`);
   }
-  // burn everything
+  // claim back
   if (resultClaims.length === 0) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("claim back no claims"),
     };
     return [backClaim];
   }
   return resultClaims;
-}
-
-/**
- * Given an amount of a reward it produces specific partial reward claims according to here defined split of the reward amount.
- * This includes split to fees and participation rewards.
- */
-export function generateSigningRewardClaimsForVoter(
-  amount: bigint,
-  signerAddress: Address,
-  rewardEpoch: RewardEpoch
-): IPartialRewardClaim[] {
-  const rewardClaims: IPartialRewardClaim[] = [];
-  const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
-  const stakingAmount = (amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE) / TOTAL_BIPS;
-  const delegationAmount = amount - stakingAmount;
-  const delegationFee =
-    (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
-  const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase();
-  rewardClaims.push({
-    beneficiary: delegationBeneficiary,
-    amount: delegationFee,
-    claimType: ClaimType.FEE,
-  });
-  const delegationCommunityReward = delegationAmount - delegationFee;
-  rewardClaims.push({
-    beneficiary: delegationBeneficiary,
-    amount: delegationCommunityReward,
-    claimType: ClaimType.WNAT,
-  });
-  let undistributedStakedWeight = 0n;
-  for (let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds.length; i++) {
-    undistributedStakedWeight += fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
-  }
-  let undistributedStakedAmount = stakingAmount;
-
-  for (let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds.length; i++) {
-    const nodeId = fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds[i].toLowerCase();
-    const weight = fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
-    const nodeCommunityReward = (weight * undistributedStakedAmount) / undistributedStakedWeight;
-    undistributedStakedAmount -= nodeCommunityReward;
-    undistributedStakedWeight -= weight;
-    // No fees are considered here. Also - no staking fee data on C-chain.
-    // In future, if we want to include staking fees, we need to add them here.
-    // In current setting, the staking fee would need to be read from P-chain indexer.
-    // alternatively, we could use delegation fee here.
-    rewardClaims.push({
-      beneficiary: nodeId,
-      amount: nodeCommunityReward,
-      claimType: ClaimType.MIRROR,
-    });
-  }
-  // assert
-  if (undistributedStakedAmount !== 0n) {
-    throw new Error("Critical error: Undistributed staked amount is not zero");
-  }
-  return rewardClaims;
 }
 
 /**
@@ -173,7 +174,8 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   votingRoundId: number,
   signatures: Map<string, GenericSubmissionData<ISignaturePayload>[]>,
   totalSigningWeight: number,
-  deadlineTimestamp: number
+  deadlineTimestamp: number,
+  protocolId: number = FTSO2_PROTOCOL_ID
 ): GenericSubmissionData<ISignaturePayload>[] {
   const result: GenericSubmissionData<ISignaturePayload>[] = [];
   let maxWeight = 0;
@@ -184,6 +186,9 @@ export function mostFrequentHashSignaturesBeforeDeadline(
       isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
     );
     for (const signatureSubmission of filteredSubmissions) {
+      if (signatureSubmission.messages.message.protocolId !== protocolId) {
+        throw new Error("Critical error: Illegal protocol id");
+      }
       weightSum += signatureSubmission.messages.weight!;
     }
     hashToWeight.set(hash, weightSum);
@@ -192,10 +197,10 @@ export function mostFrequentHashSignaturesBeforeDeadline(
     }
   }
   const minimalWeightThreshold =
-    (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS) / Number(TOTAL_BIPS);
+    (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS()) / Number(TOTAL_BIPS);
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     const weightSum = hashToWeight.get(hash)!;
-    if (weightSum >= minimalWeightThreshold) {
+    if (weightSum === maxWeight && weightSum >= minimalWeightThreshold) {
       const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
         isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
       );

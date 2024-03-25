@@ -1,4 +1,4 @@
-# Example price provider
+# Example feed provider
 
 This provider can be configured to return a random stream or an simple provider that provides the latest price form an exchange using CCXT
 

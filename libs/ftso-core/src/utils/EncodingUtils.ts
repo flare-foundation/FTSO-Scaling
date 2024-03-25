@@ -2,7 +2,7 @@ import { TLPEvents, TLPTransaction } from "../orm/entities";
 import { IPayloadMessage, PayloadMessage } from "../../../fsp-utils/src/PayloadMessage";
 import { ABICache, AbiData, AbiDataInput } from "./ABICache";
 import { decodeLog } from "web3-eth-abi";
-import { ContractMethodNames } from "../configs/networks";
+import { ContractMethodNames } from "../configs/contracts";
 
 export class EncodingUtils {
   private readonly abiCache = new ABICache();

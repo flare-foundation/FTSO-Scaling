@@ -1,122 +1,120 @@
 import { DataForRewardCalculation } from "../data-calculation-interfaces";
-import { RewardEpoch } from "../RewardEpoch";
-import { IPartialRewardOffer } from "../utils/PartialRewardOffer";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
-import { TOTAL_BIPS, SIGNING_REWARD_SPLIT_BIPS_TO_STAKE } from "./reward-constants";
-import { isFinalizationOutsideOfGracePeriod, isFinalizationInGracePeriodAndEligible } from "./reward-utils";
+import { RewardTypePrefix } from "./RewardTypePrefix";
+import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
+import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePeriod } from "./reward-utils";
 
 /**
  * Calculates partial finalization reward claims for the given offer.
  */
 export function calculateFinalizationRewardClaims(
-  offer: IPartialRewardOffer,
+  offer: IPartialRewardOfferForRound,
   data: DataForRewardCalculation,
-  eligibleFinalizationRewardVotersInGracePeriod: Set<Address>
+  eligibleFinalizationRewardVotersInGracePeriod: Set<Address>,
+  addLog = false
 ): IPartialRewardClaim[] {
+  function addInfo(text: string) {
+    return addLog
+      ? {
+          info: `${RewardTypePrefix.FINALIZATION}: ${text}`,
+          votingRoundId: offer.votingRoundId,
+        }
+      : {};
+  }
+
   if (!data.firstSuccessfulFinalization) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("No finalization"),
     };
     return [backClaim];
   }
   const votingRoundId = data.dataForCalculations.votingRoundId;
   // No voter provided finalization in grace period. Whoever finalizes gets the full reward.
   if (isFinalizationOutsideOfGracePeriod(votingRoundId, data.firstSuccessfulFinalization!)) {
-    const backClaim: IPartialRewardClaim = {
+    const otherFinalizerClaim: IPartialRewardClaim = {
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("outside of grace period"),
     };
-    return [backClaim];
+    return [otherFinalizerClaim];
   }
   const gracePeriodFinalizations = data.finalizations.filter(finalization =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
   if (gracePeriodFinalizations.length === 0) {
-    const backClaim: IPartialRewardClaim = {
+    const otherFinalizerClaim: IPartialRewardClaim = {
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
+      ...addInfo("in grace period"),
     };
-    return [backClaim];
+    return [otherFinalizerClaim];
   }
   const rewardEpoch = data.dataForCalculations.rewardEpoch;
   let undistributedAmount = offer.amount;
   let undistributedSigningRewardWeight = 0n;
-  for (const finalization of gracePeriodFinalizations) {
-    const signingAddress = finalization.submitAddress.toLowerCase();
-    const weight = rewardEpoch.signerToSigningWeight(signingAddress);
-    undistributedSigningRewardWeight += BigInt(weight);
+
+  for (const signingAddress of eligibleFinalizationRewardVotersInGracePeriod) {
+    const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
+    undistributedSigningRewardWeight += weight;
   }
   const resultClaims: IPartialRewardClaim[] = [];
   for (const finalization of gracePeriodFinalizations) {
+    if (!eligibleFinalizationRewardVotersInGracePeriod.has(finalization.submitAddress.toLowerCase())) {
+      throw new Error("Critical: finalization submit address must be eligible");
+    }
+    // submitAddress of finalization === signingAddress for the finalizations in grace period
     const signingAddress = finalization.submitAddress.toLowerCase();
+
+    const submitAddress = rewardEpoch.signingAddressToSubmitAddress.get(signingAddress);
+
+    if (!submitAddress) {
+      throw new Error("Critical: eligible finalization submit address must be equal to signingAddress of an entity");
+    }
+
+    const voterWeight = rewardEpoch.getVotersWeights().get(submitAddress);
+
     const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
-    const amount = (weight * offer.amount) / undistributedSigningRewardWeight;
+    let amount = 0n;
+    if (weight > 0n) {
+      // sanity check
+      if (undistributedSigningRewardWeight === 0n) {
+        throw new Error("Critical: reward-finalization: undistributedSigningRewardWeight must be non-zero");
+      }
+      amount = (weight * undistributedAmount) / undistributedSigningRewardWeight;
+    }
+
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
     resultClaims.push(
-      ...generateFinalizationRewardClaimsForVoter(amount, signingAddress, data.dataForCalculations.rewardEpoch)
+      ...generateSigningWeightBasedClaimsForVoter(
+        amount,
+        offer.claimBackAddress,
+        voterWeight,
+        offer.votingRoundId,
+        RewardTypePrefix.FINALIZATION,
+        addLog
+      )
     );
   }
-  return resultClaims;
-}
 
-/**
- * Given an amount of a reward it produces specific partial reward claims for finalizations according to here defined split of the reward amount.
- * This includes split to fees and participation rewards.
- */
-export function generateFinalizationRewardClaimsForVoter(
-  amount: bigint,
-  signerAddress: Address,
-  rewardEpoch: RewardEpoch
-): IPartialRewardClaim[] {
-  const rewardClaims: IPartialRewardClaim[] = [];
-  const fullVoterRegistrationInfo = rewardEpoch.fullVoterRegistrationInfoForSigner(signerAddress);
-  const stakingAmount = (amount * SIGNING_REWARD_SPLIT_BIPS_TO_STAKE) / TOTAL_BIPS;
-  const delegationAmount = amount - stakingAmount;
-  const delegationFee =
-    (delegationAmount * BigInt(fullVoterRegistrationInfo.voterRegistrationInfo.delegationFeeBIPS)) / TOTAL_BIPS;
-  const delegationBeneficiary = fullVoterRegistrationInfo.voterRegistered.delegationAddress.toLowerCase();
-  rewardClaims.push({
-    beneficiary: delegationBeneficiary,
-    amount: delegationFee,
-    claimType: ClaimType.FEE,
-  });
-  const delegationCommunityReward = delegationAmount - delegationFee;
-  rewardClaims.push({
-    beneficiary: delegationBeneficiary,
-    amount: delegationCommunityReward,
-    claimType: ClaimType.WNAT,
-  });
-  let undistributedStakedWeight = 0n;
-  for (let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds.length; i++) {
-    undistributedStakedWeight += fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
+  if (undistributedAmount < 0n) {
+    throw new Error("Critical: undistributed amount must be positive");
   }
-  let undistributedStakedAmount = stakingAmount;
-
-  for (let i = 0; i < fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds.length; i++) {
-    const nodeId = fullVoterRegistrationInfo.voterRegistrationInfo.nodeIds[i].toLowerCase();
-    const weight = fullVoterRegistrationInfo.voterRegistrationInfo.nodeWeights[i];
-    const nodeCommunityReward = (weight * undistributedStakedAmount) / undistributedStakedWeight;
-    undistributedStakedAmount -= nodeCommunityReward;
-    undistributedStakedWeight -= weight;
-    // No fees are considered here. Also - no staking fee data on C-chain.
-    // In future, if we want to include staking fees, we need to add them here.
-    // In current setting, the staking fee would need to be read from P-chain indexer.
-    // alternatively, we could use delegation fee here.
-    rewardClaims.push({
-      beneficiary: nodeId,
-      amount: nodeCommunityReward,
-      claimType: ClaimType.MIRROR,
+  // claim back for undistributed rewards
+  if (undistributedAmount !== 0n) {
+    resultClaims.push({
+      beneficiary: offer.claimBackAddress.toLowerCase(),
+      amount: undistributedAmount,
+      claimType: ClaimType.DIRECT,
+      ...addInfo("Claim back for undistributed rewards"),
     });
   }
-  // assert
-  if (undistributedStakedAmount !== 0n) {
-    throw new Error("Critical error: Undistributed staked amount is not zero");
-  }
-  return rewardClaims;
+  return resultClaims;
 }

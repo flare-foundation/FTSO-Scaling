@@ -10,7 +10,6 @@ import {
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
-import { LRUCache } from "lru-cache";
 import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 
 enum ApiTagsEnum {
@@ -24,7 +23,6 @@ enum ApiTagsEnum {
 export class FtsoDataProviderController {
   private readonly logger = new Logger(FtsoDataProviderController.name);
   constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}
-  private readonly roundToAddress = new LRUCache<number, string>({ max: 6720 }); // 1 week history with 90s rounds
 
   // Protocol Data Provider APIs
 
@@ -37,7 +35,6 @@ export class FtsoDataProviderController {
     this.logger.log(
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
-    this.checkSubmitAddress(votingRoundId, submitAddress);
     const data = await this.ftsoDataProviderService.getCommitData(votingRoundId, submitAddress);
     const encodedData = data ? encodeCommitPayloadMessage(data) : undefined;
     this.logger.log(`Returning commit data for voting round ${votingRoundId}: `);
@@ -56,8 +53,7 @@ export class FtsoDataProviderController {
     this.logger.log(
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
-    this.checkSubmitAddress(votingRoundId, submitAddress);
-    const data = await this.ftsoDataProviderService.getRevealData(votingRoundId);
+    const data = await this.ftsoDataProviderService.getRevealData(votingRoundId, submitAddress);
     const encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
     this.logger.log(`Returning reveal data for voting round ${votingRoundId}`);
     return {
@@ -117,19 +113,5 @@ export class FtsoDataProviderController {
       status: ExternalResponseStatusEnum.OK,
       data,
     };
-  }
-
-  /** Make sure the same submitAddress is used for commits and reveals in a single voting round. */
-  private checkSubmitAddress(votingRoundId: number, submitAddress: string) {
-    const addrForRound = this.roundToAddress.get(votingRoundId);
-    if (addrForRound !== undefined) {
-      if (addrForRound !== submitAddress) {
-        throw new InternalServerErrorException(
-          "Cannot use the data provider with multiple submit addresses for the same round, existing: " + addrForRound
-        );
-      }
-    } else {
-      this.roundToAddress.set(votingRoundId, submitAddress);
-    }
   }
 }

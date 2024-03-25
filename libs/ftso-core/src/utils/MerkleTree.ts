@@ -49,7 +49,7 @@ export function singleHash(val: string) {
  * Helper function for constructing the commit hash used with StateConnector.sol contract
  * @param merkleRoot merkle root (`0x`-prefixed 32-byte hex string)
  * @param randomNumber secure random number (`0x`-prefixed 32-byte hex string)
- * @param address addres (`0x`-prefixed 20-byte hex string)
+ * @param address address (`0x`-prefixed 20-byte hex string)
  * @returns `0x`-prefixed 32-byte hex string (hash)
  */
 export function commitHash(merkleRoot: string, randomNumber: string, address: string): string {
@@ -197,7 +197,7 @@ export class MerkleTree {
     let pos = this._tree.length - this.hashCount + i;
     while (pos > 0) {
       proof.push(
-        this._tree[pos + 2 * (pos % 2) - 1] // if pos even, take left sibiling at pos - 1, else the right sibiling at pos + 1
+        this._tree[pos + 2 * (pos % 2) - 1] // if pos even, take left sibling at pos - 1, else the right sibling at pos + 1
       );
       pos = this.parent(pos);
     }

@@ -288,8 +288,5 @@ describe(`SignaturePayload`, async () => {
     }
   });
 
-
-  it("Should correctly encode for relay", async () => {
-    
-  });
+  it("Should correctly encode for relay", async () => {});
 });

@@ -23,7 +23,9 @@ export interface DepositSignatureData {
 
 export namespace SignaturePayload {
   /**
-   * Endodes signature payload into byte encoding, represented by 0x-prefixed hex string
+   * Encodes signature payload into byte encoding, represented by 0x-prefixed hex string
+   * @param signaturePayload
+   * @returns
    */
   export function encode(signaturePayload: ISignaturePayload): string {
     const message = ProtocolMessageMerkleRoot.encode(signaturePayload.message);
@@ -77,6 +79,7 @@ export namespace SignaturePayload {
 
   /**
    * Decodes properly formatted signature calldata into array of payloads with signatures
+   * @param calldata
    */
   export function decodeCalldata(calldata: string): IPayloadMessage<ISignaturePayload>[] {
     const calldataInternal = calldata.startsWith("0x") ? calldata.slice(2) : calldata;

@@ -1,22 +1,24 @@
-export class PriceFeedsRequest {
-  // Feeds are represented as 8 byte hex strings
-  feeds: string[];
+export class FeedId {
+  type: number;
+  name: string;
 }
 
-export class FeedPriceData {
-  feed: string;
-  /**
-   * price in base units as float
-   */
-  price: number;
+export class FeedValuesRequest {
+  feeds: FeedId[];
 }
 
-export class PriceFeedsResponse {
+export class FeedValueData {
+  feed: FeedId;
+  /** Value in base units as float */
+  value: number;
+}
+
+export class FeedValuesResponse {
   votingRoundId: number;
-  feedPriceData: FeedPriceData[];
+  data: FeedValueData[];
 }
 
-export class PriceFeedResponse {
+export class FeedValueResponse {
   votingRoundId: number;
-  feedPriceData: FeedPriceData;
+  data: FeedValueData;
 }

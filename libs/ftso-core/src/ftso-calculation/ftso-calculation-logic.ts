@@ -8,12 +8,12 @@ import { calculateRandom } from "./ftso-random";
 /**
  * The main entrypoint for calculating the results of a voting round.
  */
-export async function calculateResultsForVotingRound(data: DataForCalculations): Promise<EpochResult> {
+export function calculateResultsForVotingRound(data: DataForCalculations): EpochResult {
   if (data.validEligibleReveals.size === 0) {
     throw Error(`No valid reveals found, unable to calculate results for voting round ${data.votingRoundId}`);
   }
-  const results: MedianCalculationResult[] = await calculateMedianResults(data);
-  const random = await calculateRandom(data);
+  const results: MedianCalculationResult[] = calculateMedianResults(data);
+  const random = calculateRandom(data);
   return prepareResultsForVotingRound(data.votingRoundId, results, random);
 }
 

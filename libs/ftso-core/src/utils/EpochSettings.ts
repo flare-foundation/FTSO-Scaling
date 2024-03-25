@@ -48,9 +48,9 @@ export class EpochSettings {
     return this.votingEpochStartSec(this.expectedFirstVotingRoundForRewardEpoch(rewardEpochId));
   }
 
-  rewardEpochForTime(unixMilli: number): number {
-    const votingEpochId = this.votingEpochForTime(unixMilli);
-    return this.expectedFirstVotingRoundForRewardEpoch(votingEpochId);
+  rewardEpochForTimeSec(timeSec: number): number {
+    const votingEpochId = this.votingEpochForTimeSec(timeSec);
+    return this.expectedRewardEpochForVotingEpoch(votingEpochId);
   }
 
   expectedRewardEpochForVotingEpoch(votingEpochId: number) {
