@@ -29,6 +29,7 @@ import { CommitData, ICommitData } from "./utils/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./utils/RevealData";
 import { Address, Feed, MessageHash } from "./voting-types";
+import { errorString } from "./utils/error";
 
 /**
  * Data availability status for data manager responses.
@@ -687,7 +688,7 @@ export class DataManager {
             const commit = CommitData.decode(message.payload);
             voterToLastCommit.set(submission.submitAddress, commit);
           } catch (e) {
-            this.logger.warn(`Unparsable message payload. Ignored. ${e.message}`);
+            this.logger.warn(`Unparsable commit message: ${message.payload}, error: ${errorString(e)}`);
           }
         }
       }
@@ -720,7 +721,7 @@ export class DataManager {
             const reveal = RevealData.decode(message.payload, feedOrder);
             voterToLastReveal.set(submission.submitAddress, reveal);
           } catch (e) {
-            this.logger.warn(`Unparsable reveal message. Ignoring: ${e.message}`);
+            this.logger.warn(`Unparsable reveal message: ${message.payload}, error: ${errorString(e)}`);
           }
         }
       }

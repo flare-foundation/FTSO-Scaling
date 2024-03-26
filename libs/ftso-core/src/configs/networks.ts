@@ -16,13 +16,13 @@ const TEST_CONFIG: NetworkContractAddresses = {
 };
 
 const COSTON_CONFIG: NetworkContractAddresses = {
-  FlareSystemsManager: { name: "FlareSystemsManager", address: "0x6e5A85aB09c2056A9Af46c3Ca5a5A1E6752C8D79" },
-  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x3692A549F0436EADCD77dCC254D7D3843537e6e0" },
-  RewardManager: { name: "RewardManager", address: "0xB5927e4A55125a5eED6E24AC11F418c916689D4C" },
+  FlareSystemsManager: { name: "FlareSystemsManager", address: "0xBb8Ffe18043AA0c7E76806353936DE707E2f39CE" },
+  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x42b289391ed2aec3c91ca51dc2b894e933845789" },
+  RewardManager: { name: "RewardManager", address: "0xcdC07BE75477C66eAa1A1BC12b93ACB55eb4f7e2" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
-  Relay: { name: "Relay", address: "0xf84B299803fe4184a7c9167514E5D4f19B3cD95b" },
-  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x99D17A3EF05fddF0C0d4E1c0D0Ba4f8aCc8e150a" },
-  VoterRegistry: { name: "VoterRegistry", address: "0xb9657EDCf84BCA4DE60b0f849f397C093459D0f8" },
+  Relay: { name: "Relay", address: "0x5bd25EbeB35Ca383e34C70bF28d1898edf3C402d" },
+  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0xc2AaBcB2F7d00264078D86b6E4aAd7133a5F5aee" },
+  VoterRegistry: { name: "VoterRegistry", address: "0xa8e2a3B83bd574Ac058fEb8B01ac1B44AAA9c450" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
@@ -137,7 +137,7 @@ const epochSettings = () => {
       );
     case "coston":
       return new EpochSettings(
-        1658430000, // ES_FIRST_VOTING_ROUND_START_TS
+        1658429955, // ES_FIRST_VOTING_ROUND_START_TS
         90, //ES_VOTING_EPOCH_DURATION_SECONDS
         0, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
         240, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
@@ -216,7 +216,7 @@ const initialRewardEpochId = () => {
       return parseInt(process.env.INITIAL_REWARD_EPOCH_ID);
     }
     case "coston":
-      return 2343;
+      return 2450;
     case "coston2":
     case "local-test":
       return 0;
