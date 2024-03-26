@@ -30,10 +30,16 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: set lower case repository
+      run: |
+        echo "REPOSITORY_LC=${REPOSITORY,,}" >>${GITHUB_ENV}
+      env:
+        REPOSITORY: '${{ github.repository }}'
+
     - name: Build and push default image
       uses: docker/build-push-action@v3.2.0
       with:
         context: . # Because GH actions are for kids and put protection on everything; https://stackoverflow.com/a/71159809/11276254
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}:${{ env.IMAGE_TAG }}
+          ghcr.io/${{ env.REPOSITORY_LC }}:${{ env.IMAGE_TAG }}
