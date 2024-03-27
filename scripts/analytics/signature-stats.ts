@@ -38,9 +38,13 @@ export async function signatureSummary(
   for (let votingRoundId = data.startVotingRoundId; votingRoundId <= data.endVotingRoundId; votingRoundId++) {
     const roundData = data.votingRoundIdToRewardCalculationData.get(votingRoundId);
 
+    if (roundData === undefined) {
+      console.log(`No data for voting round ${votingRoundId}`);
+      break;
+    }
     const signerInfos: SignerInfo[] = [];
 
-    for (const signatures of roundData.signatures) {
+    for (const signatures of roundData.signatures || []) {
       for (const signature of signatures.signatures) {
         const voterIndex = signature.messages.index;
         signerInfos.push({
@@ -50,10 +54,12 @@ export async function signatureSummary(
           inGracePeriod: signature.relativeTimestamp <= signatureGracePeriodEndOffset,
           // TODO: handle the overflow
           relativeTimestamp: signature.relativeTimestamp,
-          successful: ProtocolMessageMerkleRoot.equals(
-            signature.messages.message,
-            roundData.firstSuccessfulFinalization.messages.protocolMessageMerkleRoot
-          ),
+          successful:
+            roundData.firstSuccessfulFinalization &&
+            ProtocolMessageMerkleRoot.equals(
+              signature.messages.message,
+              roundData.firstSuccessfulFinalization.messages.protocolMessageMerkleRoot
+            ),
         });
       }
     }
@@ -74,14 +80,13 @@ export function printSignatureSummary(data: SignatureData) {
   for (const sigVotingRoundId of data.signatureData) {
     let signerString = `${sigVotingRoundId.votingRoundId}:`;
     for (const signerInfo of sigVotingRoundId.data) {
-      signerString += ` ${signerInfo.voterIndex ?? signerInfo.address.slice(0, 10)}${
-        signerInfo.inGracePeriod ? "G" : ""
-      }${signerInfo.successful ? "" : "X"}(${signerInfo.relativeTimestamp})`;
+      signerString += ` ${signerInfo.voterIndex ?? signerInfo.address.slice(0, 10)}${signerInfo.inGracePeriod ? "G" : ""
+        }${signerInfo.successful ? "" : "X"}(${signerInfo.relativeTimestamp})`;
     }
     console.log(signerString);
   }
   console.log("------ Interpretation ------");
   console.log(
-    `voting round id: ...finalizerIndexOrAddress[G-in grace period][X-not matching finalized merkle root](relative timestamp in sec)`
+    `voting round id: ...signerIndexOrAddress[G-in grace period][X-not matching finalized merkle root](relative timestamp in sec)`
   );
 }

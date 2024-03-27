@@ -69,15 +69,19 @@ export async function rewardEpochCalculationData(
 ): Promise<RewardEpochCalculationData> {
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const votingRoundIdToRewardCalculationData = new Map<number, SDataForRewardCalculation>();
-  if (rewardEpochInfo.endVotingRoundId === undefined && endVotingRoundId === undefined) {
-    throw new Error("endRewardEpochId must be specified if rewardEpochInfo.endVotingRoundId is undefined");
+  let end = rewardEpochInfo.endVotingRoundId ?? endVotingRoundId;
+  if (end === undefined) {
+    end = rewardEpochInfo.expectedEndVotingRoundId;
+    console.log(`Using expected end voting round id: ${end}`);
   }
-  const end = rewardEpochInfo.endVotingRoundId ?? endVotingRoundId!;
   for (let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId; votingRoundId <= end; votingRoundId++) {
-    votingRoundIdToRewardCalculationData.set(
-      votingRoundId,
-      deserializeDataForRewardCalculation(rewardEpochId, votingRoundId)
-    );
+    try {
+      const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+      votingRoundIdToRewardCalculationData.set(votingRoundId, data);
+    } catch (e) {
+      console.error(`Error while deserializing data for voting round ${votingRoundId}: ${e}`);
+      break;
+    }
   }
   return {
     rewardEpochInfo,

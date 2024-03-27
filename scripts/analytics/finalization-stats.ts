@@ -37,7 +37,10 @@ export async function finalizationSummary(
   const result: FinalizationDataForVotingRound[] = [];
   for (let votingRoundId = data.startVotingRoundId; votingRoundId <= data.endVotingRoundId; votingRoundId++) {
     const roundData = data.votingRoundIdToRewardCalculationData.get(votingRoundId);
-
+    if (!roundData) {
+      console.log(`No data for voting round ${votingRoundId}`);
+      break;
+    }
     const finalizerInfos: FinalizerInfo[] = roundData.finalizations.map(finalization => {
       const voterIndex = signingAddressToVoterId.get(finalization.submitAddress);
       return {
@@ -74,9 +77,8 @@ export function printFinalizationSummary(finalizations: FinalizationData) {
       .map(voter => voter.voterIndex)
       .join(", ")}]`;
     for (const finalizerInfo of finVotingRoundId.data) {
-      finalizationString += ` ${finalizerInfo.voterIndex ?? finalizerInfo.address.slice(0, 10)}${
-        finalizerInfo.successful ? "F" : ""
-      }${finalizerInfo.inGracePeriod ? "G" : ""}(${finalizerInfo.relativeTimestamp})`;
+      finalizationString += ` ${finalizerInfo.voterIndex ?? finalizerInfo.address.slice(0, 10)}${finalizerInfo.successful ? "F" : ""
+        }${finalizerInfo.inGracePeriod ? "G" : ""}(${finalizerInfo.relativeTimestamp})`;
     }
     console.log(finalizationString);
   }
