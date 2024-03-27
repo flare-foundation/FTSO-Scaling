@@ -32,9 +32,9 @@ describe("MerkleTree", () => {
         votersSubmitAddresses: [], // Used in calculation, not needed for merkle tree
         feedValues: [], // Used in calculation, not needed for merkle tree
         data: {
-          finalMedianPrice: { value: Math.floor(medianRes), decimals: 5, isEmpty: false },
-          quartile1Price: { value: Math.floor(medianRes - delta1 * 100000), decimals: 5, isEmpty: false },
-          quartile3Price: { value: Math.floor(medianRes + delta2 * 100000), decimals: 5, isEmpty: false },
+          finalMedian: { value: Math.floor(medianRes), decimals: 5, isEmpty: false },
+          quartile1: { value: Math.floor(medianRes - delta1 * 100000), decimals: 5, isEmpty: false },
+          quartile3: { value: Math.floor(medianRes + delta2 * 100000), decimals: 5, isEmpty: false },
           participatingWeight: BigInt(random.nextInt(0, totalWeight)),
         },
         weights: [], // Used in calculation, not needed for merkle tree

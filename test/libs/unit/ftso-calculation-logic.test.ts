@@ -31,13 +31,13 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 99;
         for (let index = 1; index <= numVoters; index++) {
           const voter = "voter" + index;
-          const price = index;
+          const value = index;
           const weight = BigInt(totalWeightSum / numVoters);
 
           voters.push(voter);
           feedValues.push({
             isEmpty: false,
-            value: price,
+            value: value,
             decimals: decimals,
           });
           weights.push(weight);
@@ -48,11 +48,11 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
         // the first with the median sum over the half of total weight should be 50 (among 99)
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(50);
-        expect(medianCalculationSummary.finalMedianPrice.decimals).to.equal(decimals);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(50);
+        expect(medianCalculationSummary.finalMedian.decimals).to.equal(decimals);
         // the first with the quartile sum over the quarter of total weight should be 25
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(25);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(75);
+        expect(medianCalculationSummary.quartile1.value).to.equal(25);
+        expect(medianCalculationSummary.quartile3.value).to.equal(75);
         expect(medianCalculationSummary.participatingWeight).to.equal(BigInt(totalWeightSum));
       });
     });
@@ -68,13 +68,13 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 100;
         for (let index = 1; index <= numVoters; index++) {
           const voter = "voter" + index;
-          const price = index;
+          const value = index;
           const weight = BigInt(totalWeightSum / numVoters);
 
           voters.push(voter);
           feedValues.push({
             isEmpty: false,
-            value: price,
+            value: value,
             decimals: decimals,
           });
           weights.push(weight);
@@ -85,11 +85,11 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
         // the first with the median sum equal the half of the total weight should be 50 (among 100)
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(50);
-        expect(medianCalculationSummary.finalMedianPrice.decimals).to.equal(decimals);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(50);
+        expect(medianCalculationSummary.finalMedian.decimals).to.equal(decimals);
         // the first with the quartile sum over the quarter of the total weight should be 26
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(26);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(75);
+        expect(medianCalculationSummary.quartile1.value).to.equal(26);
+        expect(medianCalculationSummary.quartile3.value).to.equal(75);
         expect(medianCalculationSummary.participatingWeight).to.equal(BigInt(totalWeightSum));
       });
     });
@@ -105,13 +105,13 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 99;
         for (let index = 1; index <= numVoters; index++) {
           const voter = "voter" + index;
-          const price = index;
+          const value = index;
           const weight = BigInt(totalWeightSum / numVoters);
 
           voters.push(voter);
           feedValues.push({
             isEmpty: false,
-            value: price,
+            value: value,
             decimals: decimals,
           });
           weights.push(weight);
@@ -122,10 +122,10 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
         // the first with the median sum equal the half of the total weight should be 50 (among 99)
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(50);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(50);
         // the first with the quartile sum over the quarter of the total weight should be 25
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(25);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(75);
+        expect(medianCalculationSummary.quartile1.value).to.equal(25);
+        expect(medianCalculationSummary.quartile3.value).to.equal(75);
         expect(medianCalculationSummary.participatingWeight).to.equal(BigInt(totalWeightSum));
       });
     });
@@ -141,13 +141,13 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         totalWeightSum = 50 * 101; // sum_{i=1}^{100} i = (i + (i+1))/2
         for (let index = 1; index <= numVoters; index++) {
           const voter = "voter" + index;
-          const price = numVoters - index + 1;
+          const value = numVoters - index + 1;
           const weight = BigInt(numVoters - index + 1);
 
           voters.push(voter);
           feedValues.push({
             isEmpty: false,
-            value: price,
+            value: value,
             decimals: decimals,
           });
           weights.push(weight);
@@ -157,17 +157,17 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
       it("should calculate the correct median", () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
-        const expectedMedianPrice = 71; // since sum_{i=1}^71 i = 2556 > 2525 = totalWeightSum / 2
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(expectedMedianPrice);
-        const expectedQuartile1Price = 50; // since sum_{i=1}^50 i = 1275 > 1262.5 = totalWeightSum / 4
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(expectedQuartile1Price);
-        const expectedQuartile3Price = 87; // since sum_{i=87}^100 i = 1309 > 1262.5 = totalWeightSum / 4
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(expectedQuartile3Price);
+        const expectedMedian = 71; // since sum_{i=1}^71 i = 2556 > 2525 = totalWeightSum / 2
+        expect(medianCalculationSummary.finalMedian.value).to.equal(expectedMedian);
+        const expectedQuartile1 = 50; // since sum_{i=1}^50 i = 1275 > 1262.5 = totalWeightSum / 4
+        expect(medianCalculationSummary.quartile1.value).to.equal(expectedQuartile1);
+        const expectedQuartile3 = 87; // since sum_{i=87}^100 i = 1309 > 1262.5 = totalWeightSum / 4
+        expect(medianCalculationSummary.quartile3.value).to.equal(expectedQuartile3);
         expect(medianCalculationSummary.participatingWeight).to.equal(BigInt(totalWeightSum));
       });
     });
 
-    describe("median is the average of 2 prices", () => {
+    describe("median is the average of 2 values", () => {
       before(() => {
         voters = ["voter1", "voter2"];
         feedValues = [
@@ -191,14 +191,14 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
       it("should calculate the correct median", () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(3);
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(2);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(4);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(3);
+        expect(medianCalculationSummary.quartile1.value).to.equal(2);
+        expect(medianCalculationSummary.quartile3.value).to.equal(4);
         expect(medianCalculationSummary.participatingWeight).to.equal(2n);
       });
     });
 
-    describe("median is the average of 2 prices float rounded down", () => {
+    describe("median is the average of 2 values float rounded down", () => {
       before(() => {
         voters = ["voter1", "voter2"];
         feedValues = [
@@ -222,9 +222,9 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
       it("should calculate the correct median", () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(3);
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(3);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(4);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(3);
+        expect(medianCalculationSummary.quartile1.value).to.equal(3);
+        expect(medianCalculationSummary.quartile3.value).to.equal(4);
         expect(medianCalculationSummary.participatingWeight).to.equal(2n);
       });
     });
@@ -256,10 +256,10 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
       it("should calculate the correct median", () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(50); // since (49 + 51) / 2 = 50
-        expect(medianCalculationSummary.finalMedianPrice.decimals).to.equal(decimals);
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(25);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(75);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(50); // since (49 + 51) / 2 = 50
+        expect(medianCalculationSummary.finalMedian.decimals).to.equal(decimals);
+        expect(medianCalculationSummary.quartile1.value).to.equal(25);
+        expect(medianCalculationSummary.quartile3.value).to.equal(75);
         expect(medianCalculationSummary.participatingWeight).to.equal(50n * 10n);
       });
     });
@@ -291,10 +291,10 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
       it("should calculate the correct median", () => {
         const medianCalculationSummary = calculateMedian(voters, feedValues, weights, decimals);
 
-        expect(medianCalculationSummary.finalMedianPrice.value).to.equal(49); // since (49 + 51) / 2 = 50
-        expect(medianCalculationSummary.finalMedianPrice.decimals).to.equal(decimals);
-        expect(medianCalculationSummary.quartile1Price.value).to.equal(24);
-        expect(medianCalculationSummary.quartile3Price.value).to.equal(74);
+        expect(medianCalculationSummary.finalMedian.value).to.equal(49); // since (49 + 51) / 2 = 50
+        expect(medianCalculationSummary.finalMedian.decimals).to.equal(decimals);
+        expect(medianCalculationSummary.quartile1.value).to.equal(24);
+        expect(medianCalculationSummary.quartile3.value).to.equal(74);
         expect(medianCalculationSummary.participatingWeight).to.equal(50n * 10n);
       });
     });

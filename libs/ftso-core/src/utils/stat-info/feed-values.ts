@@ -61,7 +61,7 @@ export function serializeFeedValuesForVotingRoundId(
   }
   const merkleTree = new MerkleTree([
     MerkleTreeStructs.hashRandomResult(randomResult),
-    ...feedResults.map(result => MerkleTreeStructs.hashPriceFeedResult(result)),
+    ...feedResults.map(result => MerkleTreeStructs.hashFeedResult(result)),
   ]);
   const merkleRoot = merkleTree.root;
   const randomValue = {
@@ -70,7 +70,7 @@ export function serializeFeedValuesForVotingRoundId(
   };
   const feedValues = feedResults.map(result => ({
     body: result,
-    merkleProof: merkleTree.getProof(MerkleTreeStructs.hashPriceFeedResult(result)),
+    merkleProof: merkleTree.getProof(MerkleTreeStructs.hashFeedResult(result)),
   }));
 
   const result: FeedValuesForVotingRoundId = {

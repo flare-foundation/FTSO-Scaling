@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ExampleProviderService } from "./example-provider-service";
 import { ExampleProviderController } from "./example-provider.controller";
-import { CcxtFeed } from "./price-feeds/ccxt-provider-service";
-import { RandomFeed } from "./price-feeds/random-feed";
-import { BaseDataFeed } from "./price-feeds/base-feed";
-import { FixedFeed } from "./price-feeds/fixed-feed";
+import { CcxtFeed } from "./data-feeds/ccxt-provider-service";
+import { RandomFeed } from "./data-feeds/random-feed";
+import { BaseDataFeed } from "./data-feeds/base-feed";
+import { FixedFeed } from "./data-feeds/fixed-feed";
 
 @Module({
   imports: [],
@@ -13,20 +13,20 @@ import { FixedFeed } from "./price-feeds/fixed-feed";
     {
       provide: "EXAMPLE_PROVIDER_SERVICE",
       useFactory: async () => {
-        let priceFeed: BaseDataFeed;
+        let dataFeed: BaseDataFeed;
 
-        if (process.env.PRICE_PROVIDER_IMPL == "fixed") {
-          priceFeed = new FixedFeed();
-        } else if (process.env.PRICE_PROVIDER_IMPL == "random") {
-          priceFeed = new RandomFeed();
+        if (process.env.VALUE_PROVIDER_IMPL == "fixed") {
+          dataFeed = new FixedFeed();
+        } else if (process.env.VALUE_PROVIDER_IMPL == "random") {
+          dataFeed = new RandomFeed();
         } else {
           // Ccxt service
           const ccxtFeed = new CcxtFeed();
           await ccxtFeed.start();
-          priceFeed = ccxtFeed;
+          dataFeed = ccxtFeed;
         }
 
-        const service = new ExampleProviderService(priceFeed);
+        const service = new ExampleProviderService(dataFeed);
         return service;
       },
     },

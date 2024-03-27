@@ -6,8 +6,8 @@ import { IPayloadMessage } from "../../../fsp-utils/src/PayloadMessage";
 export interface IRevealData {
   readonly random: string;
   readonly feeds: Feed[];
-  readonly prices?: number[];
-  readonly pricesWithDecimals?: ValueWithDecimals[];
+  readonly values?: number[];
+  readonly valuesWithDecimals?: ValueWithDecimals[];
   readonly encodedValues: string;
 }
 
@@ -26,7 +26,7 @@ export namespace RevealData {
     return {
       random: encoded.slice(0, 66),
       feeds,
-      pricesWithDecimals: FeedValueEncoder.decode("0x" + encoded.slice(66), feeds),
+      valuesWithDecimals: FeedValueEncoder.decode("0x" + encoded.slice(66), feeds),
       encodedValues: "0x" + encoded.slice(66),
     };
   }

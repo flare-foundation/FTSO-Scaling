@@ -404,7 +404,7 @@ export const GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC = () => {
 };
 
 /**
- * Price epoch reward offers are divided into three parts:
+ * Voting round reward offers are divided into three parts:
  * - 10% for finalizers
  * - 10% for signers
  * - 80%  + remainder for the median calculation results.

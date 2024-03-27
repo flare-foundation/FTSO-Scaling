@@ -43,7 +43,7 @@ export function calculateMedianRewardClaims(
 
   /**
    * Randomization for border cases
-   *  a random for IQR belt is calculated from hash(priceEpochId, slotId, address)
+   *  a random for IQR belt is calculated from hash(votingRoundId, slotId, address)
    */
   function randomSelect(feedId: string, votingRoundId: number, voterAddress: Address): boolean {
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
@@ -69,7 +69,7 @@ export function calculateMedianRewardClaims(
   if (
     calculationResult.data.participatingWeight * TOTAL_BIPS <
       calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
-    calculationResult.data.finalMedianPrice.isEmpty
+    calculationResult.data.finalMedian.isEmpty
   ) {
     const backClaim: IPartialRewardClaim = {
       beneficiary: offer.claimBackAddress.toLowerCase(),
@@ -81,23 +81,23 @@ export function calculateMedianRewardClaims(
   }
 
   // Use bigint for proper integer division
-  const medianPrice = BigInt(calculationResult.data.finalMedianPrice.value);
+  const median = BigInt(calculationResult.data.finalMedian.value);
 
   // sanity check - establish boundaries
-  if (calculationResult.data.quartile1Price.isEmpty || calculationResult.data.quartile3Price.isEmpty) {
-    throw new Error("Critical error: quartile prices are not available. This should never happen.");
+  if (calculationResult.data.quartile1.isEmpty || calculationResult.data.quartile3.isEmpty) {
+    throw new Error("Critical error: quartile values are not available. This should never happen.");
   }
 
-  const lowIQR = BigInt(calculationResult.data.quartile1Price.value);
-  const highIQR = BigInt(calculationResult.data.quartile3Price.value);
+  const lowIQR = BigInt(calculationResult.data.quartile1.value);
+  const highIQR = BigInt(calculationResult.data.quartile3.value);
 
   const voterRecords: VoterRewarding[] = [];
 
   const abs = n => (n < 0n ? -n : n);
-  const secondaryBandDiff = (abs(medianPrice) * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
+  const secondaryBandDiff = (abs(median) * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
 
-  const lowPCT = medianPrice - secondaryBandDiff;
-  const highPCT = medianPrice + secondaryBandDiff;
+  const lowPCT = median - secondaryBandDiff;
+  const highPCT = median + secondaryBandDiff;
 
   // assemble voter records
   for (let i = 0; i < calculationResult.votersSubmitAddresses!.length; i++) {

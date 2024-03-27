@@ -1,34 +1,43 @@
-# Feed Provider API
+# Feed Value Provider API
 
 FTSO protocol data provider service obtains feed values for a specific `votingRoundId` through two routes.
 
-- `POST /preparePriceFeeds/:votingRoundId`
-- `GET /preparePriceFeed/:votingRoundId:/:feedName`
+- `POST /feed-values/:votingRoundId`
+- `GET /feed-value/:votingRoundId:/:feedId`
 
-The POST requests expects the following JSON in the body:
-
-```json
-{
-  feeds: string[];
-}
-```
-
-The response is in from:
+The POST request expects the following JSON in the body:
 
 ```json
 {
-  votingRoundId: number;
-  feedPriceData: FeedPriceData[];
+  feeds: FeedId[]
 }
 ```
 
-Where `FeedPriceData` is in form
+Where `FeedId` is defined as:
 
 ```json
 {
-  feed: string;
-  price: number;
+  type: number,
+  name: string
 }
 ```
 
-The response correct response has code 200.
+The response object contains:
+
+```json
+{
+  votingRoundId: number,
+  feedValueData: FeedValueData[]
+}
+```
+
+Where `FeedValueData` is defined as:
+
+```json
+{
+  feed: FeedId,
+  value: number
+}
+```
+
+The response code for successful responses is 200.

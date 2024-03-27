@@ -37,9 +37,9 @@ type RoundAndAddress = string;
 export class FtsoDataProviderService {
   private readonly logger = new Logger(FtsoDataProviderService.name);
 
-  // connections to the indexer and price provider
+  // connections to the indexer and feed value provider
   private readonly indexerClient: IndexerClient;
-  private readonly priceProviderClient: Api<unknown>;
+  private readonly feedValueProviderClient: Api<unknown>;
   private readonly votingRoundData: LRUCache<RoundAndAddress, IRevealData>;
 
   private readonly rewardEpochManager: RewardEpochManager;
@@ -54,7 +54,7 @@ export class FtsoDataProviderService {
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     this.indexerClient = new IndexerClient(manager, required_history_sec, new Logger(IndexerClient.name));
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
-    this.priceProviderClient = new Api({ baseURL: configService.get<string>("price_provider_url") });
+    this.feedValueProviderClient = new Api({ baseURL: configService.get<string>("value_provider_url") });
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);
     this.votingRoundData = new LRUCache({
       max: configService.get<number>("voting_round_history_size"),
@@ -217,13 +217,13 @@ export class FtsoDataProviderService {
   private async getFeedValuesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
     const valuesRes = await retry(
       async () =>
-        await this.priceProviderClient.feedValueProviderApi.getFeedValues(votingRoundId, {
+        await this.feedValueProviderClient.feedValueProviderApi.getFeedValues(votingRoundId, {
           feeds: supportedFeeds.map(feed => decodeFeed(feed.id)),
         })
     );
 
     if (valuesRes.status < 200 || valuesRes.status >= 300) {
-      throw new Error(`Failed to get prices for epoch ${votingRoundId}: ${valuesRes.data}`);
+      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${valuesRes.data}`);
     }
 
     const values = valuesRes.data;
@@ -233,7 +233,7 @@ export class FtsoDataProviderService {
     const extractedValues = values.data.map(d => d.value);
 
     return {
-      prices: extractedValues,
+      values: extractedValues,
       feeds: supportedFeeds,
       random: Bytes32.random().toString(),
       encodedValues: FeedValueEncoder.encode(extractedValues, supportedFeeds),

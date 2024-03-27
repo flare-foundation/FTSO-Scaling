@@ -1,9 +1,9 @@
 # Data provider service
 
-Data provider service is a service that is run by a data provider participating in FTSO scaling protocol. The service provides API routes that [Flare System Client](https://gitlab.com/flarenetwork/flare-system-client) queries to obtain data for commits, reveals and results of calculations (median prices and random number). Data provider depends on:
+Data provider service is a service that is run by a data provider participating in FTSO scaling protocol. The service provides API routes that [Flare System Client](https://gitlab.com/flarenetwork/flare-system-client) queries to obtain data for commits, reveals and results of calculations (median values and random number). Data provider depends on:
 
 - [Flare System C-chain Indexer](https://gitlab.com/flarenetwork/flare-system-c-chain-indexer)
-- Custom feed/price provider that supports [API routes](./docs/feed-provider-API.md) that allow for querying feed values to send into protocol.
+- Custom feed value provider that supports [API routes](./docs/feed-provider-API.md) for querying feed values to send into protocol.
 
 Data providers do not directly communicate with blockchain. Instead, read access is provided through queries into indexer database while calculated information is then picked up by Flare System Client who manages sending data onto chain.
 
