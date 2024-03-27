@@ -9,8 +9,7 @@ import helmet from "helmet";
 async function bootstrap() {
   const app = await NestFactory.create(RandomExampleProviderModule);
   app.use(helmet());
-  // TODO: consider adding cors protectors + some sort of api key protection
-  const basePath = process.env.PRICE_PROVIDER_CLIENT_BASE_PATH ?? "";
+  const basePath = process.env.VALUE_PROVIDER_CLIENT_BASE_PATH ?? "";
 
   const config = new DocumentBuilder()
     .setTitle("Simple Feed Value Provider API interface")
@@ -26,7 +25,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix(basePath);
 
-  const PORT = process.env.PRICE_PROVIDER_CLIENT_PORT ? parseInt(process.env.PRICE_PROVIDER_CLIENT_PORT) : 3101;
+  const PORT = process.env.VALUE_PROVIDER_CLIENT_PORT ? parseInt(process.env.VALUE_PROVIDER_CLIENT_PORT) : 3101;
   console.log(`Your example feed value provider for FTSO is available on PORT: ${PORT}`);
   console.log(`Open link: http://localhost:${PORT}/api-doc`);
   await app.listen(PORT, "0.0.0.0");

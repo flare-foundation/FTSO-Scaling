@@ -7,7 +7,7 @@ import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
 import { FeedType } from "../../../../libs/ftso-core/src/voting-types";
 
-export const CCXT_FALLBACK_PRICE = 0.01;
+export const CCXT_FALLBACK_VALUE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
 const RETRY_BACKOFF_MS = 10_000;
 

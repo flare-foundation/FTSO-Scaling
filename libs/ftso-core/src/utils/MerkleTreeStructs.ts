@@ -23,7 +23,7 @@ export interface RandomResult {
 export type TreeResult = FeedResult | RandomResult;
 
 export namespace MerkleTreeStructs {
-  export function hashPriceFeedResult(feedResult: FeedResult): string {
+  export function hashFeedResult(feedResult: FeedResult): string {
     const abiInput = EncodingUtils.instance.getFunctionInputAbiData(
       CONTRACTS.FtsoMerkleStructs.name,
       ContractMethodNames.feedStruct,
@@ -49,7 +49,7 @@ export namespace MerkleTreeStructs {
       id: medianCalculationResult.feed.id.startsWith("0x")
         ? medianCalculationResult.feed.id
         : "0x" + medianCalculationResult.feed.id,
-      value: medianCalculationResult.data.finalMedianPrice.value,
+      value: medianCalculationResult.data.finalMedian.value,
       turnoutBIPS: Number(
         (medianCalculationResult.data.participatingWeight * 10000n) / medianCalculationResult.totalVotingWeight
       ),
@@ -66,7 +66,7 @@ export namespace MerkleTreeStructs {
   }
 
   export function hashMedianCalculationResult(medianCalculationResult: MedianCalculationResult): string {
-    return hashPriceFeedResult(fromMedianCalculationResult(medianCalculationResult));
+    return hashFeedResult(fromMedianCalculationResult(medianCalculationResult));
   }
 
   export function hashRandomCalculationResult(randomCalculationResult: RandomCalculationResult): string {

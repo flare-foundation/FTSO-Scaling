@@ -29,7 +29,7 @@ export const testFeeds: Feed[] = [
 ];
 
 describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
-  const samplePrices = [38573.26, 2175.12, 0.02042];
+  const sampleValues = [38573.26, 2175.12, 0.02042];
 
   const offerCount = 2;
   const indexerHistorySec = 1000;
@@ -42,7 +42,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     required_indexer_history_time_sec: indexerHistorySec,
     indexer_top_timeout: 1000,
     voting_round_history_size: 10000,
-    price_provider_url: "http://localhost:3000",
+    value_provider_url: "http://localhost:3000",
     port: -1,
     db_host: "",
     db_name: "",
@@ -87,7 +87,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     mock.onPost(/feed-values/).reply(200, {
       votingRoundId: 1,
-      data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
+      data: testFeeds.map((_, id) => ({ value: sampleValues[id] })),
     });
 
     const service = new FtsoDataProviderService(db.em, configService);
@@ -108,15 +108,15 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     expect(commit.commitHash).to.be.equal(expectedCommit);
   });
 
-  it("should compute results - multiple voters, same price", async () => {
+  it("should compute results - multiple voters, same value", async () => {
     const voters: TestVoter[] = generateVoters(10);
     const rewardEpochId = 1;
     await setUpRewardEpoch(rewardEpochId, voters);
 
-    // All voters return the same prices at the moment
+    // All voters return the same values at the moment
     mock.onPost(/feed-values/).reply(200, {
       votingRoundId: 1,
-      data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
+      data: testFeeds.map((_, id) => ({ value: sampleValues[id] })),
     });
 
     const services = voters.map(() => new FtsoDataProviderService(db.em, configService));
@@ -194,11 +194,11 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
       mock.onPost(/feed-values/).reply(200, {
         votingRoundId: 1,
-        data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
+        data: testFeeds.map((_, id) => ({ value: sampleValues[id] })),
       });
       mock.onPost(/feed-values/).reply(200, {
         votingRoundId: 2,
-        data: testFeeds.map((_, id) => ({ value: samplePrices[id] })),
+        data: testFeeds.map((_, id) => ({ value: sampleValues[id] })),
       });
 
       const services = voters.map(() => new FtsoDataProviderService(db.em, configService));

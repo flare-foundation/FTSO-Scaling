@@ -31,9 +31,9 @@ export namespace CommitData {
     };
   }
 
-  export function hashForCommit(voter: Address, votingRoundId: number, random: string, prices: string): string {
+  export function hashForCommit(voter: Address, votingRoundId: number, random: string, feedValues: string): string {
     const types = ["address", "uint32", "uint256", "bytes"];
-    const values = [voter.toLowerCase(), votingRoundId, random, prices];
+    const values = [voter.toLowerCase(), votingRoundId, random, feedValues];
     const encoded = encodeParameters(types, values);
     const hash = soliditySha3(encoded);
     if (hash === undefined) throw new Error(`Unable to compute commit hash for ${votingRoundId}`);

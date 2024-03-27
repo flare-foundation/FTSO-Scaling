@@ -15,8 +15,8 @@ export interface IConfig {
   voting_round_history_size: number;
   indexer_top_timeout: number;
 
-  // Price Provider url (PRICE_PROVIDER_URL)
-  price_provider_url: string;
+  // Feed Value Provider url
+  value_provider_url: string;
 }
 
 export default () => {
@@ -30,8 +30,8 @@ export default () => {
     db_user: process.env.DB_USERNAME ?? throwError("DB_USERNAME env variable not set"),
     db_pass: process.env.DB_PASSWORD ?? throwError("DB_PASSWORD env variable not set"),
     db_name: process.env.DB_NAME ?? throwError("DB_NAME env variable not set"),
-    price_provider_url:
-      process.env.PRICE_PROVIDER_BASE_URL ?? throwError("PRICE_PROVIDER_BASE_URL env variable not set"),
+    value_provider_url:
+      process.env.VALUE_PROVIDER_BASE_URL ?? throwError("VALUE_PROVIDER_BASE_URL env variable not set"),
     required_indexer_history_time_sec: parseInt(
       process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC ??
         throwError("DB_REQUIRED_INDEXER_HISTORY_TIME_SEC env variable not set")

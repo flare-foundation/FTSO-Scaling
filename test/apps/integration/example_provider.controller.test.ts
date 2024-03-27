@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ExampleProviderService } from "../../../apps/example_provider/src/example-provider-service";
 import { ExampleProviderController } from "../../../apps/example_provider/src/example-provider.controller";
-import { CcxtFeed, CCXT_FALLBACK_PRICE } from "../../../apps/example_provider/src/price-feeds/ccxt-provider-service";
-import { RandomFeed } from "../../../apps/example_provider/src/price-feeds/random-feed";
+import { CcxtFeed, CCXT_FALLBACK_VALUE } from "../../../apps/example_provider/src/data-feeds/ccxt-provider-service";
+import { RandomFeed } from "../../../apps/example_provider/src/data-feeds/random-feed";
 import { sleepFor } from "../../../libs/ftso-core/src/utils/retry";
 import { FeedId } from "../../../apps/example_provider/src/dto/provider-requests.dto";
 
@@ -12,8 +12,8 @@ describe("ExampleProviderController Random", () => {
   let exampleProviderController: ExampleProviderController;
 
   beforeEach(async () => {
-    const priceFeed = new RandomFeed();
-    const service = new ExampleProviderService(priceFeed);
+    const dataFeed = new RandomFeed();
+    const service = new ExampleProviderService(dataFeed);
     exampleProviderController = new ExampleProviderController(service);
   });
 
@@ -31,9 +31,9 @@ describe.skip("ExampleProviderController CCXT", () => {
   let exampleProviderController: ExampleProviderController;
 
   beforeEach(async () => {
-    const priceFeed = new CcxtFeed();
-    await priceFeed.start();
-    const service = new ExampleProviderService(priceFeed);
+    const dataFeed = new CcxtFeed();
+    await dataFeed.start();
+    const service = new ExampleProviderService(dataFeed);
     exampleProviderController = new ExampleProviderController(service);
 
     // Need to wait for trades to populate
@@ -51,7 +51,7 @@ describe.skip("ExampleProviderController CCXT", () => {
       expect(feedRes.votingRoundId).to.be.equal(123);
       expect(feedRes.data.value).to.be.greaterThan(0);
       expect(feedRes.data.feed).to.be.equal(BTC_USD);
-      expect(feedRes.data.value).not.to.be.equal(CCXT_FALLBACK_PRICE);
+      expect(feedRes.data.value).not.to.be.equal(CCXT_FALLBACK_VALUE);
     });
 
     it.skip("should return all coston prices", async () => {
