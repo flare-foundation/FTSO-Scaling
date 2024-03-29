@@ -60,7 +60,7 @@ export interface Feed {
   decimals: number;
 }
 
-export enum FeedType {
+export enum FeedCategory {
   None = 0,
   Crypto = 1,
   FX = 2,

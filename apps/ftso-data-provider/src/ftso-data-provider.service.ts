@@ -253,9 +253,9 @@ function decodeFeed(feedIdHex: string): FeedId {
     throw new Error(`Invalid feed string: ${feedIdHex}`);
   }
 
-  const type = parseInt(feedIdHex.slice(0, 2));
+  const category = parseInt(feedIdHex.slice(0, 2));
   const name = Buffer.from(feedIdHex.slice(2), "hex").toString("utf8").replaceAll("\0", "");
-  return { type, name };
+  return { category, name };
 }
 
 function unPrefix0x(tx: string) {

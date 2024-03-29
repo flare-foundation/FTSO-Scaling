@@ -6,7 +6,7 @@ import { RandomFeed } from "../../../apps/example_provider/src/data-feeds/random
 import { sleepFor } from "../../../libs/ftso-core/src/utils/retry";
 import { FeedId } from "../../../apps/example_provider/src/dto/provider-requests.dto";
 
-const BTC_USD: FeedId = { type: 1, name: "4254430000000000" };
+const BTC_USD: FeedId = { category: 1, name: "4254430000000000" };
 
 describe("ExampleProviderController Random", () => {
   let exampleProviderController: ExampleProviderController;
@@ -91,7 +91,7 @@ describe.skip("ExampleProviderController CCXT", () => {
         "EUR",
       ];
       const feedIds: FeedId[] = feeds.map(feed => {
-        return { type: 1, name: `${feed}/USD` };
+        return { category: 1, name: `${feed}/USD` };
       });
 
       await sleepFor(40_000);

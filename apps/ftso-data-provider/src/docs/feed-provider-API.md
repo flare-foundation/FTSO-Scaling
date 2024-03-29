@@ -17,7 +17,7 @@ Where `FeedId` is defined as:
 
 ```json
 {
-  type: number,
+  category: number,
   name: string
 }
 ```
