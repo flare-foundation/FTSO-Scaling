@@ -5,9 +5,9 @@ import { networks } from "../../../../libs/ftso-core/src/configs/networks";
 import { retry } from "../../../../libs/ftso-core/src/utils/retry";
 import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
-import { FeedType } from "../../../../libs/ftso-core/src/voting-types";
+import { FeedCategory } from "../../../../libs/ftso-core/src/voting-types";
 
-export const CCXT_FALLBACK_PRICE = 0.01;
+export const CCXT_FALLBACK_VALUE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
 const RETRY_BACKOFF_MS = 10_000;
 
@@ -25,7 +25,7 @@ interface PriceInfo {
   exchange: string;
 }
 
-const usdtToUsdFeedId: FeedId = { type: FeedType.Crypto.valueOf(), name: "USDT/USD" };
+const usdtToUsdFeedId: FeedId = { category: FeedCategory.Crypto.valueOf(), name: "USDT/USD" };
 
 export class CcxtFeed implements BaseDataFeed {
   private readonly logger = new Logger(CcxtFeed.name);
@@ -54,7 +54,7 @@ export class CcxtFeed implements BaseDataFeed {
       try {
         const exchange: Exchange = new ccxt.pro[exchangeName]({ newUpdates: true });
         this.exchangeByName.set(exchangeName, exchange);
-        loadExchanges.push(retry(async () => exchange.loadMarkets(), RETRY_BACKOFF_MS));
+        loadExchanges.push(retry(async () => exchange.loadMarkets(), 3, RETRY_BACKOFF_MS, this.logger));
       } catch (e) {
         this.logger.warn(`Failed to load markets for ${exchangeName}: ${e}`);
       }
@@ -212,5 +212,5 @@ export class CcxtFeed implements BaseDataFeed {
 }
 
 function feedsEqual(a: FeedId, b: FeedId): boolean {
-  return a.type === b.type && a.name === b.name;
+  return a.category === b.category && a.name === b.name;
 }

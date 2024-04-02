@@ -10,7 +10,7 @@
  */
 
 export interface FeedId {
-  type: number;
+  category: number;
   name: string;
 }
 
@@ -204,7 +204,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       votingRoundId: number,
       feed: string,
       query: {
-        type: number;
+        category: number;
         name: string;
       },
       params: RequestParams = {}

@@ -21,7 +21,7 @@
     "-----CUSTOM-SCRIPTS-----": "",
     "start:dev:provider": "nest start example_provider --watch",
     "-----DEVELOP-SCRIPTS-----": "echo ONLY FOR DEVELOPMENT",
-    "ftso-data-provider-provider-api-gen": "ts-node apps/ftso-data-provider/src/price-provider-api/provider-generator.ts"
+    "ftso-data-provider-provider-api-gen": "ts-node apps/ftso-data-provider/src/feed-value-provider-api/provider-generator.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -102,7 +102,7 @@
     "exclude": [
       "apps/**/main.ts",
       "apps/**/*.module.ts",
-      "apps/ftso-data-provider/src/price-provider-api/**/*",
+      "apps/ftso-data-provider/src/feed-value-provider-api/**/*",
       "apps/**/configuration.ts",
       "libs/ftso-core/src/utils/error.ts",
       "libs/ftso-core/src/utils/voting-utils.ts"

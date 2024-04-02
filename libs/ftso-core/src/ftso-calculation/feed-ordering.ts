@@ -13,7 +13,7 @@ export interface FeedWithTypeAndValue extends Feed {
  * Calculates a deterministic sequence of feeds based on the provided offers for a reward epoch.
  * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
  * In case of equal values the feedId is used to sort in increasing order.
- * The sequence defines positions of the feeds in the price vectors for the reward epoch.
+ * The sequence defines positions of the feeds in the value vectors for the reward epoch.
  */
 export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
   const feedValues = new Map<string, FeedWithTypeAndValue>();

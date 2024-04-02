@@ -25,7 +25,7 @@ const web3 = new Web3("https://dummy");
 export class MiniFtsoCalculator {
   voterIndex: number;
   privateKey: string;
-  // connections to the indexer and price provider
+  // connections to the indexer and feed value provider
   private readonly indexerClient: IndexerClient;
 
   private readonly rewardEpochManger: RewardEpochManager;

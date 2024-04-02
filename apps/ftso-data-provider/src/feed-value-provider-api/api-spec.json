@@ -23,7 +23,7 @@
         "operationId": "getFeedValue",
         "parameters": [
           { "name": "votingRoundId", "required": true, "in": "path", "schema": { "type": "number" } },
-          { "required": true, "name": "type", "in": "query", "schema": { "type": "number" } },
+          { "required": true, "name": "category", "in": "query", "schema": { "type": "number" } },
           { "required": true, "name": "name", "in": "query", "schema": { "type": "string" } }
         ],
         "responses": {
@@ -48,8 +48,8 @@
     "schemas": {
       "FeedId": {
         "type": "object",
-        "properties": { "type": { "type": "number" }, "name": { "type": "string" } },
-        "required": ["type", "name"]
+        "properties": { "category": { "type": "number" }, "name": { "type": "string" } },
+        "required": ["category", "name"]
       },
       "FeedValuesRequest": {
         "type": "object",

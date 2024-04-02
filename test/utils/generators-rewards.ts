@@ -804,7 +804,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         const voterRevealData: IRevealData = {
           random: Web3.utils.randomHex(32),
           feeds,
-          prices: feedValues,
+          values: feedValues,
           encodedValues: feedEncoded,
         };
         insertIntoRevealsMap(votingEpochId, voterIndex, voterRevealData);

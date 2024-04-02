@@ -78,7 +78,7 @@ export function calculateResultForFeed(
 
 /**
  * Performs specific median calculation for a single feed.
- * Given a list of voters, prices and weights, it calculates the median and other statistics.
+ * Given a list of voters, values and weights, it calculates the median and other statistics.
  * @param voters Array of voter addresses (unique identifiers)
  * @param feedValues Array of feed value votes as ValueWithDecimals[] for each voter
  * @param weights Array of weights for each voter in voters array
@@ -94,10 +94,10 @@ export function calculateMedian(
   if (voters.length !== feedValues.length || voters.length !== weights.length) {
     throw new Error("voters, feed values and weights must have the same length");
   }
-  const emptyResult = {
-    finalMedianPrice: FeedValueEncoder.emptyFeed(decimals),
-    quartile1Price: FeedValueEncoder.emptyFeed(decimals),
-    quartile3Price: FeedValueEncoder.emptyFeed(decimals),
+  const emptyResult: MedianCalculationSummary = {
+    finalMedian: FeedValueEncoder.emptyFeed(decimals),
+    quartile1: FeedValueEncoder.emptyFeed(decimals),
+    quartile3: FeedValueEncoder.emptyFeed(decimals),
     participatingWeight: 0n,
   };
 
@@ -115,65 +115,65 @@ export function calculateMedian(
   if (voteData.length === 0) {
     return emptyResult;
   }
-  // Sort by price
+  // Sort by value
   voteData.sort((a, b) => a.feedValue.value - b.feedValue.value);
   let totalWeight = 0n;
   voteData.forEach(vote => (totalWeight += vote.weight));
   const medianWeight = totalWeight / 2n + (totalWeight % 2n);
   let currentWeightSum = 0n;
 
-  let medianPrice: number | undefined;
+  let median: number | undefined;
   const quartileWeight = totalWeight / 4n;
-  let quartile1Price: number | undefined;
-  let quartile3Price: number | undefined;
+  let quartile1: number | undefined;
+  let quartile3: number | undefined;
 
   for (let index = 0; index < voteData.length; index++) {
     const vote = voteData[index];
     currentWeightSum += vote.weight;
-    if (quartile1Price === undefined && currentWeightSum > quartileWeight) {
-      // calculation of border price for 1st quartile
-      quartile1Price = vote.feedValue.value;
+    if (quartile1 === undefined && currentWeightSum > quartileWeight) {
+      // calculation of border value for 1st quartile
+      quartile1 = vote.feedValue.value;
     }
-    if (medianPrice === undefined && currentWeightSum >= medianWeight) {
+    if (median === undefined && currentWeightSum >= medianWeight) {
       if (currentWeightSum === medianWeight && totalWeight % 2n === 0n) {
         const next = voteData[index + 1];
-        // average of two middle prices in even case
-        medianPrice = Math.floor((vote.feedValue.value + next.feedValue.value) / 2);
+        // average of two middle values in even case
+        median = Math.floor((vote.feedValue.value + next.feedValue.value) / 2);
       } else {
-        medianPrice = vote.feedValue.value;
+        median = vote.feedValue.value;
       }
     }
-    if (medianPrice !== undefined && quartile1Price !== undefined) {
+    if (median !== undefined && quartile1 !== undefined) {
       break;
     }
   }
   currentWeightSum = 0n;
-  // calculation of border price for 3rd quartile
+  // calculation of border value for 3rd quartile
   for (let index = voteData.length - 1; index >= 0; index--) {
     const vote = voteData[index];
     currentWeightSum += vote.weight;
     if (currentWeightSum > quartileWeight) {
-      quartile3Price = vote.feedValue.value;
+      quartile3 = vote.feedValue.value;
       break;
     }
   }
 
   return {
-    finalMedianPrice: FeedValueEncoder.feedForValue(medianPrice, decimals),
-    quartile1Price: FeedValueEncoder.feedForValue(quartile1Price, decimals),
-    quartile3Price: FeedValueEncoder.feedForValue(quartile3Price, decimals),
+    finalMedian: FeedValueEncoder.feedForValue(median, decimals),
+    quartile1: FeedValueEncoder.feedForValue(quartile1, decimals),
+    quartile3: FeedValueEncoder.feedForValue(quartile3, decimals),
     participatingWeight: totalWeight,
   };
 }
 
 /**
- * Repacks voters, prices and weights into a single array of VoteData.
+ * Repacks voters, values and weights into a single array of VoteData.
  * All arrays must have the same length.
  */
 function repack(voters: string[], feedValues: ValueWithDecimals[], weights: bigint[]): VoteData[] {
   const result: VoteData[] = [];
   if (voters.length !== feedValues.length || voters.length !== weights.length) {
-    throw new Error("voters, prices and weights must have the same length");
+    throw new Error("voters, values and weights must have the same length");
   }
   for (let i = 0; i < voters.length; i++) {
     result.push({

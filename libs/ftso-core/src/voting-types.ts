@@ -40,9 +40,9 @@ export interface RandomCalculationResult {
  * Provides calculation summary for median calculation.
  */
 export interface MedianCalculationSummary {
-  readonly finalMedianPrice: ValueWithDecimals;
-  readonly quartile1Price: ValueWithDecimals;
-  readonly quartile3Price: ValueWithDecimals;
+  readonly finalMedian: ValueWithDecimals;
+  readonly quartile1: ValueWithDecimals;
+  readonly quartile3: ValueWithDecimals;
   readonly participatingWeight: bigint;
 }
 
@@ -55,12 +55,12 @@ export interface Feed {
    */
   id: string;
   /**
-   * int8 (solidity int8) the number of decimals in the price.
+   * int8 (solidity int8) the number of decimals in the value.
    */
   decimals: number;
 }
 
-export enum FeedType {
+export enum FeedCategory {
   None = 0,
   Crypto = 1,
   FX = 2,
