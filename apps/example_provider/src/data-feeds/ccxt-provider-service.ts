@@ -54,7 +54,7 @@ export class CcxtFeed implements BaseDataFeed {
       try {
         const exchange: Exchange = new ccxt.pro[exchangeName]({ newUpdates: true });
         this.exchangeByName.set(exchangeName, exchange);
-        loadExchanges.push(retry(async () => exchange.loadMarkets(), RETRY_BACKOFF_MS));
+        loadExchanges.push(retry(async () => exchange.loadMarkets(), 3, RETRY_BACKOFF_MS, this.logger));
       } catch (e) {
         this.logger.warn(`Failed to load markets for ${exchangeName}: ${e}`);
       }
