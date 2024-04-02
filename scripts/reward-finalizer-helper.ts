@@ -113,10 +113,24 @@ async function sendMerkleRoot(
   // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _noOfWeightBasedClaims, _rewardsHash));
   const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
   console.log(`Sending merkle root for epoch ${rewardEpochId} from ${wallet.address}`);
+  const rewardManagerId = await web3.eth.getChainId();
+  const noOfWeightBasedClaimsAndId = [[rewardManagerId, noOfWeightBasedClaims]];
+  const noOfWeightBasedClaimsEncoded = web3.eth.abi.encodeParameters(
+    ["tuple(uint256,uint256)[]"],
+    [noOfWeightBasedClaimsAndId]
+  );
+  // const noOfWeightBasedClaimsEncoded1 =
+  //   "0x" +
+  //   "0000000000000000000000000000000000000000000000000000000000000020" +
+  //   "0000000000000000000000000000000000000000000000000000000000000001" +
+  //   rewardManagerId.toString(16).padStart(64, "0") +
+  //   noOfWeightBasedClaims.toString(16).padStart(64, "0");
+
+  const noOfWeightBasedClaimsHash = web3.utils.keccak256(noOfWeightBasedClaimsEncoded);
   const message =
     "0x" +
     rewardEpochId.toString(16).padStart(64, "0") +
-    noOfWeightBasedClaims.toString(16).padStart(64, "0") +
+    noOfWeightBasedClaimsHash.slice(2) +
     rewardsHash.slice(2);
   const messageHash = web3.utils.keccak256(message);
   const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
@@ -127,7 +141,7 @@ async function sendMerkleRoot(
     from: wallet.address,
     to: CONTRACTS.FlareSystemsManager.address,
     data: flareSystemsManager.methods
-      .signRewards(rewardEpochId, noOfWeightBasedClaims, rewardsHash, signature)
+      .signRewards(rewardEpochId, noOfWeightBasedClaimsAndId, rewardsHash, signature)
       .encodeABI(),
     gas: "500000",
     gasPrice,
@@ -295,7 +309,7 @@ export async function main() {
       gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
       const tx = {
         from: wallet.address,
-        to: CONTRACTS.FlareSystemsManager.address,
+        to: CONTRACTS.RewardManager.address,
         data,
         value: "0",
         gas: "2000000",
@@ -329,7 +343,7 @@ export async function main() {
         gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
         const tx = {
           from: wallet.address,
-          to: CONTRACTS.FlareSystemsManager.address,
+          to: CONTRACTS.RewardManager.address,
           data,
           value: "0",
           gas: "2000000",
