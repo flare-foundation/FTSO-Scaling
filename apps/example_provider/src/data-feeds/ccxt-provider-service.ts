@@ -7,7 +7,6 @@ import { FeedId, FeedValueData } from "../dto/provider-requests.dto";
 import { BaseDataFeed } from "./base-feed";
 import { FeedCategory } from "../../../../libs/ftso-core/src/voting-types";
 
-export const CCXT_FALLBACK_VALUE = 0.01;
 const CONFIG_PREFIX = "apps/example_provider/src/config/";
 const RETRY_BACKOFF_MS = 10_000;
 
@@ -49,19 +48,29 @@ export class CcxtFeed implements BaseDataFeed {
       }
     }
 
+    this.logger.log(`Connecting to exchanges: ${JSON.stringify(Array.from(exchangeToSymbols.keys()))}`);
     const loadExchanges = [];
     for (const exchangeName of exchangeToSymbols.keys()) {
       try {
         const exchange: Exchange = new ccxt.pro[exchangeName]({ newUpdates: true });
         this.exchangeByName.set(exchangeName, exchange);
-        loadExchanges.push(retry(async () => exchange.loadMarkets(), 3, RETRY_BACKOFF_MS, this.logger));
+        loadExchanges.push([exchangeName, retry(async () => exchange.loadMarkets(), 2, RETRY_BACKOFF_MS, this.logger)]);
       } catch (e) {
-        this.logger.warn(`Failed to load markets for ${exchangeName}: ${e}`);
+        this.logger.warn(`Failed to initialize exchange ${exchangeName}, ignoring: ${e}`);
       }
     }
-    await Promise.all(loadExchanges);
+
+    for (const [exchangeName, loadExchange] of loadExchanges) {
+      try {
+        await loadExchange;
+        this.logger.log(`Exchange ${exchangeName} initialized`);
+      } catch (e) {
+        this.logger.warn(`Failed to load markets for ${exchangeName}, ignoring: ${e}`);
+      }
+    }
     this.initialized = true;
 
+    this.logger.log(`Initialization done, watching trades...`);
     void this.watchTrades(exchangeToSymbols);
   }
 
@@ -199,9 +208,7 @@ export class CcxtFeed implements BaseDataFeed {
         throw new Error("Must provide USDT feed sources, as it is used for USD conversion.");
       }
 
-      config.forEach(feed => {
-        console.log(feed.feed);
-      });
+      this.logger.log(`Supported feeds: ${JSON.stringify(config.map(f => f.feed))}`);
 
       return config;
     } catch (err) {
