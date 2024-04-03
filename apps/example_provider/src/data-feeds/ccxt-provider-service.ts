@@ -57,6 +57,7 @@ export class CcxtFeed implements BaseDataFeed {
         loadExchanges.push([exchangeName, retry(async () => exchange.loadMarkets(), 2, RETRY_BACKOFF_MS, this.logger)]);
       } catch (e) {
         this.logger.warn(`Failed to initialize exchange ${exchangeName}, ignoring: ${e}`);
+        exchangeToSymbols.delete(exchangeName);
       }
     }
 
@@ -66,6 +67,7 @@ export class CcxtFeed implements BaseDataFeed {
         this.logger.log(`Exchange ${exchangeName} initialized`);
       } catch (e) {
         this.logger.warn(`Failed to load markets for ${exchangeName}, ignoring: ${e}`);
+        exchangeToSymbols.delete(exchangeName);
       }
     }
     this.initialized = true;
