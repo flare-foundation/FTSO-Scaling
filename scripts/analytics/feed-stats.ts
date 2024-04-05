@@ -28,9 +28,9 @@ export async function feedSummary(
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const feedId = feedNameOrId.startsWith("0x")
     ? feedNameOrId
-    : rewardEpochInfo.canonicalFeedOrder[parseInt(feedNameOrId)].name;
+    : rewardEpochInfo.canonicalFeedOrder[parseInt(feedNameOrId)].id;
   const start = startVotingRoundId ?? rewardEpochInfo.signingPolicy.startVotingRoundId;
-  const end = endVotingRoundId ?? rewardEpochInfo.endVotingRoundId;
+  let end = endVotingRoundId ?? rewardEpochInfo.endVotingRoundId;
   if (start < rewardEpochInfo.signingPolicy.startVotingRoundId) {
     throw new Error("Invalid start voting round id");
   }
@@ -41,17 +41,26 @@ export async function feedSummary(
     throw new Error("Invalid range");
   }
 
-  const feedPosition = rewardEpochInfo.canonicalFeedOrder.findIndex(feed => feed.name === feedId);
+  const feedPosition = rewardEpochInfo.canonicalFeedOrder.findIndex(feed => feed.id === feedId);
   const feed = rewardEpochInfo.canonicalFeedOrder[feedPosition];
   if (feedPosition < 0) {
     throw new Error("Feed not found");
   }
   const feedDataEntries: FeedDataInRewardEpoch[] = [];
+  if (end === undefined) {
+    end = Number.POSITIVE_INFINITY; // Number
+  }
   for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {
-    const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+    let data;
+    try {
+      data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+    } catch (e) {
+      // finish when no more data - relevant for the last partially calculated reward epoch
+      break;
+    }
     const submissionAddressToValue = new Map<string, ValueWithDecimals>();
     for (const record of data.dataForCalculations.validEligibleReveals) {
-      const feedValue = record.data?.pricesWithDecimals?.[feedPosition];
+      const feedValue = record.data?.valuesWithDecimals?.[feedPosition];
       if (feedValue) {
         submissionAddressToValue.set(record.submitAddress.toLowerCase(), feedValue);
       }
@@ -77,18 +86,26 @@ export async function feedSummary(
   return result;
 }
 
+function toFeedName(hex: string) {
+  let result = "";
+  for (let i = 2; i < hex.length; i += 2) {
+    const charHexCode = hex.slice(i, i + 2);
+    result += String.fromCharCode(parseInt(charHexCode, 16));
+  }
+  return result;
+}
 export function printFeedSummary(feedData: RewardEpochDataFeeds) {
-  console.log(`Feed: ${feedData.feed.name}`);
   for (const feedDataEntry of feedData.feedData) {
     const votes = feedDataEntry.votes.map(vote => (vote ? (vote.isEmpty ? "x" : vote.value) : "-")).join(",");
     console.log(
-      `${feedDataEntry.votingRoundId}: ${feedDataEntry.medianSummary.finalMedianPrice.value} (${
-        feedDataEntry.medianSummary.quartile1Price.value
-      }, ${feedDataEntry.medianSummary.quartile3Price.value}), ${flrFormat(
+      `${feedDataEntry.votingRoundId}: ${feedDataEntry.medianSummary.finalMedian.value} (${
+        feedDataEntry.medianSummary.quartile1.value
+      }, ${feedDataEntry.medianSummary.quartile3.value}), ${flrFormat(
         feedDataEntry.medianSummary.participatingWeight
       )} | ${votes}`
     );
   }
+  console.log(`Feed: ${toFeedName(feedData.feed.id)} (${feedData.feed.id})`);
   console.log("------ Interpretation ------");
   console.log(`voting round id: median (q1, q3), weight | votes`);
 }
