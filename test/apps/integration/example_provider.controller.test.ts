@@ -1,11 +1,12 @@
 import { expect } from "chai";
 import { ExampleProviderService } from "../../../apps/example_provider/src/example-provider-service";
 import { ExampleProviderController } from "../../../apps/example_provider/src/example-provider.controller";
-import { CcxtFeed, CCXT_FALLBACK_VALUE } from "../../../apps/example_provider/src/data-feeds/ccxt-provider-service";
+import { CcxtFeed } from "../../../apps/example_provider/src/data-feeds/ccxt-provider-service";
 import { RandomFeed } from "../../../apps/example_provider/src/data-feeds/random-feed";
 import { sleepFor } from "../../../libs/ftso-core/src/utils/retry";
 import { FeedId } from "../../../apps/example_provider/src/dto/provider-requests.dto";
 
+export const DEFAULT_VALUE = 0.01;
 const BTC_USD: FeedId = { category: 1, name: "4254430000000000" };
 
 describe("ExampleProviderController Random", () => {
@@ -51,7 +52,7 @@ describe.skip("ExampleProviderController CCXT", () => {
       expect(feedRes.votingRoundId).to.be.equal(123);
       expect(feedRes.data.value).to.be.greaterThan(0);
       expect(feedRes.data.feed).to.be.equal(BTC_USD);
-      expect(feedRes.data.value).not.to.be.equal(CCXT_FALLBACK_VALUE);
+      expect(feedRes.data.value).not.to.be.equal(DEFAULT_VALUE);
     });
 
     it.skip("should return all coston prices", async () => {
