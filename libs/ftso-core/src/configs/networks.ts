@@ -499,9 +499,9 @@ const finalizationVoterSelectionThresholdWeightBips = () => {
     case "from-env":
       return extractIntegerNonNegativeValueFromEnv("FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS");
     case "coston":
-      return 100;
+      return 500;
     case "songbird":
-      return 100;
+      return 500;
     case "coston2":
     case "local-test":
       return 500;
