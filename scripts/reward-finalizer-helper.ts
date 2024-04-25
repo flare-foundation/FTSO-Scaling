@@ -57,8 +57,10 @@ console.log(`Connected to ${RPC}`);
 
 const flareSystemsManagerAbi = JSON.parse(readFileSync(`abi/FlareSystemsManager.json`).toString()).abi;
 const rewardManagerAbi = JSON.parse(readFileSync(`abi/RewardManager.json`).toString()).abi;
+const relayAbi = JSON.parse(readFileSync(`abi/Relay.json`).toString()).abi;
 const flareSystemsManager = new web3.eth.Contract(flareSystemsManagerAbi, CONTRACTS.FlareSystemsManager.address);
 const rewardManager = new web3.eth.Contract(rewardManagerAbi, CONTRACTS.RewardManager.address);
+const relay = new web3.eth.Contract(relayAbi, CONTRACTS.Relay.address);
 
 // struct Signature {
 //    uint8 v;
@@ -102,6 +104,28 @@ async function sendFakeUptimeVote(rewardEpochId: number, signingPrivateKey: stri
   const signed = await wallet.signTransaction(tx);
   const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
   console.log(`Uptime vote for epoch ${rewardEpochId} from ${wallet.address} sent`);
+}
+
+async function sendNewSigningPolicy(rewardEpochId: number, signingPrivateKey: string) {
+  const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
+  console.log(`Sending signing policy vote for epoch ${rewardEpochId} from ${wallet.address}`);
+  const signingPolicyHash: string = await relay.methods.toSigningPolicyHash(rewardEpochId).call();
+  const signature = await ECDSASignature.signMessageHash(signingPolicyHash, signingPrivateKey);
+  let gasPrice = await web3.eth.getGasPrice();
+  const nonce = await web3.eth.getTransactionCount(wallet.address);
+  gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
+  const tx = {
+    from: wallet.address,
+    to: CONTRACTS.FlareSystemsManager.address,
+    data: flareSystemsManager.methods.signNewSigningPolicy(rewardEpochId, signingPolicyHash, signature).encodeABI(),
+    value: "0",
+    gas: "500000",
+    gasPrice,
+    nonce: Number(nonce).toString(),
+  };
+  const signed = await wallet.signTransaction(tx);
+  const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+  console.log(`New signing policy vote for epoch ${rewardEpochId} from ${wallet.address} sent`);
 }
 
 async function sendMerkleRoot(
@@ -171,6 +195,25 @@ async function sendUpTimeVotes(rewardEpochId: number) {
   }
 }
 
+async function sendNewSigningPolicyVotes(rewardEpochId: number) {
+  if (!process.env.PRIVATE_KEYS) {
+    throw new Error(
+      "PRIVATE_KEYS env variable is required. It should be a comma separated list of private keys, in hex, 0x-prefixed."
+    );
+  }
+  const privateKeys = process.env.PRIVATE_KEYS?.split(",") || [];
+  for (const privateKey of privateKeys) {
+    try {
+      await sendNewSigningPolicy(rewardEpochId, privateKey);
+    } catch (e) {
+      const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+      console.error(`Error sending new signing policy vote for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
+      console.dir(e);
+      break;
+    }
+  }
+}
+
 async function sendMerkleProofs(rewardEpochId: number) {
   const distributionData = deserializeRewardDistributionData(rewardEpochId);
   if (!process.env.PRIVATE_KEYS) {
@@ -200,6 +243,19 @@ export async function main() {
   const action = process.argv[2];
   if (!action) {
     throw new Error("Action is required");
+  }
+  if (action === "signingPolicy") {
+    if (!process.argv[3]) {
+      throw new Error("usage: node reward-finalizer-helper.js signing policy <rewardEpochId> [endRewardEpochId]");
+    }
+    const rewardEpochId = Number(process.argv[3]);
+    let endRewardEpochId = rewardEpochId;
+    if (process.argv[4]) {
+      endRewardEpochId = Number(process.argv[4]);
+    }
+    for (let currentRewardEpochId = rewardEpochId; currentRewardEpochId <= endRewardEpochId; currentRewardEpochId++) {
+      await sendNewSigningPolicyVotes(currentRewardEpochId);
+    }
   }
   if (action === "uptime") {
     if (!process.argv[3]) {
