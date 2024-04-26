@@ -43,15 +43,6 @@
       "compilerOptions": {
         "tsConfigPath": "apps/ftso-reward-calculation-process/tsconfig.app.json"
       }
-    },
-    "example_provider": {
-      "type": "application",
-      "root": "apps/example_provider",
-      "entryFile": "main",
-      "sourceRoot": "apps/example_provider/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/example_provider/tsconfig.app.json"
-      }
     }
   },
   "monorepo": true,
