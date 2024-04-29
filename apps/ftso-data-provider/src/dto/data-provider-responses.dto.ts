@@ -2,6 +2,7 @@
 
 import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
 import { TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { MedianCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
 
 export enum PDPResponseStatusEnum {
   OK = "OK",
@@ -39,6 +40,25 @@ interface ExternalResponseNotAvailable {
 }
 
 export type ExternalResponse = ExternalResponseOk | ExternalResponseTooEarly | ExternalResponseNotAvailable;
+
+interface ExternalMedianResponseOk {
+  status: ExternalResponseStatusEnum.OK;
+  votingRoundId: number;
+  medianData: MedianCalculationResult[];
+}
+
+interface ExternalMedianResponseNotAvailable {
+  status: ExternalResponseStatusEnum.NOT_AVAILABLE;
+}
+
+interface ExternalMedianResponseTooEarly {
+  status: ExternalResponseStatusEnum.TOO_EARLY;
+}
+
+export type ExternalMedianResponse =
+  | ExternalMedianResponseOk
+  | ExternalMedianResponseNotAvailable
+  | ExternalMedianResponseTooEarly;
 
 export interface JSONAbiDefinition {
   abiName: string;
