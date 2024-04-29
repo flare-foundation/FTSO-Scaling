@@ -2,6 +2,7 @@ import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntP
 import { ApiSecurity, ApiTags } from "@nestjs/swagger";
 import {
   AbiDefinitionsResponse,
+  ExternalMedianResponse,
   ExternalResponse,
   ExternalResponseStatusEnum,
   PDPResponse,
@@ -112,6 +113,18 @@ export class FtsoDataProviderController {
     return {
       status: ExternalResponseStatusEnum.OK,
       data,
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("medianCalculationResults/:votingRoundId")
+  async fullMedianData(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalMedianResponse> {
+    // TODO: handle to early response as it is more informative, for now we respond with not available for to early cases
+    const data = await this.ftsoDataProviderService.getFullMedianData(votingRoundId);
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      votingRoundId,
+      medianData: data,
     };
   }
 }
