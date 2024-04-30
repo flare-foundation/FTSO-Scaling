@@ -3,6 +3,7 @@ import { FtsoDataProviderModule } from "./ftso-data-provider.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { LogLevel, Logger } from "@nestjs/common";
+import { BigIntInterceptor } from "./bigIntInterceptor";
 
 async function bootstrap() {
   let logLevels: LogLevel[] = ["log"];
@@ -11,6 +12,7 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(FtsoDataProviderModule, { logger: logLevels });
+  app.useGlobalInterceptors(new BigIntInterceptor());
   app.use(helmet());
   const basePath = process.env.DATA_PROVIDER_CLIENT_BASE_PATH ?? "";
 
