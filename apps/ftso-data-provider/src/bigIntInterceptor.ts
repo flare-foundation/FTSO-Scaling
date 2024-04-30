@@ -8,17 +8,21 @@ export class BigIntInterceptor implements NestInterceptor {
   }
 
   private convertBigIntToString(data: any): any {
+    if (typeof data !== 'object') {
+      if (typeof data === 'bigint') {
+        data = data.toString();
+      }
+      return data
+    }
+    
     if (Array.isArray(data)) {
       return data.map(item => this.convertBigIntToString(item));
-    } else if (data !== null && typeof data === "object") {
-      Object.keys(data).forEach(key => {
-        if (typeof data[key] === "bigint") {
-          data[key] = data[key].toString();
-        } else if (typeof data[key] === "object") {
-          this.convertBigIntToString(data[key]);
-        }
-      });
     }
+    
+    Object.keys(data).forEach(key => {
+        data[key] = this.convertBigIntToString(data[key]);
+    });
+
     return data;
   }
 }
