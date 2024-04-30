@@ -1,5 +1,7 @@
 import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
 import { ApiSecurity, ApiTags } from "@nestjs/swagger";
+import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 import {
   AbiDefinitionsResponse,
   ExternalMedianResponse,
@@ -9,9 +11,7 @@ import {
   PDPResponseStatusEnum,
 } from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
-import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
-import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 
 enum ApiTagsEnum {
   PDP = "FTSO Protocol data provider",
