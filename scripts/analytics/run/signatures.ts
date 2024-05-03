@@ -8,7 +8,7 @@ async function main() {
   const rewardEpochId = parseInt(process.argv[2]);
   let signatureGracePeriodEndOffset;
   if (!process.argv[3]) {
-    if (process.env.NETWORK === "coston") {
+    if (process.env.NETWORK === "coston" || process.env.NETWORK === "songbird") {
       signatureGracePeriodEndOffset =
         EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
     } else {
