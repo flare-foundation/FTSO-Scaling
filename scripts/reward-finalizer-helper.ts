@@ -48,6 +48,9 @@ import { ClaimType, IRewardClaimWithProof } from "../libs/ftso-core/src/utils/Re
 import { deserializeRewardDistributionData } from "../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
 import { readFileSync } from "fs";
 import { printClaimSummary, verifyMerkleProofs } from "./stats-utils";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 const COSTON_RPC = "https://coston-api.flare.network/ext/bc/C/rpc";
 
