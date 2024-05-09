@@ -153,7 +153,11 @@ export class IndexerClient {
     if (endTime) {
       query = query.andWhere("event.timestamp <= :endTime", { endTime });
     }
-    return query.orderBy("event.timestamp", "ASC").getMany();
+    return query
+      .orderBy("event.timestamp", "ASC")
+      .addOrderBy("event.block_number", "ASC")
+      .addOrderBy("event.log_index", "ASC")
+      .getMany();
   }
 
   /**
@@ -175,7 +179,11 @@ export class IndexerClient {
       query = query.andWhere("tx.timestamp <= :endTime", { endTime });
     }
 
-    return query.orderBy("tx.timestamp", "ASC").getMany();
+    return query
+      .orderBy("tx.timestamp", "ASC")
+      .addOrderBy("tx.block_number", "ASC")
+      .addOrderBy("tx.transaction_index", "ASC")
+      .getMany();
   }
 
   /**
@@ -321,6 +329,9 @@ export class IndexerClient {
       endTime
     );
     const rewardOffers = rewardOffersResults.map(event => RewardsOffered.fromRawEvent(event));
+    for (let i = 0; i < rewardOffers.length; i++) {
+      rewardOffers[i].offerIndex = i;
+    }
 
     const inflationOffersResults = await this.queryEvents(
       CONTRACTS.FtsoRewardOffersManager,
@@ -329,6 +340,9 @@ export class IndexerClient {
       endTime
     );
     const inflationOffers = inflationOffersResults.map(event => InflationRewardsOffered.fromRawEvent(event));
+    for (let i = 0; i < inflationOffers.length; i++) {
+      inflationOffers[i].offerIndex = rewardOffers.length + i;
+    }
 
     return {
       status,
