@@ -73,3 +73,9 @@ export namespace MerkleTreeStructs {
     return hashRandomResult(fromRandomCalculationResult(randomCalculationResult));
   }
 }
+
+// User facing API response feed with proof
+export interface FeedResultWithProof {
+  body: FeedResult;
+  proof: string[];
+}

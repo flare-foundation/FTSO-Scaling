@@ -4,6 +4,7 @@ import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolM
 import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 import {
   AbiDefinitionsResponse,
+  ExternalFeedWithProofResponse,
   ExternalMedianResponse,
   ExternalResponse,
   ExternalResponseStatusEnum,
@@ -103,6 +104,20 @@ export class FtsoDataProviderController {
     return {
       status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
       ...data,
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("specific-feed/:feedId/:votingRoundId")
+  async feedWithProof(
+    @Param("feedId") feedId: string,
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number
+  ): Promise<ExternalFeedWithProofResponse> {
+    // TODO: handle to early response as it is more informative, for now we respond with not available for to early cases
+    const data = await this.ftsoDataProviderService.getFeedWithProof(votingRoundId, feedId);
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      feedWithProof: data,
     };
   }
 
