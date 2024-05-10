@@ -20,7 +20,7 @@ import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
 import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
-import { MerkleTreeStructs } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { FeedResultWithProof, MerkleTreeStructs } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { retry } from "../../../libs/ftso-core/src/utils/retry";
@@ -158,6 +158,23 @@ export class FtsoDataProviderService {
       merkleRoot,
       isSecureRandom: result.randomData.isSecure,
       tree: treeNodes,
+    };
+    return response;
+  }
+
+  async getFeedWithProof(votingRoundId: number, feedId: string): Promise<FeedResultWithProof | undefined> {
+    const result = await this.prepareCalculationResultData(votingRoundId);
+    if (result === undefined) {
+      return undefined;
+    }
+    const feed = result.medianData.find(median => median.feed.id === feedId);
+    if (feed === undefined) {
+      return undefined;
+    }
+    const proof = result.merkleTree.getProof(MerkleTreeStructs.hashMedianCalculationResult(feed));
+    const response: FeedResultWithProof = {
+      body: MerkleTreeStructs.fromMedianCalculationResult(feed),
+      proof,
     };
     return response;
   }
