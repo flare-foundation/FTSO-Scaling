@@ -9,6 +9,7 @@ import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_CALCULATION_DATA_FILE } from "./constants";
 import { Feed, MedianCalculationResult, MedianCalculationSummary, RandomCalculationResult } from "../../voting-types";
 import { ValueWithDecimals } from "../FeedValueEncoder";
+import { RelayMessage } from "../../../../fsp-utils/src/RelayMessage";
 
 export interface RevealRecords {
   submitAddress: string;
@@ -118,6 +119,10 @@ export function serializeDataForRewardCalculation(
     };
     hashSignatures.push(hashRecord);
   }
+  for (const finalization of rewardCalculationData.finalizations) {
+    RelayMessage.augment(finalization.messages);
+  }
+  RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages);
   const data: SDataForRewardCalculation = {
     dataForCalculations: prepareDataForCalculations(rewardEpochId, rewardCalculationData),
     signatures: hashSignatures,

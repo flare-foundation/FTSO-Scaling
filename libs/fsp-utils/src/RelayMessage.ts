@@ -8,6 +8,7 @@ export interface IRelayMessage {
   protocolMessageMerkleRoot?: IProtocolMessageMerkleRoot;
   newSigningPolicy?: ISigningPolicy;
   signatures: IECDSASignatureWithIndex[];
+  protocolMessageHash?: string;
 }
 
 export namespace RelayMessage {
@@ -53,6 +54,7 @@ export namespace RelayMessage {
       }
     } else {
       encoded += "00"; // protocolId == 0 indicates new signing policy
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const encodedNewSigningPolicy = SigningPolicy.encode(message.newSigningPolicy!);
       encoded += encodedNewSigningPolicy.slice(2);
       if (verify) {
@@ -69,6 +71,7 @@ export namespace RelayMessage {
         }
         lastObservedIndex = signature.index;
         if (verify) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const actualSigner = ECDSASignatureWithIndex.recoverSigner(hashToSign!, signature);
           const signingPolicySigner = message.signingPolicy.voters[signature.index];
           if (actualSigner.toLowerCase() !== signingPolicySigner.toLowerCase()) {
@@ -94,21 +97,28 @@ export namespace RelayMessage {
     const encodedInternal = encoded.startsWith("0x") ? encoded.slice(2) : encoded;
     let newSigningPolicy: ISigningPolicy | undefined;
     let protocolMessageMerkleRoot: IProtocolMessageMerkleRoot | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     if (encodedInternal.length <= signingPolicy.encodedLength!) {
       throw Error(`Invalid relay message: too short`);
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const protocolId = encodedInternal.slice(signingPolicy.encodedLength!, signingPolicy.encodedLength! + 2);
     let encodedSignatures = "";
     if (protocolId === "00") {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const rest = encodedInternal.slice(signingPolicy.encodedLength! + 2);
       newSigningPolicy = SigningPolicy.decode(rest, false);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       if (rest.length <= newSigningPolicy.encodedLength!) {
         throw Error(`Invalid relay message: too short - missing signatures`);
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       encodedSignatures = rest.slice(newSigningPolicy.encodedLength!);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const rest = encodedInternal.slice(signingPolicy.encodedLength!);
       protocolMessageMerkleRoot = ProtocolMessageMerkleRoot.decode(rest, false);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       encodedSignatures = rest.slice(protocolMessageMerkleRoot.encodedLength!);
     }
     const signatures = ECDSASignatureWithIndex.decodeSignatureList(encodedSignatures);
@@ -149,15 +159,23 @@ export namespace RelayMessage {
       if (a.protocolMessageMerkleRoot || b.protocolMessageMerkleRoot) {
         return false;
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return SigningPolicy.equals(a.newSigningPolicy, b.newSigningPolicy!);
     }
     if (a.protocolMessageMerkleRoot && b.protocolMessageMerkleRoot) {
       if (a.newSigningPolicy || b.newSigningPolicy) {
         return false;
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return ProtocolMessageMerkleRoot.equals(a.protocolMessageMerkleRoot, b.protocolMessageMerkleRoot!);
     }
     // One of messages is invalid
     return false;
+  }
+
+  export function augment(m: IRelayMessage): IRelayMessage {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot!);
+    return m;
   }
 }
