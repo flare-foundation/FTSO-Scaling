@@ -5,6 +5,7 @@ import { Feed, MedianCalculationSummary } from "../../libs/ftso-core/src/voting-
 import { flrFormat } from "../../test/utils/reward-claim-summaries";
 
 export interface FeedDataInRewardEpoch {
+  feed?: Feed;
   votingRoundId: number;
   medianSummary: MedianCalculationSummary;
   votes: (ValueWithDecimals | undefined)[];
@@ -12,7 +13,7 @@ export interface FeedDataInRewardEpoch {
 
 export interface RewardEpochDataFeeds {
   rewardEpochId: number;
-  feed: Feed;
+  feed?: Feed;
   startVotingRoundId: number;
   endVotingRoundId: number;
   feedData: FeedDataInRewardEpoch[];
@@ -28,6 +29,8 @@ export async function feedSummary(
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const feedId = feedNameOrId.startsWith("0x")
     ? feedNameOrId
+    : feedNameOrId === "-"
+    ? undefined
     : rewardEpochInfo.canonicalFeedOrder[parseInt(feedNameOrId)].id;
   const start = startVotingRoundId ?? rewardEpochInfo.signingPolicy.startVotingRoundId;
   let end = endVotingRoundId ?? rewardEpochInfo.endVotingRoundId;
@@ -41,40 +44,52 @@ export async function feedSummary(
     throw new Error("Invalid range");
   }
 
-  const feedPosition = rewardEpochInfo.canonicalFeedOrder.findIndex(feed => feed.id === feedId);
-  const feed = rewardEpochInfo.canonicalFeedOrder[feedPosition];
-  if (feedPosition < 0) {
-    throw new Error("Feed not found");
+  const feedPositionInList = rewardEpochInfo.canonicalFeedOrder.findIndex(feed => feed.id === feedId);
+  const feed = rewardEpochInfo.canonicalFeedOrder[feedPositionInList]; // can be undefined
+  let startFeedPos = 0;
+  let endFeedPos = rewardEpochInfo.canonicalFeedOrder.length - 1;
+  if (feedPositionInList < 0) {
+    if (start !== end) {
+      throw new Error("Feed not found");
+    }
+  } else {
+    startFeedPos = feedPositionInList;
+    endFeedPos = feedPositionInList;
   }
+
   const feedDataEntries: FeedDataInRewardEpoch[] = [];
   if (end === undefined) {
     end = Number.POSITIVE_INFINITY; // Number
   }
-  for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {
-    let data;
-    try {
-      data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
-    } catch (e) {
-      // finish when no more data - relevant for the last partially calculated reward epoch
-      break;
-    }
-    const submissionAddressToValue = new Map<string, ValueWithDecimals>();
-    for (const record of data.dataForCalculations.validEligibleReveals) {
-      const feedValue = record.data?.valuesWithDecimals?.[feedPosition];
-      if (feedValue) {
-        submissionAddressToValue.set(record.submitAddress.toLowerCase(), feedValue);
+  for (let feedPos = startFeedPos; feedPos <= endFeedPos; feedPos++) {
+    for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {
+      let data;
+      try {
+        data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+      } catch (e) {
+        // finish when no more data - relevant for the last partially calculated reward epoch
+        break;
       }
+      const submissionAddressToValue = new Map<string, ValueWithDecimals>();
+      for (const record of data.dataForCalculations.validEligibleReveals) {
+        const feedValue = record.data?.valuesWithDecimals?.[feedPos];
+        if (feedValue) {
+          submissionAddressToValue.set(record.submitAddress.toLowerCase(), feedValue);
+        }
+      }
+      const votes: (ValueWithDecimals | undefined)[] = [];
+      for (const address of data.dataForCalculations.orderedVotersSubmitAddresses) {
+        votes.push(submissionAddressToValue.get(address.toLowerCase()));
+      }
+      const feed = feedPositionInList < 0 ? rewardEpochInfo.canonicalFeedOrder[feedPos] : undefined;
+      const feedData: FeedDataInRewardEpoch = {
+        votingRoundId,
+        medianSummary: data.medianSummaries[feedPos],
+        votes,
+        feed,
+      };
+      feedDataEntries.push(feedData);
     }
-    const votes: (ValueWithDecimals | undefined)[] = [];
-    for (const address of data.dataForCalculations.orderedVotersSubmitAddresses) {
-      votes.push(submissionAddressToValue.get(address.toLowerCase()));
-    }
-    const feedData: FeedDataInRewardEpoch = {
-      votingRoundId,
-      medianSummary: data.medianSummaries[feedPosition],
-      votes,
-    };
-    feedDataEntries.push(feedData);
   }
   const result: RewardEpochDataFeeds = {
     rewardEpochId,
@@ -88,8 +103,11 @@ export async function feedSummary(
 
 function toFeedName(hex: string) {
   let result = "";
-  for (let i = 2; i < hex.length; i += 2) {
+  for (let i = 4; i < hex.length; i += 2) {
     const charHexCode = hex.slice(i, i + 2);
+    if (charHexCode === "00") {
+      continue;
+    }
     result += String.fromCharCode(parseInt(charHexCode, 16));
   }
   return result;
@@ -97,15 +115,27 @@ function toFeedName(hex: string) {
 export function printFeedSummary(feedData: RewardEpochDataFeeds) {
   for (const feedDataEntry of feedData.feedData) {
     const votes = feedDataEntry.votes.map(vote => (vote ? (vote.isEmpty ? "x" : vote.value) : "-")).join(",");
-    console.log(
-      `${feedDataEntry.votingRoundId}: ${feedDataEntry.medianSummary.finalMedian.value} (${
-        feedDataEntry.medianSummary.quartile1.value
-      }, ${feedDataEntry.medianSummary.quartile3.value}), ${flrFormat(
-        feedDataEntry.medianSummary.participatingWeight
-      )} | ${votes}`
-    );
+    if (feedData.feed !== undefined) {
+      console.log(
+        `${feedDataEntry.votingRoundId}: ${feedDataEntry.medianSummary.finalMedian.value} (${
+          feedDataEntry.medianSummary.quartile1.value
+        }, ${feedDataEntry.medianSummary.quartile3.value}), ${flrFormat(
+          feedDataEntry.medianSummary.participatingWeight
+        )} | ${votes}`
+      );
+    } else {
+      console.log(
+        `${toFeedName(feedDataEntry.feed.id)}: ${feedDataEntry.medianSummary.finalMedian.value} (${
+          feedDataEntry.medianSummary.quartile1.value
+        }, ${feedDataEntry.medianSummary.quartile3.value}), ${flrFormat(
+          feedDataEntry.medianSummary.participatingWeight
+        )} | ${votes}`
+      );
+    }
   }
-  console.log(`Feed: ${toFeedName(feedData.feed.id)} (${feedData.feed.id})`);
+  if (feedData.feed !== undefined) {
+    console.log(`Feed: ${toFeedName(feedData.feed.id)} (${feedData.feed.id})`);
+  }
   console.log("------ Interpretation ------");
   console.log(`voting round id: median (q1, q3), weight | votes`);
 }
