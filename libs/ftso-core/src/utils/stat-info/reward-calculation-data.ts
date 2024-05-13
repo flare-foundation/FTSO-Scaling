@@ -122,7 +122,9 @@ export function serializeDataForRewardCalculation(
   for (const finalization of rewardCalculationData.finalizations) {
     RelayMessage.augment(finalization.messages);
   }
-  RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages);
+  if (rewardCalculationData.firstSuccessfulFinalization?.messages) {
+    RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages);
+  }
   const data: SDataForRewardCalculation = {
     dataForCalculations: prepareDataForCalculations(rewardEpochId, rewardCalculationData),
     signatures: hashSignatures,
