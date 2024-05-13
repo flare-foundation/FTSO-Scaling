@@ -1,5 +1,6 @@
 import { VoterWeights } from "../RewardEpoch";
 import { CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS } from "../configs/networks";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 
@@ -15,9 +16,8 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
  */
 export function generateSigningWeightBasedClaimsForVoter(
   amount: bigint,
-  claimBackAddress: string,
+  offer: IPartialRewardOfferForRound,
   voterWeights: VoterWeights,
-  votingRoundId: number,
   info: RewardTypePrefix,
   addLog = false
 ): IPartialRewardClaim[] {
@@ -25,7 +25,7 @@ export function generateSigningWeightBasedClaimsForVoter(
     return addLog
       ? {
           info: `${info}: ${text}`,
-          votingRoundId,
+          votingRoundId: offer.votingRoundId,
         }
       : {};
   }
@@ -40,10 +40,12 @@ export function generateSigningWeightBasedClaimsForVoter(
     // this should never happen.
     return [
       {
-        beneficiary: claimBackAddress.toLowerCase(),
+        beneficiary: offer.claimBackAddress.toLowerCase(),
         amount: amount,
         claimType: ClaimType.DIRECT,
         ...addInfo("No voter weight"),
+        offerIndex: offer.offerIndex,
+        feedId: offer.feedId,
       },
     ];
   }
@@ -62,6 +64,8 @@ export function generateSigningWeightBasedClaimsForVoter(
       amount: delegationFee + stakingFee,
       claimType: ClaimType.FEE,
       ...addInfo("fee for delegation and staking"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     } as IPartialRewardClaim);
   }
 
@@ -71,6 +75,8 @@ export function generateSigningWeightBasedClaimsForVoter(
     amount: delegationCommunityReward,
     claimType: ClaimType.WNAT,
     ...addInfo("delegation community reward"),
+    offerIndex: offer.offerIndex,
+    feedId: offer.feedId,
   } as IPartialRewardClaim);
   let undistributedStakedWeight = stakedWeight;
   let undistributedStakedAmount = stakingAmount - stakingFee;
@@ -97,6 +103,8 @@ export function generateSigningWeightBasedClaimsForVoter(
       amount: nodeCommunityReward,
       claimType: ClaimType.MIRROR,
       ...addInfo("node community reward"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     } as IPartialRewardClaim);
   }
   // assert

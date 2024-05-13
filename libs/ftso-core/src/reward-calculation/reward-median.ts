@@ -76,6 +76,8 @@ export function calculateMedianRewardClaims(
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("low turnout claim back"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [backClaim];
   }
@@ -158,6 +160,8 @@ export function calculateMedianRewardClaims(
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("no normalized weight"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [backClaim];
   }
@@ -187,7 +191,8 @@ export function calculateMedianRewardClaims(
 
     const rewardClaim = generateMedianRewardClaimsForVoter(
       reward,
-      offer.votingRoundId,
+      offer,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       votersWeights.get(voterRecord.submitAddress)!,
       addLog
     );
@@ -207,7 +212,7 @@ export function calculateMedianRewardClaims(
  */
 function generateMedianRewardClaimsForVoter(
   amount: bigint,
-  votingRoundId: number,
+  offer: IPartialRewardOfferForRound,
   voterWeights: VoterWeights,
   addLog = false
 ) {
@@ -215,7 +220,7 @@ function generateMedianRewardClaimsForVoter(
     return addLog
       ? {
           info: `${RewardTypePrefix.MEDIAN}: ${text}`,
-          votingRoundId,
+          votingRoundId: offer.votingRoundId,
         }
       : {};
   }
@@ -232,6 +237,8 @@ function generateMedianRewardClaimsForVoter(
       amount: fee,
       claimType: ClaimType.FEE,
       ...addInfo("fee"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     result.push(feeClaim);
   }
@@ -241,6 +248,8 @@ function generateMedianRewardClaimsForVoter(
       amount: participationReward,
       claimType: ClaimType.WNAT,
       ...addInfo("participation"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     result.push(rewardClaim);
   }
