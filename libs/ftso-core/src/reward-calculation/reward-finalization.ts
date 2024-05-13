@@ -30,6 +30,8 @@ export function calculateFinalizationRewardClaims(
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("No finalization"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [backClaim];
   }
@@ -41,6 +43,8 @@ export function calculateFinalizationRewardClaims(
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("outside of grace period"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [otherFinalizerClaim];
   }
@@ -49,10 +53,13 @@ export function calculateFinalizationRewardClaims(
   );
   if (gracePeriodFinalizations.length === 0) {
     const otherFinalizerClaim: IPartialRewardClaim = {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("in grace period"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [otherFinalizerClaim];
   }
@@ -88,14 +95,7 @@ export function calculateFinalizationRewardClaims(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= 1n;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(
-        amount,
-        offer.claimBackAddress,
-        voterWeight,
-        offer.votingRoundId,
-        RewardTypePrefix.FINALIZATION,
-        addLog
-      )
+      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, RewardTypePrefix.FINALIZATION, addLog)
     );
   }
 
@@ -109,6 +109,8 @@ export function calculateFinalizationRewardClaims(
       amount: undistributedAmount,
       claimType: ClaimType.DIRECT,
       ...addInfo("Claim back for undistributed rewards"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     });
   }
   return resultClaims;

@@ -59,6 +59,8 @@ export function calculateSigningRewards(
         amount: offer.amount,
         claimType: ClaimType.DIRECT,
         ...addInfo("No most frequent signatures"),
+        offerIndex: offer.offerIndex,
+        feedId: offer.feedId,
       };
       return [backClaim];
     }
@@ -98,6 +100,8 @@ export function calculateSigningRewards(
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("no weight of eligible signers"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [backClaim];
   }
@@ -134,14 +138,7 @@ export function calculateSigningRewards(
     const voterWeights = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
 
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(
-        amount,
-        offer.claimBackAddress,
-        voterWeights,
-        offer.votingRoundId,
-        RewardTypePrefix.SIGNING,
-        addLog
-      )
+      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeights, RewardTypePrefix.SIGNING, addLog)
     );
   }
   // assert check for undistributed amount
@@ -155,6 +152,8 @@ export function calculateSigningRewards(
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       ...addInfo("claim back no claims"),
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
     };
     return [backClaim];
   }
@@ -189,6 +188,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
       if (signatureSubmission.messages.message.protocolId !== protocolId) {
         throw new Error("Critical error: Illegal protocol id");
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       weightSum += signatureSubmission.messages.weight!;
     }
     hashToWeight.set(hash, weightSum);
@@ -199,6 +199,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   const minimalWeightThreshold =
     (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS()) / Number(TOTAL_BIPS);
   for (const [hash, signatureSubmissions] of signatures.entries()) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const weightSum = hashToWeight.get(hash)!;
     if (weightSum === maxWeight && weightSum >= minimalWeightThreshold) {
       const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>

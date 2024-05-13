@@ -38,6 +38,8 @@ export interface IRewardClaim extends IMergeableRewardClaim {
 export interface IPartialRewardClaim extends IMergeableRewardClaim {
   votingRoundId?: number;
   info?: string;
+  offerIndex?: number;
+  feedId?: string;
 }
 
 /**

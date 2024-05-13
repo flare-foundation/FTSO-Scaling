@@ -52,6 +52,10 @@ export class InflationRewardsOffered extends RawEventConstructible {
     );
   }
 
+  // Sequential index of the offer for the reward epoch as they appear on the blockchain
+  // Note that the first index equals the number of community reward offers, since
+  // the community reward offers are enumerate first and then the inflation reward offers follow.
+  offerIndex?: number;
   // reward epoch id
   rewardEpochId: number;
   // feed id - i.e. type + base/quote symbols - multiple of 21 (one feedId is bytes21)

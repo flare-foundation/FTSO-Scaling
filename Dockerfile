@@ -13,7 +13,6 @@ COPY --from=nodemodules /app/node_modules /app/node_modules
 COPY . ./
 
 RUN yarn build
-RUN yarn build example_provider
 
 FROM node:18-slim as runtime
 
