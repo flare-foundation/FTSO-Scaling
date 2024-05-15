@@ -142,6 +142,14 @@ export class FtsoDataProviderService {
     return message;
   }
 
+  async getUnencodedResultData(votingRoundId: number): Promise<EpochResult | undefined> {
+    const result = await this.prepareCalculationResultData(votingRoundId);
+    if (result === undefined) {
+      return undefined;
+    }
+    return result;
+  }
+
   async getFullMerkleTree(votingRoundId: number): Promise<IProtocolMessageMerkleData | undefined> {
     const result = await this.prepareCalculationResultData(votingRoundId);
     if (result === undefined) {

@@ -6,6 +6,7 @@ import {
   ExternalResponseStatusEnum,
   PDPResponse,
   PDPResponseStatusEnum,
+  UnencodedResultDataResponse,
 } from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
@@ -97,8 +98,22 @@ export class FtsoDataProviderController {
   @ApiTags(ApiTagsEnum.EXTERNAL)
   @Get("data/:votingRoundId")
   async merkleTree(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalResponse> {
-    // TODO: handle to early response as it is more informative, for now we respond with not available for to early cases
+    // TODO: handle to early response as it is more informative, for now we respond with not available for too early cases
     const data = await this.ftsoDataProviderService.getFullMerkleTree(votingRoundId);
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      ...data,
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("results/:votingRoundId")
+  async getResultsForVotingRound(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number
+  ): Promise<UnencodedResultDataResponse> {
+    // TODO: handle to early response as it is more informative, for now we respond with not available for too early cases
+    this.logger.log(`Calling GET on results with param: votingRoundId ${votingRoundId}`);
+    const data = await this.ftsoDataProviderService.getUnencodedResultData(votingRoundId);
     return {
       status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
       ...data,

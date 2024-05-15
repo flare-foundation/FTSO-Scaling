@@ -1,7 +1,18 @@
 // PDP (Protocol Data Provider) Response
 
 import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
+import { MerkleTree } from "../../../../libs/ftso-core/src/utils/MerkleTree";
 import { TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { MedianCalculationResult, RandomCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
+
+export interface BigInt {
+  toJSON: () => string;
+}
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 
 export enum PDPResponseStatusEnum {
   OK = "OK",
@@ -39,6 +50,26 @@ interface ExternalResponseNotAvailable {
 }
 
 export type ExternalResponse = ExternalResponseOk | ExternalResponseTooEarly | ExternalResponseNotAvailable;
+
+interface UnencodedResultDataOk {
+  status: ExternalResponseStatusEnum.OK;
+  votingRoundId: number;
+  medianData: MedianCalculationResult[];
+  randomData: RandomCalculationResult;
+  merkleTree: MerkleTree;
+}
+interface UnencodedResultDataTooEarly {
+  status: ExternalResponseStatusEnum.TOO_EARLY;
+}
+
+interface UnencodedResultDataNotAvailable {
+  status: ExternalResponseStatusEnum.NOT_AVAILABLE;
+}
+
+export type UnencodedResultDataResponse =
+  | UnencodedResultDataOk
+  | UnencodedResultDataTooEarly
+  | UnencodedResultDataNotAvailable;
 
 export interface JSONAbiDefinition {
   abiName: string;
