@@ -27,6 +27,18 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
 
+const COSTON2_CONFIG: NetworkContractAddresses = {
+  FlareSystemsManager: { name: "FlareSystemsManager", address: "0xbC1F76CEB521Eb5484b8943B5462D08ea96617A1" },
+  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0xd7107a7Ddb6ff24ff76ecFF2E06b9c4a3D8DCb88" },
+  RewardManager: { name: "RewardManager", address: "0x2F10597B3c9Fd42031cb18818eF2Ab88b18Ceff8" },
+  Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
+  Relay: { name: "Relay", address: "0x5CdF9eAF3EB8b44fB696984a1420B56A7575D250" },
+  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x9D7207b1410De031523356882637dd01F460E958" },
+  VoterRegistry: { name: "VoterRegistry", address: "0x51e375fda99181f052C2e28299e166D6984A5B89" },
+  FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
+  ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+};
+
 const SONGBIRD_CONFIG: NetworkContractAddresses = {
   FlareSystemsManager: { name: "FlareSystemsManager", address: "0x421c69E22f48e14Fc2d2Ee3812c59bfb81c38516" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x5aB9cB258a342001C4663D9526A1c54cCcF8C545" },
@@ -46,7 +58,7 @@ const contracts = () => {
   switch (network) {
     case "local-test":
     case "coston2":
-      return TEST_CONFIG;
+      return COSTON2_CONFIG;
     case "coston":
       return COSTON_CONFIG;
     case "songbird":
@@ -158,6 +170,14 @@ const epochSettings = () => {
         240, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
         45 //FTSO_REVEAL_DEADLINE_SECONDS
       );
+    case "coston2":
+      return new EpochSettings(
+        1658430000, // ES_FIRST_VOTING_ROUND_START_TS
+        90, //ES_VOTING_EPOCH_DURATION_SECONDS
+        0, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
+        240, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
+        45 //FTSO_REVEAL_DEADLINE_SECONDS
+      );
     case "songbird":
       return new EpochSettings(
         1658429955, // ES_FIRST_VOTING_ROUND_START_TS
@@ -166,7 +186,6 @@ const epochSettings = () => {
         3360, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
         45 //FTSO_REVEAL_DEADLINE_SECONDS
       );
-    case "coston2":
     case "local-test":
       return new EpochSettings(
         1707110090, // ES_FIRST_VOTING_ROUND_START_TS
@@ -209,9 +228,10 @@ const randomGenerationBenchingWindow = () => {
       }
     }
     case "local-test":
-    case "coston2":
-      return 50;
+      return 20;
     case "coston":
+      return 20;
+    case "coston2":
       return 20;
     case "songbird":
       return 20;
@@ -242,10 +262,10 @@ const initialRewardEpochId = () => {
     }
     case "coston":
       return 2466;
+    case "coston2":
+      return 2654;
     case "songbird":
       return 183;
-    case "coston2":
-      throw new Error("coston2 not yet supported");
     case "local-test":
       return 0;
     default:
@@ -350,9 +370,10 @@ const penaltyFactor = () => {
       return extractBigIntNonNegativeValueFromEnv("PENALTY_FACTOR");
     case "coston":
       return 30n;
+    case "coston2":
+      return 30n;
     case "songbird":
       return 30n;
-    case "coston2":
     case "local-test":
       return 30n;
     default:
@@ -383,9 +404,10 @@ const gracePeriodForSignaturesDurationSec = () => {
       return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC");
     case "coston":
       return 10; // 10 seconds
+    case "coston2":
+      return 10; // 10 seconds
     case "songbird":
       return 10; // 10 seconds
-    case "coston2":
     case "local-test":
       return 10; // 10 seconds
     default:
@@ -418,9 +440,10 @@ const gracePeriodForFinalizationDurationSec = () => {
       return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC");
     case "coston":
       return 20; // seconds
+    case "coston2":
+      return 20; // seconds
     case "songbird":
       return 20; // seconds
-    case "coston2":
     case "local-test":
       return 20; // seconds
     default:
@@ -468,9 +491,10 @@ const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
       return extractIntegerNonNegativeValueFromEnv("MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS");
     case "coston":
       return 3000;
+    case "coston2":
+      return 3000;
     case "songbird":
       return 3000;
-    case "coston2":
     case "local-test":
       return 3000;
     default:
@@ -500,9 +524,10 @@ const finalizationVoterSelectionThresholdWeightBips = () => {
       return extractIntegerNonNegativeValueFromEnv("FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS");
     case "coston":
       return 500;
+    case "coston2":
+      return 500;
     case "songbird":
       return 500;
-    case "coston2":
     case "local-test":
       return 500;
     default:
