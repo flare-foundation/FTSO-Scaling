@@ -102,8 +102,11 @@ export function calculateMedianRewardClaims(
   const highPCT = median + secondaryBandDiff;
 
   // assemble voter records
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   for (let i = 0; i < calculationResult.votersSubmitAddresses!.length; i++) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const submitAddress = calculationResult.votersSubmitAddresses![i];
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const feedValue = calculationResult.feedValues![i];
     if (feedValue.isEmpty) {
       continue;

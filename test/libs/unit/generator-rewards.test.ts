@@ -247,7 +247,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog
+      addLog,
+      true
     );
     const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
     offersSummary(rewardEpoch.rewardOffers, logger);
