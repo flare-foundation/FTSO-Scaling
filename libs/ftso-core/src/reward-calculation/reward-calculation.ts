@@ -39,7 +39,11 @@ import {
   deserializeDataForRewardCalculation,
   serializeDataForRewardCalculation,
 } from "../utils/stat-info/reward-calculation-data";
-import { deserializeRewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
+import {
+  deserializeRewardEpochInfo,
+  getRewardEpochInfo,
+  serializeRewardEpochInfo,
+} from "../utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../utils/stat-info/storage";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
@@ -64,6 +68,10 @@ export async function rewardClaimsForRewardEpoch(
   }
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
+
+  const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, endVotingRoundId);
+  serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
+
   // Partial offer generation from reward offers
   // votingRoundId => feedId => partialOffer
   const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
@@ -82,7 +90,8 @@ export async function rewardClaimsForRewardEpoch(
       dataManager,
       rewardOfferMap.get(votingRoundId),
       merge,
-      addLog
+      addLog,
+      serialize
     );
     allRewardClaims.push(...rewardClaims);
     if (merge) {
