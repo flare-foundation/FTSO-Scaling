@@ -7,9 +7,9 @@ import {
   MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
   TOTAL_BIPS,
 } from "../configs/networks";
-import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { SDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
@@ -26,7 +26,7 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
  */
 export function calculateSigningRewards(
   offer: IPartialRewardOfferForRound,
-  data: DataForRewardCalculation,
+  data: SDataForRewardCalculation,
   addLog = false
 ): IPartialRewardClaim[] {
   function addInfo(text: string) {
@@ -43,14 +43,17 @@ export function calculateSigningRewards(
   const doubleSigners = calculateDoubleSigners(
     data.dataForCalculations.votingRoundId,
     FTSO2_PROTOCOL_ID,
-    data.signatures
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    data.signaturesMap!
   );
   if (!data.firstSuccessfulFinalization) {
     const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
     const signatures = mostFrequentHashSignaturesBeforeDeadline(
       votingRoundId,
-      data.signatures,
-      data.dataForCalculations.rewardEpoch.totalSigningWeight,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      data.signaturesMap!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      data.dataForCalculations.totalSigningWeight!,
       deadlineTimestamp
     );
     if (signatures.length === 0) {
@@ -65,14 +68,17 @@ export function calculateSigningRewards(
       return [backClaim];
     }
     rewardEligibleSignatures = signatures.filter(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       signature => !doubleSigners.has(signature.messages.signer!.toLowerCase())
     );
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
     );
-    let signatures = data.signatures.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
+    let signatures = data.signaturesMap.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
     // filter out double signers
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     signatures = signatures.filter(signature => !doubleSigners.has(signature.messages.signer!.toLowerCase()));
 
     // rewarded:
@@ -91,6 +97,7 @@ export function calculateSigningRewards(
   }
   let undistributedSigningRewardWeight = 0n;
   for (const signature of rewardEligibleSignatures) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     undistributedSigningRewardWeight += BigInt(signature.messages.weight!);
   }
 
@@ -109,6 +116,7 @@ export function calculateSigningRewards(
   let undistributedAmount = offer.amount;
   const resultClaims: IPartialRewardClaim[] = [];
   // sort signatures according to signing policy order (index in signing policy)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   rewardEligibleSignatures.sort((a, b) => a.messages.index! - b.messages.index!);
 
   // assert check for duplicate voter indices
@@ -118,6 +126,7 @@ export function calculateSigningRewards(
     }
   }
   for (const signature of rewardEligibleSignatures) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const weight = BigInt(signature.messages.weight!);
     let amount = 0n;
     if (weight > 0n) {
@@ -131,11 +140,10 @@ export function calculateSigningRewards(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= weight;
 
-    const submitAddress = data.dataForCalculations.rewardEpoch.signingAddressToSubmitAddress.get(
-      signature.messages.signer!
-    );
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const submitAddress = data.dataForCalculations.signingAddressToSubmitAddress.get(signature.messages.signer!);
 
-    const voterWeights = data.dataForCalculations.rewardEpoch.getVotersWeights().get(submitAddress);
+    const voterWeights = data.dataForCalculations.votersWeightsMap.get(submitAddress);
 
     resultClaims.push(
       ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeights, RewardTypePrefix.SIGNING, addLog)
