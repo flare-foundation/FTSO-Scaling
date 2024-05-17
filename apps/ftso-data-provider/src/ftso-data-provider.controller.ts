@@ -161,5 +161,5 @@ function isBeforeDeadline(votingRoundId: number): boolean {
   const localTimeDriftOffset = 1000; // 1 second
   const now = Date.now();
   const revealDeadline = EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) * 1000;
-  return now > revealDeadline + localTimeDriftOffset;
+  return now < revealDeadline + localTimeDriftOffset;
 }
