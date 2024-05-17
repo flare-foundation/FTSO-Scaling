@@ -3,7 +3,7 @@ import { FtsoDataProviderModule } from "./ftso-data-provider.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { LogLevel, Logger } from "@nestjs/common";
-import { BigIntInterceptor } from "./bigIntInterceptor";
+import { BigIntInterceptor } from "./utils/BigIntInterceptor";
 
 async function bootstrap() {
   let logLevels: LogLevel[] = ["log"];
