@@ -5,7 +5,7 @@ import { RewardEpoch } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER, EPOCH_SETTINGS } from "../../configs/networks";
 import { FullVoterRegistrationInfo, RewardOffers } from "../../events";
 import { Feed } from "../../voting-types";
-import { bigIntReplacer } from "../big-number-serialization";
+import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_EPOCH_INFO_FILE } from "./constants";
 
 export interface RewardEpochInfo {
@@ -79,5 +79,5 @@ export function deserializeRewardEpochInfo(
   if (!existsSync(rewardEpochInfoPath)) {
     throw new Error(`Reward epoch info file not found at ${rewardEpochInfoPath}`);
   }
-  return JSON.parse(readFileSync(rewardEpochInfoPath, "utf8"));
+  return JSON.parse(readFileSync(rewardEpochInfoPath, "utf8"), bigIntReviver);
 }

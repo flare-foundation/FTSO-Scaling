@@ -88,6 +88,7 @@ export class CalculatorService {
 
   setupEnvVariables(config: any) {
     process.env.NETWORK = "from-env";
+    // eslint-disable-next-line guard-for-in
     for (const key in config) {
       if (typeof config[key] !== "string" && typeof config[key] !== "number" && typeof config[key] !== "bigint") {
         throw new Error(`Invalid type for ${key}, expected string, number or bigint, got ${typeof config[key]}`);

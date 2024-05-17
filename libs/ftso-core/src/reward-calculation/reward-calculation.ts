@@ -34,10 +34,15 @@ import {
   deserializePartialClaimsForVotingRoundId,
   serializePartialClaimsForVotingRoundId,
 } from "../utils/stat-info/partial-claims";
+import {
+  augmentDataForRewardCalculation,
+  deserializeDataForRewardCalculation,
+  serializeDataForRewardCalculation,
+} from "../utils/stat-info/reward-calculation-data";
+import { deserializeRewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
+import { destroyStorage } from "../utils/stat-info/storage";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { destroyStorage } from "../utils/stat-info/storage";
-import { serializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -137,61 +142,21 @@ export async function partialRewardClaimsForVotingRound(
   serializeResults = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
+  let allRewardClaims: IPartialRewardClaim[] = [];
+
+  await prepareDataForRewardCalculations(rewardEpochId, votingRoundId, randomGenerationBenchingWindow, dataManager);
   let feedOffers = feedOffersParam;
   if (feedOffers === undefined) {
     feedOffers = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId, calculationFolder);
   }
-  let allRewardClaims: IPartialRewardClaim[] = [];
-  // Obtain data for reward calculation
-  const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
-    votingRoundId,
-    randomGenerationBenchingWindow
-  );
-  if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
-    throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
-  }
 
-  const rewardDataForCalculations = rewardDataForCalculationResponse.data;
-  const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
+  const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+  const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+  augmentDataForRewardCalculation(data, rewardEpochInfo);
 
-  const voterWeights = rewardEpoch.getVotersWeights();
-
-  // Calculate feed medians
-  const medianResults: MedianCalculationResult[] = calculateMedianResults(
-    rewardDataForCalculations.dataForCalculations
-  );
-  // feedId => medianResult
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
-  for (const medianResult of medianResults) {
+  for (const medianResult of data.medianCalculationResults) {
     medianCalculationMap.set(medianResult.feed.id, medianResult);
-  }
-
-  // Select eligible voters for finalization rewards
-  const randomVoterSelector = new RandomVoterSelector(
-    rewardEpoch.signingPolicy.voters,
-    rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
-    FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
-  );
-
-  const initialHash = RandomVoterSelector.initialHashSeed(
-    rewardEpoch.signingPolicy.seed,
-    FTSO2_PROTOCOL_ID,
-    votingRoundId
-  );
-  const eligibleFinalizationRewardVotersInGracePeriod = new Set(
-    randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
-  );
-
-  if (serializeResults) {
-    const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
-    const calculationResults = [
-      MerkleTreeStructs.fromRandomCalculationResult(randomData),
-      ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
-    ];
-    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
-    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
-      ...eligibleFinalizationRewardVotersInGracePeriod,
-    ]);
   }
 
   // Calculate reward claims for each feed offer
@@ -209,18 +174,15 @@ export async function partialRewardClaimsForVotingRound(
       const medianRewardClaims = calculateMedianRewardClaims(
         splitOffers.medianRewardOffer,
         medianResult,
-        voterWeights,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        data.dataForCalculations.votersWeightsMap!,
         addLog
       );
-      const signingRewardClaims = calculateSigningRewards(
-        splitOffers.signingRewardOffer,
-        rewardDataForCalculations,
-        addLog
-      );
+      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, data, addLog);
       const finalizationRewardClaims = calculateFinalizationRewardClaims(
         splitOffers.finalizationRewardOffer,
-        rewardDataForCalculations,
-        eligibleFinalizationRewardVotersInGracePeriod,
+        data,
+        new Set(data.eligibleFinalizers),
         addLog
       );
 
@@ -228,8 +190,10 @@ export async function partialRewardClaimsForVotingRound(
       const revealWithdrawalPenalties = calculatePenalties(
         offer,
         PENALTY_FACTOR(),
-        rewardDataForCalculations.dataForCalculations.revealOffenders,
-        voterWeights,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        data.dataForCalculations.revealOffendersSet!,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        data.dataForCalculations.votersWeightsMap!,
         addLog,
         RewardTypePrefix.REVEAL_OFFENDERS
       );
@@ -239,12 +203,15 @@ export async function partialRewardClaimsForVotingRound(
       const doubleSigners = calculateDoubleSigners(
         votingRoundId,
         FTSO2_PROTOCOL_ID,
-        rewardDataForCalculations.signatures
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        data.signaturesMap!
       );
 
       // convert signingAddresses to submitAddresses
       const doubleSignersSubmit = new Set(
-        [...doubleSigners.keys()].map(signingAddress => rewardEpoch.signingAddressToSubmitAddress.get(signingAddress))
+        [...doubleSigners.keys()].map(signingAddress =>
+          data.dataForCalculations.signingAddressToSubmitAddress.get(signingAddress)
+        )
       );
 
       //distribute penalties
@@ -252,7 +219,8 @@ export async function partialRewardClaimsForVotingRound(
         offer,
         PENALTY_FACTOR(),
         doubleSignersSubmit,
-        voterWeights,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        data.dataForCalculations.votersWeightsMap!,
         addLog,
         RewardTypePrefix.DOUBLE_SIGNERS
       );
@@ -272,6 +240,56 @@ export async function partialRewardClaimsForVotingRound(
     serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims, calculationFolder);
   }
   return allRewardClaims;
+}
+
+export async function prepareDataForRewardCalculations(
+  rewardEpochId: number,
+  votingRoundId: number,
+  randomGenerationBenchingWindow: number,
+  dataManager: DataManager,
+  calculationFolder = CALCULATIONS_FOLDER()
+) {
+  const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
+    votingRoundId,
+    randomGenerationBenchingWindow
+  );
+  if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
+    throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
+  }
+
+  const rewardDataForCalculations = rewardDataForCalculationResponse.data;
+  const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
+
+  // Calculate feed medians
+  const medianResults: MedianCalculationResult[] = calculateMedianResults(
+    rewardDataForCalculations.dataForCalculations
+  );
+
+  // Select eligible voters for finalization rewards
+  const randomVoterSelector = new RandomVoterSelector(
+    rewardEpoch.signingPolicy.voters,
+    rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
+    FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
+  );
+
+  const initialHash = RandomVoterSelector.initialHashSeed(
+    rewardEpoch.signingPolicy.seed,
+    FTSO2_PROTOCOL_ID,
+    votingRoundId
+  );
+  const eligibleFinalizationRewardVotersInGracePeriod = new Set(
+    randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
+  );
+
+  const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
+  const calculationResults = [
+    MerkleTreeStructs.fromRandomCalculationResult(randomData),
+    ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+  ];
+  serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
+  serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
+    ...eligibleFinalizationRewardVotersInGracePeriod,
+  ]);
 }
 
 /**

@@ -1,6 +1,6 @@
-import { DataForRewardCalculation } from "../data-calculation-interfaces";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
+import { SDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 import { Address } from "../voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
@@ -11,7 +11,7 @@ import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePer
  */
 export function calculateFinalizationRewardClaims(
   offer: IPartialRewardOfferForRound,
-  data: DataForRewardCalculation,
+  data: SDataForRewardCalculation,
   eligibleFinalizationRewardVotersInGracePeriod: Set<Address>,
   addLog = false
 ): IPartialRewardClaim[] {
@@ -37,8 +37,10 @@ export function calculateFinalizationRewardClaims(
   }
   const votingRoundId = data.dataForCalculations.votingRoundId;
   // No voter provided finalization in grace period. Whoever finalizes gets the full reward.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   if (isFinalizationOutsideOfGracePeriod(votingRoundId, data.firstSuccessfulFinalization!)) {
     const otherFinalizerClaim: IPartialRewardClaim = {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
@@ -63,12 +65,12 @@ export function calculateFinalizationRewardClaims(
     };
     return [otherFinalizerClaim];
   }
-  const rewardEpoch = data.dataForCalculations.rewardEpoch;
+
   let undistributedAmount = offer.amount;
   let undistributedSigningRewardWeight = 0n;
 
   for (const signingAddress of eligibleFinalizationRewardVotersInGracePeriod) {
-    const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
+    const weight = BigInt(data.dataForCalculations.signerToSigningWeight.get(signingAddress));
     undistributedSigningRewardWeight += weight;
   }
   const resultClaims: IPartialRewardClaim[] = [];
@@ -79,15 +81,16 @@ export function calculateFinalizationRewardClaims(
     // submitAddress of finalization === signingAddress for the finalizations in grace period
     const signingAddress = finalization.submitAddress.toLowerCase();
 
-    const submitAddress = rewardEpoch.signingAddressToSubmitAddress.get(signingAddress);
+    const submitAddress = data.dataForCalculations.signingAddressToSubmitAddress.get(signingAddress);
 
     if (!submitAddress) {
       throw new Error("Critical: eligible finalization submit address must be equal to signingAddress of an entity");
     }
 
-    const voterWeight = rewardEpoch.getVotersWeights().get(submitAddress);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const voterWeight = data.dataForCalculations.votersWeightsMap!.get(submitAddress);
 
-    const weight = BigInt(rewardEpoch.signerToSigningWeight(signingAddress));
+    const weight = BigInt(data.dataForCalculations.signerToSigningWeight.get(signingAddress));
     let amount = 0n;
     if (weight > 0n) {
       // sanity check
