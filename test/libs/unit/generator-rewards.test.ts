@@ -310,7 +310,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog
+      addLog,
+      true
     );
     const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
     offersSummary(rewardEpoch.rewardOffers, logger);
@@ -398,7 +399,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog
+      addLog,
+      true
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
     expect(claimSummaries.length).to.equal(numberOfVoters); // no burn claims
@@ -461,7 +463,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog
+      addLog,
+      true
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
     expect(claimSummaries.length).to.equal(numberOfVoters); // no burn claims, just negative specific claims
@@ -533,7 +536,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog
+      addLog,
+      true
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
     expect(claimSummaries.length).to.equal(numberOfVoters + 1); // 1 external voter
