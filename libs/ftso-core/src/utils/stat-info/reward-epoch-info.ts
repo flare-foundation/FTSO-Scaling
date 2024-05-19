@@ -57,6 +57,9 @@ export function serializeRewardEpochInfo(
   rewardEpochInfo: RewardEpochInfo,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
+  if (!existsSync(calculationFolder)) {
+    mkdirSync(calculationFolder);
+  }
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
