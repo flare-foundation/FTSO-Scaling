@@ -12,7 +12,7 @@ import {
 import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
 import {
   aggregateRewardClaimsInStorage,
-  initializeRewardEpochStorage,
+  initializeRewardEpochStorageOld,
   partialRewardClaimsForVotingRound,
   rewardClaimsForRewardEpoch,
 } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
@@ -580,7 +580,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     // Fix here
 
     const useExpectedEndIfNoSigningPolicyAfter = true;
-    let rewardEpochDuration = await initializeRewardEpochStorage(
+    let rewardEpochDuration = await initializeRewardEpochStorageOld(
       rewardEpoch.rewardEpochId,
       rewardEpochManger,
       useExpectedEndIfNoSigningPolicyAfter
@@ -602,6 +602,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
         undefined, // should be read from calculations folder
+        true, // prepare data for reward calculations
         merge,
         addLog,
         serializeResults
@@ -626,7 +627,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     destroyStorage(rewardEpochId);
 
     // partial alternative calculation of merged claims
-    rewardEpochDuration = await initializeRewardEpochStorage(
+    rewardEpochDuration = await initializeRewardEpochStorageOld(
       rewardEpoch.rewardEpochId,
       rewardEpochManger,
       useExpectedEndIfNoSigningPolicyAfter
@@ -659,6 +660,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
         undefined, // should be read from calculations folder
+        true, // prepare data for reward calculations
         merge,
         addLog,
         serializeResults

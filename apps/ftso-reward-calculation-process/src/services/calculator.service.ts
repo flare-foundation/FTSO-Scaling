@@ -19,11 +19,16 @@ import {
   aggregateRewardClaimsInStorage,
   initializeRewardEpochStorage,
   partialRewardClaimsForVotingRound,
+  prepareDataForRewardCalculations
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import { granulatedPartialOfferMap } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+import { IPartialRewardOfferForRound } from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
 import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils/stat-info/final-reward-claims";
+import { serializeGranulatedPartialOfferMap } from "../../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
 import { getAggregationProgress, recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
@@ -31,13 +36,12 @@ import {
   rewardEpochCalculationStatusExists,
   setRewardCalculationStatus,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
+import { serializeRewardDistributionData } from "../../../../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
 import {
   getRewardEpochInfo,
   serializeRewardEpochInfo,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/storage";
-import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
-import { serializeRewardDistributionData } from "../../../../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
 
 export interface OptionalCommandOptions {
   rewardEpochId?: number;
@@ -47,6 +51,8 @@ export interface OptionalCommandOptions {
   startVotingRoundId?: number;
   endVotingRoundId?: number;
   initialize?: boolean;
+  calculateRewardCalculationData?: boolean;
+  calculateOffers?: boolean;
   calculateClaims?: boolean;
   aggregateClaims?: boolean;
   retryDelayMs?: number;
@@ -125,6 +131,35 @@ export class CalculatorService {
     }
   }
 
+  async calculationOfRewardCalculationData(
+    rewardEpochDuration: RewardEpochDuration,
+    votingRoundId: number,
+    retryDelayMs: number,
+    logger: Logger
+  ) {
+    let done = false;
+    while (!done) {
+      try {
+        logger.log(`Calculating data for reward calculation for voting round: ${votingRoundId}`);
+        await prepareDataForRewardCalculations(
+          rewardEpochDuration.rewardEpochId,
+          votingRoundId,
+          RANDOM_GENERATION_BENCHING_WINDOW(),
+          this.dataManager
+        );
+        done = true;
+      } catch (e) {
+        logger.error(
+          `Error while calculating reward calculation data for voting round ${votingRoundId} in reward epoch ${rewardEpochDuration.rewardEpochId}: ${e}`
+        );
+        // TODO: calculate expected time when data should be ready. If not, keep delaying for 10s
+        const delay = retryDelayMs ?? 10000;
+        logger.log(`Sleeping for ${delay / 1000}s before retrying...`);
+        await sleepFor(delay);
+      }
+    }
+  }
+
   async calculateClaimsAndAggregate(
     rewardEpochDuration: RewardEpochDuration,
     votingRoundId: number,
@@ -142,6 +177,7 @@ export class CalculatorService {
           RANDOM_GENERATION_BENCHING_WINDOW(),
           this.dataManager,
           undefined, // should be read from calculations folder
+          false, // reward calculation data should be already calculated
           false, // don't merge
           true, // add logs
           true //serializeResults
@@ -162,7 +198,52 @@ export class CalculatorService {
     }
   }
 
-  async batchCalculate(
+  async batchCalculateRewardCalculationData(
+    options: OptionalCommandOptions,
+    rewardEpochDuration: RewardEpochDuration,
+    end: number,
+    useExpectedEndIfNoSigningPolicyAfter: boolean,
+    logger: Logger
+  ) {
+    logger.log("Using parallel processing for reward calculation data");
+    logger.log(options);
+    logger.log("-------------------");
+    const pool = workerPool.pool(__dirname + "/../claim-calculation-worker.js", {
+      maxWorkers: options.numberOfWorkers,
+    });
+    const promises = [];
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId <= end;
+      votingRoundId += options.batchSize
+    ) {
+      const endBatch = Math.min(votingRoundId + options.batchSize - 1, end);
+      let loggerFile;
+      if (options.calculationFolder !== undefined) {
+        const logFolder = path.join(options.calculationFolder, `logs`);
+        if (!existsSync(logFolder)) {
+          mkdirSync(logFolder);
+        }
+        loggerFile = path.join(logFolder, `logs-${votingRoundId}-${endBatch}.log`);
+      }
+      const batchOptions: OptionalCommandOptions = {
+        rewardEpochId: rewardEpochDuration.rewardEpochId,
+        calculateRewardCalculationData: true,
+        startVotingRoundId: votingRoundId,
+        endVotingRoundId: endBatch,
+        loggerFile,
+        isWorker: true,
+        useExpectedEndIfNoSigningPolicyAfter,
+      };
+      // logger.log(batchOptions);
+      promises.push(pool.exec("run", [batchOptions]));
+    }
+    await Promise.all(promises);
+    await pool.terminate();
+    logger.log("Batch calculation for reward calculation data done", end);
+  }
+
+  async batchCalculateClaimsAndAggregations(
     options: OptionalCommandOptions,
     rewardEpochDuration: RewardEpochDuration,
     end: number,
@@ -222,11 +303,13 @@ export class CalculatorService {
     logger.log(options);
     let startRewardEpochId;
     let endRewardEpochId;
+    // Determine which reward epoch should be calculated
     if (options.startRewardEpochId !== undefined && options.rewardEpochId === undefined) {
       startRewardEpochId = options.startRewardEpochId;
       // may be undefined. This means that we are calculating current reward epoch incrementally
       endRewardEpochId = options.endRewardEpochId;
     } else if (options.startRewardEpochId === undefined && options.rewardEpochId !== undefined) {
+      // only one specific reward epoch
       startRewardEpochId = options.rewardEpochId;
       endRewardEpochId = options.rewardEpochId;
     } else if (options.startRewardEpochId === undefined && options.rewardEpochId === undefined) {
@@ -234,6 +317,7 @@ export class CalculatorService {
       if (latestRewardEpochId === undefined) {
         throw new Error("Critical error: No latest reward epoch found.");
       }
+      // We start with the latest reward epoch we know it is finished
       startRewardEpochId = latestRewardEpochId - 1;
       endRewardEpochId = latestRewardEpochId - 1;
     } else {
@@ -248,14 +332,16 @@ export class CalculatorService {
     // If not, the loop enters incremental calculation waiting for new voting rounds to be finalized.
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      // end reward epoch was set
       if (endRewardEpochId && rewardEpochId > endRewardEpochId) {
         // all done, finish
         logger.log("ALL DONE", rewardEpochId, startRewardEpochId, endRewardEpochId);
         return;
       }
+      // Recovery data in case of incremental calculation
       let skipInitializationForRecovery = false;
       let recoveryStartVotingRoundId: number | undefined = undefined;
-
+      // Check for existing calculated reward epochs
       if (rewardEpochCalculationStatusExists(rewardEpochId)) {
         const status = deserializeRewardEpochCalculationStatus(rewardEpochId);
         if (status.calculationStatus === RewardCalculationStatus.DONE) {
@@ -264,6 +350,7 @@ export class CalculatorService {
           continue;
         }
         // recovery mode works only for incremental calculation
+        // TODO: revisit
         if (options.recoveryMode && options.batchSize === undefined) {
           const aggregationProgress = getAggregationProgress(rewardEpochId);
           if (
@@ -285,10 +372,12 @@ export class CalculatorService {
         logger.log("Incremental mode");
       }
       let rewardEpochDuration;
+      let rewardEpoch;
       if (options.initialize && !skipInitializationForRecovery) {
-        logger.log("Initializing reward epoch storage");
+        logger.log(`Initializing reward epoch storage for reward epoch ${rewardEpochId}`);
         destroyStorage(rewardEpochId);
-        rewardEpochDuration = await initializeRewardEpochStorage(
+        // creates subfolders for voting rounds and distributes partial reward offers
+        [rewardEpochDuration, rewardEpoch] = await initializeRewardEpochStorage(
           rewardEpochId,
           this.rewardEpochManager,
           isIncrementalMode ? true : options.useExpectedEndIfNoSigningPolicyAfter
@@ -298,11 +387,12 @@ export class CalculatorService {
           rewardEpochId,
           isIncrementalMode ? true : options.useExpectedEndIfNoSigningPolicyAfter
         );
+        rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(
+          rewardEpochDuration.startVotingRoundId
+        );
       }
 
-      const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(
-        rewardEpochDuration.startVotingRoundId
-      );
+      // Serialization of reward epoch info, statuses and recording intial progress
       if (options.initialize && !skipInitializationForRecovery) {
         const rewardEpochInfo = getRewardEpochInfo(
           rewardEpoch,
@@ -318,6 +408,7 @@ export class CalculatorService {
         setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.IN_PROGRESS);
         recordProgress(rewardEpochId);
       }
+
       const start = recoveryStartVotingRoundId ?? options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
       const end = options.endVotingRoundId ?? rewardEpochDuration.endVotingRoundId;
       if (start < rewardEpochDuration.startVotingRoundId || start > rewardEpochDuration.endVotingRoundId) {
@@ -327,21 +418,64 @@ export class CalculatorService {
         throw new Error(`Invalid end voting round id: ${end}`);
       }
       let lastBatchCalculationVotingRoundId: number = end;
+      let forceSkipBatchCalculation = false;
 
-      if (options.calculateClaims) {
-        let forceSkipBatchCalculation = false;
-        if (isIncrementalMode) {
-          const calculatedCurrentVotingRoundId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
-          const estimatedFinalizedVotingRoundId = calculatedCurrentVotingRoundId - 5;
-          if (estimatedFinalizedVotingRoundId < rewardEpochDuration.startVotingRoundId + (options.batchSize ?? 0)) {
-            forceSkipBatchCalculation = true;
-          } else {
-            lastBatchCalculationVotingRoundId = estimatedFinalizedVotingRoundId;
-          }
+      if (isIncrementalMode) {
+        const calculatedCurrentVotingRoundId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
+        const estimatedFinalizedVotingRoundId = calculatedCurrentVotingRoundId - 5;
+        if (estimatedFinalizedVotingRoundId < rewardEpochDuration.startVotingRoundId + (options.batchSize ?? 0)) {
+          forceSkipBatchCalculation = true;
+        } else {
+          lastBatchCalculationVotingRoundId = estimatedFinalizedVotingRoundId;
         }
+      }
+
+      if (options.calculateRewardCalculationData) {
         // first try to do batch calculations
         if (options.batchSize !== undefined && options.batchSize > 0 && !forceSkipBatchCalculation) {
-          await this.batchCalculate(
+          await this.batchCalculateRewardCalculationData(
+            options,
+            rewardEpochDuration,
+            lastBatchCalculationVotingRoundId,
+            isIncrementalMode,
+            logger
+          );
+          recordProgress(rewardEpochId);
+        }
+        // then proceed to incremental, if needed
+        if (isIncrementalMode || options.batchSize === undefined) {
+          let serialStart = start;
+          const serialEnd = end;
+
+          if (isIncrementalMode) {
+            serialStart = Math.max(lastBatchCalculationVotingRoundId, start);
+          }
+          for (let votingRoundId = serialStart; votingRoundId <= serialEnd; votingRoundId++) {
+            await this.calculationOfRewardCalculationData(
+              rewardEpochDuration,
+              votingRoundId,
+              options.retryDelayMs,
+              logger
+            );
+            recordProgress(rewardEpochId);
+          }
+        }
+      }
+
+      if (options.calculateOffers) {
+        const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
+          rewardEpochDuration.startVotingRoundId,
+          rewardEpochDuration.endVotingRoundId,
+          rewardEpoch.rewardOffers
+        );
+        // sync call
+        serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, false);
+      }
+
+      if (options.calculateClaims) {
+        // first try to do batch calculations
+        if (options.batchSize !== undefined && options.batchSize > 0 && !forceSkipBatchCalculation) {
+          await this.batchCalculateClaimsAndAggregations(
             options,
             rewardEpochDuration,
             lastBatchCalculationVotingRoundId,
@@ -363,7 +497,7 @@ export class CalculatorService {
             await this.calculateClaimsAndAggregate(
               rewardEpochDuration,
               votingRoundId,
-              options.aggregateClaims,
+              options.aggregateClaims && isIncrementalMode,
               options.retryDelayMs,
               logger
             );
@@ -378,15 +512,20 @@ export class CalculatorService {
         }
       }
 
-      if (end === rewardEpochDuration.endVotingRoundId && options.aggregateClaims) {
-        setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
-        recordProgress(rewardEpochId);
-        const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, end);
-        serializeFinalRewardClaims(rewardEpochId, lastClaims);
-        const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
-        serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+      if (
+        end === rewardEpochDuration.endVotingRoundId &&
+        (options.aggregateClaims || options.calculateClaims || options.calculateRewardCalculationData)
+      ) {
+        if (options.aggregateClaims) {
+          setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
+          recordProgress(rewardEpochId);
+          const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, end);
+          serializeFinalRewardClaims(rewardEpochId, lastClaims);
+          const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
+          serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+        }
         rewardEpochId++;
-        logger.log("Incrementing reward epoch id to", rewardEpochId);
+        logger.log(`Incrementing reward epoch id to ${rewardEpochId}`);
         continue;
       }
       recordProgress(rewardEpochId);
