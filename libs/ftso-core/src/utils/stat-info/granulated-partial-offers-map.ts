@@ -24,19 +24,24 @@ export interface OffersPerVotingRound {
 export function serializeGranulatedPartialOfferMap(
   rewardEpochDuration: RewardEpochDuration,
   rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>>,
+  regenerate = true,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   if (!existsSync(calculationFolder)) {
     mkdirSync(calculationFolder);
   }
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochDuration.rewardEpochId}`);
-  if (existsSync(rewardEpochFolder)) {
+  if (regenerate && existsSync(rewardEpochFolder)) {
     rmSync(rewardEpochFolder, { recursive: true });
   }
-  mkdirSync(rewardEpochFolder);
+  if (!existsSync(rewardEpochFolder)) {
+    mkdirSync(rewardEpochFolder);
+  }
   for (let i = rewardEpochDuration.startVotingRoundId; i <= rewardEpochDuration.endVotingRoundId; i++) {
     const votingRoundFolder = path.join(rewardEpochFolder, `${i}`);
-    mkdirSync(votingRoundFolder);
+    if (!existsSync(votingRoundFolder)) {
+      mkdirSync(votingRoundFolder);
+    }
     const feedOffers = rewardOfferMap.get(i);
     if (!feedOffers) {
       throw new Error(`Critical error: No feed offers for voting round ${i}`);
@@ -54,6 +59,24 @@ export function serializeGranulatedPartialOfferMap(
     }
     const offersPath = path.join(votingRoundFolder, OFFERS_FILE);
     writeFileSync(offersPath, JSON.stringify(offersPerVotingRound, bigIntReplacer));
+  }
+}
+
+export function createRewardCalculationFolders(
+  rewardEpochDuration: RewardEpochDuration,
+  calculationFolder = CALCULATIONS_FOLDER()
+): void {
+  if (!existsSync(calculationFolder)) {
+    mkdirSync(calculationFolder);
+  }
+  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochDuration.rewardEpochId}`);
+  if (existsSync(rewardEpochFolder)) {
+    rmSync(rewardEpochFolder, { recursive: true });
+  }
+  mkdirSync(rewardEpochFolder);
+  for (let i = rewardEpochDuration.startVotingRoundId; i <= rewardEpochDuration.endVotingRoundId; i++) {
+    const votingRoundFolder = path.join(rewardEpochFolder, `${i}`);
+    mkdirSync(votingRoundFolder);
   }
 }
 

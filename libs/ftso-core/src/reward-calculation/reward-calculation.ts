@@ -27,6 +27,7 @@ import {
 } from "../utils/stat-info/aggregated-claims";
 import { serializeFeedValuesForVotingRoundId } from "../utils/stat-info/feed-values";
 import {
+  createRewardCalculationFolders,
   deserializeGranulatedPartialOfferMap,
   serializeGranulatedPartialOfferMap,
 } from "../utils/stat-info/granulated-partial-offers-map";
@@ -47,6 +48,7 @@ import {
 import { destroyStorage } from "../utils/stat-info/storage";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
+import { RewardEpoch } from "../RewardEpoch";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -89,6 +91,7 @@ export async function rewardClaimsForRewardEpoch(
       randomGenerationBenchingWindow,
       dataManager,
       rewardOfferMap.get(votingRoundId),
+      true, // prepareData
       merge,
       addLog,
       serialize
@@ -108,7 +111,7 @@ export async function rewardClaimsForRewardEpoch(
  * Initializes reward epoch storage for the given reward epoch.
  * Creates calculation folders with granulated offer data.
  */
-export async function initializeRewardEpochStorage(
+export async function initializeRewardEpochStorageOld(
   rewardEpochId: number,
   rewardEpochManager: RewardEpochManager,
   useExpectedEndIfNoSigningPolicyAfter = false,
@@ -127,8 +130,27 @@ export async function initializeRewardEpochStorage(
     rewardEpoch.rewardOffers
   );
   // sync call
-  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, calculationFolder);
+  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, true, calculationFolder);
   return rewardEpochDuration;
+}
+
+/**
+ * Initializes reward epoch storage for the given reward epoch.
+ * Creates calculation folders with granulated offer data.
+ */
+export async function initializeRewardEpochStorage(
+  rewardEpochId: number,
+  rewardEpochManager: RewardEpochManager,
+  useExpectedEndIfNoSigningPolicyAfter = false,
+  calculationFolder = CALCULATIONS_FOLDER()
+): Promise<[RewardEpochDuration, RewardEpoch]> {
+  const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
+    rewardEpochId,
+    useExpectedEndIfNoSigningPolicyAfter
+  );
+  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
+  createRewardCalculationFolders(rewardEpochDuration, calculationFolder);
+  return [rewardEpochDuration, rewardEpoch];
 }
 
 /**
@@ -146,6 +168,7 @@ export async function partialRewardClaimsForVotingRound(
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
   feedOffersParam: Map<string, IPartialRewardOfferForRound[]> | undefined,
+  prepareData = true,
   merge = true,
   addLog = false,
   serializeResults = false,
@@ -153,7 +176,10 @@ export async function partialRewardClaimsForVotingRound(
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
 
-  await prepareDataForRewardCalculations(rewardEpochId, votingRoundId, randomGenerationBenchingWindow, dataManager);
+  if (prepareData) {
+    await prepareDataForRewardCalculations(rewardEpochId, votingRoundId, randomGenerationBenchingWindow, dataManager);
+  }
+
   let feedOffers = feedOffersParam;
   if (feedOffers === undefined) {
     feedOffers = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId, calculationFolder);

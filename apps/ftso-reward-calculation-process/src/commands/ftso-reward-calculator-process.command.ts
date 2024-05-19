@@ -83,8 +83,16 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
+    flags: "-g, --calculateRewardCalculationData [boolean]",
+    description: "Calculates reward calculation data and serializes them for each voting round",
+  })
+  parseCalculateRewardCalculationData(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
     flags: "-c, --calculateClaims [boolean]",
-    description: "Calculates reward claims",
+    description: "Calculates reward claims and serializes them",
   })
   parseCalculateClaims(val: string): boolean {
     return JSON.parse(val);
@@ -99,10 +107,18 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
-    flags: "-o, --recoveryMode [boolean]",
+    flags: "-v, --recoveryMode [boolean]",
     description: "Calculates in recovery mode (using the last known state)",
   })
   parseRecoveryMode(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
+    flags: "-o, --calculateOffers [boolean]",
+    description: "Calculates partial reward offers",
+  })
+  parseOffers(val: string): boolean {
     return JSON.parse(val);
   }
 

@@ -1,4 +1,3 @@
-
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { globSync } from "glob";
 import path from "path/posix";
@@ -67,7 +66,7 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(progressType);
+      ((_: never): void => {})(progressType);
   }
 }
 
@@ -100,7 +99,7 @@ export function rewardCalculationProgress(
   }
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
 
-  const numberExtractRegex = new RegExp(`^.*\/(\\d+)\/${config.fileName}$`);
+  const numberExtractRegex = new RegExp(`^.*/(\\d+)/${config.fileName}$`);
   const result = globSync(`${rewardEpochFolder}/**/${config.fileName}`)
     .map(file => parseInt(file.replace(numberExtractRegex, "$1")))
     .filter(votingRoundId => status.startVotingRoundId <= votingRoundId && votingRoundId <= status.endVotingRoundId);
@@ -152,7 +151,7 @@ export function printProgress(progress: ProgressReport): string {
   if (progress.progress !== undefined) {
     value =
       ((progress.progress - progress.startVotingRoundId) / (progress.endVotingRoundId - progress.startVotingRoundId)) *
-      100 +
+        100 +
       "%";
   }
   return `${progress.type} (${progress.status}): ${value}`;
