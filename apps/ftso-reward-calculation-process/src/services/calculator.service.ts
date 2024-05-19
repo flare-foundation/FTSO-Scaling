@@ -31,6 +31,10 @@ import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils
 import { serializeGranulatedPartialOfferMap } from "../../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
 import { getAggregationProgress, recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
 import {
+  deserializeDataForRewardCalculation,
+  writeDataForRewardCalculation,
+} from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
+import {
   RewardCalculationStatus,
   deserializeRewardEpochCalculationStatus,
   rewardEpochCalculationStatusExists,
@@ -458,6 +462,29 @@ export class CalculatorService {
               logger
             );
             recordProgress(rewardEpochId);
+          }
+        }
+        if (!isIncrementalMode && !options.isWorker) {
+          for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {
+            if (votingRoundId > rewardEpochDuration.startVotingRoundId) {
+              const previousCalculationData = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId - 1);
+              if (!previousCalculationData) {
+                throw new Error(`Missing reward calculation data for previous voting round ${votingRoundId - 1}`);
+              }
+              const currentCalculationData = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+              if (!currentCalculationData) {
+                throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
+              }
+              previousCalculationData.nextVotingRoundRandomResult = currentCalculationData.randomResult;
+              writeDataForRewardCalculation(previousCalculationData);
+              logger.log(`Fixing random for voting round ${votingRoundId - 1}`);
+
+              if (votingRoundId === rewardEpochDuration.endVotingRoundId) {
+                currentCalculationData.nextVotingRoundRandomResult = currentCalculationData.randomResult;
+                writeDataForRewardCalculation(currentCalculationData);
+                logger.log(`Fixing random for voting round ${votingRoundId}`);
+              }
+            }
           }
         }
       }

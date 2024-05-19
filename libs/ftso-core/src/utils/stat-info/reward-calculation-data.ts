@@ -160,6 +160,24 @@ export function serializeDataForRewardCalculation(
 }
 
 /**
+ * Writes the data for reward calculation to disk.
+ * The data is stored in
+ *   `<calculationsFolder>/<rewardEpochId>/<votingRoundId>/REWARD_CALCULATION_DATA_FILE`.
+ */
+export function writeDataForRewardCalculation(
+  data: SDataForRewardCalculation,
+  calculationFolder = CALCULATIONS_FOLDER()
+): void {
+  const rewardEpochFolder = path.join(calculationFolder, `${data.dataForCalculations.rewardEpochId}`);
+  if (!existsSync(rewardEpochFolder)) {
+    mkdirSync(rewardEpochFolder);
+  }
+  const votingRoundFolder = path.join(rewardEpochFolder, `${data.dataForCalculations.votingRoundId}`);
+  const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
+  writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
+}
+
+/**
  * After deserialization, the data is augmented with additional maps and sets for easier access.
  */
 function augmentDataForCalculation(data: SDataForCalculation, rewardEpochInfo: RewardEpochInfo): void {
