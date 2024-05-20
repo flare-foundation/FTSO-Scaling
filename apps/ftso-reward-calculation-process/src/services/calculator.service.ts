@@ -19,9 +19,9 @@ import {
   aggregateRewardClaimsInStorage,
   initializeRewardEpochStorage,
   partialRewardClaimsForVotingRound,
-  prepareDataForRewardCalculations
+  prepareDataForRewardCalculations,
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
-import { granulatedPartialOfferMap } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+import { granulatedPartialOfferMapForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
 import { IPartialRewardOfferForRound } from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
@@ -490,10 +490,23 @@ export class CalculatorService {
       }
 
       if (options.calculateOffers) {
-        const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
+        const randomNumbers: bigint[] = [];
+        for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {
+          const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+          if (!data) {
+            throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
+          }
+          randomNumbers.push(data.randomResult.random);
+        }
+
+        const rewardOfferMap: Map<
+          number,
+          Map<string, IPartialRewardOfferForRound[]>
+        > = granulatedPartialOfferMapForRandomFeedSelection(
           rewardEpochDuration.startVotingRoundId,
           rewardEpochDuration.endVotingRoundId,
-          rewardEpoch.rewardOffers
+          rewardEpoch,
+          randomNumbers
         );
         // sync call
         serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, false);

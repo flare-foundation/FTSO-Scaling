@@ -1,4 +1,5 @@
-import { FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
+import { RewardEpoch } from "../RewardEpoch";
+import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered, RewardOffers } from "../events";
 import {
   IPartialRewardOfferForEpoch,
@@ -53,6 +54,7 @@ export function granulatedPartialOfferMap(
       rewardOffer
     );
     for (const votingEpochRewardOffer of votingEpochRewardOffers) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const votingRoundId = votingEpochRewardOffer.votingRoundId!;
       const feedId = votingEpochRewardOffer.feedId;
       const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
@@ -61,6 +63,90 @@ export function granulatedPartialOfferMap(
       feedOffers.set(feedId, feedIdOffers);
       feedIdOffers.push(votingEpochRewardOffer);
     }
+  }
+  return rewardOfferMap;
+}
+
+export function adaptCommunityRewardOffer(rewardOffer: IPartialRewardOfferForEpoch): void {
+  rewardOffer.minRewardedTurnoutBIPS = 0;
+  rewardOffer.primaryBandRewardSharePPM = 1000000;
+  rewardOffer.secondaryBandWidthPPM = 0;
+  rewardOffer.isInflation = false;
+  rewardOffer.claimBackAddress = BURN_ADDRESS;
+}
+
+export function granulatedPartialOfferMapForRandomFeedSelection(
+  startVotingRoundId: number,
+  endVotingRoundId: number,
+  rewardEpoch: RewardEpoch,
+  randomNumbers: bigint[]
+): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
+  if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
+    throw new Error(
+      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${
+        endVotingRoundId - startVotingRoundId + 1
+      }`
+    );
+  }
+  // Calculate total amount of rewards for the reward epoch
+  let totalAmount = 0n;
+  for (const rewardOffer of rewardEpoch.rewardOffers.rewardOffers) {
+    totalAmount += rewardOffer.amount;
+  }
+  for (const inflationOffer of rewardEpoch.rewardOffers.inflationOffers) {
+    totalAmount += inflationOffer.amount;
+  }
+  // Create a map of feedId -> rewardOffer for easier access
+  const currencyRewardOffers = new Map<string, IPartialRewardOfferForEpoch>();
+  for (const inflationRewardOffer of rewardEpoch.rewardOffers.inflationOffers) {
+    // amounts will be ignored
+    const feedOffers = PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer);
+    for (const feedOffer of feedOffers) {
+      if (currencyRewardOffers.has(feedOffer.feedId)) {
+        console.log(
+          `Duplicate feed inflation offer for feed ${feedOffer.feedId}. Only the configuration of the last one will be used.`
+        );
+      }
+      currencyRewardOffers.set(feedOffer.feedId, feedOffer); // always use the last configuration only
+    }
+  }
+  for (const rewardOffer of rewardEpoch.rewardOffers.rewardOffers) {
+    if (currencyRewardOffers.has(rewardOffer.feedId)) {
+      console.log(`Duplicate community reward offer for feed ${rewardOffer.feedId}. Only the first one is considered.`);
+    } else {
+      const adaptedCommunityOffer = PartialRewardOffer.fromRewardOffered(rewardOffer);
+      adaptCommunityRewardOffer(adaptedCommunityOffer);
+      currencyRewardOffers.set(rewardOffer.feedId, PartialRewardOffer.fromRewardOffered(rewardOffer));
+    }
+  }
+  // Create a map of votingRoundId -> feedId -> rewardOffer
+  // Note that the second level dictionary has only one key and the value is array of length one, containing full reward for the
+  // voting round and randomly selected feed.
+  const rewardOfferMap = new Map<number, Map<string, IPartialRewardOfferForRound[]>>();
+  const numberOfVotingRounds = endVotingRoundId - startVotingRoundId + 1;
+  const sharePerOne: bigint = totalAmount / BigInt(numberOfVotingRounds);
+  const remainder: number = Number(totalAmount % BigInt(numberOfVotingRounds));
+
+  for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
+    const selectedFeedIndex = Number(randomNumber % BigInt(rewardEpoch.canonicalFeedOrder.length));
+    const selectedFeed = rewardEpoch.canonicalFeedOrder[selectedFeedIndex];
+    const selectedFeedId = selectedFeed.id;
+    const selectedFeedOffer = currencyRewardOffers.get(selectedFeedId);
+    if (!selectedFeedOffer) {
+      throw new Error(`Feed ${selectedFeedId} is missing in reward offers`);
+    }
+    // Create adapted offer with selected feed
+    const feedOfferForVoting: IPartialRewardOfferForRound = {
+      ...selectedFeedOffer,
+      votingRoundId,
+      amount: sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n),
+    };
+    const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
+    rewardOfferMap.set(votingRoundId, feedOffers);
+    const feedIdOffers = feedOffers.get(selectedFeedId) || [];
+    feedOffers.set(selectedFeedId, feedIdOffers);
+    feedIdOffers.push(feedOfferForVoting);
   }
   return rewardOfferMap;
 }
