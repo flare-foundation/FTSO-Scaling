@@ -144,9 +144,6 @@ export class FtsoDataProviderService {
 
   async getUnencodedResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const result = await this.prepareCalculationResultData(votingRoundId);
-    if (result === undefined) {
-      return undefined;
-    }
     return result;
   }
 
