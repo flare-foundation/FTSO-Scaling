@@ -62,6 +62,10 @@ export function serializeGranulatedPartialOfferMap(
   }
 }
 
+/**
+ * Creates necessary folders for reward epoch calculations. These include
+ * the `<calculationsFolder>/<rewardEpochId>/<votingRoundId>` folders.
+ */
 export function createRewardCalculationFolders(
   rewardEpochDuration: RewardEpochDuration,
   calculationFolder = CALCULATIONS_FOLDER()
