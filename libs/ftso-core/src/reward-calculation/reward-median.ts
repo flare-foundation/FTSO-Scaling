@@ -1,27 +1,29 @@
 import { encodeParameters } from "web3-eth-abi";
 import { soliditySha3 } from "web3-utils";
 import { VoterWeights } from "../RewardEpoch";
+import { FTSO2_PROTOCOL_ID, TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
+import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
-import { medianRewardDistributionWeight } from "./reward-utils";
-import { TOTAL_BIPS, TOTAL_PPM } from "../configs/networks";
 import { RewardTypePrefix } from "./RewardTypePrefix";
-import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
+import { medianRewardDistributionWeight } from "./reward-utils";
+
+export enum MediantRewardClaimType {
+  LOW_TURNOUT_CLAIM_BACK = "low turnout claim back",
+  NO_NORMALIZED_WEIGHT = "no normalized weight",
+  FEE = "fee",
+  PARTICIPATION = "participation",
+}
 
 /**
  * Given a partial reward offer, median calculation result for a specific feed and voter weights it calculates the median closeness partial
  * reward claims for the offer for all voters (with non-zero reward). For each voter all relevant partial claims are generated (including fees, participation rewards, etc).
- * @param offer
- * @param calculationResult
  * @param votersWeights map from submitAddress to VoterWeights
- * @param addLog
- * @returns
  */
 export function calculateMedianRewardClaims(
   offer: IPartialRewardOfferForRound,
   calculationResult: MedianCalculationResult,
-  votersWeights: Map<Address, VoterWeights>,
-  addLog = false
+  votersWeights: Map<Address, VoterWeights>
 ): IPartialRewardClaim[] {
   interface VoterRewarding {
     readonly submitAddress: Address;
@@ -31,15 +33,6 @@ export function calculateMedianRewardClaims(
   }
 
   ///////// Helper functions /////////
-
-  function addInfo(text: string) {
-    return addLog
-      ? {
-          info: `${RewardTypePrefix.MEDIAN}: ${text}`,
-          votingRoundId,
-        }
-      : {};
-  }
 
   /**
    * Randomization for border cases
@@ -51,7 +44,7 @@ export function calculateMedianRewardClaims(
       BigInt(
         soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
       ) %
-        2n ===
+      2n ===
       1n
     );
   }
@@ -68,16 +61,19 @@ export function calculateMedianRewardClaims(
   // Turnout condition is not reached or no median is computed. Offer is returned to the provider.
   if (
     calculationResult.data.participatingWeight * TOTAL_BIPS <
-      calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
+    calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
     calculationResult.data.finalMedian.isEmpty
   ) {
     const backClaim: IPartialRewardClaim = {
+      votingRoundId,
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
-      ...addInfo("low turnout claim back"),
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
+      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      rewardTypeTag: RewardTypePrefix.MEDIAN,
+      rewardDetailTag: MediantRewardClaimType.LOW_TURNOUT_CLAIM_BACK,
     };
     return [backClaim];
   }
@@ -114,6 +110,7 @@ export function calculateMedianRewardClaims(
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
       submitAddress: submitAddress,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)!),
       iqr:
         (value > lowIQR && value < highIQR) ||
@@ -159,12 +156,15 @@ export function calculateMedianRewardClaims(
   if (totalNormalizedRewardedWeight === 0n) {
     // claim back to reward issuer
     const backClaim: IPartialRewardClaim = {
+      votingRoundId,
       beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
-      ...addInfo("no normalized weight"),
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
+      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      rewardTypeTag: RewardTypePrefix.MEDIAN,
+      rewardDetailTag: MediantRewardClaimType.NO_NORMALIZED_WEIGHT,
     };
     return [backClaim];
   }
@@ -196,8 +196,7 @@ export function calculateMedianRewardClaims(
       reward,
       offer,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      votersWeights.get(voterRecord.submitAddress)!,
-      addLog
+      votersWeights.get(voterRecord.submitAddress)!
     );
     rewardClaims.push(...rewardClaim);
   }
@@ -216,18 +215,8 @@ export function calculateMedianRewardClaims(
 function generateMedianRewardClaimsForVoter(
   amount: bigint,
   offer: IPartialRewardOfferForRound,
-  voterWeights: VoterWeights,
-  addLog = false
+  voterWeights: VoterWeights
 ) {
-  function addInfo(text: string) {
-    return addLog
-      ? {
-          info: `${RewardTypePrefix.MEDIAN}: ${text}`,
-          votingRoundId: offer.votingRoundId,
-        }
-      : {};
-  }
-
   const result: IPartialRewardClaim[] = [];
   const fee = (amount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
 
@@ -236,23 +225,29 @@ function generateMedianRewardClaimsForVoter(
   // No claims with zero amount
   if (fee > 0n) {
     const feeClaim: IPartialRewardClaim = {
+      votingRoundId: offer.votingRoundId,
       beneficiary: voterWeights.identityAddress.toLowerCase(),
       amount: fee,
       claimType: ClaimType.FEE,
-      ...addInfo("fee"),
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
+      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      rewardTypeTag: RewardTypePrefix.MEDIAN,
+      rewardDetailTag: MediantRewardClaimType.FEE,
     };
     result.push(feeClaim);
   }
   if (participationReward > 0n) {
     const rewardClaim: IPartialRewardClaim = {
+      votingRoundId: offer.votingRoundId,
       beneficiary: voterWeights.delegationAddress.toLowerCase(),
       amount: participationReward,
       claimType: ClaimType.WNAT,
-      ...addInfo("participation"),
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
+      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      rewardTypeTag: RewardTypePrefix.MEDIAN,
+      rewardDetailTag: MediantRewardClaimType.PARTICIPATION,
     };
     result.push(rewardClaim);
   }
