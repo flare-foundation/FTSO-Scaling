@@ -4,6 +4,8 @@ import FakeTimers from "@sinonjs/fake-timers";
 import { existsSync, mkdirSync } from "fs";
 import path from "path/posix";
 import { EntityManager } from "typeorm";
+import { encodeParameters } from "web3-eth-abi";
+import { soliditySha3 } from "web3-utils";
 import * as workerPool from "workerpool";
 import { DataManager } from "../../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../../libs/ftso-core/src/IndexerClient";
@@ -464,26 +466,54 @@ export class CalculatorService {
           }
         }
         if (!isIncrementalMode && !options.isWorker) {
+          let nextVotingRoundIdWithNoSecureRandom = start;
+          // Random number for use in a specific voting round (N) is calculated as a hash of first secure random number
+          // in subsequent voting rounds and the voting round id (N).
           for (let votingRoundId = start; votingRoundId <= end; votingRoundId++) {
             if (votingRoundId > rewardEpochDuration.startVotingRoundId) {
-              const previousCalculationData = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId - 1);
-              if (!previousCalculationData) {
-                throw new Error(`Missing reward calculation data for previous voting round ${votingRoundId - 1}`);
-              }
               const currentCalculationData = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
               if (!currentCalculationData) {
                 throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
               }
-              previousCalculationData.nextVotingRoundRandomResult = currentCalculationData.randomResult;
-              writeDataForRewardCalculation(previousCalculationData);
-              logger.log(`Fixing random for voting round ${votingRoundId - 1}`);
 
-              if (votingRoundId === rewardEpochDuration.endVotingRoundId) {
-                currentCalculationData.nextVotingRoundRandomResult = currentCalculationData.randomResult;
-                writeDataForRewardCalculation(currentCalculationData);
-                logger.log(`Fixing random for voting round ${votingRoundId}`);
+              // skip unsecure random
+              // Temporary only up to endVotingRoundId.
+              // TODO: fix it from future rounds
+              if (
+                votingRoundId !== rewardEpochDuration.endVotingRoundId &&
+                !currentCalculationData.randomResult.isSecure
+              ) {
+                continue;
+              }
+              const secureRandom = BigInt(currentCalculationData.randomResult.random);
+              const lastRoundShift = votingRoundId === rewardEpochDuration.endVotingRoundId ? 1 : 0;
+
+              while (nextVotingRoundIdWithNoSecureRandom < votingRoundId + lastRoundShift) {
+                const previousCalculationData = deserializeDataForRewardCalculation(
+                  rewardEpochId,
+                  nextVotingRoundIdWithNoSecureRandom
+                );
+                if (!previousCalculationData) {
+                  throw new Error(
+                    `Missing reward calculation data for previous voting round ${nextVotingRoundIdWithNoSecureRandom}`
+                  );
+                }
+                previousCalculationData.nextVotingRoundRandomResult = BigInt(
+                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                  soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
+                ).toString();
+
+                // currentCalculationData.randomResult;
+                writeDataForRewardCalculation(previousCalculationData);
+                logger.log(`Fixing random for voting round ${nextVotingRoundIdWithNoSecureRandom}`);
+                nextVotingRoundIdWithNoSecureRandom++;
               }
             }
+          }
+          if (nextVotingRoundIdWithNoSecureRandom - 1 !== end) {
+            throw new Error(
+              `Critical error: nextVotingRoundIdWithNoSecureRandom ${nextVotingRoundIdWithNoSecureRandom} !== end ${end}`
+            );
           }
         }
       }
@@ -495,7 +525,8 @@ export class CalculatorService {
           if (!data) {
             throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
           }
-          randomNumbers.push(data.randomResult.random);
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          randomNumbers.push(BigInt(data.nextVotingRoundRandomResult!));
         }
 
         const rewardOfferMap: Map<

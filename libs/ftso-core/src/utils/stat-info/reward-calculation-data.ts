@@ -100,7 +100,7 @@ export interface SDataForRewardCalculation {
   medianCalculationResults: MedianCalculationResult[];
   randomResult: SimplifiedRandomCalculationResult;
   // usually added after results of the next voting round are known
-  nextVotingRoundRandomResult?: SimplifiedRandomCalculationResult;
+  nextVotingRoundRandomResult?: string;
   eligibleFinalizers: string[];
   // not serialized, reconstructed on augmentation
   signaturesMap?: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
