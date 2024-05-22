@@ -183,7 +183,6 @@ export class CalculatorService {
           undefined, // should be read from calculations folder
           false, // reward calculation data should be already calculated
           false, // don't merge
-          true, // add logs
           true //serializeResults
         );
         if (aggregateClaims) {

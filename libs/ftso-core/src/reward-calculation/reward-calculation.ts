@@ -7,7 +7,7 @@ import {
   PENALTY_FACTOR,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
-import { IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
+import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RewardEpochDuration } from "../utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
@@ -17,6 +17,7 @@ import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
 
+import { RewardEpoch } from "../RewardEpoch";
 import { calculateRandom } from "../ftso-calculation/ftso-random";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
@@ -48,7 +49,6 @@ import {
 import { destroyStorage } from "../utils/stat-info/storage";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { RewardEpoch } from "../RewardEpoch";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -61,7 +61,6 @@ export async function rewardClaimsForRewardEpoch(
   dataManager: DataManager,
   rewardEpochManager: RewardEpochManager,
   merge = true,
-  addLog = false,
   serialize = false,
   forceDestroyStorage = false
 ): Promise<IRewardClaim[] | IPartialRewardClaim[]> {
@@ -93,7 +92,6 @@ export async function rewardClaimsForRewardEpoch(
       rewardOfferMap.get(votingRoundId),
       true, // prepareData
       merge,
-      addLog,
       serialize
     );
     allRewardClaims.push(...rewardClaims);
@@ -170,7 +168,6 @@ export async function partialRewardClaimsForVotingRound(
   feedOffersParam: Map<string, IPartialRewardOfferForRound[]> | undefined,
   prepareData = true,
   merge = true,
-  addLog = false,
   serializeResults = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
@@ -194,6 +191,14 @@ export async function partialRewardClaimsForVotingRound(
     medianCalculationMap.set(medianResult.feed.id, medianResult);
   }
 
+  const delegationAddressToSigningAddress = new Map<string, string>();
+  for (const voterWeight of data.dataForCalculations.votersWeightsMap.values()) {
+    delegationAddressToSigningAddress.set(
+      voterWeight.delegationAddress.toLowerCase(),
+      voterWeight.signingAddress.toLowerCase()
+    );
+  }
+
   // Calculate reward claims for each feed offer
   for (const [feedId, offers] of feedOffers.entries()) {
     const medianResult = medianCalculationMap.get(feedId);
@@ -210,15 +215,30 @@ export async function partialRewardClaimsForVotingRound(
         splitOffers.medianRewardOffer,
         medianResult,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        data.dataForCalculations.votersWeightsMap!,
-        addLog
+        data.dataForCalculations.votersWeightsMap!
       );
-      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, data, addLog);
+
+      // Extract voter signing addresses that are eligible for median reward
+      const medianEligibleVoters = new Set(
+        medianRewardClaims
+          .filter(claim => claim.claimType === ClaimType.WNAT && claim.amount > 0n)
+          .map(claim => {
+            const delegationAddress = claim.beneficiary.toLowerCase();
+            const signingAddress = delegationAddressToSigningAddress.get(delegationAddress);
+            if (!signingAddress) {
+              throw new Error(`Critical error: No signing address for delegation address: ${delegationAddress}`);
+            }
+            return signingAddress;
+          })
+      );
+
+      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, data, medianEligibleVoters);
+
       const finalizationRewardClaims = calculateFinalizationRewardClaims(
         splitOffers.finalizationRewardOffer,
         data,
         new Set(data.eligibleFinalizers),
-        addLog
+        medianEligibleVoters
       );
 
       // Calculate penalties for reveal withdrawal offenders
@@ -229,7 +249,6 @@ export async function partialRewardClaimsForVotingRound(
         data.dataForCalculations.revealOffendersSet!,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.votersWeightsMap!,
-        addLog,
         RewardTypePrefix.REVEAL_OFFENDERS
       );
 
@@ -256,7 +275,6 @@ export async function partialRewardClaimsForVotingRound(
         doubleSignersSubmit,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.votersWeightsMap!,
-        addLog,
         RewardTypePrefix.DOUBLE_SIGNERS
       );
 

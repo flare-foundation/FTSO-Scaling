@@ -98,13 +98,15 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
   ).to.equal(0);
 
   const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.info.startsWith(RewardTypePrefix.FINALIZATION)
+    c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)
   );
   expect(finalizationClaims.length).to.equal(60); // 5 voting rounds x 4 claims x 3 offers x 1 finalizer
   const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
   expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
 
-  const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
+  const signatureClaims = (claims as IPartialRewardClaim[]).filter(c =>
+    c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)
+  );
   // console.dir(finalizationClaims)
   expect(signatureClaims.length).to.equal(600); // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
   for (const voter of voters) {
@@ -156,12 +158,12 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
   }
   // no double signing penalties
   const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)
+    c.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)
   );
   expect(doubleSignerClaims.length).to.equal(0);
   // no reveal offender penalties Reveal offenders
   const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)
+    c.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)
   );
   expect(revealOffenderClaims.length).to.equal(0);
 }
@@ -239,7 +241,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
-    const addLog = true;
     const merge = false;
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,
@@ -247,8 +248,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog,
-      true
+      true // serialize
     );
     const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
     offersSummary(rewardEpoch.rewardOffers, logger);
@@ -302,7 +302,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
-    const addLog = true;
     const merge = false;
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,
@@ -310,8 +309,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog,
-      true
+      true // serialize
     );
     const mergedClaims = RewardClaim.convertToRewardClaims(rewardEpoch.rewardEpochId, RewardClaim.merge(claims));
     offersSummary(rewardEpoch.rewardOffers, logger);
@@ -319,9 +317,11 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     claimSummary(voters, mergedClaims, logger);
 
     // extract signing claims
-    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c => c.info.startsWith(RewardTypePrefix.SIGNING));
+    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c =>
+      c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)
+    );
     const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c =>
-      c.info.startsWith(RewardTypePrefix.FINALIZATION)
+      c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)
     );
     expect(signatureClaims.length).to.equal(540); // 3 offers x 9 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
     const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
@@ -391,7 +391,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
-    const addLog = true;
     const merge = false;
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,
@@ -399,11 +398,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog,
-      true
+      true // serialize
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
-    expect(claimSummaries.length).to.equal(numberOfVoters); // no burn claims
     expect(claimSummaries[lastVoterIndex].revealWithdrawalFeePenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[lastVoterIndex].revealWithdrawalDelegationPenalties.length).to.equal(3); // 3 offers
     expect(claimSummaries[lastVoterIndex].revealWithdrawalNodeIdPenalties.length).to.equal(6); // 3 offers x 2 nodes
@@ -455,7 +452,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
-    const addLog = true;
     const merge = false;
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,
@@ -463,7 +459,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog,
       true
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
@@ -528,7 +523,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const benchingWindowRevealOffenders = 1;
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
-    const addLog = true;
     const merge = false;
     const claims = await rewardClaimsForRewardEpoch(
       rewardEpoch.rewardEpochId,
@@ -536,8 +530,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       dataManager,
       rewardEpochManger,
       merge,
-      addLog,
-      true
+      true // serialize
     );
     const claimSummaries = calculateVoterClaimSummaries(voters, claims);
     expect(claimSummaries.length).to.equal(numberOfVoters + 1); // 1 external voter
@@ -574,7 +567,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
 
-    const addLog = true;
     const merge = false;
 
     // Fix here
@@ -604,7 +596,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         undefined, // should be read from calculations folder
         true, // prepare data for reward calculations
         merge,
-        addLog,
         serializeResults
       );
       claims.push(...rewardClaims);
@@ -662,7 +653,6 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         undefined, // should be read from calculations folder
         true, // prepare data for reward calculations
         merge,
-        addLog,
         serializeResults
       );
       logStatus(ProgressType.CLAIM_CALCULATION);

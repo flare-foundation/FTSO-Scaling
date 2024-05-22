@@ -13,7 +13,6 @@ import { medianRewardDistributionWeight } from "./reward-utils";
  * @param penaltyFactor
  * @param offenders Set of submitAddresses of offenders
  * @param votersWeights
- * @param addLog
  * @param penaltyType For logging
  * @returns
  */
@@ -22,7 +21,6 @@ export function calculatePenalties(
   penaltyFactor: bigint,
   offenders: Set<Address>,
   votersWeights: Map<Address, VoterWeights>,
-  addLog = false,
   penaltyType: RewardTypePrefix
 ): IPartialRewardClaim[] {
   const totalWeight = [...votersWeights.values()]
@@ -45,7 +43,7 @@ export function calculatePenalties(
       }
       penalty = (-voterWeight * offer.amount * penaltyFactor) / totalWeight;
     }
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, addLog));
+    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType));
   }
   return penaltyClaims;
 }

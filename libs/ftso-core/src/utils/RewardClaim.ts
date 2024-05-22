@@ -37,9 +37,13 @@ export interface IRewardClaim extends IMergeableRewardClaim {
 
 export interface IPartialRewardClaim extends IMergeableRewardClaim {
   votingRoundId?: number;
-  info?: string;
   offerIndex?: number;
   feedId?: string;
+  // Fields used for classifying how the reward was calculated
+  protocolTag?: string;
+  rewardTypeTag?: string;
+  rewardDetailTag?: string;
+  burnedForVoter?: string;
 }
 
 /**

@@ -64,12 +64,7 @@ describe(`Reward median, ${getTestFile(__filename)}`, function () {
   });
 
   it("should calculate rewards offer", function () {
-    const claims = calculateMedianRewardClaims(
-      splitPartialOfferedReward[0],
-      medianCalculationResult,
-      voterWeights,
-      true
-    );
+    const claims = calculateMedianRewardClaims(splitPartialOfferedReward[0], medianCalculationResult, voterWeights);
 
     expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedReward[0].amount);
   });
@@ -78,8 +73,7 @@ describe(`Reward median, ${getTestFile(__filename)}`, function () {
     const claims = calculateMedianRewardClaims(
       splitPartialOfferedRewardNoSecondary[0],
       medianCalculationResult,
-      voterWeights,
-      true
+      voterWeights
     );
 
     expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedRewardNoSecondary[0].amount);
