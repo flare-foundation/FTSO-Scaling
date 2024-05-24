@@ -644,6 +644,13 @@ export class CalculatorService {
     for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
       this.claimAggregation(rewardEpochDuration, votingRoundId, logger);
     }
+
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
+    recordProgress(rewardEpochId);
+    const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, endVotingRoundId);
+    serializeFinalRewardClaims(rewardEpochId, lastClaims);
+    const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
+    serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
   }
 
   /**
