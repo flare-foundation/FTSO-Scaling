@@ -14,6 +14,7 @@ import {
   BURN_ADDRESS,
   CONTRACTS,
   EPOCH_SETTINGS,
+  FUTURE_VOTING_ROUNDS,
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../../libs/ftso-core/src/configs/networks";
 import { RewardEpochStarted } from "../../../../libs/ftso-core/src/events";
@@ -44,6 +45,7 @@ import {
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
 import { serializeRewardDistributionData } from "../../../../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
 import {
+  deserializeRewardEpochInfo,
   getRewardEpochInfo,
   serializeRewardEpochInfo,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
@@ -138,7 +140,7 @@ export class CalculatorService {
   }
 
   async calculationOfRewardCalculationData(
-    rewardEpochDuration: RewardEpochDuration,
+    rewardEpochId: number,
     votingRoundId: number,
     retryDelayMs: number,
     logger: Logger
@@ -148,7 +150,7 @@ export class CalculatorService {
       try {
         logger.log(`Calculating data for reward calculation for voting round: ${votingRoundId}`);
         await prepareDataForRewardCalculations(
-          rewardEpochDuration.rewardEpochId,
+          rewardEpochId,
           votingRoundId,
           RANDOM_GENERATION_BENCHING_WINDOW(),
           this.dataManager
@@ -156,7 +158,7 @@ export class CalculatorService {
         done = true;
       } catch (e) {
         logger.error(
-          `Error while calculating reward calculation data for voting round ${votingRoundId} in reward epoch ${rewardEpochDuration.rewardEpochId}: ${e}`
+          `Error while calculating reward calculation data for voting round ${votingRoundId} in reward epoch ${rewardEpochId}: ${e}`
         );
         // TODO: calculate expected time when data should be ready. If not, keep delaying for 10s
         const delay = retryDelayMs ?? 10000;
@@ -299,6 +301,351 @@ export class CalculatorService {
     }
   }
 
+  async runCalculateRewardCalculationTopJob(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
+    const logger = new Logger();
+    const rewardEpochId = options.rewardEpochId;
+    destroyStorage(rewardEpochId);
+    // creates subfolders for voting rounds and distributes partial reward offers
+    const [rewardEpochDuration, rewardEpoch] = await initializeRewardEpochStorage(
+      rewardEpochId,
+      this.rewardEpochManager,
+      options.useExpectedEndIfNoSigningPolicyAfter
+    );
+    if (rewardEpochDuration.endVotingRoundId === undefined) {
+      throw new Error(`Invalid reward epoch duration for reward epoch ${rewardEpochId}`);
+    }
+    const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, rewardEpochDuration.endVotingRoundId);
+    serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
+    setRewardCalculationStatus(
+      rewardEpochId,
+      RewardCalculationStatus.PENDING,
+      rewardEpoch,
+      rewardEpochDuration.endVotingRoundId
+    );
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.IN_PROGRESS);
+    recordProgress(rewardEpochId);
+
+    const start = options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
+    const end = options.endVotingRoundId ?? rewardEpochDuration.endVotingRoundId;
+
+    if (
+      start === undefined ||
+      start < rewardEpochDuration.startVotingRoundId ||
+      start > rewardEpochDuration.endVotingRoundId
+    ) {
+      throw new Error(`Invalid start voting round id: ${start}`);
+    }
+    if (
+      end === undefined ||
+      end < rewardEpochDuration.startVotingRoundId ||
+      end > rewardEpochDuration.endVotingRoundId
+    ) {
+      throw new Error(`Invalid end voting round id: ${end}`);
+    }
+    logger.log("Using parallel processing for reward calculation data");
+    logger.log(options);
+    logger.log("-------------------");
+    const pool = workerPool.pool(__dirname + "/../calculation-data-worker.js", {
+      maxWorkers: options.numberOfWorkers,
+    });
+    const promises = [];
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId <= end;
+      votingRoundId += options.batchSize
+    ) {
+      const endBatch = Math.min(votingRoundId + options.batchSize - 1, end);
+      const batchOptions: OptionalCommandOptions = {
+        rewardEpochId: rewardEpochDuration.rewardEpochId,
+        calculateRewardCalculationData: true,
+        startVotingRoundId: votingRoundId,
+        endVotingRoundId: endBatch,
+        isWorker: true,
+      };
+      // logger.log(batchOptions);
+      promises.push(pool.exec("run", [batchOptions]));
+    }
+    await Promise.all(promises);
+    await pool.terminate();
+    logger.log("Batch calculation for reward calculation data done", end);
+    return rewardEpochDuration;
+  }
+
+  async runCalculateRewardCalculationDataWorker(options: OptionalCommandOptions): Promise<void> {
+    const logger = new Logger();
+    const rewardEpochId = options.rewardEpochId;
+
+    for (let votingRoundId = options.startVotingRoundId; votingRoundId <= options.endVotingRoundId; votingRoundId++) {
+      await this.calculationOfRewardCalculationData(options.rewardEpochId, votingRoundId, options.retryDelayMs, logger);
+      recordProgress(rewardEpochId);
+    }
+  }
+
+  async runRandomNumberFixing(rewardEpochId: number, newEpochVotingRoundOffset: number): Promise<void> {
+    const logger = new Logger();
+    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+    const newRewardEpochId = rewardEpochId + 1;
+    const nextRewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId + 1);
+
+    let nextVotingRoundIdWithNoSecureRandom = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+    // Random number for use in a specific voting round (N) is calculated as a hash of first secure random number
+    // in subsequent voting rounds and the voting round id (N).
+    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      const currentCalculationData = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+      if (!currentCalculationData) {
+        throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
+      }
+
+      // skip unsecure random
+      if (!currentCalculationData.randomResult.isSecure) {
+        continue;
+      }
+      const secureRandom = BigInt(currentCalculationData.randomResult.random);
+
+      while (nextVotingRoundIdWithNoSecureRandom < votingRoundId) {
+        const previousCalculationData = deserializeDataForRewardCalculation(
+          rewardEpochId,
+          nextVotingRoundIdWithNoSecureRandom
+        );
+        if (!previousCalculationData) {
+          throw new Error(
+            `Missing reward calculation data for previous voting round ${nextVotingRoundIdWithNoSecureRandom}`
+          );
+        }
+        const newRandomNumber = BigInt(
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
+        ).toString();
+        previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;
+
+        writeDataForRewardCalculation(previousCalculationData);
+        logger.log(
+          `Fixing random for voting round ${nextVotingRoundIdWithNoSecureRandom} with ${votingRoundId}: ${newRandomNumber}`
+        );
+        nextVotingRoundIdWithNoSecureRandom++;
+      }
+    }
+
+    // Resolve for the future reward epoch
+    const newStartVotingRoundId = nextRewardEpochInfo.signingPolicy.startVotingRoundId;
+
+    for (
+      let votingRoundId = newStartVotingRoundId;
+      votingRoundId < newStartVotingRoundId + newEpochVotingRoundOffset;
+      votingRoundId++
+    ) {
+      const currentCalculationData = deserializeDataForRewardCalculation(newRewardEpochId, votingRoundId);
+      if (!currentCalculationData) {
+        throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
+      }
+      // skip unsecure random
+      if (!currentCalculationData.randomResult.isSecure) {
+        continue;
+      }
+      const secureRandom = BigInt(currentCalculationData.randomResult.random);
+
+      while (nextVotingRoundIdWithNoSecureRandom <= endVotingRoundId) {
+        const previousCalculationData = deserializeDataForRewardCalculation(
+          rewardEpochId,
+          nextVotingRoundIdWithNoSecureRandom
+        );
+        if (!previousCalculationData) {
+          throw new Error(
+            `Missing reward calculation data for previous voting round ${nextVotingRoundIdWithNoSecureRandom}`
+          );
+        }
+        const newRandomNumber = BigInt(
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
+        ).toString();
+
+        previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;
+
+        writeDataForRewardCalculation(previousCalculationData);
+        logger.log(
+          `Fixing random for voting round ${nextVotingRoundIdWithNoSecureRandom} with ${votingRoundId}: ${newRandomNumber}`
+        );
+
+        nextVotingRoundIdWithNoSecureRandom++;
+      }
+      if (nextVotingRoundIdWithNoSecureRandom > endVotingRoundId) {
+        break;
+      }
+    }
+    // If secure random is still not available. The rewards will get burned (indicated by not setting the random number).
+  }
+
+  async fullRoundInitializationAndDataCalculationWithRandomFixing(options: OptionalCommandOptions): Promise<void> {
+    const adaptedOptions = {
+      rewardEpochId: options.rewardEpochId,
+      initialize: true,
+      calculateRewardCalculationData: true,
+      batchSize: options.batchSize,
+      numberOfWorkers: options.numberOfWorkers,
+    } as OptionalCommandOptions;
+    const rewardEpochDuration = await this.runCalculateRewardCalculationTopJob(adaptedOptions);
+    const newOptions = { ...adaptedOptions };
+    newOptions.endVotingRoundId = rewardEpochDuration.endVotingRoundId + FUTURE_VOTING_ROUNDS();
+    newOptions.rewardEpochId = newOptions.rewardEpochId + 1;
+    const rewardEpochDuration2 = await this.runCalculateRewardCalculationTopJob(newOptions);
+    console.dir(rewardEpochDuration2);
+    await this.runRandomNumberFixing(options.rewardEpochId, FUTURE_VOTING_ROUNDS());
+  }
+
+  async fullRoundOfferCalculation(options: OptionalCommandOptions): Promise<void> {
+    const rewardEpochId = options.rewardEpochId;
+    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+    const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+    const rewardEpochDuration: RewardEpochDuration = {
+      rewardEpochId,
+      startVotingRoundId,
+      endVotingRoundId,
+      expectedEndUsed: false,
+    };
+
+    if (endVotingRoundId === undefined) {
+      throw new Error(`No endVotingRound for ${rewardEpochId}`);
+    }
+    const randomNumbers: bigint[] = [];
+    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+      if (!data) {
+        throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      randomNumbers.push(BigInt(data.nextVotingRoundRandomResult!));
+    }
+
+    const rewardOfferMap: Map<
+      number,
+      Map<string, IPartialRewardOfferForRound[]>
+    > = granulatedPartialOfferMapForRandomFeedSelection(
+      startVotingRoundId,
+      endVotingRoundId,
+      rewardEpochInfo,
+      randomNumbers
+    );
+    // sync call
+    serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, false);
+  }
+
+  async runCalculateRewardClaimsTopJob(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
+    const logger = new Logger();
+    const rewardEpochId = options.rewardEpochId;
+    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+    const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+    const rewardEpochDuration: RewardEpochDuration = {
+      rewardEpochId,
+      startVotingRoundId,
+      endVotingRoundId,
+      expectedEndUsed: false,
+    };
+
+    const start = options.startVotingRoundId ?? rewardEpochDuration.startVotingRoundId;
+    const end = options.endVotingRoundId ?? rewardEpochDuration.endVotingRoundId;
+
+    if (
+      start === undefined ||
+      start < rewardEpochDuration.startVotingRoundId ||
+      start > rewardEpochDuration.endVotingRoundId
+    ) {
+      throw new Error(`Invalid start voting round id: ${start}`);
+    }
+    if (
+      end === undefined ||
+      end < rewardEpochDuration.startVotingRoundId ||
+      end > rewardEpochDuration.endVotingRoundId
+    ) {
+      throw new Error(`Invalid end voting round id: ${end}`);
+    }
+    logger.log("Using parallel processing for reward claims");
+    logger.log(options);
+    logger.log("-------------------");
+    const pool = workerPool.pool(__dirname + "/../claim-only-calculation-worker.js", {
+      maxWorkers: options.numberOfWorkers,
+    });
+    const promises = [];
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId <= end;
+      votingRoundId += options.batchSize
+    ) {
+      const endBatch = Math.min(votingRoundId + options.batchSize - 1, end);
+      const batchOptions = {
+        rewardEpochId: rewardEpochDuration.rewardEpochId,
+        calculateClaims: true,
+        startVotingRoundId: votingRoundId,
+        endVotingRoundId: endBatch,
+        isWorker: true,
+      };
+
+      // logger.log(batchOptions);
+      promises.push(pool.exec("run", [batchOptions]));
+    }
+    await Promise.all(promises);
+    await pool.terminate();
+    logger.log("Batch calculation for reward claims done", end);
+    return rewardEpochDuration;
+  }
+
+  async runCalculateRewardOfferWorker(options: OptionalCommandOptions): Promise<void> {
+    const logger = new Logger();
+    const rewardEpochId = options.rewardEpochId;
+    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+    const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+    const rewardEpochDuration: RewardEpochDuration = {
+      rewardEpochId,
+      startVotingRoundId,
+      endVotingRoundId,
+      expectedEndUsed: false,
+    };
+
+    for (let votingRoundId = options.startVotingRoundId; votingRoundId <= options.endVotingRoundId; votingRoundId++) {
+      await this.calculateClaimsAndAggregate(
+        rewardEpochDuration,
+        votingRoundId,
+        false, // don't aggregate
+        options.retryDelayMs,
+        logger
+      );
+
+      recordProgress(rewardEpochId);
+    }
+  }
+
+  async fullRoundClaimCalculation(options: OptionalCommandOptions): Promise<void> {
+    const adaptedOptions = {
+      rewardEpochId: options.rewardEpochId,
+      calculateClaims: true,
+      batchSize: options.batchSize,
+      numberOfWorkers: options.numberOfWorkers,
+    } as OptionalCommandOptions;
+    await this.runCalculateRewardClaimsTopJob(adaptedOptions);
+  }
+
+  async fullRoundAggregateClaims(options: OptionalCommandOptions): Promise<void> {
+    const logger = new Logger();
+    const rewardEpochId = options.rewardEpochId;
+    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+    const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+    const rewardEpochDuration: RewardEpochDuration = {
+      rewardEpochId,
+      startVotingRoundId,
+      endVotingRoundId,
+      expectedEndUsed: false,
+    };
+
+    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      this.claimAggregation(rewardEpochDuration, votingRoundId, logger);
+    }
+  }
+
   /**
    * Returns a list of all (merged) reward claims for the given reward epoch.
    * Calculation can be quite intensive.
@@ -306,6 +653,44 @@ export class CalculatorService {
   async run(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     logger.log(options);
+    if (
+      options.rewardEpochId !== undefined &&
+      options.initialize &&
+      options.calculateRewardCalculationData &&
+      options.batchSize &&
+      options.numberOfWorkers
+    ) {
+      try {
+        await this.fullRoundInitializationAndDataCalculationWithRandomFixing(options);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    if (options.rewardEpochId !== undefined && options.calculateOffers) {
+      try {
+        await this.fullRoundOfferCalculation(options);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    if (options.rewardEpochId !== undefined && options.calculateClaims) {
+      try {
+        await this.fullRoundClaimCalculation(options);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    if (options.rewardEpochId !== undefined && options.aggregateClaims) {
+      try {
+        await this.fullRoundAggregateClaims(options);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    return;
     let startRewardEpochId;
     let endRewardEpochId;
     // Determine which reward epoch should be calculated
