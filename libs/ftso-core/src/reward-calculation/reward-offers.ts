@@ -6,6 +6,7 @@ import {
   IPartialRewardOfferForRound,
   PartialRewardOffer,
 } from "../utils/PartialRewardOffer";
+import { RewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
 
 /**
  * A split of partial reward offer into three parts:
@@ -78,7 +79,7 @@ export function adaptCommunityRewardOffer(rewardOffer: IPartialRewardOfferForEpo
 export function granulatedPartialOfferMapForRandomFeedSelection(
   startVotingRoundId: number,
   endVotingRoundId: number,
-  rewardEpoch: RewardEpoch,
+  rewardEpochInfo: RewardEpochInfo,
   randomNumbers: bigint[]
 ): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
   if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
@@ -90,15 +91,15 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
   }
   // Calculate total amount of rewards for the reward epoch
   let totalAmount = 0n;
-  for (const rewardOffer of rewardEpoch.rewardOffers.rewardOffers) {
+  for (const rewardOffer of rewardEpochInfo.rewardOffers.rewardOffers) {
     totalAmount += rewardOffer.amount;
   }
-  for (const inflationOffer of rewardEpoch.rewardOffers.inflationOffers) {
+  for (const inflationOffer of rewardEpochInfo.rewardOffers.inflationOffers) {
     totalAmount += inflationOffer.amount;
   }
   // Create a map of feedId -> rewardOffer for easier access
   const currencyRewardOffers = new Map<string, IPartialRewardOfferForEpoch>();
-  for (const inflationRewardOffer of rewardEpoch.rewardOffers.inflationOffers) {
+  for (const inflationRewardOffer of rewardEpochInfo.rewardOffers.inflationOffers) {
     // amounts will be ignored
     const feedOffers = PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer);
     for (const feedOffer of feedOffers) {
@@ -110,7 +111,7 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
       currencyRewardOffers.set(feedOffer.feedId, feedOffer); // always use the last configuration only
     }
   }
-  for (const rewardOffer of rewardEpoch.rewardOffers.rewardOffers) {
+  for (const rewardOffer of rewardEpochInfo.rewardOffers.rewardOffers) {
     if (currencyRewardOffers.has(rewardOffer.feedId)) {
       console.log(`Duplicate community reward offer for feed ${rewardOffer.feedId}. Only the first one is considered.`);
     } else {
@@ -129,8 +130,8 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
 
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
     const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
-    const selectedFeedIndex = Number(randomNumber % BigInt(rewardEpoch.canonicalFeedOrder.length));
-    const selectedFeed = rewardEpoch.canonicalFeedOrder[selectedFeedIndex];
+    const selectedFeedIndex = Number(randomNumber % BigInt(rewardEpochInfo.canonicalFeedOrder.length));
+    const selectedFeed = rewardEpochInfo.canonicalFeedOrder[selectedFeedIndex];
     const selectedFeedId = selectedFeed.id;
     const selectedFeedOffer = currencyRewardOffers.get(selectedFeedId);
     if (!selectedFeedOffer) {
