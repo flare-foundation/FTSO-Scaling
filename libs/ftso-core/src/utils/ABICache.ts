@@ -13,6 +13,10 @@ import {
   VoterRegistered,
   VoterRegistrationInfo,
 } from "../events";
+import { FastUpdateFeedsSubmitted } from "../events/FastUpdateFeedsSubmitted";
+import { FastUpdateFeeds } from "../events/FastUpdateFeeds";
+import { FUInflationRewardsOffered } from "../events/FUInflationRewardsOffered";
+import { IncentiveOffered } from "../events/IncentiveOffered";
 
 type AbiItem = AbiFunctionFragment | AbiEventFragment;
 
@@ -54,6 +58,10 @@ export class ABICache {
       ["FtsoMerkleStructs", ContractMethodNames.feedWithProofStruct, undefined],
       ["ProtocolMerkleStructs", ContractMethodNames.rewardClaimStruct, undefined],
       ["ProtocolMerkleStructs", ContractMethodNames.rewardClaimWithProofStruct, undefined],
+      ["FastUpdater", undefined, FastUpdateFeedsSubmitted.eventName],
+      ["FastUpdater", undefined, FastUpdateFeeds.eventName],
+      ["FastUpdateIncentiveManager", undefined, FUInflationRewardsOffered.eventName],
+      ["FastUpdateIncentiveManager", undefined, IncentiveOffered.eventName],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {
