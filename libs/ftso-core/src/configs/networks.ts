@@ -13,6 +13,8 @@ const TEST_CONFIG: NetworkContractAddresses = {
   VoterRegistry: { name: "VoterRegistry", address: "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "" },
+  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "" },
 };
 
 const COSTON_CONFIG: NetworkContractAddresses = {
@@ -25,6 +27,11 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   VoterRegistry: { name: "VoterRegistry", address: "0x051E9Cb16A8676C011faa10efA1ABE95372e7825" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9" },
+  FastUpdateIncentiveManager: {
+    name: "FastUpdateIncentiveManager",
+    address: "0xc1a22A1d295e829Caf3be61bd1E11E5eEd7f0F15",
+  },
 };
 
 const COSTON2_CONFIG: NetworkContractAddresses = {
@@ -37,6 +44,8 @@ const COSTON2_CONFIG: NetworkContractAddresses = {
   VoterRegistry: { name: "VoterRegistry", address: "0x51e375fda99181f052C2e28299e166D6984A5B89" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "" },
+  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "" },
 };
 
 const SONGBIRD_CONFIG: NetworkContractAddresses = {
@@ -49,6 +58,8 @@ const SONGBIRD_CONFIG: NetworkContractAddresses = {
   VoterRegistry: { name: "VoterRegistry", address: "0x16EdaECC2D3713C3A94CCd1FFCd2589cfb7Ee9e0" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "" },
+  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "" },
 };
 
 export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird";
@@ -112,6 +123,11 @@ const contracts = () => {
         VoterRegistry: { name: "VoterRegistry", address: process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS },
         FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
         ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+        FastUpdater: { name: "FastUpdater", address: process.env.FTSO_CA_FAST_UPDATER_ADDRESS },
+        FastUpdateIncentiveManager: {
+          name: "FastUpdateIncentiveManager",
+          address: process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS,
+        },
       };
       return CONTRACT_CONFIG;
     }

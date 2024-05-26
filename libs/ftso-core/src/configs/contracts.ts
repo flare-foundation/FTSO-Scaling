@@ -36,6 +36,14 @@ interface ProtocolMerkleStructsDefinition {
   name: "ProtocolMerkleStructs";
   address: ContractAddress;
 }
+interface FastUpdaterDefinition {
+  name: "FastUpdater";
+  address: ContractAddress;
+}
+interface FastUpdateIncentiveManagerDefinition {
+  name: "FastUpdateIncentiveManager";
+  address: ContractAddress;
+}
 
 export type ContractDefinitions =
   | FlareSystemsManagerDefinition
@@ -46,7 +54,9 @@ export type ContractDefinitions =
   | FlareSystemsCalculatorDefinition
   | VoterRegistryDefinition
   | ProtocolMerkleStructsDefinition
-  | FtsoMerkleStructsDefinition;
+  | FtsoMerkleStructsDefinition
+  | FastUpdaterDefinition
+  | FastUpdateIncentiveManagerDefinition;
 
 export type ContractDefinitionsNames =
   | FlareSystemsManagerDefinition["name"]
@@ -57,7 +67,9 @@ export type ContractDefinitionsNames =
   | FlareSystemsCalculatorDefinition["name"]
   | VoterRegistryDefinition["name"]
   | ProtocolMerkleStructsDefinition["name"]
-  | FtsoMerkleStructsDefinition["name"];
+  | FtsoMerkleStructsDefinition["name"]
+  | FastUpdaterDefinition["name"]
+  | FastUpdateIncentiveManagerDefinition["name"];
 
 export enum ContractMethodNames {
   submit1 = "submit1",
@@ -89,4 +101,6 @@ export interface NetworkContractAddresses {
   VoterRegistry: VoterRegistryDefinition;
   FtsoMerkleStructs: FtsoMerkleStructsDefinition;
   ProtocolMerkleStructs: ProtocolMerkleStructsDefinition;
+  FastUpdater: FastUpdaterDefinition;
+  FastUpdateIncentiveManager: FastUpdateIncentiveManagerDefinition;
 }
