@@ -7,7 +7,7 @@ import { EntityManager } from "typeorm";
 import { encodeParameters } from "web3-eth-abi";
 import { soliditySha3 } from "web3-utils";
 import * as workerPool from "workerpool";
-import { DataManager } from "../../../../libs/ftso-core/src/DataManager";
+import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
 import { IndexerClient } from "../../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
 import {
@@ -23,6 +23,7 @@ import {
   initializeRewardEpochStorage,
   partialRewardClaimsForVotingRound,
   prepareDataForRewardCalculations,
+  prepareDataForRewardCalculationsForRange,
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { granulatedPartialOfferMapForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
 import { IPartialRewardOfferForRound } from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
@@ -85,7 +86,7 @@ export class CalculatorService {
   // private readonly epochSettings: EpochSettings;
   private readonly indexerClient: IndexerClient;
   private rewardEpochManager: RewardEpochManager;
-  private dataManager: DataManager;
+  private dataManager: DataManagerForRewarding;
   private entityManager: EntityManager;
 
   // Indexer top timeout margin
@@ -97,7 +98,7 @@ export class CalculatorService {
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     this.indexerClient = new IndexerClient(manager, required_history_sec, this.logger);
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
-    this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);
+    this.dataManager = new DataManagerForRewarding(this.indexerClient, this.rewardEpochManager, this.logger);
   }
 
   setupEnvVariables(config: any) {
@@ -159,6 +160,40 @@ export class CalculatorService {
       } catch (e) {
         logger.error(
           `Error while calculating reward calculation data for voting round ${votingRoundId} in reward epoch ${rewardEpochId}: ${e}`
+        );
+        // TODO: calculate expected time when data should be ready. If not, keep delaying for 10s
+        const delay = retryDelayMs ?? 10000;
+        logger.log(`Sleeping for ${delay / 1000}s before retrying...`);
+        await sleepFor(delay);
+      }
+    }
+  }
+
+  async calculationOfRewardCalculationDataForRange(
+    rewardEpochId: number,
+    firstVotingRoundId: number,
+    lastVotingRoundId: number,
+    retryDelayMs: number,
+    logger: Logger
+  ) {
+    let done = false;
+    while (!done) {
+      try {
+        logger.log(
+          `Calculating data for reward calculation for voting rounds: ${firstVotingRoundId}-${lastVotingRoundId}`
+        );
+        await prepareDataForRewardCalculationsForRange(
+          rewardEpochId,
+          firstVotingRoundId,
+          lastVotingRoundId,
+          RANDOM_GENERATION_BENCHING_WINDOW(),
+          this.dataManager
+        );
+        done = true;
+      } catch (e) {
+        console.log(e);
+        logger.error(
+          `Error while calculating reward calculation data for voting rounds ${firstVotingRoundId}-${lastVotingRoundId} in reward epoch ${rewardEpochId}: ${e}`
         );
         // TODO: calculate expected time when data should be ready. If not, keep delaying for 10s
         const delay = retryDelayMs ?? 10000;
@@ -375,10 +410,14 @@ export class CalculatorService {
     const logger = new Logger();
     const rewardEpochId = options.rewardEpochId;
 
-    for (let votingRoundId = options.startVotingRoundId; votingRoundId <= options.endVotingRoundId; votingRoundId++) {
-      await this.calculationOfRewardCalculationData(options.rewardEpochId, votingRoundId, options.retryDelayMs, logger);
-      recordProgress(rewardEpochId);
-    }
+    await this.calculationOfRewardCalculationDataForRange(
+      options.rewardEpochId,
+      options.startVotingRoundId,
+      options.endVotingRoundId,
+      options.retryDelayMs,
+      logger
+    );
+    recordProgress(rewardEpochId);
   }
 
   async runRandomNumberFixing(rewardEpochId: number, newEpochVotingRoundOffset: number): Promise<void> {

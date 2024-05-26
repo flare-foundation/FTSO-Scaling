@@ -17,6 +17,7 @@ import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
 
+import { DataManagerForRewarding } from "../DataManagerForRewarding";
 import { RewardEpoch } from "../RewardEpoch";
 import { calculateRandom } from "../ftso-calculation/ftso-random";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
@@ -343,6 +344,60 @@ export async function prepareDataForRewardCalculations(
   serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
     ...eligibleFinalizationRewardVotersInGracePeriod,
   ]);
+}
+
+export async function prepareDataForRewardCalculationsForRange(
+  rewardEpochId: number,
+  firstVotingRoundId: number,
+  lastVotingRoundId: number,
+  randomGenerationBenchingWindow: number,
+  dataManager: DataManagerForRewarding,
+  calculationFolder = CALCULATIONS_FOLDER()
+) {
+  const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculationForVotingRoundRange(
+    firstVotingRoundId,
+    lastVotingRoundId,
+    randomGenerationBenchingWindow
+  );
+  if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
+    throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
+  }
+
+  for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+    const rewardDataForCalculations = rewardDataForCalculationResponse.data[votingRoundId - firstVotingRoundId];
+    const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
+
+    // Calculate feed medians
+    const medianResults: MedianCalculationResult[] = calculateMedianResults(
+      rewardDataForCalculations.dataForCalculations
+    );
+
+    // Select eligible voters for finalization rewards
+    const randomVoterSelector = new RandomVoterSelector(
+      rewardEpoch.signingPolicy.voters,
+      rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
+      FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
+    );
+
+    const initialHash = RandomVoterSelector.initialHashSeed(
+      rewardEpoch.signingPolicy.seed,
+      FTSO2_PROTOCOL_ID,
+      votingRoundId
+    );
+    const eligibleFinalizationRewardVotersInGracePeriod = new Set(
+      randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
+    );
+
+    const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
+    const calculationResults = [
+      MerkleTreeStructs.fromRandomCalculationResult(randomData),
+      ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+    ];
+    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
+    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
+      ...eligibleFinalizationRewardVotersInGracePeriod,
+    ]);
+  }
 }
 
 /**
