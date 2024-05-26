@@ -218,6 +218,7 @@ const epochSettings = () => {
 };
 
 const constantEpochSettings = epochSettings();
+
 export const EPOCH_SETTINGS = () => {
   const network = process.env.NETWORK as networks;
   if (network === "from-env") {

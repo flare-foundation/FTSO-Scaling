@@ -1,16 +1,19 @@
 import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
 import { ApiSecurity, ApiTags } from "@nestjs/swagger";
+import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 import {
   AbiDefinitionsResponse,
+  ExternalFeedWithProofResponse,
+  ExternalMedianResponse,
   ExternalResponse,
   ExternalResponseStatusEnum,
   PDPResponse,
   PDPResponseStatusEnum,
 } from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
-import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
-import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 
 enum ApiTagsEnum {
   PDP = "FTSO Protocol data provider",
@@ -97,11 +100,33 @@ export class FtsoDataProviderController {
   @ApiTags(ApiTagsEnum.EXTERNAL)
   @Get("data/:votingRoundId")
   async merkleTree(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalResponse> {
-    // TODO: handle to early response as it is more informative, for now we respond with not available for to early cases
+    if (isBeforeDeadline(votingRoundId)) {
+      return {
+        status: ExternalResponseStatusEnum.TOO_EARLY,
+      };
+    }
     const data = await this.ftsoDataProviderService.getFullMerkleTree(votingRoundId);
     return {
       status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
       ...data,
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("specific-feed/:feedId/:votingRoundId")
+  async feedWithProof(
+    @Param("feedId") feedId: string,
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number
+  ): Promise<ExternalFeedWithProofResponse> {
+    if (isBeforeDeadline(votingRoundId)) {
+      return {
+        status: ExternalResponseStatusEnum.TOO_EARLY,
+      };
+    }
+    const data = await this.ftsoDataProviderService.getFeedWithProof(votingRoundId, feedId);
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      feedWithProof: data,
     };
   }
 
@@ -114,4 +139,27 @@ export class FtsoDataProviderController {
       data,
     };
   }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("medianCalculationResults/:votingRoundId")
+  async fullMedianData(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<ExternalMedianResponse> {
+    if (isBeforeDeadline(votingRoundId)) {
+      return {
+        status: ExternalResponseStatusEnum.TOO_EARLY,
+      };
+    }
+    const data = await this.ftsoDataProviderService.getFullMedianData(votingRoundId);
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      votingRoundId,
+      medianData: data,
+    };
+  }
+}
+
+function isBeforeDeadline(votingRoundId: number): boolean {
+  const localTimeDriftOffset = 1000; // 1 second
+  const now = Date.now();
+  const revealDeadline = EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) * 1000;
+  return now < revealDeadline + localTimeDriftOffset;
 }

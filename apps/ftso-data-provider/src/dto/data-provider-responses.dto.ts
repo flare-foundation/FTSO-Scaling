@@ -1,7 +1,8 @@
 // PDP (Protocol Data Provider) Response
 
 import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
-import { TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { FeedResultWithProof, TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { MedianCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
 
 export enum PDPResponseStatusEnum {
   OK = "OK",
@@ -40,6 +41,25 @@ interface ExternalResponseNotAvailable {
 
 export type ExternalResponse = ExternalResponseOk | ExternalResponseTooEarly | ExternalResponseNotAvailable;
 
+interface ExternalMedianResponseOk {
+  status: ExternalResponseStatusEnum.OK;
+  votingRoundId: number;
+  medianData: MedianCalculationResult[];
+}
+
+interface ExternalMedianResponseNotAvailable {
+  status: ExternalResponseStatusEnum.NOT_AVAILABLE;
+}
+
+interface ExternalMedianResponseTooEarly {
+  status: ExternalResponseStatusEnum.TOO_EARLY;
+}
+
+export type ExternalMedianResponse =
+  | ExternalMedianResponseOk
+  | ExternalMedianResponseNotAvailable
+  | ExternalMedianResponseTooEarly;
+
 export interface JSONAbiDefinition {
   abiName: string;
   data: AbiDataInput;
@@ -55,3 +75,21 @@ interface AbiDefinitionsResponseNotAvailable {
 }
 
 export type AbiDefinitionsResponse = AbiDefinitionsResponseOk | AbiDefinitionsResponseNotAvailable;
+
+interface ExternalFeedWithProofResponseOk {
+  status: ExternalResponseStatusEnum.OK;
+  feedWithProof: FeedResultWithProof;
+}
+
+interface ExternalFeedWithProofResponseNotAvailable {
+  status: ExternalResponseStatusEnum.NOT_AVAILABLE;
+}
+
+interface ExternalFeedWithProofResponseTooEarly {
+  status: ExternalResponseStatusEnum.TOO_EARLY;
+}
+
+export type ExternalFeedWithProofResponse =
+  | ExternalFeedWithProofResponseOk
+  | ExternalFeedWithProofResponseNotAvailable
+  | ExternalFeedWithProofResponseTooEarly;
