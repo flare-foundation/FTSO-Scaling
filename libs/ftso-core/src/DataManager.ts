@@ -346,7 +346,7 @@ export class DataManager {
    * @param submissions
    * @returns
    */
-  protected static extractSignatures(
+  public static extractSignatures(
     votingRoundId: number,
     rewardEpoch: RewardEpoch,
     submissions: SubmissionData[],
