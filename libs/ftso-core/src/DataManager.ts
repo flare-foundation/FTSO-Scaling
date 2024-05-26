@@ -58,18 +58,18 @@ export interface DataMangerResponse<T> {
   data?: T;
 }
 
-interface CommitsAndReveals {
+export interface CommitsAndReveals {
   votingRoundId: number;
   commits: Map<Address, ICommitData>;
   reveals: Map<Address, IRevealData>;
 }
 
-interface CommitAndRevealSubmissionsMappingsForRange {
+export interface CommitAndRevealSubmissionsMappingsForRange {
   votingRoundIdToCommits: Map<number, SubmissionData[]>;
   votingRoundIdToReveals: Map<number, SubmissionData[]>;
 }
 
-interface SignAndFinalizeSubmissionData {
+export interface SignAndFinalizeSubmissionData {
   signatures: SubmissionData[];
   finalizations: FinalizationData[];
 }
@@ -82,9 +82,9 @@ interface SignAndFinalizeSubmissionData {
  */
 export class DataManager {
   constructor(
-    private readonly indexerClient: IndexerClient,
-    private readonly rewardEpochManager: RewardEpochManager,
-    private readonly logger: ILogger
+    protected readonly indexerClient: IndexerClient,
+    protected readonly rewardEpochManager: RewardEpochManager,
+    protected readonly logger: ILogger
   ) {}
 
   /**
@@ -144,7 +144,8 @@ export class DataManager {
       mappingsResponse.data.votingRoundIdToCommits,
       mappingsResponse.data.votingRoundIdToReveals,
       randomGenerationBenchingWindow,
-      this.rewardEpochManager
+      (votingRoundId: number) =>
+        this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId, rewardEpoch.rewardEpochId + 1)
     );
 
     this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
@@ -230,7 +231,7 @@ export class DataManager {
    * @param endTimeout
    * @returns
    */
-  private async getCommitAndRevealMappingsForVotingRoundRange(
+  protected async getCommitAndRevealMappingsForVotingRoundRange(
     startVotingRoundId: number,
     endVotingRoundId: number,
     endTimeout?: number
@@ -295,7 +296,7 @@ export class DataManager {
    * @param votingRoundId
    * @returns
    */
-  private async getSignAndFinalizeSubmissionDataForVotingRound(
+  protected async getSignAndFinalizeSubmissionDataForVotingRound(
     votingRoundId: number
   ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
     const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
@@ -345,7 +346,7 @@ export class DataManager {
    * @param submissions
    * @returns
    */
-  public static extractSignatures(
+  protected static extractSignatures(
     votingRoundId: number,
     rewardEpoch: RewardEpoch,
     submissions: SubmissionData[],
@@ -421,7 +422,7 @@ export class DataManager {
    * @param protocolId
    * @returns
    */
-  private extractFinalizations(
+  protected extractFinalizations(
     votingRoundId: number,
     rewardEpoch: RewardEpoch,
     submissions: FinalizationData[],
@@ -490,7 +491,7 @@ export class DataManager {
   /**
    * Prepares data for median calculation and rewarding.
    */
-  private getDataForCalculationsPartial(
+  protected getDataForCalculationsPartial(
     commitsAndReveals: CommitsAndReveals,
     rewardEpoch: RewardEpoch
   ): DataForCalculationsPartial {
@@ -539,7 +540,7 @@ export class DataManager {
    * Construct a mapping submissionAddress => reveal data for valid reveals of eligible voters.
    * A reveal is considered valid if there exists a matching commit.
    */
-  private getValidReveals(
+  protected getValidReveals(
     votingRoundId: number,
     eligibleCommits: Map<Address, ICommitData>,
     eligibleReveals: Map<Address, IRevealData>
@@ -568,7 +569,7 @@ export class DataManager {
    * Construct a set of submitAddresses that incorrectly revealed or did not reveal at all.
    * Iterate over commits and check if they were revealed correctly, return those that were not.
    */
-  private getRevealOffenders(
+  protected getRevealOffenders(
     votingRoundId: number,
     availableCommits: Map<Address, ICommitData>,
     availableReveals: Map<Address, IRevealData>
@@ -594,14 +595,14 @@ export class DataManager {
    * A reveal offender is any voter (eligible or not), which has committed but did not reveal for a specific voting round,
    * or has provided invalid reveal (not matching to the commit).
    */
-  private async getBenchingWindowRevealOffenders(
+  protected async getBenchingWindowRevealOffenders(
     votingRoundId: number,
     rewardEpochId: number,
     startVotingRoundId: number,
     votingRoundIdToCommits: Map<number, SubmissionData[]>,
     votingRoundIdToReveals: Map<number, SubmissionData[]>,
     randomGenerationBenchingWindow: number,
-    rewardEpochManager: RewardEpochManager
+    rewardEpochFromVotingEpochId: (votingEpochId: number) => Promise<RewardEpoch>
   ) {
     const randomOffenders = new Set<Address>();
     const genesisRewardEpoch = GENESIS_REWARD_EPOCH_START_EVENT();
@@ -620,8 +621,7 @@ export class DataManager {
       if (!commits || commits.length === 0) {
         continue;
       }
-      const feedOrder = (await rewardEpochManager.getRewardEpochForVotingEpochId(i, rewardEpochId + 1))
-        .canonicalFeedOrder;
+      const feedOrder = (await rewardEpochFromVotingEpochId(i)).canonicalFeedOrder;
       const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals, feedOrder);
       const revealOffenders = this.getRevealOffenders(
         commitsAndReveals.votingRoundId,
@@ -652,7 +652,7 @@ export class DataManager {
    * @param feedOrder
    * @returns
    */
-  private getVoterToLastCommitAndRevealMapsForVotingRound(
+  protected getVoterToLastCommitAndRevealMapsForVotingRound(
     votingRoundId: number,
     commitSubmissions: SubmissionData[],
     revealSubmissions: SubmissionData[],
@@ -676,7 +676,7 @@ export class DataManager {
    * NOTICE: actually assumes, but does not check
    * The function must not revert, it ignores unparsable messages and logs them.
    */
-  private getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map<Address, ICommitData> {
+  protected getVoterToLastCommitMap(submissionDataArray: SubmissionData[]): Map<Address, ICommitData> {
     const voterToLastCommit = new Map<Address, ICommitData>();
     for (const submission of submissionDataArray) {
       for (const message of submission.messages) {
@@ -709,7 +709,10 @@ export class DataManager {
    * @param feedOrder
    * @returns
    */
-  private getVoterToLastRevealMap(submissionDataArray: SubmissionData[], feedOrder: Feed[]): Map<Address, IRevealData> {
+  protected getVoterToLastRevealMap(
+    submissionDataArray: SubmissionData[],
+    feedOrder: Feed[]
+  ): Map<Address, IRevealData> {
     const voterToLastReveal = new Map<Address, IRevealData>();
     for (const submission of submissionDataArray) {
       for (const message of submission.messages) {
@@ -751,7 +754,7 @@ export class DataManager {
    * @param submissionEpochArray
    * @param type: "commit" | "reveal"
    */
-  private remapSubmissionDataArrayToVotingRounds(submissionEpochArray: SubmissionData[], type: "commit" | "reveal") {
+  protected remapSubmissionDataArrayToVotingRounds(submissionEpochArray: SubmissionData[], type: "commit" | "reveal") {
     const offset = type === "commit" ? 0 : 1;
     const votingRoundIdWithOffsetToSubmission = new Map<number, SubmissionData[]>();
     for (const submission of submissionEpochArray) {
@@ -772,7 +775,7 @@ export class DataManager {
    * @param reveals
    * @returns
    */
-  private filterRevealsByDeadlineTime(reveals: SubmissionData[]) {
+  protected filterRevealsByDeadlineTime(reveals: SubmissionData[]) {
     return reveals.filter(reveal => reveal.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds);
   }
 }
