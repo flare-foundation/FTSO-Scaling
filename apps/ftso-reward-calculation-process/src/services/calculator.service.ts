@@ -8,7 +8,7 @@ import { encodeParameters } from "web3-eth-abi";
 import { soliditySha3 } from "web3-utils";
 import * as workerPool from "workerpool";
 import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
-import { IndexerClient } from "../../../../libs/ftso-core/src/IndexerClient";
+import { IndexerClientForRewarding } from "../../../../libs/ftso-core/src/IndexerClientForRewarding";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
 import {
   BURN_ADDRESS,
@@ -51,6 +51,7 @@ import {
   serializeRewardEpochInfo,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/storage";
+import { BlockAssuranceResult } from "../../../../libs/ftso-core/src/IndexerClient";
 
 export interface OptionalCommandOptions {
   rewardEpochId?: number;
@@ -84,7 +85,7 @@ if (process.env.FORCE_NOW) {
 export class CalculatorService {
   private readonly logger = new Logger(CalculatorService.name);
   // private readonly epochSettings: EpochSettings;
-  private readonly indexerClient: IndexerClient;
+  private readonly indexerClient: IndexerClientForRewarding;
   private rewardEpochManager: RewardEpochManager;
   private dataManager: DataManagerForRewarding;
   private entityManager: EntityManager;
@@ -96,7 +97,7 @@ export class CalculatorService {
     this.entityManager = manager;
     const required_history_sec = configService.get<number>("required_indexer_history_time_sec");
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
-    this.indexerClient = new IndexerClient(manager, required_history_sec, this.logger);
+    this.indexerClient = new IndexerClientForRewarding(manager, required_history_sec, this.logger);
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
     this.dataManager = new DataManagerForRewarding(this.indexerClient, this.rewardEpochManager, this.logger);
   }
@@ -349,7 +350,33 @@ export class CalculatorService {
     if (rewardEpochDuration.endVotingRoundId === undefined) {
       throw new Error(`Invalid reward epoch duration for reward epoch ${rewardEpochId}`);
     }
-    const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, rewardEpochDuration.endVotingRoundId);
+    const fuInflationRewardsOfferedResponse = await this.indexerClient.getFUInflationRewardsOfferedEvents(
+      rewardEpoch.previousRewardEpochStartedEvent.startVotingRoundId,
+      rewardEpoch.signingPolicy.startVotingRoundId - 1
+    );
+    if (fuInflationRewardsOfferedResponse.status !== BlockAssuranceResult.OK) {
+      throw new Error(`Error while fetching FUInflationRewardsOffered events for reward epoch ${rewardEpochId}`);
+    }
+    const fuInflationRewardsOffered = fuInflationRewardsOfferedResponse.data.find(
+      x => x.rewardEpochId === rewardEpochId
+    );
+    if (!fuInflationRewardsOffered === undefined) {
+      throw new Error(`No FUInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
+    }
+    const fuIncentivesOfferedResponse = await this.indexerClient.getIncentiveOfferedEvents(
+      rewardEpoch.signingPolicy.startVotingRoundId,
+      rewardEpochDuration.endVotingRoundId
+    );
+    if (fuIncentivesOfferedResponse.status !== BlockAssuranceResult.OK) {
+      throw new Error(`Error while fetching IncentiveOffered events for reward epoch ${rewardEpochId}`);
+    }
+    const rewardEpochInfo = getRewardEpochInfo(
+      rewardEpoch,
+      rewardEpochDuration.endVotingRoundId,
+      fuInflationRewardsOffered,
+      fuIncentivesOfferedResponse.data
+    );
+
     serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
     setRewardCalculationStatus(
       rewardEpochId,

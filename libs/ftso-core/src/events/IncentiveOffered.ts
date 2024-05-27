@@ -3,7 +3,7 @@ import { decodeEvent } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
 export class IncentiveOffered extends RawEventConstructible {
-  static eventName = "InflationRewardsOffered";
+  static eventName = "IncentiveOffered";
   constructor(data: any) {
     super();
     this.rewardEpochId = Number(data.rewardEpochId);
