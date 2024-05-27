@@ -16,7 +16,7 @@ export class FUInflationRewardsOffered extends RawEventConstructible {
   constructor(data: any) {
     super();
     this.rewardEpochId = Number(data.rewardEpochId);
-    this.feedConfigurations = data.feedValues.map((v: any) => {
+    this.feedConfigurations = data.feedConfigurations.map((v: any) => {
       const config: FastUpdateFeedConfiguration = {
         feedId: v.feedId,
         rewardBandValue: Number(v.rewardBandValue),

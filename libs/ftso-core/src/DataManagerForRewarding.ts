@@ -1,10 +1,15 @@
 import { DataAvailabilityStatus, DataManager, DataMangerResponse, SignAndFinalizeSubmissionData } from "./DataManager";
-import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
+import { BlockAssuranceResult } from "./IndexerClient";
+import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { ContractMethodNames } from "./configs/contracts";
 import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
-import { DataForCalculations, DataForRewardCalculation } from "./data-calculation-interfaces";
+import {
+  DataForCalculations,
+  DataForRewardCalculation,
+  FastUpdatesDataForVotingRound,
+} from "./data-calculation-interfaces";
 import { ILogger } from "./utils/ILogger";
 
 /**
@@ -15,7 +20,7 @@ import { ILogger } from "./utils/ILogger";
  */
 export class DataManagerForRewarding extends DataManager {
   constructor(
-    protected readonly indexerClient: IndexerClient,
+    protected readonly indexerClient: IndexerClientForRewarding,
     protected readonly rewardEpochManager: RewardEpochManager,
     protected readonly logger: ILogger
   ) {
@@ -156,6 +161,15 @@ export class DataManagerForRewarding extends DataManager {
         status: signaturesResponse.status,
       };
     }
+    const fastUpdatesDataResponse = await this.getFastUpdatesDataForVotingRoundRange(
+      firstVotingRoundId,
+      lastVotingRoundId
+    );
+    if (fastUpdatesDataResponse.status !== DataAvailabilityStatus.OK) {
+      return {
+        status: fastUpdatesDataResponse.status,
+      };
+    }
     const result: DataForRewardCalculation[] = [];
     let startIndexSignatures = 0;
     let endIndexSignatures = 0;
@@ -215,6 +229,7 @@ export class DataManagerForRewarding extends DataManager {
         signatures,
         finalizations,
         firstSuccessfulFinalization,
+        fastUpdatesData: fastUpdatesDataResponse.data[votingRoundId - firstVotingRoundId],
       };
       result.push(dataForRound);
     }
@@ -271,6 +286,43 @@ export class DataManagerForRewarding extends DataManager {
         signatures,
         finalizations,
       },
+    };
+  }
+
+  public async getFastUpdatesDataForVotingRoundRange(
+    firstVotingRoundId: number,
+    lastVotingRoundId: number
+  ): Promise<DataMangerResponse<FastUpdatesDataForVotingRound[]>> {
+    const feedValuesResponse = await this.indexerClient.getFastUpdateFeedsEvents(firstVotingRoundId, lastVotingRoundId);
+    if (feedValuesResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const feedUpdates = await this.indexerClient.getFastUpdateFeedsSubmittedEvents(
+      firstVotingRoundId,
+      lastVotingRoundId
+    );
+    if (feedUpdates.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const result: FastUpdatesDataForVotingRound[] = [];
+    for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+      const fastUpdateFeeds = feedValuesResponse.data[votingRoundId - firstVotingRoundId];
+      const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
+      const value: FastUpdatesDataForVotingRound = {
+        votingRoundId,
+        feedValues: fastUpdateFeeds.feeds,
+        feedDecimals: fastUpdateFeeds.decimals,
+        signingPolicyAddressesSubmitted: fastUpdateSubmissions.map(submission => submission.signingPolicyAddress),
+      };
+      result.push(value);
+    }
+    return {
+      status: DataAvailabilityStatus.OK,
+      data: result,
     };
   }
 }

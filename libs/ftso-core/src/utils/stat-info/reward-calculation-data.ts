@@ -5,7 +5,7 @@ import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
 import { VoterWeights } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { DataForRewardCalculation } from "../../data-calculation-interfaces";
+import { DataForRewardCalculation, FastUpdatesDataForVotingRound } from "../../data-calculation-interfaces";
 import {
   Address,
   Feed,
@@ -99,6 +99,7 @@ export interface SDataForRewardCalculation {
   firstSuccessfulFinalization?: ParsedFinalizationData;
   medianCalculationResults: MedianCalculationResult[];
   randomResult: SimplifiedRandomCalculationResult;
+  fastUpdatesData?: FastUpdatesDataForVotingRound;
   // usually added after results of the next voting round are known
   nextVotingRoundRandomResult?: string;
   eligibleFinalizers: string[];
@@ -155,6 +156,7 @@ export function serializeDataForRewardCalculation(
     medianCalculationResults: medianResults,
     randomResult: simplifyRandomCalculationResult(randomResult),
     eligibleFinalizers: eligibleFinalizationRewardVotersInGracePeriod,
+    fastUpdatesData: rewardCalculationData.fastUpdatesData,
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }
