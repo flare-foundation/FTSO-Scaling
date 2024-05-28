@@ -140,7 +140,8 @@ export class DataManagerForRewarding extends DataManager {
   public async getDataForRewardCalculationForVotingRoundRange(
     firstVotingRoundId: number,
     lastVotingRoundId: number,
-    randomGenerationBenchingWindow: number
+    randomGenerationBenchingWindow: number,
+    useFastUpdatesData: boolean
   ): Promise<DataMangerResponse<DataForRewardCalculation[]>> {
     const dataForCalculationsResponse = await this.getDataForCalculationsForVotingRoundRange(
       firstVotingRoundId,
@@ -161,14 +162,18 @@ export class DataManagerForRewarding extends DataManager {
         status: signaturesResponse.status,
       };
     }
-    const fastUpdatesDataResponse = await this.getFastUpdatesDataForVotingRoundRange(
-      firstVotingRoundId,
-      lastVotingRoundId
-    );
-    if (fastUpdatesDataResponse.status !== DataAvailabilityStatus.OK) {
-      return {
-        status: fastUpdatesDataResponse.status,
-      };
+    let fastUpdatesData: FastUpdatesDataForVotingRound[] = [];
+    if (useFastUpdatesData) {
+      const fastUpdatesDataResponse = await this.getFastUpdatesDataForVotingRoundRange(
+        firstVotingRoundId,
+        lastVotingRoundId
+      );
+      if (fastUpdatesDataResponse.status !== DataAvailabilityStatus.OK) {
+        return {
+          status: fastUpdatesDataResponse.status,
+        };
+      }
+      fastUpdatesData = fastUpdatesDataResponse.data;
     }
     const result: DataForRewardCalculation[] = [];
     let startIndexSignatures = 0;
@@ -229,7 +234,7 @@ export class DataManagerForRewarding extends DataManager {
         signatures,
         finalizations,
         firstSuccessfulFinalization,
-        fastUpdatesData: fastUpdatesDataResponse.data[votingRoundId - firstVotingRoundId],
+        fastUpdatesData: fastUpdatesData[votingRoundId - firstVotingRoundId],
       };
       result.push(dataForRound);
     }

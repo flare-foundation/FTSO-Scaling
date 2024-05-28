@@ -146,4 +146,12 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   parseRetryDelayMs(val: string): number {
     return Number(val);
   }
+
+  @Option({
+    flags: "-y, --useFastUpdatesData [boolean]",
+    description: "Extracts data for fast updates rewarding",
+  })
+  parseUseFastUpdatesDataMode(val: string): boolean {
+    return JSON.parse(val);
+  }
 }

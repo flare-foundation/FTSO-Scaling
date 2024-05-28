@@ -25,7 +25,8 @@ yarn nest build ftso-reward-calculation-process
 # In the current (ongoing) reward epoch the calculation is switched to incremental, as data becomes available. 
 # If the data for a specific reward epoch id is already available, the calculation is skipped.
 export FROM_REWARD_EPOCH_ID=2640
-node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r 2700 -i -g -o -c -a -b 40 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
+# export TEST_FU_INFLATION_REWARD_AMOUNT=2342342342342342342342342
+node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r 2692 -i -g -y -o -c -a -b 40 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
 
 # ---------------------------------------------------------------------------------------------------------------------------
 # Recoverable sequential calculation

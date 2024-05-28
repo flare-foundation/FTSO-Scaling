@@ -1,7 +1,7 @@
-import { RewardEpoch } from "../RewardEpoch";
 import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered, RewardOffers } from "../events";
 import {
+  IFUPartialRewardOfferForRound,
   IPartialRewardOfferForEpoch,
   IPartialRewardOfferForRound,
   PartialRewardOffer,
@@ -176,4 +176,54 @@ export function splitRewardOfferByTypes<T extends IPartialRewardOfferForEpoch>(o
     },
   };
   return result;
+}
+
+export function granulatedPartialOfferMapForFastUpdates(
+  rewardEpochInfo: RewardEpochInfo
+): Map<number, Map<string, IFUPartialRewardOfferForRound[]>> {
+  const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+  const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+  if (startVotingRoundId === undefined || endVotingRoundId === undefined) {
+    throw new Error("Start or end voting round id is undefined");
+  }
+  // Calculate total amount of rewards for the reward epoch
+  let totalAmount = rewardEpochInfo.fuInflationRewardsOffered.amount;
+
+  for (const incentiveOffered of rewardEpochInfo.fuIncentivesOffered) {
+    totalAmount += incentiveOffered.offerAmount;
+  }
+
+  if (process.env.TEST_FU_INFLATION_REWARD_AMOUNT) {
+    totalAmount = BigInt(process.env.TEST_FU_INFLATION_REWARD_AMOUNT);
+  }
+  // Create a map of votingRoundId -> feedId -> rewardOffer
+  const rewardOfferMap = new Map<number, Map<string, IFUPartialRewardOfferForRound[]>>();
+  const numberOfVotingRounds = endVotingRoundId - startVotingRoundId + 1;
+  const sharePerOne: bigint = totalAmount / BigInt(numberOfVotingRounds);
+  const remainder: number = Number(totalAmount % BigInt(numberOfVotingRounds));
+
+  for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    let undistributedVotingRoundAmount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
+    let totalUndistributedShares = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.reduce(
+      (acc, feed) => acc + BigInt(feed.inflationShare),
+      0n
+    );
+    for (const configuration of rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations) {
+      const amount = (undistributedVotingRoundAmount * BigInt(configuration.inflationShare)) / totalUndistributedShares;
+      undistributedVotingRoundAmount -= amount;
+      totalUndistributedShares -= BigInt(configuration.inflationShare);
+      const feedOfferForVoting: IFUPartialRewardOfferForRound = {
+        votingRoundId,
+        amount,
+        feedId: configuration.feedId,
+        rewardBandValue: configuration.rewardBandValue,
+      };
+      const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IFUPartialRewardOfferForRound[]>();
+      rewardOfferMap.set(votingRoundId, feedOffers);
+      const feedIdOffers = feedOffers.get(configuration.feedId) || [];
+      feedOffers.set(configuration.feedId, feedIdOffers);
+      feedIdOffers.push(feedOfferForVoting);
+    }
+  }
+  return rewardOfferMap;
 }
