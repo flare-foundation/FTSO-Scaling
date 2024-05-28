@@ -1,18 +1,18 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { IPartialRewardOfferForRound } from "../PartialRewardOffer";
+import { IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../PartialRewardOffer";
 import { RewardEpochDuration } from "../RewardEpochDuration";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
-import { OFFERS_FILE } from "./constants";
+import { FU_OFFERS_FILE, OFFERS_FILE } from "./constants";
 
-export interface FeedOffers {
+export interface FeedOffers<T> {
   readonly feedId: string;
-  readonly offers: IPartialRewardOfferForRound[];
+  readonly offers: T[];
 }
-export interface OffersPerVotingRound {
+export interface OffersPerVotingRound<T> {
   readonly votingRoundId: number;
-  readonly feedOffers: FeedOffers[];
+  readonly feedOffers: FeedOffers<T>[];
 }
 
 /**
@@ -23,8 +23,9 @@ export interface OffersPerVotingRound {
  */
 export function serializeGranulatedPartialOfferMap(
   rewardEpochDuration: RewardEpochDuration,
-  rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>>,
+  rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[] | IFUPartialRewardOfferForRound[]>>,
   regenerate = true,
+  file = OFFERS_FILE,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   if (!existsSync(calculationFolder)) {
@@ -46,7 +47,7 @@ export function serializeGranulatedPartialOfferMap(
     if (!feedOffers) {
       throw new Error(`Critical error: No feed offers for voting round ${i}`);
     }
-    const offersPerVotingRound: OffersPerVotingRound = {
+    const offersPerVotingRound: OffersPerVotingRound<IPartialRewardOfferForRound | IFUPartialRewardOfferForRound> = {
       votingRoundId: i,
       feedOffers: [],
     };
@@ -57,7 +58,7 @@ export function serializeGranulatedPartialOfferMap(
         offers,
       });
     }
-    const offersPath = path.join(votingRoundFolder, OFFERS_FILE);
+    const offersPath = path.join(votingRoundFolder, file);
     writeFileSync(offersPath, JSON.stringify(offersPerVotingRound, bigIntReplacer));
   }
 }
@@ -100,8 +101,33 @@ export function deserializeGranulatedPartialOfferMap(
   if (!existsSync(offersPath)) {
     throw new Error(`Critical error: No granulated offers for voting round ${votingRoundId}`);
   }
-  const offersPerVotingRound: OffersPerVotingRound = JSON.parse(readFileSync(offersPath, "utf8"), bigIntReviver);
+  const offersPerVotingRound: OffersPerVotingRound<IPartialRewardOfferForRound> = JSON.parse(
+    readFileSync(offersPath, "utf8"),
+    bigIntReviver
+  );
   const feedOffers = new Map<string, IPartialRewardOfferForRound[]>();
+  for (const feedOffer of offersPerVotingRound.feedOffers) {
+    feedOffers.set(feedOffer.feedId, feedOffer.offers);
+  }
+  return feedOffers;
+}
+
+export function deserializeGranulatedPartialOfferMapForFastUpdates(
+  rewardEpochId: number,
+  votingRoundId: number,
+  calculationFolder = CALCULATIONS_FOLDER()
+): Map<string, IFUPartialRewardOfferForRound[]> {
+  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
+  const offersPath = path.join(votingRoundFolder, FU_OFFERS_FILE);
+  if (!existsSync(offersPath)) {
+    throw new Error(`Critical error: No granulated offers for voting round ${votingRoundId}`);
+  }
+  const offersPerVotingRound: OffersPerVotingRound<IFUPartialRewardOfferForRound> = JSON.parse(
+    readFileSync(offersPath, "utf8"),
+    bigIntReviver
+  );
+  const feedOffers = new Map<string, IFUPartialRewardOfferForRound[]>();
   for (const feedOffer of offersPerVotingRound.feedOffers) {
     feedOffers.set(feedOffer.feedId, feedOffer.offers);
   }

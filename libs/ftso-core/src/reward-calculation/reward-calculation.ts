@@ -352,12 +352,14 @@ export async function prepareDataForRewardCalculationsForRange(
   lastVotingRoundId: number,
   randomGenerationBenchingWindow: number,
   dataManager: DataManagerForRewarding,
+  useFastUpdatesData: boolean,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculationForVotingRoundRange(
     firstVotingRoundId,
     lastVotingRoundId,
-    randomGenerationBenchingWindow
+    randomGenerationBenchingWindow,
+    useFastUpdatesData
   );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);

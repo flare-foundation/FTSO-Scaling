@@ -8,6 +8,7 @@ import { encodeParameters } from "web3-eth-abi";
 import { soliditySha3 } from "web3-utils";
 import * as workerPool from "workerpool";
 import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
+import { BlockAssuranceResult } from "../../../../libs/ftso-core/src/IndexerClient";
 import { IndexerClientForRewarding } from "../../../../libs/ftso-core/src/IndexerClientForRewarding";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
 import {
@@ -18,6 +19,8 @@ import {
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../../libs/ftso-core/src/configs/networks";
 import { RewardEpochStarted } from "../../../../libs/ftso-core/src/events";
+import { FUInflationRewardsOffered } from "../../../../libs/ftso-core/src/events/FUInflationRewardsOffered";
+import { IncentiveOffered } from "../../../../libs/ftso-core/src/events/IncentiveOffered";
 import {
   aggregateRewardClaimsInStorage,
   initializeRewardEpochStorage,
@@ -25,12 +28,19 @@ import {
   prepareDataForRewardCalculations,
   prepareDataForRewardCalculationsForRange,
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
-import { granulatedPartialOfferMapForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
-import { IPartialRewardOfferForRound } from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import {
+  granulatedPartialOfferMapForFastUpdates,
+  granulatedPartialOfferMapForRandomFeedSelection,
+} from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+import {
+  IFUPartialRewardOfferForRound,
+  IPartialRewardOfferForRound,
+} from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
+import { FU_OFFERS_FILE, OFFERS_FILE } from "../../../../libs/ftso-core/src/utils/stat-info/constants";
 import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils/stat-info/final-reward-claims";
 import { serializeGranulatedPartialOfferMap } from "../../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
 import { getAggregationProgress, recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
@@ -51,7 +61,6 @@ import {
   serializeRewardEpochInfo,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/storage";
-import { BlockAssuranceResult } from "../../../../libs/ftso-core/src/IndexerClient";
 
 export interface OptionalCommandOptions {
   rewardEpochId?: number;
@@ -74,6 +83,7 @@ export interface OptionalCommandOptions {
   calculationFolder?: string;
   isWorker?: boolean;
   recoveryMode?: boolean;
+  useFastUpdatesData?: boolean;
 }
 
 if (process.env.FORCE_NOW) {
@@ -175,7 +185,8 @@ export class CalculatorService {
     firstVotingRoundId: number,
     lastVotingRoundId: number,
     retryDelayMs: number,
-    logger: Logger
+    logger: Logger,
+    useFastUpdatesData: boolean
   ) {
     let done = false;
     while (!done) {
@@ -188,7 +199,8 @@ export class CalculatorService {
           firstVotingRoundId,
           lastVotingRoundId,
           RANDOM_GENERATION_BENCHING_WINDOW(),
-          this.dataManager
+          this.dataManager,
+          useFastUpdatesData
         );
         done = true;
       } catch (e) {
@@ -277,6 +289,7 @@ export class CalculatorService {
         loggerFile,
         isWorker: true,
         useExpectedEndIfNoSigningPolicyAfter,
+        useFastUpdatesData: options.useFastUpdatesData,
       };
       // logger.log(batchOptions);
       promises.push(pool.exec("run", [batchOptions]));
@@ -350,33 +363,37 @@ export class CalculatorService {
     if (rewardEpochDuration.endVotingRoundId === undefined) {
       throw new Error(`Invalid reward epoch duration for reward epoch ${rewardEpochId}`);
     }
-    const fuInflationRewardsOfferedResponse = await this.indexerClient.getFUInflationRewardsOfferedEvents(
-      rewardEpoch.previousRewardEpochStartedEvent.startVotingRoundId,
-      rewardEpoch.signingPolicy.startVotingRoundId - 1
-    );
-    if (fuInflationRewardsOfferedResponse.status !== BlockAssuranceResult.OK) {
-      throw new Error(`Error while fetching FUInflationRewardsOffered events for reward epoch ${rewardEpochId}`);
-    }
-    const fuInflationRewardsOffered = fuInflationRewardsOfferedResponse.data.find(
-      x => x.rewardEpochId === rewardEpochId
-    );
-    if (!fuInflationRewardsOffered === undefined) {
-      throw new Error(`No FUInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
-    }
-    const fuIncentivesOfferedResponse = await this.indexerClient.getIncentiveOfferedEvents(
-      rewardEpoch.signingPolicy.startVotingRoundId,
-      rewardEpochDuration.endVotingRoundId
-    );
-    if (fuIncentivesOfferedResponse.status !== BlockAssuranceResult.OK) {
-      throw new Error(`Error while fetching IncentiveOffered events for reward epoch ${rewardEpochId}`);
+
+    let fuInflationRewardsOffered: FUInflationRewardsOffered | undefined;
+    let fuIncentivesOfferedData: IncentiveOffered[] | undefined;
+
+    if (options.useFastUpdatesData) {
+      const fuInflationRewardsOfferedResponse = await this.indexerClient.getFUInflationRewardsOfferedEvents(
+        rewardEpoch.previousRewardEpochStartedEvent.startVotingRoundId,
+        rewardEpoch.signingPolicy.startVotingRoundId - 1
+      );
+      if (fuInflationRewardsOfferedResponse.status !== BlockAssuranceResult.OK) {
+        throw new Error(`Error while fetching FUInflationRewardsOffered events for reward epoch ${rewardEpochId}`);
+      }
+      fuInflationRewardsOffered = fuInflationRewardsOfferedResponse.data.find(x => x.rewardEpochId === rewardEpochId);
+      if (fuInflationRewardsOffered === undefined) {
+        throw new Error(`No FUInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
+      }
+      const fuIncentivesOfferedResponse = await this.indexerClient.getIncentiveOfferedEvents(
+        rewardEpoch.signingPolicy.startVotingRoundId,
+        rewardEpochDuration.endVotingRoundId
+      );
+      if (fuIncentivesOfferedResponse.status !== BlockAssuranceResult.OK) {
+        throw new Error(`Error while fetching IncentiveOffered events for reward epoch ${rewardEpochId}`);
+      }
+      fuIncentivesOfferedData = fuIncentivesOfferedResponse.data;
     }
     const rewardEpochInfo = getRewardEpochInfo(
       rewardEpoch,
       rewardEpochDuration.endVotingRoundId,
       fuInflationRewardsOffered,
-      fuIncentivesOfferedResponse.data
+      fuIncentivesOfferedData
     );
-
     serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
     setRewardCalculationStatus(
       rewardEpochId,
@@ -423,6 +440,7 @@ export class CalculatorService {
         startVotingRoundId: votingRoundId,
         endVotingRoundId: endBatch,
         isWorker: true,
+        useFastUpdatesData: options.useFastUpdatesData,
       };
       // logger.log(batchOptions);
       promises.push(pool.exec("run", [batchOptions]));
@@ -442,7 +460,8 @@ export class CalculatorService {
       options.startVotingRoundId,
       options.endVotingRoundId,
       options.retryDelayMs,
-      logger
+      logger,
+      options.useFastUpdatesData
     );
     recordProgress(rewardEpochId);
   }
@@ -550,6 +569,7 @@ export class CalculatorService {
       calculateRewardCalculationData: true,
       batchSize: options.batchSize,
       numberOfWorkers: options.numberOfWorkers,
+      useFastUpdatesData: options.useFastUpdatesData,
     } as OptionalCommandOptions;
     const rewardEpochDuration = await this.runCalculateRewardCalculationTopJob(adaptedOptions);
     const newOptions = { ...adaptedOptions };
@@ -595,7 +615,15 @@ export class CalculatorService {
       randomNumbers
     );
     // sync call
-    serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, false);
+    serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, false, OFFERS_FILE);
+
+    if (options.useFastUpdatesData) {
+      const fuRewardOfferMap: Map<
+        number,
+        Map<string, IFUPartialRewardOfferForRound[]>
+      > = granulatedPartialOfferMapForFastUpdates(rewardEpochInfo);
+      serializeGranulatedPartialOfferMap(rewardEpochDuration, fuRewardOfferMap, false, FU_OFFERS_FILE);
+    }
   }
 
   async runCalculateRewardClaimsTopJob(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
@@ -647,6 +675,7 @@ export class CalculatorService {
         startVotingRoundId: votingRoundId,
         endVotingRoundId: endBatch,
         isWorker: true,
+        useFastUpdatesData: options.useFastUpdatesData,
       };
 
       // logger.log(batchOptions);
@@ -690,6 +719,7 @@ export class CalculatorService {
       calculateClaims: true,
       batchSize: options.batchSize,
       numberOfWorkers: options.numberOfWorkers,
+      useFastUpdatesData: options.useFastUpdatesData,
     } as OptionalCommandOptions;
     await this.runCalculateRewardClaimsTopJob(adaptedOptions);
   }

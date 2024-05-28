@@ -30,6 +30,13 @@ export interface IPartialRewardOfferForRound extends IPartialRewardOfferForEpoch
   votingRoundId: number;
 }
 
+export interface IFUPartialRewardOfferForRound {
+  votingRoundId: number;
+  feedId: string;
+  amount: bigint;
+  rewardBandValue: number;
+}
+
 export namespace PartialRewardOffer {
   export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOfferForEpoch {
     return {
