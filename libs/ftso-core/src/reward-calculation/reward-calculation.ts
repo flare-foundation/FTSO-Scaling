@@ -50,6 +50,7 @@ import {
 import { destroyStorage } from "../utils/stat-info/storage";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
+import { OFFERS_FILE } from "../utils/stat-info/constants";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -129,7 +130,7 @@ export async function initializeRewardEpochStorageOld(
     rewardEpoch.rewardOffers
   );
   // sync call
-  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, true, calculationFolder);
+  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, true, OFFERS_FILE, calculationFolder);
   return rewardEpochDuration;
 }
 
