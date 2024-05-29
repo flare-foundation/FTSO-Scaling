@@ -167,6 +167,25 @@ const ftso2ProtocolId = () => {
 // Protocol id for FTSO2
 export const FTSO2_PROTOCOL_ID = ftso2ProtocolId();
 
+const ftso2FastUpdatesProtocolId = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "coston":
+    case "from-env":
+    case "local-test":
+    case "coston2":
+    case "songbird":
+      return 255;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
+  }
+};
+
+// Protocol id for FTSO2 fast updates
+export const FTSO2_FAST_UPDATES_PROTOCOL_ID = ftso2FastUpdatesProtocolId();
+
 const epochSettings = () => {
   const network = process.env.NETWORK as networks;
   switch (network) {
