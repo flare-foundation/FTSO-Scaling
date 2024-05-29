@@ -42,9 +42,10 @@ export function calculateMedianRewardClaims(
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
       BigInt(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
       ) %
-      2n ===
+        2n ===
       1n
     );
   }
@@ -61,7 +62,7 @@ export function calculateMedianRewardClaims(
   // Turnout condition is not reached or no median is computed. Offer is returned to the provider.
   if (
     calculationResult.data.participatingWeight * TOTAL_BIPS <
-    calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
+      calculationResult.totalVotingWeight * BigInt(offer.minRewardedTurnoutBIPS) ||
     calculationResult.data.finalMedian.isEmpty
   ) {
     const backClaim: IPartialRewardClaim = {

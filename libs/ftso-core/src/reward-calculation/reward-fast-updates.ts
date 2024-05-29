@@ -21,7 +21,7 @@ export enum FastUpdatesRewardClaimType {
  * accuracy of the feed value compared to the median value.
  * The median value for the voting round id N is compared to the event
  * emitted feed value at the beginning of the voting epoch N.
- * The rewards are paid out only if the feed value is within the specific 
+ * The rewards are paid out only if the feed value is within the specific
  * reward band around the median value.
  */
 export function calculateFastUpdatesClaims(

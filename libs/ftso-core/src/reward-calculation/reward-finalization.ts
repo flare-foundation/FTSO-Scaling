@@ -67,11 +67,11 @@ export function calculateFinalizationRewardClaims(
   const gracePeriodFinalizations = data.finalizations.filter(finalization =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
+  // Successful finalizations outside of the grace period are already handled
   if (gracePeriodFinalizations.length === 0 || eligibleVoters.size === 0) {
-    const otherFinalizerClaim: IPartialRewardClaim = {
+    const burnClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
+      beneficiary: offer.claimBackAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       offerIndex: offer.offerIndex,
@@ -80,7 +80,7 @@ export function calculateFinalizationRewardClaims(
       rewardTypeTag: RewardTypePrefix.FINALIZATION,
       rewardDetailTag: FinalizationRewardClaimType.IN_GRACE_PERIOD,
     };
-    return [otherFinalizerClaim];
+    return [burnClaim];
   }
 
   let undistributedAmount = offer.amount;
