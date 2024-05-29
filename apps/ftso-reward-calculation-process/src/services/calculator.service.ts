@@ -221,7 +221,8 @@ export class CalculatorService {
     votingRoundId: number,
     aggregateClaims: boolean,
     retryDelayMs: number,
-    logger: Logger
+    logger: Logger,
+    useFastUpdatesData: boolean
   ) {
     let done = false;
     while (!done) {
@@ -235,7 +236,8 @@ export class CalculatorService {
           undefined, // should be read from calculations folder
           false, // reward calculation data should be already calculated
           false, // don't merge
-          true //serializeResults
+          true, //serializeResults
+          useFastUpdatesData
         );
         if (aggregateClaims) {
           this.claimAggregation(rewardEpochDuration, votingRoundId, logger);
@@ -706,7 +708,8 @@ export class CalculatorService {
         votingRoundId,
         false, // don't aggregate
         options.retryDelayMs,
-        logger
+        logger,
+        options.useFastUpdatesData
       );
 
       recordProgress(rewardEpochId);
@@ -1057,7 +1060,8 @@ export class CalculatorService {
               votingRoundId,
               options.aggregateClaims && isIncrementalMode,
               options.retryDelayMs,
-              logger
+              logger,
+              options.useFastUpdatesData
             );
             recordProgress(rewardEpochId);
           }

@@ -43,3 +43,9 @@ export interface FastUpdatesDataForVotingRound {
   feedDecimals: number[];
   signingPolicyAddressesSubmitted: string[];
 }
+
+export interface FUFeedValue {
+  feedId: string;
+  value: bigint;
+  decimals: number;
+}

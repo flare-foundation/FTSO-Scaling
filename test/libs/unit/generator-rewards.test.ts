@@ -596,7 +596,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         undefined, // should be read from calculations folder
         true, // prepare data for reward calculations
         merge,
-        serializeResults
+        serializeResults,
+        false // do not use fast updates data
       );
       claims.push(...rewardClaims);
     }
@@ -653,7 +654,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         undefined, // should be read from calculations folder
         true, // prepare data for reward calculations
         merge,
-        serializeResults
+        serializeResults,
+        false // do not use fast updates data
       );
       logStatus(ProgressType.CLAIM_CALCULATION);
     }

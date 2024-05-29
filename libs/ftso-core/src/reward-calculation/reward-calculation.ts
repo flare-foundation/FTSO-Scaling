@@ -19,6 +19,8 @@ import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-off
 
 import { DataManagerForRewarding } from "../DataManagerForRewarding";
 import { RewardEpoch } from "../RewardEpoch";
+import { FUFeedValue } from "../data-calculation-interfaces";
+import { FastUpdateFeedConfiguration } from "../events/FUInflationRewardsOffered";
 import { calculateRandom } from "../ftso-calculation/ftso-random";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
@@ -27,10 +29,12 @@ import {
   deserializeAggregatedClaimsForVotingRoundId,
   serializeAggregatedClaimsForVotingRoundId,
 } from "../utils/stat-info/aggregated-claims";
+import { OFFERS_FILE } from "../utils/stat-info/constants";
 import { serializeFeedValuesForVotingRoundId } from "../utils/stat-info/feed-values";
 import {
   createRewardCalculationFolders,
   deserializeGranulatedPartialOfferMap,
+  deserializeGranulatedPartialOfferMapForFastUpdates,
   serializeGranulatedPartialOfferMap,
 } from "../utils/stat-info/granulated-partial-offers-map";
 import {
@@ -48,9 +52,9 @@ import {
   serializeRewardEpochInfo,
 } from "../utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../utils/stat-info/storage";
+import { calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { OFFERS_FILE } from "../utils/stat-info/constants";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -171,6 +175,7 @@ export async function partialRewardClaimsForVotingRound(
   prepareData = true,
   merge = true,
   serializeResults = false,
+  useFastUpdatesData = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
@@ -194,11 +199,23 @@ export async function partialRewardClaimsForVotingRound(
   }
 
   const delegationAddressToSigningAddress = new Map<string, string>();
+  const signingAddressToDelegationAddress = new Map<string, string>();
+  const signingAddressToIdentityAddress = new Map<string, string>();
+  const signingAddressToFeeBips = new Map<string, number>();
   for (const voterWeight of data.dataForCalculations.votersWeightsMap.values()) {
     delegationAddressToSigningAddress.set(
       voterWeight.delegationAddress.toLowerCase(),
       voterWeight.signingAddress.toLowerCase()
     );
+    signingAddressToDelegationAddress.set(
+      voterWeight.signingAddress.toLowerCase(),
+      voterWeight.delegationAddress.toLowerCase()
+    );
+    signingAddressToIdentityAddress.set(
+      voterWeight.signingAddress.toLowerCase(),
+      voterWeight.identityAddress.toLowerCase()
+    );
+    signingAddressToFeeBips.set(voterWeight.signingAddress.toLowerCase(), voterWeight.feeBIPS);
   }
 
   // Calculate reward claims for each feed offer
@@ -288,6 +305,70 @@ export async function partialRewardClaimsForVotingRound(
       allRewardClaims.push(...doubleSigningPenalties);
       if (merge) {
         allRewardClaims = RewardClaim.merge(allRewardClaims);
+      }
+    }
+  }
+  if (useFastUpdatesData) {
+    const fuFeedOffers = deserializeGranulatedPartialOfferMapForFastUpdates(
+      rewardEpochId,
+      votingRoundId,
+      calculationFolder
+    );
+    // feedId => FastUpdateFeedConfiguration
+    const fuConfigurationMap = new Map<string, FastUpdateFeedConfiguration>();
+    if (rewardEpochInfo.fuInflationRewardsOffered) {
+      for (const feedConfiguration of rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations) {
+        fuConfigurationMap.set(feedConfiguration.feedId, feedConfiguration);
+      }
+    }
+    const fuFeedValueMap = new Map<string, FUFeedValue>();
+    if (
+      rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length !== data.fastUpdatesData.feedValues.length
+    ) {
+      throw new Error("Critical error: Feed configurations and feed values do not match");
+    }
+    for (let i = 0; i < rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length; i++) {
+      const feedConfiguration = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations[i];
+      const value = data.fastUpdatesData.feedValues[i];
+      const decimals = data.fastUpdatesData.feedDecimals[i];
+      fuFeedValueMap.set(feedConfiguration.feedId, {
+        feedId: feedConfiguration.feedId,
+        value,
+        decimals,
+      } as FUFeedValue);
+    }
+    const signingPolicyAddressesSubmitted = data.fastUpdatesData.signingPolicyAddressesSubmitted;
+    for (const [feedId, offers] of fuFeedOffers.entries()) {
+      const medianResult = medianCalculationMap.get(feedId);
+      if (medianResult === undefined) {
+        // This should never happen
+        throw new Error("Critical error: Median result is undefined");
+      }
+      const feedValue = fuFeedValueMap.get(feedId);
+      if (feedValue === undefined) {
+        throw new Error(`Critical error: No feed value for feedId ${feedId}`);
+      }
+      const feedConfiguration = fuConfigurationMap.get(feedId);
+      if (feedConfiguration === undefined) {
+        throw new Error(`Critical error: No feed configuration for feedId ${feedId}`);
+      }
+
+      // Calculate reward claims for each offer
+      for (const offer of offers) {
+        const fastUpdatesClaims = calculateFastUpdatesClaims(
+          offer,
+          medianResult,
+          feedValue,
+          feedConfiguration,
+          signingPolicyAddressesSubmitted,
+          signingAddressToDelegationAddress,
+          signingAddressToIdentityAddress,
+          signingAddressToFeeBips
+        );
+        allRewardClaims.push(...fastUpdatesClaims);
+        if (merge) {
+          allRewardClaims = RewardClaim.merge(allRewardClaims);
+        }
       }
     }
   }
