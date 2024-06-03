@@ -22,7 +22,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9" },
-  VoterRegistry: { name: "VoterRegistry", address: "0x051E9Cb16A8676C011faa10efA1ABE95372e7825" },
+  VoterRegistry: { name: "VoterRegistry", address: "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
 };
