@@ -416,9 +416,12 @@ export class IndexerClient {
     }
 
     // TEMP CHANGE
-    const voterRegistryContract = CONTRACTS.VoterRegistry;
+    const voterRegistryContract = { ...CONTRACTS.VoterRegistry };
 
     const network = process.env.NETWORK as networks;
+    if (network === "coston" && rewardEpochId < 2731) {
+      voterRegistryContract.address = "0x051E9Cb16A8676C011faa10efA1ABE95372e7825";
+    }
     if (network === "coston2" && rewardEpochId < 2735) {
       voterRegistryContract.address = "0x51e375fda99181f052C2e28299e166D6984A5B89";
     }
