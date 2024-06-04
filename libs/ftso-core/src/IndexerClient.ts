@@ -5,7 +5,13 @@ import { Address, VotingEpochId } from "./voting-types";
 
 import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
 import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
-import { CONTRACTS, EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./configs/networks";
+import {
+  CONTRACTS,
+  EPOCH_SETTINGS,
+  FIRST_DATABASE_INDEX_STATE,
+  LAST_DATABASE_INDEX_STATE,
+  networks,
+} from "./configs/networks";
 import { ContractDefinitions, ContractMethodNames } from "./configs/contracts";
 import {
   FullVoterRegistrationInfo,
@@ -386,6 +392,7 @@ export class IndexerClient {
    * The function checks the availability of block range in the indexer database.
    */
   public async getFullVoterRegistrationInfoEvents(
+    rewardEpochId: number,
     startTime: number,
     endTime: number
   ): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
@@ -393,8 +400,21 @@ export class IndexerClient {
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
+
+    // TEMP CHANGE
+    const voterRegistryContract = CONTRACTS.VoterRegistry;
+
+    const network = process.env.NETWORK as networks;
+    if (network === "coston2" && rewardEpochId < 2735) {
+      voterRegistryContract.address = "0x51e375fda99181f052C2e28299e166D6984A5B89";
+    }
+    if (network === "songbird" && rewardEpochId < 196) {
+      voterRegistryContract.address = "0x16EdaECC2D3713C3A94CCd1FFCd2589cfb7Ee9e0";
+    }
+    // END TEMP CHANGE
+
     const voterRegisteredResults = await this.queryEvents(
-      CONTRACTS.VoterRegistry,
+      voterRegistryContract,
       VoterRegistered.eventName,
       startTime,
       endTime
