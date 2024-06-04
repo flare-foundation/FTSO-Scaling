@@ -85,7 +85,7 @@ export class DataManager {
     protected readonly indexerClient: IndexerClient,
     protected readonly rewardEpochManager: RewardEpochManager,
     protected readonly logger: ILogger
-  ) {}
+  ) { }
 
   /**
    * Prepare data for median calculation and rewarding given the voting round id and the random generation benching window.
@@ -502,7 +502,9 @@ export class DataManager {
       if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
         eligibleCommits.set(submitAddress, commit);
       } else {
-        this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+        if (!process.env.REMOVE_ANNOYING_MESSAGES) {
+          this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+        }
       }
     }
     // Filter out reveals from non-eligible voters
@@ -510,7 +512,9 @@ export class DataManager {
       if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
         eligibleReveals.set(submitAddress, reveal);
       } else {
-        this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+        if (!process.env.REMOVE_ANNOYING_MESSAGES) {
+          this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+        }
       }
     }
     const validEligibleReveals = this.getValidReveals(
@@ -549,7 +553,9 @@ export class DataManager {
     for (const [submitAddress, reveal] of eligibleReveals.entries()) {
       const commit = eligibleCommits.get(submitAddress);
       if (!commit) {
-        this.logger.debug(`No eligible commit found for address ${submitAddress}`);
+        if (!process.env.REMOVE_ANNOYING_MESSAGES) {
+          this.logger.debug(`No eligible commit found for address ${submitAddress}`);
+        }
         continue;
       }
 

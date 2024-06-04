@@ -21,7 +21,9 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
     try {
       await this.calculator.run(options);
     } catch (e) {
+      console.log(e);
       this.logger.error(e);
+      process.exit(1);
     }
   }
 

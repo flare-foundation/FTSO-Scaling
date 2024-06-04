@@ -6,7 +6,7 @@ import { CALCULATIONS_FOLDER, EPOCH_SETTINGS } from "../../configs/networks";
 import { FullVoterRegistrationInfo, RewardOffers } from "../../events";
 import { Feed } from "../../voting-types";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
-import { REWARD_EPOCH_INFO_FILE } from "./constants";
+import { REWARD_EPOCH_INFO_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 import { FUInflationRewardsOffered } from "../../events/FUInflationRewardsOffered";
 import { IncentiveOffered } from "../../events/IncentiveOffered";
 
@@ -66,12 +66,16 @@ export function getRewardEpochInfo(
 export function serializeRewardEpochInfo(
   rewardEpochId: number,
   rewardEpochInfo: RewardEpochInfo,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   if (!existsSync(calculationFolder)) {
     mkdirSync(calculationFolder);
   }
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
   }
@@ -86,9 +90,13 @@ export function serializeRewardEpochInfo(
  */
 export function deserializeRewardEpochInfo(
   rewardEpochId: number,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): RewardEpochInfo {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const rewardEpochInfoPath = path.join(rewardEpochFolder, REWARD_EPOCH_INFO_FILE);
   if (!existsSync(rewardEpochInfoPath)) {
     throw new Error(`Reward epoch info file not found at ${rewardEpochInfoPath}`);

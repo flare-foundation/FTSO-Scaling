@@ -592,4 +592,4 @@ export const CAPPED_STAKING_FEE_BIPS = 2000;
 
 export const CALCULATIONS_FOLDER = () => "calculations";
 
-export const FUTURE_VOTING_ROUNDS = () => 10;
+export const FUTURE_VOTING_ROUNDS = () => 30;

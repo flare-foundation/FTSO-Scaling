@@ -13,3 +13,5 @@ export const OFFER_DISTRIBUTION_PROGRESS_FILE = "offer-distribution-progress.jso
 export const FEED_CALCULATION_PROGRESS_FILE = "feed-calculation-progress.json";
 export const CLAIM_CALCULATION_PROGRESS_FILE = "claim-calculation-progress.json";
 export const CLAIM_AGGREGATION_PROGRESS_FILE = "claim-aggregation-progress.json";
+
+export const TEMP_REWARD_EPOCH_FOLDER_PREFIX = "tmp-";

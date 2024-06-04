@@ -76,19 +76,20 @@ export function decodeEvent<T>(
   smartContractName: string,
   eventName: string,
   data: TLPEvents,
-  transform: (data: any) => T
+  transform: (data: any, entity?: TLPEvents) => T
 ): T {
   const abiData = EncodingUtils.instance.getEventAbiData(smartContractName, eventName);
   function prefix0x(x: string) {
     return x.startsWith("0x") ? x : "0x" + x;
   }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const inputs = [...abiData.abi!.inputs!];
   // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
   const topics = [data.topic0, data.topic1, data.topic2, data.topic3]
     .filter(x => x && x != "NULL")
     .map(x => prefix0x(x));
   const decoded = decodeLog(inputs, prefix0x(data.data), topics);
-  return transform(decoded);
+  return transform(decoded, data);
 }
 
 /**

@@ -17,7 +17,7 @@ import {
 import { ValueWithDecimals } from "../FeedValueEncoder";
 import { IRevealData } from "../RevealData";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
-import { REWARD_CALCULATION_DATA_FILE } from "./constants";
+import { REWARD_CALCULATION_DATA_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 import { RewardEpochInfo } from "./reward-epoch-info";
 
 export interface RevealRecords {
@@ -125,9 +125,13 @@ export function serializeDataForRewardCalculation(
   medianResults: MedianCalculationResult[],
   randomResult: RandomCalculationResult,
   eligibleFinalizationRewardVotersInGracePeriod: string[],
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
   }
@@ -168,9 +172,13 @@ export function serializeDataForRewardCalculation(
  */
 export function writeDataForRewardCalculation(
   data: SDataForRewardCalculation,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
-  const rewardEpochFolder = path.join(calculationFolder, `${data.dataForCalculations.rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${data.dataForCalculations.rewardEpochId}`
+  );
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
   }
@@ -257,9 +265,14 @@ export function augmentDataForRewardCalculation(
 
 export function deserializeDataForRewardCalculation(
   rewardEpochId: number,
-  votingRoundId: number
+  votingRoundId: number,
+  tempRewardEpochFolder = false,
+  calculationFolder = CALCULATIONS_FOLDER()
 ): SDataForRewardCalculation {
-  const rewardEpochFolder = path.join(CALCULATIONS_FOLDER(), `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
   if (!existsSync(rewardCalculationsDataPath)) {
