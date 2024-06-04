@@ -613,6 +613,7 @@ export class CalculatorService {
     newOptions.endVotingRoundId = rewardEpochDuration.endVotingRoundId + FUTURE_VOTING_ROUNDS();
     newOptions.rewardEpochId = newOptions.rewardEpochId + 1;
     newOptions.tempRewardEpochFolder = true;
+    newOptions.useExpectedEndIfNoSigningPolicyAfter = true;
     const rewardEpochDuration2 = await this.runCalculateRewardCalculationTopJob(newOptions);
     console.dir(rewardEpochDuration2);
     await this.runRandomNumberFixing(options.rewardEpochId, FUTURE_VOTING_ROUNDS());
