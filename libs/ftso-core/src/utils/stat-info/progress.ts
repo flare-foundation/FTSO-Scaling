@@ -11,6 +11,7 @@ import {
   FEED_VALUES_FILE,
   OFFERS_FILE,
   OFFER_DISTRIBUTION_PROGRESS_FILE,
+  TEMP_REWARD_EPOCH_FOLDER_PREFIX,
 } from "./constants";
 import { RewardCalculationStatus, deserializeRewardEpochCalculationStatus } from "./reward-calculation-status";
 
@@ -76,9 +77,10 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
 export function rewardCalculationProgress(
   rewardEpochId: number,
   progressType: ProgressType,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): ProgressReport {
-  const status = deserializeRewardEpochCalculationStatus(rewardEpochId, calculationFolder);
+  const status = deserializeRewardEpochCalculationStatus(rewardEpochId, tempRewardEpochFolder, calculationFolder);
   const config = progressConfig(progressType);
   const tmpResult = {
     startVotingRoundId: status.startVotingRoundId,
@@ -97,10 +99,15 @@ export function rewardCalculationProgress(
       confirmed: true,
     };
   }
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
 
   const numberExtractRegex = new RegExp(`^.*/(\\d+)/${config.fileName}$`);
-  const result = globSync(`${rewardEpochFolder}/**/${config.fileName}`)
+  const result = globSync(
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochFolder}/**/${config.fileName}`
+  )
     .map(file => parseInt(file.replace(numberExtractRegex, "$1")))
     .filter(votingRoundId => status.startVotingRoundId <= votingRoundId && votingRoundId <= status.endVotingRoundId);
   result.sort();
@@ -160,28 +167,39 @@ export function printProgress(progress: ProgressReport): string {
 /**
  * Records the progress of reward calculation for a given reward epoch into the progress files.
  */
-export function recordProgress(rewardEpochId: number, calculationFolder = CALCULATIONS_FOLDER()) {
+export function recordProgress(
+  rewardEpochId: number,
+  tempRewardEpochFolder = false,
+  calculationFolder = CALCULATIONS_FOLDER()
+) {
   const progressOfferDistribution = rewardCalculationProgress(
     rewardEpochId,
     ProgressType.OFFER_DISTRIBUTION,
+    tempRewardEpochFolder,
     calculationFolder
   );
   const progressFeedCalculation = rewardCalculationProgress(
     rewardEpochId,
     ProgressType.FEED_CALCULATION,
+    tempRewardEpochFolder,
     calculationFolder
   );
   const progressClaimCalculation = rewardCalculationProgress(
     rewardEpochId,
     ProgressType.CLAIM_CALCULATION,
+    tempRewardEpochFolder,
     calculationFolder
   );
   const progressClaimAggregation = rewardCalculationProgress(
     rewardEpochId,
     ProgressType.CLAIM_AGGREGATION,
+    tempRewardEpochFolder,
     calculationFolder
   );
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
 
   const statusFileProgressOfferDistribution = path.join(rewardEpochFolder, OFFER_DISTRIBUTION_PROGRESS_FILE);
   writeFileSync(statusFileProgressOfferDistribution, JSON.stringify(progressOfferDistribution));
@@ -195,9 +213,13 @@ export function recordProgress(rewardEpochId: number, calculationFolder = CALCUL
 
 export function getAggregationProgress(
   rewardEpochId: number,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): ProgressReport | undefined {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const statusFileProgressClaimAggregation = path.join(rewardEpochFolder, CLAIM_AGGREGATION_PROGRESS_FILE);
   if (existsSync(statusFileProgressClaimAggregation)) {
     return JSON.parse(readFileSync(statusFileProgressClaimAggregation).toString()) as ProgressReport;

@@ -1,6 +1,7 @@
 import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID } from "../configs/networks";
 import { FUFeedValue } from "../data-calculation-interfaces";
 import { FastUpdateFeedConfiguration } from "../events/FUInflationRewardsOffered";
+import { ILogger } from "../utils/ILogger";
 import { IFUPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../voting-types";
@@ -32,7 +33,8 @@ export function calculateFastUpdatesClaims(
   signingPolicyAddressesSubmitted: Address[],
   signingAddressToDelegationAddress: Map<Address, Address>,
   signingAddressToIdentityAddress: Map<Address, Address>,
-  signingAddressToFeeBips: Map<Address, number>
+  signingAddressToFeeBips: Map<Address, number>,
+  logger: ILogger
 ): IPartialRewardClaim[] {
   if (signingPolicyAddressesSubmitted.length === 0 || medianResult.data.finalMedian.isEmpty) {
     const backClaim: IPartialRewardClaim = {
@@ -81,14 +83,32 @@ export function calculateFastUpdatesClaims(
   const sharePerOne = offer.amount / numberOfSubmissions;
   const remainder = offer.amount % numberOfSubmissions;
   for (let i = 0; i < numberOfSubmissions; i++) {
-    const signingAddress = signingPolicyAddressesSubmitted[i];
-    const delegationAddress = signingAddressToDelegationAddress.get(signingAddress);
-    const feeBIPS = signingAddressToFeeBips.get(signingAddress);
-    const identityAddress = signingAddressToIdentityAddress.get(signingAddress);
+    let signingAddress = signingPolicyAddressesSubmitted[i];
+    let delegationAddress = signingAddressToDelegationAddress.get(signingAddress);
+    let feeBIPS = signingAddressToFeeBips.get(signingAddress);
+    let identityAddress = signingAddressToIdentityAddress.get(signingAddress);
     if (!signingAddress || !delegationAddress || !identityAddress) {
-      throw new Error(
-        "Critical error: signingAddress, delegationAddress or identityAddress is not available. This should never happen."
-      );
+      if (process.env.ALLOW_IDENTITY_ADDRESS_SIGNING) {
+        const identityAddressToSigningAddress = new Map<Address, Address>();
+        signingAddressToIdentityAddress.forEach((value, key) => {
+          identityAddressToSigningAddress.set(value, key);
+        });
+        if (!identityAddressToSigningAddress.has(signingAddress)) {
+          throw new Error(
+            `Critical error: with ALLOW_IDENTITY_ADDRESS_SIGNING enabled, not correct identityAddress (${signingAddress}). This should never happen.`
+          );
+        }
+        identityAddress = signingAddress;
+        signingAddress = identityAddressToSigningAddress.get(identityAddress);
+        delegationAddress = signingAddressToDelegationAddress.get(signingAddress);
+        feeBIPS = signingAddressToFeeBips.get(signingAddress);
+        logger.error("----------------- IDENTITY SIGNING USED -----------------");
+        logger.error("signingAddress: " + signingAddress);
+      } else {
+        throw new Error(
+          `Critical error: signingAddress (${signingAddress}), delegationAddress (${delegationAddress}) or identityAddress (${identityAddress}) is not available. This should never happen.`
+        );
+      }
     }
     if (feeBIPS === undefined) {
       throw new Error(

@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { RewardEpoch } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { STATUS_FILE } from "./constants";
+import { STATUS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 
 export enum RewardCalculationStatus {
   PENDING = "PENDING",
@@ -37,9 +37,13 @@ export function initialRewardEpochCalculationStatus(
  */
 export function serializeRewardEpochCalculationStatus(
   status: RewardEpochCalculationStatus,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
-  const rewardEpochFolder = path.join(calculationFolder, `${status.rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${status.rewardEpochId}`
+  );
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
   writeFileSync(statusFile, JSON.stringify(status));
 }
@@ -49,9 +53,13 @@ export function serializeRewardEpochCalculationStatus(
  */
 export function deserializeRewardEpochCalculationStatus(
   rewardEpochId: number,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): RewardEpochCalculationStatus {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
   if (!existsSync(statusFile)) {
     throw new Error(`Reward calculation status for epoch ${rewardEpochId} does not exist`);
@@ -64,9 +72,13 @@ export function deserializeRewardEpochCalculationStatus(
  */
 export function rewardEpochCalculationStatusExists(
   rewardEpochId: number,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): boolean {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const statusFile = path.join(rewardEpochFolder, STATUS_FILE);
   return existsSync(statusFile);
 }
@@ -78,35 +90,36 @@ export function setRewardCalculationStatus(
   rewardEpochId: number,
   status: RewardCalculationStatus,
   rewardEpoch?: RewardEpoch,
-  endVotingRoundId?: number
+  endVotingRoundId?: number,
+  tempRewardEpochFolder = false
 ) {
   if (status === RewardCalculationStatus.PENDING) {
     if (!rewardEpoch) {
       throw new Error(`Reward epoch ${rewardEpochId} not found`);
     }
-    if (rewardEpochCalculationStatusExists(rewardEpochId)) {
+    if (rewardEpochCalculationStatusExists(rewardEpochId, tempRewardEpochFolder)) {
       throw new Error(`Reward calculation status for epoch ${rewardEpochId} already exists`);
     }
     const status = initialRewardEpochCalculationStatus(rewardEpoch, endVotingRoundId);
-    serializeRewardEpochCalculationStatus(status);
+    serializeRewardEpochCalculationStatus(status, tempRewardEpochFolder);
     return;
   }
   if (status === RewardCalculationStatus.IN_PROGRESS) {
-    const readStatus = deserializeRewardEpochCalculationStatus(rewardEpochId);
+    const readStatus = deserializeRewardEpochCalculationStatus(rewardEpochId, tempRewardEpochFolder);
     if (readStatus.calculationStatus !== RewardCalculationStatus.PENDING) {
       throw new Error(`Reward calculation status for epoch ${rewardEpochId} is not pending`);
     }
     readStatus.calculationStatus = status;
-    serializeRewardEpochCalculationStatus(readStatus);
+    serializeRewardEpochCalculationStatus(readStatus, tempRewardEpochFolder);
     return;
   }
   if (status === RewardCalculationStatus.DONE) {
-    const readStatus = deserializeRewardEpochCalculationStatus(rewardEpochId);
+    const readStatus = deserializeRewardEpochCalculationStatus(rewardEpochId, tempRewardEpochFolder);
     if (readStatus.calculationStatus !== RewardCalculationStatus.IN_PROGRESS) {
       throw new Error(`Reward calculation status for epoch ${rewardEpochId} is not in progress`);
     }
     readStatus.calculationStatus = status;
-    serializeRewardEpochCalculationStatus(readStatus);
+    serializeRewardEpochCalculationStatus(readStatus, tempRewardEpochFolder);
     return;
   }
   throw new Error(`Invalid reward calculation status: ${status}`);

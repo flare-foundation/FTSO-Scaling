@@ -24,7 +24,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9" },
-  VoterRegistry: { name: "VoterRegistry", address: "0x051E9Cb16A8676C011faa10efA1ABE95372e7825" },
+  VoterRegistry: { name: "VoterRegistry", address: "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9" },
@@ -41,7 +41,7 @@ const COSTON2_CONFIG: NetworkContractAddresses = {
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x5CdF9eAF3EB8b44fB696984a1420B56A7575D250" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x9D7207b1410De031523356882637dd01F460E958" },
-  VoterRegistry: { name: "VoterRegistry", address: "0x51e375fda99181f052C2e28299e166D6984A5B89" },
+  VoterRegistry: { name: "VoterRegistry", address: "0x3BFdbe79BEf39Bae3F85636f525AcD3051Df4f64" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "" },
@@ -55,7 +55,7 @@ const SONGBIRD_CONFIG: NetworkContractAddresses = {
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x126FAeEc75601dA3354c0b5Cc0b60C85fCbC3A5e" },
-  VoterRegistry: { name: "VoterRegistry", address: "0x16EdaECC2D3713C3A94CCd1FFCd2589cfb7Ee9e0" },
+  VoterRegistry: { name: "VoterRegistry", address: "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "" },
@@ -592,4 +592,4 @@ export const CAPPED_STAKING_FEE_BIPS = 2000;
 
 export const CALCULATIONS_FOLDER = () => "calculations";
 
-export const FUTURE_VOTING_ROUNDS = () => 10;
+export const FUTURE_VOTING_ROUNDS = () => 30;

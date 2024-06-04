@@ -55,6 +55,7 @@ import { destroyStorage } from "../utils/stat-info/storage";
 import { calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
+import { ILogger } from "../utils/ILogger";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -146,6 +147,7 @@ export async function initializeRewardEpochStorage(
   rewardEpochId: number,
   rewardEpochManager: RewardEpochManager,
   useExpectedEndIfNoSigningPolicyAfter = false,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<[RewardEpochDuration, RewardEpoch]> {
   const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
@@ -153,7 +155,7 @@ export async function initializeRewardEpochStorage(
     useExpectedEndIfNoSigningPolicyAfter
   );
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
-  createRewardCalculationFolders(rewardEpochDuration, calculationFolder);
+  createRewardCalculationFolders(rewardEpochDuration, tempRewardEpochFolder, calculationFolder);
   return [rewardEpochDuration, rewardEpoch];
 }
 
@@ -176,6 +178,7 @@ export async function partialRewardClaimsForVotingRound(
   merge = true,
   serializeResults = false,
   useFastUpdatesData = false,
+  logger: ILogger = console,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
   let allRewardClaims: IPartialRewardClaim[] = [];
@@ -363,7 +366,8 @@ export async function partialRewardClaimsForVotingRound(
           signingPolicyAddressesSubmitted,
           signingAddressToDelegationAddress,
           signingAddressToIdentityAddress,
-          signingAddressToFeeBips
+          signingAddressToFeeBips,
+          logger
         );
         allRewardClaims.push(...fastUpdatesClaims);
         if (merge) {
@@ -422,10 +426,16 @@ export async function prepareDataForRewardCalculations(
     MerkleTreeStructs.fromRandomCalculationResult(randomData),
     ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
   ];
-  serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
-  serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
-    ...eligibleFinalizationRewardVotersInGracePeriod,
-  ]);
+  serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, false, calculationFolder);
+  serializeDataForRewardCalculation(
+    rewardEpochId,
+    rewardDataForCalculations,
+    medianResults,
+    randomData,
+    [...eligibleFinalizationRewardVotersInGracePeriod],
+    false,
+    calculationFolder
+  );
 }
 
 export async function prepareDataForRewardCalculationsForRange(
@@ -435,6 +445,7 @@ export async function prepareDataForRewardCalculationsForRange(
   randomGenerationBenchingWindow: number,
   dataManager: DataManagerForRewarding,
   useFastUpdatesData: boolean,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculationForVotingRoundRange(
@@ -477,10 +488,22 @@ export async function prepareDataForRewardCalculationsForRange(
       MerkleTreeStructs.fromRandomCalculationResult(randomData),
       ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
     ];
-    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
-    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
-      ...eligibleFinalizationRewardVotersInGracePeriod,
-    ]);
+    serializeFeedValuesForVotingRoundId(
+      rewardEpochId,
+      votingRoundId,
+      calculationResults,
+      tempRewardEpochFolder,
+      calculationFolder
+    );
+    serializeDataForRewardCalculation(
+      rewardEpochId,
+      rewardDataForCalculations,
+      medianResults,
+      randomData,
+      [...eligibleFinalizationRewardVotersInGracePeriod],
+      tempRewardEpochFolder,
+      calculationFolder
+    );
   }
 }
 

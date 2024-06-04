@@ -6,7 +6,7 @@ import { EncodingUtils } from "../EncodingUtils";
 import { MerkleTree } from "../MerkleTree";
 import { FeedResult, MerkleTreeStructs, RandomResult } from "../MerkleTreeStructs";
 import { bigIntReplacer } from "../big-number-serialization";
-import { FEED_VALUES_FILE } from "./constants";
+import { FEED_VALUES_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 
 export interface FeedResultWithMerkleProof {
   body: FeedResult;
@@ -34,9 +34,13 @@ export function serializeFeedValuesForVotingRoundId(
   rewardEpochId: number,
   votingRoundId: number,
   calculationResults: (FeedResult | RandomResult)[],
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   if (!existsSync(votingRoundFolder)) {
     mkdirSync(votingRoundFolder);

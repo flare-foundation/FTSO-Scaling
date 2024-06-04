@@ -107,8 +107,9 @@ export class DataManagerForRewarding extends DataManager {
         randomGenerationBenchingWindow,
         (votingRoundId: number) => rewardEpochForVotingRoundId(votingRoundId)
       );
-
-      this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
+      if (!process.env.REMOVE_ANNOYING_MESSAGES) {
+        this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
+      }
       const dataForRound = {
         ...partialData,
         randomGenerationBenchingWindow,

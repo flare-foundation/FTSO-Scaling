@@ -4,7 +4,7 @@ import { CALCULATIONS_FOLDER } from "../../configs/networks";
 import { IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../PartialRewardOffer";
 import { RewardEpochDuration } from "../RewardEpochDuration";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
-import { FU_OFFERS_FILE, OFFERS_FILE } from "./constants";
+import { FU_OFFERS_FILE, OFFERS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 
 export interface FeedOffers<T> {
   readonly feedId: string;
@@ -69,12 +69,16 @@ export function serializeGranulatedPartialOfferMap(
  */
 export function createRewardCalculationFolders(
   rewardEpochDuration: RewardEpochDuration,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   if (!existsSync(calculationFolder)) {
     mkdirSync(calculationFolder);
   }
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochDuration.rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochDuration.rewardEpochId}`
+  );
   if (existsSync(rewardEpochFolder)) {
     rmSync(rewardEpochFolder, { recursive: true });
   }
