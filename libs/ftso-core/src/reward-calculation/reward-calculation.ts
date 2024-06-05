@@ -230,6 +230,21 @@ export async function partialRewardClaimsForVotingRound(
     }
     // Calculate reward claims for each offer
     for (const offer of offers) {
+      if (offer.shouldBeBurned) {
+        const fullOfferBackClaim: IPartialRewardClaim = {
+          votingRoundId,
+          beneficiary: offer.claimBackAddress.toLowerCase(),
+          amount: offer.amount,
+          claimType: ClaimType.DIRECT,
+          offerIndex: offer.offerIndex,
+          // feedId: offer.feedId,  // should be undefined
+          protocolTag: "" + FTSO2_PROTOCOL_ID,
+          rewardTypeTag: RewardTypePrefix.FULL_OFFER_CLAIM_BACK,
+          rewardDetailTag: "", // no additional tag
+        };
+        allRewardClaims.push(fullOfferBackClaim);
+        continue;
+      }
       // First each offer is split into three parts: median, signing and finalization
       const splitOffers = splitRewardOfferByTypes(offer);
       // From each partial offer in split calculate reward claims

@@ -600,6 +600,7 @@ export class CalculatorService {
   }
 
   async fullRoundInitializationAndDataCalculationWithRandomFixing(options: OptionalCommandOptions): Promise<void> {
+    const logger = new Logger();
     const adaptedOptions = {
       rewardEpochId: options.rewardEpochId,
       initialize: true,
@@ -614,8 +615,9 @@ export class CalculatorService {
     newOptions.rewardEpochId = newOptions.rewardEpochId + 1;
     newOptions.tempRewardEpochFolder = true;
     newOptions.useExpectedEndIfNoSigningPolicyAfter = true;
+    newOptions.useFastUpdatesData = false;
     const rewardEpochDuration2 = await this.runCalculateRewardCalculationTopJob(newOptions);
-    console.dir(rewardEpochDuration2);
+    logger.log(rewardEpochDuration2);
     await this.runRandomNumberFixing(options.rewardEpochId, FUTURE_VOTING_ROUNDS());
     destroyStorage(options.rewardEpochId + 1, true);
   }
@@ -635,14 +637,19 @@ export class CalculatorService {
     if (endVotingRoundId === undefined) {
       throw new Error(`No endVotingRound for ${rewardEpochId}`);
     }
-    const randomNumbers: bigint[] = [];
+    const randomNumbers: (bigint | undefined)[] = [];
     for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
       const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
       if (!data) {
         throw new Error(`Missing reward calculation data for voting round ${votingRoundId}`);
       }
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      randomNumbers.push(BigInt(data.nextVotingRoundRandomResult!));
+      const randomNumberResult = data.nextVotingRoundRandomResult;
+      if (randomNumberResult !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        randomNumbers.push(BigInt(data.nextVotingRoundRandomResult!));
+      } else {
+        randomNumbers.push(undefined);
+      }
     }
 
     const rewardOfferMap: Map<

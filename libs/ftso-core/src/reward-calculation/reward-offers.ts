@@ -80,7 +80,7 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
   startVotingRoundId: number,
   endVotingRoundId: number,
   rewardEpochInfo: RewardEpochInfo,
-  randomNumbers: bigint[]
+  randomNumbers: (bigint | undefined)[]
 ): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
   if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
     throw new Error(
@@ -130,7 +130,9 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
 
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
     const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
-    const selectedFeedIndex = Number(randomNumber % BigInt(rewardEpochInfo.canonicalFeedOrder.length));
+    // if random number is undefined, just choose the first feed. The offer will be burned anyway.
+    const selectedFeedIndex =
+      randomNumber === undefined ? 0 : Number(randomNumber % BigInt(rewardEpochInfo.canonicalFeedOrder.length));
     const selectedFeed = rewardEpochInfo.canonicalFeedOrder[selectedFeedIndex];
     const selectedFeedId = selectedFeed.id;
     const selectedFeedOffer = currencyRewardOffers.get(selectedFeedId);
@@ -143,6 +145,10 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
       votingRoundId,
       amount: sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n),
     };
+    // Mark offer for full burning
+    if (randomNumber === undefined) {
+      feedOfferForVoting.shouldBeBurned = true;
+    }
     const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
     rewardOfferMap.set(votingRoundId, feedOffers);
     const feedIdOffers = feedOffers.get(selectedFeedId) || [];
