@@ -28,6 +28,7 @@ export interface IPartialRewardOfferForEpoch {
 export interface IPartialRewardOfferForRound extends IPartialRewardOfferForEpoch {
   // voting round id
   votingRoundId: number;
+  shouldBeBurned?: boolean;
 }
 
 export interface IFUPartialRewardOfferForRound {
