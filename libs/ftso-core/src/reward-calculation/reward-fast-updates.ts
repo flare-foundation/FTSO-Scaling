@@ -10,11 +10,11 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
 const TOTAL_PPM = 1000000n;
 
 export enum FastUpdatesRewardClaimType {
-  NO_SUBMISSIONS = "no submissions",
-  NO_MEDIAN_PRICE = "no median price",
-  MISSED_BAND = "missed band",
-  FEE = "fee",
-  PARTICIPATION = "participation",
+  NO_SUBMISSIONS = "NO_SUBMISSIONS",
+  NO_MEDIAN_PRICE = "NO_MEDIAN_PRICE",
+  MISSED_BAND = "MISSING_BAND",
+  FEE = "FEE",
+  PARTICIPATION = "PARTICIPATION",
 }
 
 /**

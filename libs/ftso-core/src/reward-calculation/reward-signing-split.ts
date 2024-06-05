@@ -5,10 +5,10 @@ import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 
 export enum SigningWeightRewardClaimType {
-  NO_VOTER_WEIGHT = "No voter weight",
-  FEE_FOR_DELEGATION_AND_STAKING = "fee for delegation and staking",
-  DELEGATION_COMMUNITY_REWARD = "delegation community reward",
-  NODE_COMMUNITY_REWARD = "node community reward",
+  NO_VOTER_WEIGHT = "NO_VOTER_WEIGHT",
+  FEE_FOR_DELEGATION_AND_STAKING = "FEES_FOR_DELEGATION_AND_STAKING",
+  DELEGATION_COMMUNITY_REWARD = "DELEGATION_COMMUNITY_REWARD",
+  NODE_COMMUNITY_REWARD = "NODE_COMMUNITY_REWARD",
 }
 
 /**

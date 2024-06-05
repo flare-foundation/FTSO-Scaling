@@ -20,10 +20,10 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
 const BURN_NON_ELIGIBLE_REWARDS = true;
 
 export enum SigningWeightRewardClaimType {
-  NO_MOST_FREQUENT_SIGNATURES = "No most frequent signatures",
-  NO_WEIGHT_OF_ELIGIBLE_SIGNERS = "No weight of eligible signers",
-  CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER = "Claim back due to non-eligible signer",
-  CLAIM_BACK_NO_CLAIMS = "Claim back no claims",
+  NO_MOST_FREQUENT_SIGNATURES = "NO_MOST_FREQUENT_SIGNATURES",
+  NO_WEIGHT_OF_ELIGIBLE_SIGNERS = "NO_WEIGHT_OF_ELIGIBLE_SIGNERS",
+  CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER = "CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER",
+  CLAIM_BACK_NO_CLAIMS = "CLAIM_BACK_NO_CLAIMS",
 }
 /**
  * Given an offer and data for reward calculation it calculates signing rewards for the offer.
