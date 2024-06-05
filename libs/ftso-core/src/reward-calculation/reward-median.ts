@@ -9,10 +9,10 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
 import { medianRewardDistributionWeight } from "./reward-utils";
 
 export enum MediantRewardClaimType {
-  LOW_TURNOUT_CLAIM_BACK = "low turnout claim back",
-  NO_NORMALIZED_WEIGHT = "no normalized weight",
-  FEE = "fee",
-  PARTICIPATION = "participation",
+  LOW_TURNOUT_CLAIM_BACK = "LOW_TURNOUT_CLAIM_BACK",
+  NO_NORMALIZED_WEIGHT = "NO_NORMALIZED_WEIGHT",
+  FEE = "FEE",
+  PARTICIPATION = "PARTICIPATION",
 }
 
 /**

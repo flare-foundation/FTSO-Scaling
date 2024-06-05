@@ -8,10 +8,10 @@ import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split
 import { isFinalizationInGracePeriodAndEligible, isFinalizationOutsideOfGracePeriod } from "./reward-utils";
 
 export enum FinalizationRewardClaimType {
-  NO_FINALIZATION = "No finalization",
-  OUTSIDE_OF_GRACE_PERIOD = "Outside of grace period",
-  IN_GRACE_PERIOD = "In grace period",
-  CLAIM_BACK_FOR_UNDISTRIBUTED_REWARDS = "Claim back for undistributed rewards",
+  NO_FINALIZATION = "NO_FINALIZATION",
+  OUTSIDE_OF_GRACE_PERIOD = "OUTSIDE_OF_GRACE_PERIOD",
+  FINALIZED_BUT_NO_ELIGIBLE_VOTERS = "FINALIZED_BUT_NO_ELIGIBLE_VOTERS",
+  CLAIM_BACK_FOR_UNDISTRIBUTED_REWARDS = "CLAIM_BACK_FOR_UNDISTRIBUTED_REWARDS",
 }
 
 /**
@@ -67,7 +67,9 @@ export function calculateFinalizationRewardClaims(
   const gracePeriodFinalizations = data.finalizations.filter(finalization =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
-  // Successful finalizations outside of the grace period are already handled
+  // Rewarding of first successful finalizations outside of the grace period are already handled above
+  // Here we have a successful finalization in grace period, but not from anyone eligible and nobody among
+  // the eligible ones provided finalization in grace period.
   if (gracePeriodFinalizations.length === 0 || eligibleVoters.size === 0) {
     const burnClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
@@ -78,7 +80,7 @@ export function calculateFinalizationRewardClaims(
       feedId: offer.feedId,
       protocolTag: "" + FTSO2_PROTOCOL_ID,
       rewardTypeTag: RewardTypePrefix.FINALIZATION,
-      rewardDetailTag: FinalizationRewardClaimType.IN_GRACE_PERIOD,
+      rewardDetailTag: FinalizationRewardClaimType.FINALIZED_BUT_NO_ELIGIBLE_VOTERS,
     };
     return [burnClaim];
   }
