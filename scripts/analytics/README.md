@@ -46,6 +46,14 @@ Prints reward stats for a given reward epoch.
 env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
 ```
 
+Alternatively, one can get CSV with breakdown of partial reward claims.
+
+```bash
+env NETWORK=coston yarn ts-node scripts/analytics/run/reward-claims-csv.ts test.csv <startRewardEpoch> <endRewardEpoch>
+```
+
+The CSV can be imported to Excel and filters can be used to analyze claims.
+
 ## Uptime and reward finalization stats
 
 Prints up time and reward finalization stats.
