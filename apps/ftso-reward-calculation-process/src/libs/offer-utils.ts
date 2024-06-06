@@ -1,17 +1,17 @@
 import {
   granulatedPartialOfferMapForFastUpdates,
-  granulatedPartialOfferMapForRandomFeedSelection
+  granulatedPartialOfferMapForRandomFeedSelection,
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
 import {
   IFUPartialRewardOfferForRound,
-  IPartialRewardOfferForRound
+  IPartialRewardOfferForRound,
 } from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { FU_OFFERS_FILE, OFFERS_FILE } from "../../../../libs/ftso-core/src/utils/stat-info/constants";
 import { serializeGranulatedPartialOfferMap } from "../../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
 import {
   RewardEpochInfo,
-  deserializeRewardEpochInfo
+  deserializeRewardEpochInfo,
 } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
@@ -38,7 +38,8 @@ export async function fullRoundOfferCalculation(options: OptionalCommandOptions)
   );
 
   const rewardOfferMap: Map<
-    number, Map<string, IPartialRewardOfferForRound[]>
+    number,
+    Map<string, IPartialRewardOfferForRound[]>
   > = granulatedPartialOfferMapForRandomFeedSelection(
     startVotingRoundId,
     endVotingRoundId,
@@ -50,7 +51,8 @@ export async function fullRoundOfferCalculation(options: OptionalCommandOptions)
 
   if (options.useFastUpdatesData) {
     const fuRewardOfferMap: Map<
-      number, Map<string, IFUPartialRewardOfferForRound[]>
+      number,
+      Map<string, IFUPartialRewardOfferForRound[]>
     > = granulatedPartialOfferMapForFastUpdates(rewardEpochInfo);
     serializeGranulatedPartialOfferMap(rewardEpochDuration, fuRewardOfferMap, false, FU_OFFERS_FILE);
   }
@@ -70,7 +72,8 @@ export function initializeTemplateOffers(rewardEpochInfo: RewardEpochInfo, endVo
   };
 
   const rewardOfferMap: Map<
-    number, Map<string, IPartialRewardOfferForRound[]>
+    number,
+    Map<string, IPartialRewardOfferForRound[]>
   > = granulatedPartialOfferMapForRandomFeedSelection(
     startVotingRoundId,
     endVotingRoundId,

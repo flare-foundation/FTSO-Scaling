@@ -39,43 +39,68 @@ export async function latestRewardEpochStart(
   return;
 }
 
+/**
+ * Tries to find the next reward epoch signing policy event and to determine the actual end voting round id.
+ * If the next reward epoch is found, offers get reinitialized and the state is updated.
+ */
 export async function tryFindNextRewardEpoch(
   indexerClient: IndexerClientForRewarding,
-  state: IncrementalCalculationState
-) {
-  if (!state.nextRewardEpochIdentified) return;
+  state: IncrementalCalculationState,
+  logger: Logger
+): Promise<boolean> {
+  if (!state.nextRewardEpochIdentified) return false;
   const lowestExpectedIndexerHistoryTime = await indexerClient.secureLowestTimestamp();
   const signingPolicyInitializedEvents = await indexerClient.getLatestSigningPolicyInitializedEvents(
     lowestExpectedIndexerHistoryTime
   );
   if (!signingPolicyInitializedEvents.data) {
-    return;
+    return false;
   }
   let i = signingPolicyInitializedEvents.data!.length - 1;
   while (i >= 0 && signingPolicyInitializedEvents.data![i].rewardEpochId > state.rewardEpochId + 1) {
     i--;
   }
   if (i >= 0 && signingPolicyInitializedEvents.data![i].rewardEpochId === state.rewardEpochId + 1) {
-    state.endVotingRoundId = signingPolicyInitializedEvents.data![i].startVotingRoundId - 1;
-    state.rewardEpochInfo.endVotingRoundId = state.endVotingRoundId;
+    const realEndVotingRoundId = signingPolicyInitializedEvents.data![i].startVotingRoundId - 1;
+
+    state.rewardEpochInfo.endVotingRoundId = realEndVotingRoundId;
     serializeRewardEpochInfo(state.rewardEpochId, state.rewardEpochInfo);
-    state.finalProcessedVotingRoundId = state.endVotingRoundId + FUTURE_VOTING_ROUNDS();
-    initializeTemplateOffers(state.rewardEpochInfo, state.endVotingRoundId);
-    state.maxVotingRoundIdFolder = Math.max(state.maxVotingRoundIdFolder, state.endVotingRoundId);
-    const randomNumbers = extractRandomNumbers(
-      state.rewardEpochId,
-      state.startVotingRoundId,
-      state.nextVotingRoundIdWithNoSecureRandom - 1
-    );
-    fixOffersForRandomFeedSelection(
-      state.rewardEpochId,
-      state.startVotingRoundId,
-      state.nextVotingRoundIdWithNoSecureRandom - 1,
-      state.rewardEpochInfo,
-      randomNumbers
-    );
-    // reset claim calculation from start
-    state.nextVotingRoundForClaimCalculation = state.startVotingRoundId;
+    state.endVotingRoundId = realEndVotingRoundId;
+    state.finalProcessedVotingRoundId = realEndVotingRoundId + FUTURE_VOTING_ROUNDS();
+    if (state.endVotingRoundId !== realEndVotingRoundId) {
+      logger.log(
+        `New reward epoch identified: ${
+          state.rewardEpochId + 1
+        }. Real end voting round: ${realEndVotingRoundId} does not match the estimated/expected end voting round id: ${
+          state.endVotingRoundId
+        }.`
+      );
+      state.endVotingRoundId = realEndVotingRoundId;
+      initializeTemplateOffers(state.rewardEpochInfo, state.endVotingRoundId);
+      logger.log(`Offers reinitialized for reward epoch ${state.rewardEpochId + 1}.`);
+      state.maxVotingRoundIdFolder = Math.max(state.maxVotingRoundIdFolder, state.endVotingRoundId);
+      const randomNumbers = extractRandomNumbers(
+        state.rewardEpochId,
+        state.startVotingRoundId,
+        state.nextVotingRoundIdWithNoSecureRandom - 1
+      );
+      fixOffersForRandomFeedSelection(
+        state.rewardEpochId,
+        state.startVotingRoundId,
+        state.nextVotingRoundIdWithNoSecureRandom - 1,
+        state.rewardEpochInfo,
+        randomNumbers
+      );
+      logger.log(`Offers fixed for reward epoch ${state.rewardEpochId + 1}.`);
+      // reset claim calculation from start
+      state.nextVotingRoundForClaimCalculation = state.startVotingRoundId;
+    } else {
+      logger.log(
+        `Next reward epoch identified: ${
+          state.rewardEpochId + 1
+        }. Real end voting round: ${realEndVotingRoundId} matches the expected end voting round id.`
+      );
+    }
     state.nextRewardEpochIdentified = true;
   }
 }
@@ -109,7 +134,7 @@ export async function calculationOfRewardCalculationDataForRange(
       );
       done = true;
     } catch (e) {
-      console.log(e);
+      // console.log(e);
       logger.error(
         `Error while calculating reward calculation data for voting rounds ${firstVotingRoundId}-${lastVotingRoundId} in reward epoch ${rewardEpochId}: ${e}`
       );

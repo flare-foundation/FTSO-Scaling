@@ -76,7 +76,9 @@ export class CalculatorService {
   async runRewardCalculationIncremental(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
     const logger = new Logger();
     const rewardEpochId = await latestRewardEpochStart(this.indexerClient);
+    logger.log(`Incremental calculation for reward epoch ${rewardEpochId}`);
     // TODO: recovery mode
+    logger.log(`Destroying and recreating storage for reward epoch ${rewardEpochId}`);
     destroyStorage(rewardEpochId, options.tempRewardEpochFolder);
     // creates subfolders for voting rounds and distributes partial reward offers
     const [rewardEpochDuration, rewardEpoch] = await initializeRewardEpochStorage(
@@ -112,8 +114,9 @@ export class CalculatorService {
     initializeTemplateOffers(rewardEpochInfo, rewardEpochDuration.endVotingRoundId);
 
     // Calculate reward calculation data for initial voting rounds to catchup
+    logger.log(`Incremental batch catchup for reward epoch ${rewardEpochId}`);
     const end = await incrementalBatchCatchup(rewardEpochDuration, options, logger);
-
+    logger.log(`Incremental calculation for reward epoch ${rewardEpochId} starting from voting round ${end + 1}`);
     const state: IncrementalCalculationState = {
       rewardEpochId,
       votingRoundId: end + 1,
@@ -141,12 +144,12 @@ export class CalculatorService {
         logger,
         options.useFastUpdatesData
       );
-
+      logger.log(`Processing implications for ${state.votingRoundId}`);
       await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
       recordProgress(rewardEpochId);
 
       state.votingRoundId++;
-      await tryFindNextRewardEpoch(this.indexerClient, state);
+      await tryFindNextRewardEpoch(this.indexerClient, state, logger);
       if (state.nextRewardEpochIdentified && state.nextVotingRoundIdWithNoSecureRandom > state.endVotingRoundId) {
         break;
       }
@@ -276,6 +279,10 @@ export class CalculatorService {
         await this.processOneRewardEpoch({ ...options, rewardEpochId });
         logger.log(`End processing reward epoch ${rewardEpochId}`);
       }
+      return;
+    }
+    if (options.incrementalCalculation) {
+      await this.runRewardCalculationIncremental(options);
       return;
     }
   }

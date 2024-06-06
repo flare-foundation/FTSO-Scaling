@@ -157,4 +157,12 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   parseUseFastUpdatesDataMode(val: string): boolean {
     return JSON.parse(val);
   }
+
+  @Option({
+    flags: "-l, --incrementalCalculation [boolean]",
+    description: "Start incremental calculation for current reward epoch",
+  })
+  parseIncrementalCalculation(val: string): boolean {
+    return JSON.parse(val);
+  }
 }

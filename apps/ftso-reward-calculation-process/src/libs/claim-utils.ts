@@ -98,6 +98,11 @@ export async function fixRandomNumbersOffersAndCalculateClaims(
       state.rewardEpochInfo,
       randomNumbers
     );
+    logger.log(
+      `Offers fixed for reward epoch ${
+        state.rewardEpochId + 1
+      } from voting rounds ${lastNextVotingRoundIdWithNoSecureRandom}-${state.nextVotingRoundIdWithNoSecureRandom - 1}.`
+    );
     const rewardEpochDuration: RewardEpochDuration = {
       rewardEpochId: state.rewardEpochInfo.rewardEpochId,
       startVotingRoundId: state.startVotingRoundId,
@@ -120,6 +125,7 @@ export async function fixRandomNumbersOffersAndCalculateClaims(
         logger,
         false //options.useFastUpdatesData
       );
+      logger.log(`Claims calculated for voting round ${tmpVotingRoundId}.`);
       recordProgress(state.rewardEpochId);
     }
     state.nextVotingRoundForClaimCalculation = state.nextVotingRoundIdWithNoSecureRandom;

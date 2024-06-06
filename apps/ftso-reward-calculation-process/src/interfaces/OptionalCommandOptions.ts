@@ -21,4 +21,5 @@ export interface OptionalCommandOptions {
   recoveryMode?: boolean;
   useFastUpdatesData?: boolean;
   tempRewardEpochFolder?: boolean;
+  incrementalCalculation?: boolean;
 }
