@@ -1,5 +1,6 @@
 import { Command, CommandRunner, Option } from "nest-commander";
-import { CalculatorService, OptionalCommandOptions } from "../services/calculator.service";
+import { CalculatorService } from "../services/calculator.service";
+import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { Logger } from "@nestjs/common";
 @Command({
   name: "ftso-reward-calculation-process",
