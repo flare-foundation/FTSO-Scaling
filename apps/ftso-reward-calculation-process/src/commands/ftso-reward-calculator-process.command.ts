@@ -1,5 +1,6 @@
 import { Command, CommandRunner, Option } from "nest-commander";
-import { CalculatorService, OptionalCommandOptions } from "../services/calculator.service";
+import { CalculatorService } from "../services/calculator.service";
+import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { Logger } from "@nestjs/common";
 @Command({
   name: "ftso-reward-calculation-process",
@@ -154,6 +155,14 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
     description: "Extracts data for fast updates rewarding",
   })
   parseUseFastUpdatesDataMode(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
+    flags: "-l, --incrementalCalculation [boolean]",
+    description: "Start incremental calculation for current reward epoch",
+  })
+  parseIncrementalCalculation(val: string): boolean {
     return JSON.parse(val);
   }
 }

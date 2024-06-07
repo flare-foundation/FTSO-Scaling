@@ -276,7 +276,9 @@ export function deserializeDataForRewardCalculation(
   const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
   const rewardCalculationsDataPath = path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE);
   if (!existsSync(rewardCalculationsDataPath)) {
-    throw new Error(`Reward calculation data for epoch ${rewardEpochId} does not exist.`);
+    throw new Error(
+      `Reward calculation data for reward epoch ${rewardEpochId}, voting round ${votingRoundId} does not exist.`
+    );
   }
   const data = JSON.parse(
     readFileSync(rewardCalculationsDataPath, "utf-8"),

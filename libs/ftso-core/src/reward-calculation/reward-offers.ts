@@ -6,6 +6,12 @@ import {
   IPartialRewardOfferForRound,
   PartialRewardOffer,
 } from "../utils/PartialRewardOffer";
+import { RewardEpochDuration } from "../utils/RewardEpochDuration";
+import { OFFERS_FILE } from "../utils/stat-info/constants";
+import {
+  deserializeGranulatedPartialOfferMap,
+  serializeGranulatedPartialOfferMap,
+} from "../utils/stat-info/granulated-partial-offers-map";
 import { RewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
 
 /**
@@ -156,6 +162,55 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
     feedIdOffers.push(feedOfferForVoting);
   }
   return rewardOfferMap;
+}
+
+export function fixOffersForRandomFeedSelection(
+  rewardEpochId: number,
+  startVotingRoundId: number,
+  endVotingRoundId: number,
+  rewardEpochInfo: RewardEpochInfo,
+  randomNumbers: (bigint | undefined)[]
+) {
+  if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
+    throw new Error(
+      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${
+        endVotingRoundId - startVotingRoundId + 1
+      }`
+    );
+  }
+
+  const rewardOfferMap = new Map<number, Map<string, IPartialRewardOfferForRound[]>>();
+
+  for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
+    // if random number is undefined, just choose the first feed. The offer will be burned anyway.
+    const selectedFeedIndex =
+      randomNumber === undefined ? 0 : Number(randomNumber % BigInt(rewardEpochInfo.canonicalFeedOrder.length));
+    const selectedFeed = rewardEpochInfo.canonicalFeedOrder[selectedFeedIndex];
+    const selectedFeedId = selectedFeed.id;
+
+    const currentRewardOffersMap = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId);
+    const newRewardOfferMap = new Map<string, IPartialRewardOfferForRound[]>();
+    const newRewardOffers: IPartialRewardOfferForRound[] = [];
+    for (const offerList of currentRewardOffersMap.values()) {
+      for (const offer of offerList) {
+        offer.feedId = selectedFeedId;
+        if (randomNumber === undefined) {
+          offer.shouldBeBurned = true;
+        }
+        newRewardOffers.push(offer);
+      }
+    }
+    newRewardOfferMap.set(selectedFeedId, newRewardOffers);
+    rewardOfferMap.set(votingRoundId, newRewardOfferMap);
+  }
+  const adaptedRewardEpochDuration: RewardEpochDuration = {
+    rewardEpochId,
+    startVotingRoundId,
+    endVotingRoundId,
+    expectedEndUsed: false,
+  };
+  serializeGranulatedPartialOfferMap(adaptedRewardEpochDuration, rewardOfferMap, false, OFFERS_FILE);
 }
 
 /**
