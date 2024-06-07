@@ -154,7 +154,14 @@ export class CalculatorService {
         break;
       }
     }
-    return await cleanupAndReturnFinalEpochDuration(this.rewardEpochManager, state);
+    const finalRewardEpochDuration = await cleanupAndReturnFinalEpochDuration(this.rewardEpochManager, state);
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
+    recordProgress(rewardEpochId);
+    const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, state.endVotingRoundId);
+    serializeFinalRewardClaims(rewardEpochId, lastClaims);
+    const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
+    serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+    return finalRewardEpochDuration;
   }
 
   async fullRoundInitializationAndDataCalculationWithRandomFixing(options: OptionalCommandOptions): Promise<void> {
