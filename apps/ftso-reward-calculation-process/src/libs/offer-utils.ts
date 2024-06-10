@@ -78,7 +78,8 @@ export function initializeTemplateOffers(rewardEpochInfo: RewardEpochInfo, endVo
     startVotingRoundId,
     endVotingRoundId,
     rewardEpochInfo,
-    randomNumbers
+    randomNumbers,
+    true
   );
   serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, false, OFFERS_FILE);
 }

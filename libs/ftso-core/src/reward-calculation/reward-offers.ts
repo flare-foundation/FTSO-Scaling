@@ -82,11 +82,20 @@ export function adaptCommunityRewardOffer(rewardOffer: IPartialRewardOfferForEpo
   rewardOffer.claimBackAddress = BURN_ADDRESS;
 }
 
+/**
+ * Given a reward epoch info and random numbers for each voting round, creates a map of partial reward offers for each voting round and feed.
+ * If @param provideAllOptions is set to false only one feed is chosen using the random number provided and one offer per voting round is
+ * generated. If the random number is undefined, the offer is marked for burning.
+ * If @param provideAllOptions is set to true, offers for all feeds will be provided for each voting round with the same share of the reward as
+ * it would be used for the selected feed. This enables the later selection by random number. In this case there is also no offers marked for
+ * burning.
+ */
 export function granulatedPartialOfferMapForRandomFeedSelection(
   startVotingRoundId: number,
   endVotingRoundId: number,
   rewardEpochInfo: RewardEpochInfo,
-  randomNumbers: (bigint | undefined)[]
+  randomNumbers: (bigint | undefined)[],
+  provideAllOptions = false
 ): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
   if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
     throw new Error(
@@ -135,6 +144,28 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
   const remainder: number = Number(totalAmount % BigInt(numberOfVotingRounds));
 
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    if (provideAllOptions) {
+      for (const feed of rewardEpochInfo.canonicalFeedOrder) {
+        const feedId = feed.id;
+        const feedOffer = currencyRewardOffers.get(feedId);
+        if (!feedOffer) {
+          throw new Error(`Feed ${feedId} is missing in reward offers`);
+        }
+        // Create adapted offer with selected feed
+        const feedOfferForVoting: IPartialRewardOfferForRound = {
+          ...feedOffer,
+          votingRoundId,
+          // all get the same amount, as only one will be chosen.
+          amount: sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n),
+        };
+        const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
+        rewardOfferMap.set(votingRoundId, feedOffers);
+        const feedIdOffers = feedOffers.get(feedId) || [];
+        feedOffers.set(feedId, feedIdOffers);
+        feedIdOffers.push(feedOfferForVoting);
+      }
+      continue;
+    }
     const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
     // if random number is undefined, just choose the first feed. The offer will be burned anyway.
     const selectedFeedIndex =
@@ -192,15 +223,14 @@ export function fixOffersForRandomFeedSelection(
     const currentRewardOffersMap = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId);
     const newRewardOfferMap = new Map<string, IPartialRewardOfferForRound[]>();
     const newRewardOffers: IPartialRewardOfferForRound[] = [];
-    for (const offerList of currentRewardOffersMap.values()) {
-      for (const offer of offerList) {
-        offer.feedId = selectedFeedId;
-        if (randomNumber === undefined) {
-          offer.shouldBeBurned = true;
-        }
-        newRewardOffers.push(offer);
-      }
+    const offer = currentRewardOffersMap.get(selectedFeedId)?.[0];
+    if (!offer) {
+      throw new Error(`Feed ${selectedFeedId} is missing in reward offers`);
     }
+    if (randomNumber === undefined) {
+      offer.shouldBeBurned = true;
+    }
+    newRewardOffers.push(offer);
     newRewardOfferMap.set(selectedFeedId, newRewardOffers);
     rewardOfferMap.set(votingRoundId, newRewardOfferMap);
   }
