@@ -10,6 +10,7 @@ export interface CSVRewardClaim extends IPartialRewardClaim {
   signingWeightPct: number;
   delegationWeightPct: number;
   cappedDelegationWeightPct: number;
+  burnedForVoterId?: number;
 }
 
 function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEpoch: number): CSVRewardClaim[] {
@@ -60,48 +61,58 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
           100
       );
     }
+    const endVotingRoundId = rewardEpochInfo.endVotingRoundId ?? Number.POSITIVE_INFINITY;
 
     for (
       let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
-      votingRoundId <= rewardEpochInfo.endVotingRoundId!;
+      votingRoundId <= endVotingRoundId;
       votingRoundId++
     ) {
-      const partialClaims = deserializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId);
-      for (const claim of partialClaims) {
-        let voterIndex = -1;
-        let identityAddress = "";
-        let signingWeightPct = 0;
-        let delegationWeightPct = 0;
-        let cappedDelegationWeightPct = 0;
-        if (claim.claimType === ClaimType.FEE) {
-          voterIndex = identityAddressToVoterId.get(claim.beneficiary.toLowerCase());
-          identityAddress = claim.beneficiary.toLowerCase();
-        } else if (claim.claimType === ClaimType.WNAT) {
-          voterIndex = delegationAddressToVoterId.get(claim.beneficiary.toLowerCase());
-          identityAddress = voterIdToIdentityAddress.get(voterIndex) ?? "";
-        } else if (claim.claimType === ClaimType.DIRECT) {
-          const tryIndex = signingAddressToVoterId.get(claim.beneficiary.toLowerCase());
-          if (tryIndex !== undefined) {
-            voterIndex = tryIndex;
+      try {
+        const partialClaims = deserializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId);
+        for (const claim of partialClaims) {
+          let voterIndex = -1;
+          let identityAddress = "";
+          let signingWeightPct = 0;
+          let delegationWeightPct = 0;
+          let cappedDelegationWeightPct = 0;
+          let burnedForVoterId: number | undefined = undefined;
+          if (claim.claimType === ClaimType.FEE) {
+            voterIndex = identityAddressToVoterId.get(claim.beneficiary.toLowerCase());
+            identityAddress = claim.beneficiary.toLowerCase();
+          } else if (claim.claimType === ClaimType.WNAT) {
+            voterIndex = delegationAddressToVoterId.get(claim.beneficiary.toLowerCase());
             identityAddress = voterIdToIdentityAddress.get(voterIndex) ?? "";
+          } else if (claim.claimType === ClaimType.DIRECT) {
+            const tryIndex = signingAddressToVoterId.get(claim.beneficiary.toLowerCase());
+            if (tryIndex !== undefined) {
+              voterIndex = tryIndex;
+              identityAddress = voterIdToIdentityAddress.get(voterIndex) ?? "";
+            }
           }
+          if (voterIndex >= 0) {
+            signingWeightPct = voterIdToSigningWeightPct.get(voterIndex) ?? 0;
+            delegationWeightPct = voterIdToDelegationWeightPct.get(voterIndex) ?? 0;
+            cappedDelegationWeightPct = voterIdToCappedDelegationWeightPct.get(voterIndex) ?? 0;
+          }
+          burnedForVoterId = signingAddressToVoterId.get(claim.burnedForVoter?.toLowerCase());
+          const fixedClaim: CSVRewardClaim = {
+            ...claim,
+            rewardEpochId,
+            identityAddress,
+            voterIndex,
+            signingWeightPct,
+            delegationWeightPct,
+            cappedDelegationWeightPct,
+            burnedForVoterId,
+          };
+          feedData.push(fixedClaim);
         }
-        if (voterIndex >= 0) {
-          signingWeightPct = voterIdToSigningWeightPct.get(voterIndex) ?? 0;
-          delegationWeightPct = voterIdToDelegationWeightPct.get(voterIndex) ?? 0;
-          cappedDelegationWeightPct = voterIdToCappedDelegationWeightPct.get(voterIndex) ?? 0;
-        }
-
-        const fixedClaim: CSVRewardClaim = {
-          ...claim,
-          rewardEpochId,
-          identityAddress,
-          voterIndex,
-          signingWeightPct,
-          delegationWeightPct,
-          cappedDelegationWeightPct,
-        };
-        feedData.push(fixedClaim);
+      } catch (e) {
+        console.log(e);
+        console.log(`Cannot read partial claims for voting round ${votingRoundId} in reward epoch ${rewardEpochId}`);
+        console.log(`Finished with last voting round ${votingRoundId - 1} in reward epoch ${rewardEpochId}`);
+        break;
       }
     }
   }
@@ -116,16 +127,16 @@ function decodeFeed(feedIdHex: string): string {
 export function claimsToCSV(startRewardEpochId: number, endRewardEpoch: number, filename: string) {
   const feedData = getAllClaimsForRewardEpochRange(startRewardEpochId, endRewardEpoch);
   let csv =
-    "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoter\n";
+    "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoterId\n";
   csv += feedData
     .map(claim => {
       return `${claim.votingRoundId},${claim.rewardEpochId},${claim.beneficiary},${claim.voterIndex},${
         claim.signingWeightPct
-      },${claim.delegationWeightPct},${claim.cappedDelegationWeightPct},${Number(claim.amount).toString()},${
+      },${claim.delegationWeightPct},${claim.cappedDelegationWeightPct},${Number(claim.amount).toString()}.0,${
         ClaimType[claim.claimType]
       },${decodeFeed(claim.feedId)},${claim.offerIndex ?? ""},${claim.protocolTag ?? ""},${claim.rewardTypeTag ?? ""},${
         claim.rewardDetailTag
-      },${claim.burnedForVoter ?? ""}`;
+      },${claim.burnedForVoterId ?? ""}`;
     })
     .join("\n");
   writeFileSync(filename, csv);
