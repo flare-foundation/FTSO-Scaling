@@ -48,11 +48,12 @@ export async function tryFindNextRewardEpoch(
   state: IncrementalCalculationState,
   logger: Logger
 ): Promise<boolean> {
-  if (!state.nextRewardEpochIdentified) return false;
+  if (state.nextRewardEpochIdentified) return false;
   const lowestExpectedIndexerHistoryTime = await indexerClient.secureLowestTimestamp();
   const signingPolicyInitializedEvents = await indexerClient.getLatestSigningPolicyInitializedEvents(
     lowestExpectedIndexerHistoryTime
   );
+
   if (!signingPolicyInitializedEvents.data) {
     return false;
   }

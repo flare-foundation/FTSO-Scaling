@@ -71,8 +71,12 @@ export async function incrementalBatchCatchup(
   options: OptionalCommandOptions,
   logger: Logger
 ): Promise<number> {
+  const INCREMENTAL_BATCH_END_OFFSET = 5;
   const calculatedCurrentVotingRoundId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
-  const end = calculatedCurrentVotingRoundId - 5;
+  let end = calculatedCurrentVotingRoundId - INCREMENTAL_BATCH_END_OFFSET;
+  if (rewardEpochDuration.endVotingRoundId !== undefined) {
+    end = rewardEpochDuration.endVotingRoundId - INCREMENTAL_BATCH_END_OFFSET;
+  }
   logger.log("Using parallel processing for reward calculation data catchup");
   logger.log(options);
   logger.log("-------------------");

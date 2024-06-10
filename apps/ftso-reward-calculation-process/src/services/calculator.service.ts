@@ -144,6 +144,8 @@ export class CalculatorService {
         logger,
         options.useFastUpdatesData
       );
+      // The call above may create additional folder
+      state.maxVotingRoundIdFolder = Math.max(state.maxVotingRoundIdFolder, state.votingRoundId);
       logger.log(`Processing implications for ${state.votingRoundId}`);
       await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
       recordProgress(rewardEpochId);
