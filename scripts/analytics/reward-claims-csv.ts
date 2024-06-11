@@ -125,6 +125,8 @@ function decodeFeed(feedIdHex: string): string {
 }
 
 export function claimsToCSV(startRewardEpochId: number, endRewardEpoch: number, filename: string) {
+  let totalAmount = 0n;
+  let burnedAmount = 0n;
   const feedData = getAllClaimsForRewardEpochRange(startRewardEpochId, endRewardEpoch);
   let csv =
     "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoterId\n";
@@ -139,5 +141,14 @@ export function claimsToCSV(startRewardEpochId: number, endRewardEpoch: number, 
       },${claim.burnedForVoterId ?? ""}`;
     })
     .join("\n");
+  for (const claim of feedData) {
+    if (claim.amount > 0n) {
+      totalAmount += claim.amount;
+    }
+    if(claim.amount < 0n) {
+      burnedAmount += -claim.amount;
+    }
+  }
+  console.log(`Total: ${totalAmount}, burned: ${burnedAmount}`)
   writeFileSync(filename, csv);
 }
