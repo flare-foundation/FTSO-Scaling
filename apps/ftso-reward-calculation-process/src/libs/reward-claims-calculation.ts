@@ -69,6 +69,7 @@ export async function runCalculateRewardClaimWorker(
   dataManager: DataManagerForRewarding,
   options: OptionalCommandOptions
 ): Promise<void> {
+  const startTime = Date.now();
   const logger = new Logger();
   const rewardEpochId = options.rewardEpochId;
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
@@ -91,7 +92,11 @@ export async function runCalculateRewardClaimWorker(
       logger,
       options.useFastUpdatesData
     );
-
     recordProgress(rewardEpochId);
   }
+  logger.log(
+    `Claim calculation done for voting rounds ${startVotingRoundId}-${endVotingRoundId} in ${
+      Date.now() - startTime
+    } ms.`
+  );
 }

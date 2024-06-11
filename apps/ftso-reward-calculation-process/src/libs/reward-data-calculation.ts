@@ -136,6 +136,7 @@ export async function runCalculateRewardCalculationDataWorker(
   dataManager: DataManagerForRewarding,
   options: OptionalCommandOptions
 ): Promise<void> {
+  const startTime = Date.now();
   const logger = new Logger();
   const rewardEpochId = options.rewardEpochId;
 
@@ -148,6 +149,11 @@ export async function runCalculateRewardCalculationDataWorker(
     logger,
     options.useFastUpdatesData,
     options.tempRewardEpochFolder
+  );
+  logger.log(
+    `Reward calculation data calculated for ${options.startVotingRoundId}-${options.endVotingRoundId} took ${
+      Date.now() - startTime
+    }.`
   );
   recordProgress(rewardEpochId, options.tempRewardEpochFolder);
 }

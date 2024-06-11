@@ -75,9 +75,11 @@ export async function incrementalBatchCatchup(
   const calculatedCurrentVotingRoundId = EPOCH_SETTINGS().votingEpochForTime(Date.now());
   let end = calculatedCurrentVotingRoundId - INCREMENTAL_BATCH_END_OFFSET;
   if (rewardEpochDuration.endVotingRoundId !== undefined) {
-    end = rewardEpochDuration.endVotingRoundId - INCREMENTAL_BATCH_END_OFFSET;
+    end = Math.min(calculatedCurrentVotingRoundId, rewardEpochDuration.endVotingRoundId) - INCREMENTAL_BATCH_END_OFFSET;
   }
-  logger.log("Using parallel processing for reward calculation data catchup");
+  logger.log(
+    `Using parallel processing for reward calculation data catchup. Start from ${rewardEpochDuration.startVotingRoundId}, end at ${end}`
+  );
   logger.log(options);
   logger.log("-------------------");
   const pool = workerPool.pool(__dirname + "/../workers/calculation-data-worker.js", {
@@ -105,5 +107,52 @@ export async function incrementalBatchCatchup(
   await Promise.all(promises);
   await pool.terminate();
   logger.log(`Batch calculation for reward calculation data done: ${rewardEpochDuration.startVotingRoundId} - ${end}`);
+  return end;
+}
+
+export async function incrementalBatchClaimCatchup(
+  rewardEpochDuration: RewardEpochDuration,
+  state: IncrementalCalculationState,
+  options: OptionalCommandOptions,
+  logger: Logger
+) {
+  const startTime = Date.now();
+  const end = state.nextVotingRoundIdWithNoSecureRandom - 1;
+  logger.log(
+    `Using parallel processing for claim calculation data catchup. Start from ${rewardEpochDuration.startVotingRoundId}, end at ${end}`
+  );
+  logger.log(options);
+  logger.log("-------------------");
+  const pool = workerPool.pool(__dirname + "/../workers/claim-only-calculation-worker.js", {
+    maxWorkers: options.numberOfWorkers,
+    workerType: "thread",
+  });
+  const promises = [];
+  for (
+    let votingRoundId = rewardEpochDuration.startVotingRoundId;
+    votingRoundId <= end;
+    votingRoundId += options.batchSize
+  ) {
+    const endBatch = Math.min(votingRoundId + options.batchSize - 1, end);
+    const batchOptions = {
+      rewardEpochId: rewardEpochDuration.rewardEpochId,
+      calculateClaims: true,
+      startVotingRoundId: votingRoundId,
+      endVotingRoundId: endBatch,
+      isWorker: true,
+      useFastUpdatesData: options.useFastUpdatesData,
+    };
+
+    // logger.log(batchOptions);
+    promises.push(pool.exec("run", [batchOptions]));
+  }
+  await Promise.all(promises);
+  await pool.terminate();
+  logger.log(
+    `Batch calculation for reward claims done (${rewardEpochDuration.startVotingRoundId}-${end}) in ${
+      Date.now() - startTime
+    } ms`
+  );
+  state.nextVotingRoundForClaimCalculation = end + 1;
   return end;
 }

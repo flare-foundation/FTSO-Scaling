@@ -70,12 +70,7 @@ export async function calculateClaimsAndAggregate(
   }
 }
 
-export async function fixRandomNumbersOffersAndCalculateClaims(
-  dataManager: DataManagerForRewarding,
-  state: IncrementalCalculationState,
-  options: OptionalCommandOptions,
-  logger: Logger
-) {
+export function fixRandomNumbersAndOffers(state: IncrementalCalculationState, logger: Logger) {
   // fix random numbers
   const lastNextVotingRoundIdWithNoSecureRandom = state.nextVotingRoundIdWithNoSecureRandom;
   state.nextVotingRoundIdWithNoSecureRandom = processRandomNumberFixingRange(
@@ -103,31 +98,38 @@ export async function fixRandomNumbersOffersAndCalculateClaims(
         state.rewardEpochId + 1
       } from voting rounds ${lastNextVotingRoundIdWithNoSecureRandom}-${state.nextVotingRoundIdWithNoSecureRandom - 1}.`
     );
-    const rewardEpochDuration: RewardEpochDuration = {
-      rewardEpochId: state.rewardEpochInfo.rewardEpochId,
-      startVotingRoundId: state.startVotingRoundId,
-      endVotingRoundId: state.endVotingRoundId,
-      expectedEndUsed: false,
-    };
-
-    // calculate claims
-    for (
-      let tmpVotingRoundId = state.nextVotingRoundForClaimCalculation;
-      tmpVotingRoundId < state.nextVotingRoundIdWithNoSecureRandom;
-      tmpVotingRoundId++
-    ) {
-      await calculateClaimsAndAggregate(
-        dataManager,
-        rewardEpochDuration,
-        tmpVotingRoundId,
-        true, // aggregate
-        options.retryDelayMs,
-        logger,
-        false //options.useFastUpdatesData
-      );
-      logger.log(`Claims calculated for voting round ${tmpVotingRoundId}.`);
-      recordProgress(state.rewardEpochId);
-    }
-    state.nextVotingRoundForClaimCalculation = state.nextVotingRoundIdWithNoSecureRandom;
   }
+}
+
+export async function calculateAndAggregateRemainingClaims(
+  dataManager: DataManagerForRewarding,
+  state: IncrementalCalculationState,
+  options: OptionalCommandOptions,
+  logger: Logger
+) {
+  const rewardEpochDuration: RewardEpochDuration = {
+    rewardEpochId: state.rewardEpochInfo.rewardEpochId,
+    startVotingRoundId: state.startVotingRoundId,
+    endVotingRoundId: state.endVotingRoundId,
+    expectedEndUsed: false,
+  };
+
+  for (
+    let tmpVotingRoundId = state.nextVotingRoundForClaimCalculation;
+    tmpVotingRoundId < state.nextVotingRoundIdWithNoSecureRandom;
+    tmpVotingRoundId++
+  ) {
+    await calculateClaimsAndAggregate(
+      dataManager,
+      rewardEpochDuration,
+      tmpVotingRoundId,
+      true, // aggregate
+      options.retryDelayMs,
+      logger,
+      false //options.useFastUpdatesData
+    );
+    logger.log(`Claims calculated for voting round ${tmpVotingRoundId}.`);
+    recordProgress(state.rewardEpochId);
+  }
+  state.nextVotingRoundForClaimCalculation = state.nextVotingRoundIdWithNoSecureRandom;
 }
