@@ -19,7 +19,7 @@ import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-u
 // Allowing for two options in regard to conditioning rewards on existence of median rewards.
 const BURN_NON_ELIGIBLE_REWARDS = true;
 
-export enum SigningWeightRewardClaimType {
+export enum SigningRewardClaimType {
   NO_MOST_FREQUENT_SIGNATURES = "NO_MOST_FREQUENT_SIGNATURES",
   NO_WEIGHT_OF_ELIGIBLE_SIGNERS = "NO_WEIGHT_OF_ELIGIBLE_SIGNERS",
   CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER = "CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER",
@@ -67,7 +67,7 @@ export function calculateSigningRewards(
         feedId: offer.feedId,
         protocolTag: "" + FTSO2_PROTOCOL_ID,
         rewardTypeTag: RewardTypePrefix.SIGNING,
-        rewardDetailTag: SigningWeightRewardClaimType.NO_MOST_FREQUENT_SIGNATURES,
+        rewardDetailTag: SigningRewardClaimType.NO_MOST_FREQUENT_SIGNATURES,
       };
       return [backClaim];
     }
@@ -123,7 +123,7 @@ export function calculateSigningRewards(
       feedId: offer.feedId,
       protocolTag: "" + FTSO2_PROTOCOL_ID,
       rewardTypeTag: RewardTypePrefix.SIGNING,
-      rewardDetailTag: SigningWeightRewardClaimType.NO_WEIGHT_OF_ELIGIBLE_SIGNERS,
+      rewardDetailTag: SigningRewardClaimType.NO_WEIGHT_OF_ELIGIBLE_SIGNERS,
     };
     return [backClaim];
   }
@@ -176,7 +176,7 @@ export function calculateSigningRewards(
         feedId: offer.feedId,
         protocolTag: "" + FTSO2_PROTOCOL_ID,
         rewardTypeTag: RewardTypePrefix.SIGNING,
-        rewardDetailTag: SigningWeightRewardClaimType.CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER,
+        rewardDetailTag: SigningRewardClaimType.CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER,
         burnedForVoter: signer,
       };
       resultClaims.push(backClaim);
@@ -201,7 +201,7 @@ export function calculateSigningRewards(
       feedId: offer.feedId,
       protocolTag: "" + FTSO2_PROTOCOL_ID,
       rewardTypeTag: RewardTypePrefix.SIGNING,
-      rewardDetailTag: SigningWeightRewardClaimType.CLAIM_BACK_NO_CLAIMS,
+      rewardDetailTag: SigningRewardClaimType.CLAIM_BACK_NO_CLAIMS,
     };
     return [backClaim];
   }

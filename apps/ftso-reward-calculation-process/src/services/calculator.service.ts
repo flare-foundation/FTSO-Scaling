@@ -32,14 +32,15 @@ import {
   latestRewardEpochStart,
   tryFindNextRewardEpoch,
 } from "../libs/calculator-utils";
-import { claimAggregation, fixRandomNumbersOffersAndCalculateClaims } from "../libs/claim-utils";
-import { fullRoundOfferCalculation, initializeTemplateOffers } from "../libs/offer-utils";
-import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
+import { calculateAndAggregateRemainingClaims, claimAggregation, fixRandomNumbersAndOffers } from "../libs/claim-utils";
 import {
   cleanupAndReturnFinalEpochDuration,
   incrementalBatchCatchup,
+  incrementalBatchClaimCatchup,
   incrementalExtendRewardEpochDuration,
 } from "../libs/incremental-calculation-utils";
+import { fullRoundOfferCalculation, initializeTemplateOffers } from "../libs/offer-utils";
+import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
 
@@ -119,7 +120,7 @@ export class CalculatorService {
     logger.log(`Incremental calculation for reward epoch ${rewardEpochId} starting from voting round ${end + 1}`);
     const state: IncrementalCalculationState = {
       rewardEpochId,
-      votingRoundId: end + 1,
+      votingRoundId: end,
       startVotingRoundId: rewardEpochDuration.startVotingRoundId,
       endVotingRoundId: rewardEpochDuration.endVotingRoundId,
       finalProcessedVotingRoundId: rewardEpochDuration.endVotingRoundId + FUTURE_VOTING_ROUNDS(),
@@ -129,7 +130,17 @@ export class CalculatorService {
       nextVotingRoundForClaimCalculation: rewardEpochDuration.startVotingRoundId,
       rewardEpochInfo,
     };
+    fixRandomNumbersAndOffers(state, logger);
+    await incrementalBatchClaimCatchup(rewardEpochDuration, state, options, logger);
+    for (
+      let votingRoundId = rewardEpochDuration.startVotingRoundId;
+      votingRoundId < state.nextVotingRoundForClaimCalculation;
+      votingRoundId++
+    ) {
+      claimAggregation(rewardEpochDuration, votingRoundId, logger);
+    }
 
+    state.votingRoundId = end + 1;
     while (state.votingRoundId <= state.finalProcessedVotingRoundId) {
       if (state.votingRoundId === state.finalProcessedVotingRoundId && !state.nextRewardEpochIdentified) {
         incrementalExtendRewardEpochDuration(state);
@@ -147,7 +158,9 @@ export class CalculatorService {
       // The call above may create additional folder
       state.maxVotingRoundIdFolder = Math.max(state.maxVotingRoundIdFolder, state.votingRoundId);
       logger.log(`Processing implications for ${state.votingRoundId}`);
-      await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
+      // await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
+      fixRandomNumbersAndOffers(state, logger);
+      await calculateAndAggregateRemainingClaims(this.dataManager, state, options, logger);
       recordProgress(rewardEpochId);
 
       state.votingRoundId++;

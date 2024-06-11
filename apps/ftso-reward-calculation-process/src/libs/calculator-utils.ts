@@ -117,6 +117,7 @@ export async function calculationOfRewardCalculationDataForRange(
   tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
+  const startTime = Date.now();
   let done = false;
   while (!done) {
     try {
@@ -144,5 +145,10 @@ export async function calculationOfRewardCalculationDataForRange(
       logger.log(`Sleeping for ${delay / 1000}s before retrying...`);
       await sleepFor(delay);
     }
+    logger.log(
+      `Reward calculation for voting rounds: ${firstVotingRoundId}-${lastVotingRoundId} took ${
+        Date.now() - startTime
+      }ms`
+    );
   }
 }
