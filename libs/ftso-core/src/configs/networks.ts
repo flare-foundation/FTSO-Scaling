@@ -30,7 +30,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   FastUpdater: { name: "FastUpdater", address: "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9" },
   FastUpdateIncentiveManager: {
     name: "FastUpdateIncentiveManager",
-    address: "0xc1a22A1d295e829Caf3be61bd1E11E5eEd7f0F15",
+    address: "0x8c45666369B174806E1AB78D989ddd79a3267F3b",
   },
 };
 
