@@ -29,6 +29,8 @@ yarn nest build ftso-reward-calculation-process
 export FROM_REWARD_EPOCH_ID=2733
 # export TEST_FU_INFLATION_REWARD_AMOUNT=10000000000000000000000  # 10,000 CFLR
 node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -b 40 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
+
+# Incremental calculation
 # node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -l -b 40 -w 10 -m 10000
 
 # ---------------------------------------------------------------------------------------------------------------------------

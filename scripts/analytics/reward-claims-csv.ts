@@ -6,6 +6,7 @@ import { deserializeRewardEpochInfo } from "../../libs/ftso-core/src/utils/stat-
 export interface CSVRewardClaim extends IPartialRewardClaim {
   rewardEpochId: number;
   identityAddress: string;
+  delegationAddress: string;
   voterIndex: number;
   signingWeightPct: number;
   delegationWeightPct: number;
@@ -20,6 +21,7 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
     const signingAddressToVoterId = new Map<string, number>();
     const identityAddressToVoterId = new Map<string, number>();
     const voterIdToIdentityAddress = new Map<number, string>();
+    const voterIdToDelegationAddress = new Map<number, string>();
     const delegationAddressToVoterId = new Map<string, number>();
     const voterIdToSigningWeightPct = new Map<number, number>();
     const voterIdToDelegationWeightPct = new Map<number, number>();
@@ -47,6 +49,10 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
         rewardEpochInfo.voterRegistrationInfo[i].voterRegistrationInfo.delegationAddress.toLowerCase(),
         i
       );
+      voterIdToDelegationAddress.set(
+        i,
+        rewardEpochInfo.voterRegistrationInfo[i].voterRegistrationInfo.delegationAddress.toLowerCase()
+      );
       voterIdToSigningWeightPct.set(i, (rewardEpochInfo.signingPolicy.weights[i] / totalSigningWeight) * 100);
       voterIdToDelegationWeightPct.set(
         i,
@@ -73,6 +79,7 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
         for (const claim of partialClaims) {
           let voterIndex = -1;
           let identityAddress = "";
+          let delegationAddress = "";
           let signingWeightPct = 0;
           let delegationWeightPct = 0;
           let cappedDelegationWeightPct = 0;
@@ -80,14 +87,17 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
           if (claim.claimType === ClaimType.FEE) {
             voterIndex = identityAddressToVoterId.get(claim.beneficiary.toLowerCase());
             identityAddress = claim.beneficiary.toLowerCase();
+            delegationAddress = voterIdToDelegationAddress.get(voterIndex) ?? "";
           } else if (claim.claimType === ClaimType.WNAT) {
             voterIndex = delegationAddressToVoterId.get(claim.beneficiary.toLowerCase());
             identityAddress = voterIdToIdentityAddress.get(voterIndex) ?? "";
+            delegationAddress = voterIdToDelegationAddress.get(voterIndex) ?? "";
           } else if (claim.claimType === ClaimType.DIRECT) {
             const tryIndex = signingAddressToVoterId.get(claim.beneficiary.toLowerCase());
             if (tryIndex !== undefined) {
               voterIndex = tryIndex;
               identityAddress = voterIdToIdentityAddress.get(voterIndex) ?? "";
+              delegationAddress = voterIdToDelegationAddress.get(voterIndex) ?? "";
             }
           }
           if (voterIndex >= 0) {
@@ -100,6 +110,7 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
             ...claim,
             rewardEpochId,
             identityAddress,
+            delegationAddress,
             voterIndex,
             signingWeightPct,
             delegationWeightPct,
@@ -129,7 +140,7 @@ export function claimsToCSV(startRewardEpochId: number, endRewardEpoch: number, 
   let burnedAmount = 0n;
   const feedData = getAllClaimsForRewardEpochRange(startRewardEpochId, endRewardEpoch);
   let csv =
-    "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoterId\n";
+    "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoterId,identityAddress,delegationAddress\n";
   csv += feedData
     .map(claim => {
       return `${claim.votingRoundId},${claim.rewardEpochId},${claim.beneficiary},${claim.voterIndex},${
@@ -138,7 +149,7 @@ export function claimsToCSV(startRewardEpochId: number, endRewardEpoch: number, 
         ClaimType[claim.claimType]
       },${decodeFeed(claim.feedId)},${claim.offerIndex ?? ""},${claim.protocolTag ?? ""},${claim.rewardTypeTag ?? ""},${
         claim.rewardDetailTag
-      },${claim.burnedForVoterId ?? ""}`;
+      },${claim.burnedForVoterId ?? ""},${claim.identityAddress},${claim.delegationAddress}`;
     })
     .join("\n");
   for (const claim of feedData) {
