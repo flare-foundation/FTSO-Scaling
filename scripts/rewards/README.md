@@ -80,20 +80,20 @@ Aggregated reward claims are obtained by aggregating the detailed reward claims 
 ### Detailed reward claims
 
 Detailed reward claims are records containing the following fields:
-- `votingRoundId` - voting round id for which the claim is calculated
+- `votingRoundId` - voting round id for which the claim is calculated.
 - `beneficiary` - address or node id of the beneficiary of the claim. The interpretation (whether it is an address or node id) of the field depends on the `claimType`.
-- `claimType` - type of the claim, one of the following
-  - 0 - `DIRECT` - a direct reward claim to an address
-  - 1 - `FEE` - the claim represents the fee of a data provider. In this case beneficiary field is the identity address of a data provider who gets the fee.
-  - 2 - `WNAT` - the claim represents the part of the reward earned by the data provider that gets distributed to the community of delegators. The beneficiary field is the delegation address of the data provider.
-  - 3 - `MIRROR` - the claim represents the part of the reward earned by the data provider that gets distributed to the community of stakers and stake delegators on the nodes that belong to the data provider. This is relevant only on Coston2 and Flare networks. The beneficiary is the relevant node id (encoded into 20-byte code) on which the stakes that get the reward amount are.
+- `claimType` - [type of the claim](../../libs/ftso-core/src/utils/RewardClaim.ts), one of the following:
+  - 0 - `DIRECT` - a direct reward claim to an address.
+  - 1 - `FEE` - the reward claim represents the fee of a data provider. In this case beneficiary field is the identity address of a data provider who gets the fee.
+  - 2 - `WNAT` - the reward claim represents the part of the reward earned by the data provider that gets distributed to the community of delegators. The beneficiary field is the delegation address of the data provider.
+  - 3 - `MIRROR` - the reward claim represents the part of the reward earned by the data provider that gets distributed to the community of stakers and stake delegators on the nodes that belong to the data provider. This is relevant only on Coston2 and Flare networks. The `beneficiary` is the relevant node id (encoded into 20-byte code) on which the stakes that get the reward amount are provided.
   - 4 - `CCHAIN` - not used, possible future use.
 - `amount` - amount of the claim.
 - `offerIndex` - reference to inflation or community offer from which the reward comes. Not relevant.
 - `feedId` - feed, if relevant, from which currency the claim was generated, in particular which currency was chosen for the specific voting round.
-- `protocolTag` - see below
-- `rewardTypeTag` - see below
-- `rewardDetailTag` - see below
+- `protocolTag` - see below.
+- `rewardTypeTag` - see below.
+- `rewardDetailTag` - see below.
 
 ## Classification of the reward claims
 
@@ -105,18 +105,18 @@ The reward claims are marked with three tags:
 ### Protocol tag
 
 Possible values of protocolTag are:
-- 100 - Indicates FTSO scaling protocol
-- 255 - FTSO fast updates protocol
+- 100 - Indicates FTSO scaling protocol.
+- 255 - FTSO fast updates protocol.
 
 ### Reward type tag
 
-Reward type tag indicates which component of rewarding or penalization in relevant protocol participated in the reward claim. The options are as follows:
-- `Median` - accuracy reward claim for FTSO scaling
-- `Signing` - timely signing reward claim for FTSO scaling
-- `Finalization` - prompt finalization reward for FTSO scaling
-- `Double signers` - penalization for double signing in FTSO scaling protocol
-- `Reveal offenders` - penalization for reveal offenders in FTSO scaling protocol
-- `Fast updates accuracy` - accuracy reward for FAST updates protocol
+[Reward type tag](../../libs/ftso-core/src/reward-calculation/RewardTypePrefix.ts) indicates which component of rewarding or penalization in relevant protocol participated in the reward claim. The options are as follows:
+- `Median` - accuracy reward claim for FTSO scaling.
+- `Signing` - timely signing reward claim for FTSO scaling.
+- `Finalization` - prompt finalization reward for FTSO scaling.
+- `Double signers` - penalization for double signing in FTSO scaling protocol.
+- `Reveal offenders` - penalization for reveal offenders in FTSO scaling protocol.
+- `Fast updates accuracy` - accuracy reward for FAST updates protocol.
 - `Full offer claim back` - full reward offer burning/claim back in FTSO scaling protocol. Happens when a voting round does not receive a secure reward random number and the rewarded feed cannot be chosen. Consequently, this is a reward claim to claim to the burn address. Detail tags are irrelevant in this case and are empty.
 
 ### Reward detail tag
@@ -125,7 +125,7 @@ Reward detail tag depends on reward type tag. Hence both tags constitute a two l
 
 #### For `Median`
 
-These detail tags appear only in claims generated FTSO scaling protocol rewarding, when the reward type tag is Median. 
+These [detail tags](../../libs/ftso-core/src/reward-calculation/reward-median.ts) appear only in claims generated FTSO scaling protocol rewarding, when the reward type tag is Median. 
 - `LOW_TURNOUT_CLAIM_BACK` - the weight that participated in the weighted median algorithm is too low compared to the total voting weight. This makes this claim to be burned (assigned to claim back address).
 - `NO_NORMALIZED_WEIGHT` - a weight normalization is calculated to avoid fractions during the distribution of the rewards for primary and secondary bands. If the total normalized weight is 0, then the burn claim with this tag is generated. 
 - `FEE` - fee part of the accuracy reward. The beneficiary of such a claim is the identity address of the data provider.
@@ -133,7 +133,7 @@ These detail tags appear only in claims generated FTSO scaling protocol rewardin
 
 #### Reward distribution according to signing weight
 
-When rewards are distributed with reward type tags Signing and Finalization to a specific voter, the following detail tags can appear.
+When rewards are distributed with reward type tags Signing and Finalization to a specific voter, the following [detail tags](../../libs/ftso-core/src/reward-calculation/reward-signing-split.ts) can appear.
 - `NO_VOTER_WEIGHT` - extreme case where a data provider has zero total weight but should receive some reward. In this case the claim gets burned (beneficiary is burn or claim back address). Claim type is `DIRECT`.
 - `FEE_FOR_DELEGATION_AND_STAKING` - fee claim for data provider, beneficiary is data provider’s identity address. Claim type is `FEE`.
 - `DELEGATION_COMMUNITY_REWARD` - claim for a part of the signing weight of a data provider obtained from delegations. The beneficiary is the delegation address of the data provider. Claim type is `WNAT`.
@@ -141,23 +141,23 @@ When rewards are distributed with reward type tags Signing and Finalization to a
 
 #### For `Signing`
 
-In case some parts of funds intended for correct signing and signature deposition get burned, one of the following tags is used.
-- `NO_MOST_FREQUENT_SIGNATURES` - In case that finalization for the voting round N is not done by the end of the voting epoch N+1 and there are no signatures the burn claim is generated.
+In case some parts of funds intended for correct signing and signature deposition get burned, one of the following [detail tags](../../libs/ftso-core/src/reward-calculation/reward-signing.ts) are used.
+- `NO_MOST_FREQUENT_SIGNATURES` - In case that finalization for the voting round N is not done by the end of the voting epoch `N + 1` and there are no signatures the burn claim is generated.
 - `NO_WEIGHT_OF_ELIGIBLE_SIGNERS` - eligible signers (the ones that earned non-zero reward from accuracy part) have total weight 0.
 - `CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER` - reward claim for a non-eligible signer in a voting round is burned and marked with this tag.
 - `CLAIM_BACK_NO_CLAIMS` - if there are no reward claims by eligible signers, the remaining funds get burned and marked with this tag.
 
 #### For `Finalization`
 
-When finalizing the following reward detail tags are used.
-- `NO_FINALIZATION` - no finalization was done for the voting round N before the end of the voting epoch N+1. The burn claim is generated.
+When finalizing the following [reward detail tags](../../libs/ftso-core/src/reward-calculation/reward-finalization.ts) are used.
+- `NO_FINALIZATION` - no finalization was done for the voting round N before the end of the voting epoch `N + 1`. The burn claim is generated.
 - `OUTSIDE_OF_GRACE_PERIOD` - the first finalization was done outside the grace period for finalization (end of reveal + 20s) and the address that did the finalization gets full finalization reward claim marked by this tag.
 - `FINALIZED_BUT_NO_ELIGIBLE_VOTERS` - the finalization was done during the grace period for finalization but by a non-eligible voter, while on the other hand there were no eligible finalizers submitting valid finalization data during the grace period. Hence the burn claim is generated.
 - `CLAIM_BACK_FOR_UNDISTRIBUTED_REWARDS` - a joint burn claim for remaining funds for rewarding prompt finalizing. E.g. some of data providers selected for finalization did not submit the finalization data or became non-eligible due to 0 accuracy rewards. 
 
 #### Fast updates accuracy
 
-Relevant for FTSOv2 fast updates sub protocol (not FTSO scaling)
+[Detail tags](../../libs/ftso-core/src/reward-calculation/reward-fast-updates.ts) relevant for FTSOv2 fast updates sub protocol (not FTSO scaling).
 - `NO_SUBMISSIONS` - no fast updates submissions during the voting epoch so nobody is eligible for rewards. A burn claim is generated.
 - `NO_MEDIAN_PRICE` - FTSO scaling protocol did not produce a median price so comparison with fast updates price is not possible, hence the burn claim is generated.
 - `MISSED_BAND` - burn claim for total voting round rewards, when the benchmark fast update price misses the prescribed band around the FTSO scaling price for specific voting round. 
@@ -178,7 +178,7 @@ The data is calculated into the folder `calculations`. For each reward epoch `re
 ### Public reward data
 
 Public reward data includes the following files:
-- `reward-epoch-info.json` - extracted data that are input to reward calculation.
+- `reward-epoch-info.json` - extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
 - `reward-distribution-data.json` - all aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib).
 
 ### Detailed reward calculation data
@@ -189,8 +189,16 @@ In folder `calculations/<rewardEpochId>`
 - `reward-epoch-info.json` - see above (the only difference is that big numbers are serialized as `"123n"` instead `"123"`)
 - `reward-distribution-data.json`- see above (the only difference is that big numbers are serialized as `"123n"` instead `"123"`)
 - `final-reward-claims.json` - final list of claim
+- `calculation-status.json` - status file about on-going reward calculation.  
 - several `*-progress.json` files for intermediate (during calculation) progress monitoring
 
+In folders `calculations/<rewardEpochId>/<votingRoundId>`
+- `reward-calculation-data.json` - majority of data that is needed as the input into reward claim calculation.
+- `offers.json` - partial offers (usually just one) holding total reward funds for the voting round in FTSO scaling protocol.
+- `fast-updates-offers.json` - partial offers for FTSO fast updates protocol
+- `feed-values.json` - Merkle tree data with proofs for price feeds and random.
+- `claims.json` - detailed reward claims for the voting round. Include the claims from both protocols.
+- `aggregated-claims.json` - aggregated partial claims from previous voting rounds and `claims.json`.
 
 
 

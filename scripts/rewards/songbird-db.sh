@@ -10,12 +10,10 @@ export DB_PASSWORD=root
 export DB_NAME=flare_ftso_indexer
 
 export REMOVE_ANNOYING_MESSAGES=true
-# Start reward epoch id on Coston
-export START_REWARD_EPOCH_ID=2344
-# export START_REWARD_EPOCH_ID=2367
 
-# check here: https://coston-explorer.flare.network/address/0x6e5A85aB09c2056A9Af46c3Ca5a5A1E6752C8D79/read-contract#address-tabs
-# 9.  getCurrentRewardEpochId, and use one epoch less for test (required indexer history is 4 epochs/ 1 day)
+
+# check here: https://songbird-explorer.flare.network/address/0x421c69E22f48e14Fc2d2Ee3812c59bfb81c38516/read-contract#address-tabs
+# 9.  getCurrentRewardEpochId, and use one epoch less for test (required indexer history is 4 epochs/ 14 days)
 # export REWARD_EPOCH_ID=2349
 
 # COMPILATION
