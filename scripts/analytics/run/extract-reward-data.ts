@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, write, writeFileSync } from "fs";
 import path from "path/posix";
-import { REWARD_DISTRIBUTION_DATA_FILE, REWARD_EPOCH_INFO_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
+import { REWARD_DISTRIBUTION_DATA_FILE, REWARD_DISTRIBUTION_DATA_TUPLES_FILE, REWARD_EPOCH_INFO_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
 import { CALCULATIONS_FOLDER } from "../../../libs/ftso-core/src/configs/networks";
 import { bigIntReviver } from "../../../libs/ftso-core/src/utils/big-number-serialization";
+import { IRewardClaimWithProof } from "../../../libs/ftso-core/src/utils/RewardClaim";
 
 const REWARDS_FOLDER = "rewards-data"; 
 
@@ -11,6 +12,10 @@ export function bigIntReplacerNoN(key: string, value: any): any {
     return value.toString();
   }
   return value;
+}
+
+export function tuplifyClaim(claim: IRewardClaimWithProof) {
+  return [claim.merkleProof, [claim.body.rewardEpochId, claim.body.beneficiary, claim.body.amount, claim.body.claimType]];
 }
 
 async function main() {
@@ -54,6 +59,14 @@ async function main() {
     console.log("Writing to", targetFile);
     writeFileSync(targetFile, JSON.stringify(data, bigIntReplacerNoN, 2));
   }
+
+  const sourceFile = path.join(rewardEpochFolder, REWARD_DISTRIBUTION_DATA_FILE);
+  const targetFile = path.join(rewardEpochFolder, REWARD_DISTRIBUTION_DATA_TUPLES_FILE);
+  const data = JSON.parse(readFileSync(sourceFile, "utf8"));
+  const rewardClaims = data.rewardClaims;
+  data.rewardClaims = rewardClaims.map(claim => tuplifyClaim(claim));
+  console.log("Writing to", targetFile);
+  writeFileSync(targetFile, JSON.stringify(data, bigIntReplacerNoN, 2));
 }
 
 main()

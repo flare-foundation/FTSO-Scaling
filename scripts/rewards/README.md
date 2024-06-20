@@ -180,6 +180,7 @@ The data is calculated into the folder `calculations`. For each reward epoch `re
 Public reward data includes the following files:
 - `reward-epoch-info.json` - extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
 - `reward-distribution-data.json` - all aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib).
+- `reward-distribution-data-tuples.json` - Same as `reward-distribution-data.json`, only that reward claims with proofs are encoded as tuples instead of JSON-like structs. This is useful for claiming using the blockchain explorer interface.
 
 ### Detailed reward calculation data
 
@@ -200,8 +201,43 @@ In folders `calculations/<rewardEpochId>/<votingRoundId>`
 - `claims.json` - detailed reward claims for the voting round. Include the claims from both protocols.
 - `aggregated-claims.json` - aggregated partial claims from previous voting rounds and `claims.json`.
 
+## Claiming rewards
 
+Claiming is done using the function [`claim(...)`](https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/blob/main/contracts/userInterfaces/IRewardManager.sol?ref_type=heads#L85) on `RewardManager` smart contract
+Delegators and stake delegators can use the claim function without any proofs, once somebody (usually this is done by a dedicated bot, but it may be done essentially by anyone) initializes all the reward claims of claim type `2-WNAT` and `3-MIRROR` (the latter is relevant on Flare and Coston2 only). Initialization is done using (multiple) calls of function [`initialiseWeightBasedClaims(...)`](https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/blob/main/contracts/userInterfaces/IRewardManager.sol?ref_type=heads#L115). Once all the proofs of those types of claims for some reward epoch id are initialized, claiming without proofs by delegators and stake delegators are enabled for that reward epoch id. Note that such claims actually claim all the rewards for the reward owner address, also unclaimed rewards from previous 
+reward epochs, up to the claimed one.
 
+On the other hand, data providers wanting to get their fees (claim type `1-FEE` and direct claims `0-DIRECT`) need to provide an array of claims with Merkle proofs as the last parameter of `claim(...)` function. If this is done using one of the explorers, the claims with Merkle proofs structs should be encoded as array tuples. Such an encoding that can be immediately used in explorer interface is provided in files `reward-distribution-data-tuples.json`. For example:
 
+Consider the following file [`rewards-data/songbird/196/reward-distribution-data-tuples.json`](../../rewards-data/songbird/196/reward-distribution-data-tuples.json). The first claim in the array under the key `rewardClaims` looks tuple encoded like this:
 
+```
+[
+  [
+    "0xda8b514526d9ac79c13c1f63226c5c1b27b368ff6852b64a5f03ba7a56ffec5c",
+    "0x5c56e5f93353a52dca455ad173db2650b226ede83cd523c6218627b2eb610847",
+    "0x969000b68be46a0202be7b46b0e637e7e154b3520f7e4c2a0f44b1bfda58e71c",
+    "0x7f8415ae69b13b6d951be847c480719cebe22540daccc50845b44c5de2bfbb74",
+    "0xccdc296a1d3cbfe55ee55655212dafda624cec02f6f18eb0ec5d678269dd551a",
+    "0x0f5b21a211c8acb954e5a63f76374eef4edb4443315167b89f4455581c0cc0f4",
+    "0x9592cc6d8d016de2f0c324cbb6ca670c1dc5e71d2bf3bfacaabd68222c2729f3"
+  ],
+  [
+    196,
+    "0xee6f6572cfeb3467ce5f3572bea7c5fd6d2b1725",
+    "9472868282415650382450",
+    1
+  ]
+]
+```
 
+[Songbird explorer](https://songbird-explorer.flare.network/address/0x8A80583BD5A5Cd8f68De585163259D61Ea8dc904/write-contract#address-tabs) can be used for claiming (function `4. claim`).
+
+The following parameters should be provided:
+- `_rewardOwner` - `beneficiary` in the list of `_proofs`
+- `_recipient` - any address.
+- `_rewardEpochId` - reward epoch id as in `_proofs`.
+- `_wrap` - option to directly wrap the reward to `WFLR` (`WSGB`) on the beneficiary account.
+- `_proofs` - an array of proofs encoded as tuples (see above). For example if using one proof as above, one has to wrap it in additional brackets indicating the array (like `[...]` where the tuple encoded proof should be used instead of `...`). 
+
+Note that each direct or fee claim is independent. Hence, for example, one can freely first claim the rewards from later reward epoch and then for earlier. Once a specific claim is paid out, it cannot be used anymore to receive a reward.

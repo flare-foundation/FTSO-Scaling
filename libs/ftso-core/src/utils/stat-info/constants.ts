@@ -8,6 +8,7 @@ export const REWARD_EPOCH_INFO_FILE = "reward-epoch-info.json";
 export const REWARD_CALCULATION_DATA_FILE = "reward-calculation-data.json";
 export const FINAL_REWARD_CLAIMS_FILE = "final-reward-claims.json";
 export const REWARD_DISTRIBUTION_DATA_FILE = "reward-distribution-data.json";
+export const REWARD_DISTRIBUTION_DATA_TUPLES_FILE = "reward-distribution-data-tuples.json";
 
 export const OFFER_DISTRIBUTION_PROGRESS_FILE = "offer-distribution-progress.json";
 export const FEED_CALCULATION_PROGRESS_FILE = "feed-calculation-progress.json";
