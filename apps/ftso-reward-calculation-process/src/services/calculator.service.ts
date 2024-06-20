@@ -72,7 +72,7 @@ export class CalculatorService {
 
   /**
    * Performs incremental calculation of reward calculation data for the ongoing reward epoch.
-   * It tries to detect
+   * It tries to detect current reward epoch from the system time.
    */
   async runRewardCalculationIncremental(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
     const logger = new Logger();
@@ -304,8 +304,10 @@ export class CalculatorService {
       return;
     }
     if (options.incrementalCalculation) {
-      await this.runRewardCalculationIncremental(options);
-      return;
+      while (true) {
+        // Ends when the rewards for reward epoch are fully processed.
+        await this.runRewardCalculationIncremental(options);
+      }
     }
   }
 }
