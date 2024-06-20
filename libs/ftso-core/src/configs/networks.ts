@@ -58,8 +58,8 @@ const SONGBIRD_CONFIG: NetworkContractAddresses = {
   VoterRegistry: { name: "VoterRegistry", address: "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
-  FastUpdater: { name: "FastUpdater", address: "" },
-  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116" },
+  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006" },
 };
 
 export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird";
