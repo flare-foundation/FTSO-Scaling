@@ -2,7 +2,8 @@
 
 The repository contains services to support [FTSO Scaling protocol](./protocol/README.md) which include:
 - [Data provider service](./apps/ftso-data-provider/src/README.md)
-- [Reward calculator service](./apps/ftso-reward-calculator/src/README.md)
+- [Reward calculator](./scripts/rewards/README.md)
+- [Reward data analytics scripts](./scripts/analytics/README.md)
 
 The services are [Nest.js](https://nestjs.com/) applications which use logic  that is implemented in [FTSO core library](./libs/ftso-core/)
 
@@ -26,7 +27,9 @@ node dist/apps/ftso-data-provider/apps/ftso-data-provider/src/main.js
 
 ## FTSO Reward Calculator (experimental)
 
-Same as above, except for running the code use 
-```bash
-node dist/apps/ftso-reward-calculator/src/main.js
-```
+[Reward calculator](./scripts/rewards/README.md) is a command line script that calculates rewards for FTSOv2 protocols.
+It uses the [Flare system C-chain indexer](https://github.com/flare-foundation/flare-system-c-chain-indexer) database.
+
+## FTSO Reward data analytics scripts
+
+A [few scripts](scripts/analytics/README.md) that enable insight into reward calculation data.

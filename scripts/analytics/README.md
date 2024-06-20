@@ -9,7 +9,7 @@ Currently, calculations for Coston only can be done.
 Use:
 
 ```bash
-./scripts/coston-db.sh
+./scripts/rewards/coston-db.sh
 ```
 This will trigger calculations from reward epoch id 2380 on. If other ranges are needed, parameters of the call in the file should be adjusted accordingly.
 

@@ -26,7 +26,7 @@ yarn nest build ftso-reward-calculation-process
 # Calculating all reward data from the starting reward epoch id. The calculation of claims is parallelized. 
 # In the current (ongoing) reward epoch the calculation is switched to incremental, as data becomes available. 
 # If the data for a specific reward epoch id is already available, the calculation is skipped.
-export FROM_REWARD_EPOCH_ID=2733
+export FROM_REWARD_EPOCH_ID=2773
 # export TEST_FU_INFLATION_REWARD_AMOUNT=10000000000000000000000  # 10,000 CFLR
 node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -b 40 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
 

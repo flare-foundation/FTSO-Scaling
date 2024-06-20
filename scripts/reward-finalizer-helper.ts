@@ -4,7 +4,7 @@
 
 The tool bases on calculated data in the `calculations` folder. These can be calculated using the script
 
-./scripts/coston-db.sh
+./scripts/rewards/coston-db.sh
 
 For calculation of specific reward epoch set the parameters in the call in the script accordingly.
 Once the relevant reward epoch data are calculated, the tool can be used to:
