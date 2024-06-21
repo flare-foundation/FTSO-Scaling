@@ -11,6 +11,7 @@ import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
 import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils/stat-info/final-reward-claims";
+import { getIncrementalCalculationsTempRewards, serializeIncrementalCalculationsTempRewards } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-rewards";
 import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
@@ -137,8 +138,11 @@ export class CalculatorService {
       votingRoundId < state.nextVotingRoundForClaimCalculation;
       votingRoundId++
     ) {
-      claimAggregation(rewardEpochDuration, votingRoundId, logger);
+      claimAggregation(rewardEpochDuration, votingRoundId, logger, true);
     }
+
+    const tempClaimData = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, state.nextVotingRoundForClaimCalculation - 1);
+    serializeIncrementalCalculationsTempRewards(tempClaimData);
 
     state.votingRoundId = end + 1;
     while (state.votingRoundId <= state.finalProcessedVotingRoundId) {
@@ -161,6 +165,10 @@ export class CalculatorService {
       // await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
       fixRandomNumbersAndOffers(state, logger);
       await calculateAndAggregateRemainingClaims(this.dataManager, state, options, logger);
+
+      const tempClaimData = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, state.nextVotingRoundForClaimCalculation - 1);
+      serializeIncrementalCalculationsTempRewards(tempClaimData);
+  
       recordProgress(rewardEpochId);
 
       state.votingRoundId++;

@@ -270,7 +270,7 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
   }
   logger.log("CLAIM SUMMARY");
   logger.log(`Total value: ${flrFormat(totalValue)}(${totalValue.toString()})`);
-  logger.log(`Burned value: ${flrFormat(burned)} (${burned.toString()})`);
+  logger.log(`Burned value: ${flrFormat(burned)} (${burned.toString()}, ${Number(burned)/Number(totalValue)*100}%)`);
   logger.log("VOTER FEES (by identity address):");
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];

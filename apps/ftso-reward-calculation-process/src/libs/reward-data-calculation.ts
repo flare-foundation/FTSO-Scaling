@@ -153,7 +153,7 @@ export async function runCalculateRewardCalculationDataWorker(
   logger.log(
     `Reward calculation data calculated for ${options.startVotingRoundId}-${options.endVotingRoundId} took ${
       Date.now() - startTime
-    }.`
+    } ms.`
   );
   recordProgress(rewardEpochId, options.tempRewardEpochFolder);
 }

@@ -148,7 +148,7 @@ export async function calculationOfRewardCalculationDataForRange(
     logger.log(
       `Reward calculation for voting rounds: ${firstVotingRoundId}-${lastVotingRoundId} took ${
         Date.now() - startTime
-      }ms`
+      } ms`
     );
   }
 }
