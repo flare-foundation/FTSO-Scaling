@@ -95,11 +95,9 @@ export namespace RelayMessage {
     const encodedInternal = encoded.startsWith("0x") ? encoded.slice(2) : encoded;
     let newSigningPolicy: ISigningPolicy | undefined;
     let protocolMessageMerkleRoot: IProtocolMessageMerkleRoot | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     if (encodedInternal.length <= signingPolicy.encodedLength!) {
       throw Error(`Invalid relay message: too short`);
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const protocolId = encodedInternal.slice(signingPolicy.encodedLength!, signingPolicy.encodedLength! + 2);
     let encodedSignatures = "";
     if (protocolId === "00") {
@@ -165,7 +163,6 @@ export namespace RelayMessage {
   }
 
   export function augment(m: IRelayMessage): IRelayMessage {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot!);
     return m;
   }

@@ -29,7 +29,6 @@ export function calculatePenalties(
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of offenders) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const voterWeights = votersWeights.get(submitAddress)!;
     if (!voterWeights) {
       throw new Error("Critical error: Illegal offender");

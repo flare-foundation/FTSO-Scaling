@@ -48,7 +48,6 @@ export function calculateFinalizationRewardClaims(
   }
   const votingRoundId = data.dataForCalculations.votingRoundId;
   // No voter provided finalization in grace period. Whoever finalizes gets the full reward.
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   if (isFinalizationOutsideOfGracePeriod(votingRoundId, data.firstSuccessfulFinalization!)) {
     const otherFinalizerClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
@@ -114,7 +113,6 @@ export function calculateFinalizationRewardClaims(
       throw new Error("Critical: eligible finalization submit address must be equal to signingAddress of an entity");
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const voterWeight = data.dataForCalculations.votersWeightsMap!.get(submitAddress);
 
     // sanity check

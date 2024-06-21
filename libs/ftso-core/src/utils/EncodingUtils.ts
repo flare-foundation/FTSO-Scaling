@@ -82,7 +82,6 @@ export function decodeEvent<T>(
   function prefix0x(x: string) {
     return x.startsWith("0x") ? x : "0x" + x;
   }
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const inputs = [...abiData.abi!.inputs!];
   // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
   const topics = [data.topic0, data.topic1, data.topic2, data.topic3]
