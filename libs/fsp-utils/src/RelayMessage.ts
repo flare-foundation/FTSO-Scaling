@@ -8,6 +8,7 @@ export interface IRelayMessage {
   protocolMessageMerkleRoot?: IProtocolMessageMerkleRoot;
   newSigningPolicy?: ISigningPolicy;
   signatures: IECDSASignatureWithIndex[];
+  protocolMessageHash?: string;
 }
 
 export namespace RelayMessage {
@@ -159,5 +160,10 @@ export namespace RelayMessage {
     }
     // One of messages is invalid
     return false;
+  }
+
+  export function augment(m: IRelayMessage): IRelayMessage {
+    m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot!);
+    return m;
   }
 }

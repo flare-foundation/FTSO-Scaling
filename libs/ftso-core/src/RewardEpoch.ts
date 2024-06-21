@@ -53,6 +53,7 @@ export class RewardEpoch {
 
   public readonly votePowerBlock: number;
   public readonly votePowerBlockTimestamp: number;
+  public readonly previousRewardEpochStartedEvent: RewardEpochStarted;
 
   constructor(
     previousRewardEpochStartedEvent: RewardEpochStarted,
@@ -63,6 +64,7 @@ export class RewardEpoch {
     fullVotersRegistrationInfo: FullVoterRegistrationInfo[]
   ) {
     this.signingPolicy = signingPolicyInitializedEvent;
+    this.previousRewardEpochStartedEvent = previousRewardEpochStartedEvent;
 
     ///////// Consistency checks /////////
     if (this.signingPolicy.rewardEpochId !== previousRewardEpochStartedEvent.rewardEpochId + 1) {

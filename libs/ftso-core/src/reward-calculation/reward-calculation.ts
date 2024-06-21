@@ -7,7 +7,7 @@ import {
   PENALTY_FACTOR,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
-import { IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
+import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RewardEpochDuration } from "../utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../voting-types";
 import { RandomVoterSelector } from "./RandomVoterSelector";
@@ -17,6 +17,10 @@ import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
 
+import { DataManagerForRewarding } from "../DataManagerForRewarding";
+import { RewardEpoch } from "../RewardEpoch";
+import { FUFeedValue } from "../data-calculation-interfaces";
+import { FastUpdateFeedConfiguration } from "../events/FUInflationRewardsOffered";
 import { calculateRandom } from "../ftso-calculation/ftso-random";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
@@ -25,19 +29,33 @@ import {
   deserializeAggregatedClaimsForVotingRoundId,
   serializeAggregatedClaimsForVotingRoundId,
 } from "../utils/stat-info/aggregated-claims";
+import { OFFERS_FILE } from "../utils/stat-info/constants";
 import { serializeFeedValuesForVotingRoundId } from "../utils/stat-info/feed-values";
 import {
+  createRewardCalculationFolders,
   deserializeGranulatedPartialOfferMap,
+  deserializeGranulatedPartialOfferMapForFastUpdates,
   serializeGranulatedPartialOfferMap,
 } from "../utils/stat-info/granulated-partial-offers-map";
 import {
   deserializePartialClaimsForVotingRoundId,
   serializePartialClaimsForVotingRoundId,
 } from "../utils/stat-info/partial-claims";
+import {
+  augmentDataForRewardCalculation,
+  deserializeDataForRewardCalculation,
+  serializeDataForRewardCalculation,
+} from "../utils/stat-info/reward-calculation-data";
+import {
+  deserializeRewardEpochInfo,
+  getRewardEpochInfo,
+  serializeRewardEpochInfo,
+} from "../utils/stat-info/reward-epoch-info";
+import { destroyStorage } from "../utils/stat-info/storage";
+import { calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { destroyStorage } from "../utils/stat-info/storage";
-import { serializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
+import { ILogger } from "../utils/ILogger";
 
 /**
  * Calculates merged reward claims for the given reward epoch.
@@ -50,7 +68,6 @@ export async function rewardClaimsForRewardEpoch(
   dataManager: DataManager,
   rewardEpochManager: RewardEpochManager,
   merge = true,
-  addLog = false,
   serialize = false,
   forceDestroyStorage = false
 ): Promise<IRewardClaim[] | IPartialRewardClaim[]> {
@@ -59,6 +76,10 @@ export async function rewardClaimsForRewardEpoch(
   }
   const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
   const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
+
+  const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, endVotingRoundId);
+  serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
+
   // Partial offer generation from reward offers
   // votingRoundId => feedId => partialOffer
   const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
@@ -76,8 +97,9 @@ export async function rewardClaimsForRewardEpoch(
       randomGenerationBenchingWindow,
       dataManager,
       rewardOfferMap.get(votingRoundId),
+      true, // prepareData
       merge,
-      addLog
+      serialize
     );
     allRewardClaims.push(...rewardClaims);
     if (merge) {
@@ -94,7 +116,7 @@ export async function rewardClaimsForRewardEpoch(
  * Initializes reward epoch storage for the given reward epoch.
  * Creates calculation folders with granulated offer data.
  */
-export async function initializeRewardEpochStorage(
+export async function initializeRewardEpochStorageOld(
   rewardEpochId: number,
   rewardEpochManager: RewardEpochManager,
   useExpectedEndIfNoSigningPolicyAfter = false,
@@ -113,8 +135,28 @@ export async function initializeRewardEpochStorage(
     rewardEpoch.rewardOffers
   );
   // sync call
-  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, calculationFolder);
+  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, true, OFFERS_FILE, calculationFolder);
   return rewardEpochDuration;
+}
+
+/**
+ * Initializes reward epoch storage for the given reward epoch.
+ * Creates calculation folders with granulated offer data.
+ */
+export async function initializeRewardEpochStorage(
+  rewardEpochId: number,
+  rewardEpochManager: RewardEpochManager,
+  useExpectedEndIfNoSigningPolicyAfter = false,
+  tempRewardEpochFolder = false,
+  calculationFolder = CALCULATIONS_FOLDER()
+): Promise<[RewardEpochDuration, RewardEpoch]> {
+  const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
+    rewardEpochId,
+    useExpectedEndIfNoSigningPolicyAfter
+  );
+  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
+  createRewardCalculationFolders(rewardEpochDuration, tempRewardEpochFolder, calculationFolder);
+  return [rewardEpochDuration, rewardEpoch];
 }
 
 /**
@@ -132,17 +174,231 @@ export async function partialRewardClaimsForVotingRound(
   randomGenerationBenchingWindow: number,
   dataManager: DataManager,
   feedOffersParam: Map<string, IPartialRewardOfferForRound[]> | undefined,
+  prepareData = true,
   merge = true,
-  addLog = false,
   serializeResults = false,
+  useFastUpdatesData = false,
+  logger: ILogger = console,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
+  let allRewardClaims: IPartialRewardClaim[] = [];
+
+  if (prepareData) {
+    await prepareDataForRewardCalculations(rewardEpochId, votingRoundId, randomGenerationBenchingWindow, dataManager);
+  }
+
   let feedOffers = feedOffersParam;
   if (feedOffers === undefined) {
     feedOffers = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId, calculationFolder);
   }
-  let allRewardClaims: IPartialRewardClaim[] = [];
-  // Obtain data for reward calculation
+
+  const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+  const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+  augmentDataForRewardCalculation(data, rewardEpochInfo);
+
+  const medianCalculationMap = new Map<string, MedianCalculationResult>();
+  for (const medianResult of data.medianCalculationResults) {
+    medianCalculationMap.set(medianResult.feed.id, medianResult);
+  }
+
+  const delegationAddressToSigningAddress = new Map<string, string>();
+  const signingAddressToDelegationAddress = new Map<string, string>();
+  const signingAddressToIdentityAddress = new Map<string, string>();
+  const signingAddressToFeeBips = new Map<string, number>();
+  for (const voterWeight of data.dataForCalculations.votersWeightsMap.values()) {
+    delegationAddressToSigningAddress.set(
+      voterWeight.delegationAddress.toLowerCase(),
+      voterWeight.signingAddress.toLowerCase()
+    );
+    signingAddressToDelegationAddress.set(
+      voterWeight.signingAddress.toLowerCase(),
+      voterWeight.delegationAddress.toLowerCase()
+    );
+    signingAddressToIdentityAddress.set(
+      voterWeight.signingAddress.toLowerCase(),
+      voterWeight.identityAddress.toLowerCase()
+    );
+    signingAddressToFeeBips.set(voterWeight.signingAddress.toLowerCase(), voterWeight.feeBIPS);
+  }
+
+  // Calculate reward claims for each feed offer
+  for (const [feedId, offers] of feedOffers.entries()) {
+    const medianResult = medianCalculationMap.get(feedId);
+    if (medianResult === undefined) {
+      // This should never happen
+      throw new Error("Critical error: Median result is undefined");
+    }
+    // Calculate reward claims for each offer
+    for (const offer of offers) {
+      if (offer.shouldBeBurned) {
+        const fullOfferBackClaim: IPartialRewardClaim = {
+          votingRoundId,
+          beneficiary: offer.claimBackAddress.toLowerCase(),
+          amount: offer.amount,
+          claimType: ClaimType.DIRECT,
+          offerIndex: offer.offerIndex,
+          // feedId: offer.feedId,  // should be undefined
+          protocolTag: "" + FTSO2_PROTOCOL_ID,
+          rewardTypeTag: RewardTypePrefix.FULL_OFFER_CLAIM_BACK,
+          rewardDetailTag: "", // no additional tag
+        };
+        allRewardClaims.push(fullOfferBackClaim);
+        continue;
+      }
+      // First each offer is split into three parts: median, signing and finalization
+      const splitOffers = splitRewardOfferByTypes(offer);
+      // From each partial offer in split calculate reward claims
+      const medianRewardClaims = calculateMedianRewardClaims(
+        splitOffers.medianRewardOffer,
+        medianResult,
+        data.dataForCalculations.votersWeightsMap!
+      );
+
+      // Extract voter signing addresses that are eligible for median reward
+      const medianEligibleVoters = new Set(
+        medianRewardClaims
+          .filter(claim => claim.claimType === ClaimType.WNAT && claim.amount > 0n)
+          .map(claim => {
+            const delegationAddress = claim.beneficiary.toLowerCase();
+            const signingAddress = delegationAddressToSigningAddress.get(delegationAddress);
+            if (!signingAddress) {
+              throw new Error(`Critical error: No signing address for delegation address: ${delegationAddress}`);
+            }
+            return signingAddress;
+          })
+      );
+
+      const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, data, medianEligibleVoters);
+
+      const finalizationRewardClaims = calculateFinalizationRewardClaims(
+        splitOffers.finalizationRewardOffer,
+        data,
+        new Set(data.eligibleFinalizers),
+        medianEligibleVoters
+      );
+
+      // Calculate penalties for reveal withdrawal offenders
+      const revealWithdrawalPenalties = calculatePenalties(
+        offer,
+        PENALTY_FACTOR(),
+        data.dataForCalculations.revealOffendersSet!,
+        data.dataForCalculations.votersWeightsMap!,
+        RewardTypePrefix.REVEAL_OFFENDERS
+      );
+
+      // Calculate penalties for reveal double signers
+      // get signingAddresses of double signers
+      const doubleSigners = calculateDoubleSigners(
+        votingRoundId,
+        FTSO2_PROTOCOL_ID,
+        data.signaturesMap!
+      );
+
+      // convert signingAddresses to submitAddresses
+      const doubleSignersSubmit = new Set(
+        [...doubleSigners.keys()].map(signingAddress =>
+          data.dataForCalculations.signingAddressToSubmitAddress.get(signingAddress)
+        )
+      );
+
+      //distribute penalties
+      const doubleSigningPenalties = calculatePenalties(
+        offer,
+        PENALTY_FACTOR(),
+        doubleSignersSubmit,
+        data.dataForCalculations.votersWeightsMap!,
+        RewardTypePrefix.DOUBLE_SIGNERS
+      );
+
+      // Merge all reward claims into a single array
+      allRewardClaims.push(...medianRewardClaims);
+      allRewardClaims.push(...signingRewardClaims);
+      allRewardClaims.push(...finalizationRewardClaims);
+      allRewardClaims.push(...revealWithdrawalPenalties);
+      allRewardClaims.push(...doubleSigningPenalties);
+      if (merge) {
+        allRewardClaims = RewardClaim.merge(allRewardClaims);
+      }
+    }
+  }
+  if (useFastUpdatesData) {
+    const fuFeedOffers = deserializeGranulatedPartialOfferMapForFastUpdates(
+      rewardEpochId,
+      votingRoundId,
+      calculationFolder
+    );
+    // feedId => FastUpdateFeedConfiguration
+    const fuConfigurationMap = new Map<string, FastUpdateFeedConfiguration>();
+    if (rewardEpochInfo.fuInflationRewardsOffered) {
+      for (const feedConfiguration of rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations) {
+        fuConfigurationMap.set(feedConfiguration.feedId, feedConfiguration);
+      }
+    }
+    const fuFeedValueMap = new Map<string, FUFeedValue>();
+    if (
+      rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length !== data.fastUpdatesData.feedValues.length
+    ) {
+      throw new Error("Critical error: Feed configurations and feed values do not match");
+    }
+    for (let i = 0; i < rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length; i++) {
+      const feedConfiguration = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations[i];
+      const value = data.fastUpdatesData.feedValues[i];
+      const decimals = data.fastUpdatesData.feedDecimals[i];
+      fuFeedValueMap.set(feedConfiguration.feedId, {
+        feedId: feedConfiguration.feedId,
+        value,
+        decimals,
+      } as FUFeedValue);
+    }
+    const signingPolicyAddressesSubmitted = data.fastUpdatesData.signingPolicyAddressesSubmitted;
+    for (const [feedId, offers] of fuFeedOffers.entries()) {
+      const medianResult = medianCalculationMap.get(feedId);
+      if (medianResult === undefined) {
+        // This should never happen
+        throw new Error("Critical error: Median result is undefined");
+      }
+      const feedValue = fuFeedValueMap.get(feedId);
+      if (feedValue === undefined) {
+        throw new Error(`Critical error: No feed value for feedId ${feedId}`);
+      }
+      const feedConfiguration = fuConfigurationMap.get(feedId);
+      if (feedConfiguration === undefined) {
+        throw new Error(`Critical error: No feed configuration for feedId ${feedId}`);
+      }
+
+      // Calculate reward claims for each offer
+      for (const offer of offers) {
+        const fastUpdatesClaims = calculateFastUpdatesClaims(
+          offer,
+          medianResult,
+          feedValue,
+          feedConfiguration,
+          signingPolicyAddressesSubmitted,
+          signingAddressToDelegationAddress,
+          signingAddressToIdentityAddress,
+          signingAddressToFeeBips,
+          logger
+        );
+        allRewardClaims.push(...fastUpdatesClaims);
+        if (merge) {
+          allRewardClaims = RewardClaim.merge(allRewardClaims);
+        }
+      }
+    }
+  }
+  if (serializeResults) {
+    serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims, calculationFolder);
+  }
+  return allRewardClaims;
+}
+
+export async function prepareDataForRewardCalculations(
+  rewardEpochId: number,
+  votingRoundId: number,
+  randomGenerationBenchingWindow: number,
+  dataManager: DataManager,
+  calculationFolder = CALCULATIONS_FOLDER()
+) {
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
     votingRoundId,
     randomGenerationBenchingWindow
@@ -154,17 +410,10 @@ export async function partialRewardClaimsForVotingRound(
   const rewardDataForCalculations = rewardDataForCalculationResponse.data;
   const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
 
-  const voterWeights = rewardEpoch.getVotersWeights();
-
   // Calculate feed medians
   const medianResults: MedianCalculationResult[] = calculateMedianResults(
     rewardDataForCalculations.dataForCalculations
   );
-  // feedId => medianResult
-  const medianCalculationMap = new Map<string, MedianCalculationResult>();
-  for (const medianResult of medianResults) {
-    medianCalculationMap.set(medianResult.feed.id, medianResult);
-  }
 
   // Select eligible voters for finalization rewards
   const randomVoterSelector = new RandomVoterSelector(
@@ -182,96 +431,90 @@ export async function partialRewardClaimsForVotingRound(
     randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
   );
 
-  if (serializeResults) {
+  const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
+  const calculationResults = [
+    MerkleTreeStructs.fromRandomCalculationResult(randomData),
+    ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+  ];
+  serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, false, calculationFolder);
+  serializeDataForRewardCalculation(
+    rewardEpochId,
+    rewardDataForCalculations,
+    medianResults,
+    randomData,
+    [...eligibleFinalizationRewardVotersInGracePeriod],
+    false,
+    calculationFolder
+  );
+}
+
+export async function prepareDataForRewardCalculationsForRange(
+  rewardEpochId: number,
+  firstVotingRoundId: number,
+  lastVotingRoundId: number,
+  randomGenerationBenchingWindow: number,
+  dataManager: DataManagerForRewarding,
+  useFastUpdatesData: boolean,
+  tempRewardEpochFolder = false,
+  calculationFolder = CALCULATIONS_FOLDER()
+) {
+  const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculationForVotingRoundRange(
+    firstVotingRoundId,
+    lastVotingRoundId,
+    randomGenerationBenchingWindow,
+    useFastUpdatesData
+  );
+  if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
+    throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);
+  }
+
+  for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+    const rewardDataForCalculations = rewardDataForCalculationResponse.data[votingRoundId - firstVotingRoundId];
+    const rewardEpoch = rewardDataForCalculations.dataForCalculations.rewardEpoch;
+
+    // Calculate feed medians
+    const medianResults: MedianCalculationResult[] = calculateMedianResults(
+      rewardDataForCalculations.dataForCalculations
+    );
+
+    // Select eligible voters for finalization rewards
+    const randomVoterSelector = new RandomVoterSelector(
+      rewardEpoch.signingPolicy.voters,
+      rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
+      FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
+    );
+
+    const initialHash = RandomVoterSelector.initialHashSeed(
+      rewardEpoch.signingPolicy.seed,
+      FTSO2_PROTOCOL_ID,
+      votingRoundId
+    );
+    const eligibleFinalizationRewardVotersInGracePeriod = new Set(
+      randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
+    );
+
     const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
     const calculationResults = [
       MerkleTreeStructs.fromRandomCalculationResult(randomData),
       ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
     ];
-    serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, calculationFolder);
-    serializeDataForRewardCalculation(rewardEpochId, rewardDataForCalculations, medianResults, randomData, [
-      ...eligibleFinalizationRewardVotersInGracePeriod,
-    ]);
+    serializeFeedValuesForVotingRoundId(
+      rewardEpochId,
+      votingRoundId,
+      calculationResults,
+      tempRewardEpochFolder,
+      calculationFolder
+    );
+    serializeDataForRewardCalculation(
+      rewardEpochId,
+      rewardDataForCalculations,
+      medianResults,
+      randomData,
+      [...eligibleFinalizationRewardVotersInGracePeriod],
+      tempRewardEpochFolder,
+      calculationFolder
+    );
   }
-
-  // Calculate reward claims for each feed offer
-  for (const [feedId, offers] of feedOffers.entries()) {
-    const medianResult = medianCalculationMap.get(feedId);
-    if (medianResult === undefined) {
-      // This should never happen
-      throw new Error("Critical error: Median result is undefined");
-    }
-    // Calculate reward claims for each offer
-    for (const offer of offers) {
-      // First each offer is split into three parts: median, signing and finalization
-      const splitOffers = splitRewardOfferByTypes(offer);
-      // From each partial offer in split calculate reward claims
-      const medianRewardClaims = calculateMedianRewardClaims(
-        splitOffers.medianRewardOffer,
-        medianResult,
-        voterWeights,
-        addLog
-      );
-      const signingRewardClaims = calculateSigningRewards(
-        splitOffers.signingRewardOffer,
-        rewardDataForCalculations,
-        addLog
-      );
-      const finalizationRewardClaims = calculateFinalizationRewardClaims(
-        splitOffers.finalizationRewardOffer,
-        rewardDataForCalculations,
-        eligibleFinalizationRewardVotersInGracePeriod,
-        addLog
-      );
-
-      // Calculate penalties for reveal withdrawal offenders
-      const revealWithdrawalPenalties = calculatePenalties(
-        offer,
-        PENALTY_FACTOR(),
-        rewardDataForCalculations.dataForCalculations.revealOffenders,
-        voterWeights,
-        addLog,
-        RewardTypePrefix.REVEAL_OFFENDERS
-      );
-
-      // Calculate penalties for reveal double signers
-      // get signingAddresses of double signers
-      const doubleSigners = calculateDoubleSigners(
-        votingRoundId,
-        FTSO2_PROTOCOL_ID,
-        rewardDataForCalculations.signatures
-      );
-
-      // convert signingAddresses to submitAddresses
-      const doubleSignersSubmit = new Set(
-        [...doubleSigners.keys()].map(signingAddress => rewardEpoch.signingAddressToSubmitAddress.get(signingAddress))
-      );
-
-      //distribute penalties
-      const doubleSigningPenalties = calculatePenalties(
-        offer,
-        PENALTY_FACTOR(),
-        doubleSignersSubmit,
-        voterWeights,
-        addLog,
-        RewardTypePrefix.DOUBLE_SIGNERS
-      );
-
-      // Merge all reward claims into a single array
-      allRewardClaims.push(...medianRewardClaims);
-      allRewardClaims.push(...signingRewardClaims);
-      allRewardClaims.push(...finalizationRewardClaims);
-      allRewardClaims.push(...revealWithdrawalPenalties);
-      allRewardClaims.push(...doubleSigningPenalties);
-      if (merge) {
-        allRewardClaims = RewardClaim.merge(allRewardClaims);
-      }
-    }
-  }
-  if (serializeResults) {
-    serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims, calculationFolder);
-  }
-  return allRewardClaims;
 }
 
 /**

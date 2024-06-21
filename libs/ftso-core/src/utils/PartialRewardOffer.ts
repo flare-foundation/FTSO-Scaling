@@ -21,11 +21,21 @@ export interface IPartialRewardOfferForEpoch {
   claimBackAddress: Address;
   // indicates if the reward is from inflation
   isInflation: boolean;
+  // Reward offer index - link to the initial reward offer
+  offerIndex: number;
 }
 
 export interface IPartialRewardOfferForRound extends IPartialRewardOfferForEpoch {
   // voting round id
   votingRoundId: number;
+  shouldBeBurned?: boolean;
+}
+
+export interface IFUPartialRewardOfferForRound {
+  votingRoundId: number;
+  feedId: string;
+  amount: bigint;
+  rewardBandValue: number;
 }
 
 export namespace PartialRewardOffer {
@@ -40,6 +50,7 @@ export namespace PartialRewardOffer {
       secondaryBandWidthPPM: rewardOffer.secondaryBandWidthPPM,
       claimBackAddress: rewardOffer.claimBackAddress,
       isInflation: false,
+      offerIndex: rewardOffer.offerIndex!,
     };
   }
 
@@ -65,6 +76,7 @@ export namespace PartialRewardOffer {
         secondaryBandWidthPPM: inflationRewardOffer.secondaryBandWidthPPMs[i],
         claimBackAddress: BURN_ADDRESS,
         isInflation: true,
+        offerIndex: inflationRewardOffer.offerIndex!,
       });
     }
     return rewardOffers;

@@ -34,4 +34,18 @@ export interface DataForRewardCalculation {
   finalizations: ParsedFinalizationData[];
   // might be undefined, if such finalization does not exist in an observed range
   firstSuccessfulFinalization?: ParsedFinalizationData;
+  fastUpdatesData?: FastUpdatesDataForVotingRound;
+}
+
+export interface FastUpdatesDataForVotingRound {
+  votingRoundId: number;
+  feedValues: bigint[];
+  feedDecimals: number[];
+  signingPolicyAddressesSubmitted: string[];
+}
+
+export interface FUFeedValue {
+  feedId: string;
+  value: bigint;
+  decimals: number;
 }

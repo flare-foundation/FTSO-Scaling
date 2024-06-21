@@ -111,24 +111,24 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
     if (voterIndex !== undefined) {
       // should be fee of direct claim from external voter
       if (claim.claimType === ClaimType.FEE) {
-        if (claim.info.startsWith(RewardTypePrefix.MEDIAN)) {
+        if (claim.rewardTypeTag.startsWith(RewardTypePrefix.MEDIAN)) {
           voterIndexToSummary.get(voterIndex).medianFees.push(claim);
           continue;
-        } else if (claim.info.startsWith(RewardTypePrefix.SIGNING)) {
+        } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)) {
           voterIndexToSummary.get(voterIndex).signingFees.push(claim);
           continue;
-        } else if (claim.info.startsWith(RewardTypePrefix.FINALIZATION)) {
+        } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)) {
           voterIndexToSummary.get(voterIndex).finalizationFees.push(claim);
           continue;
-        } else if (claim.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
+        } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
           voterIndexToSummary.get(voterIndex).doubleSigningFeePenalties.push(claim);
           continue;
-        } else if (claim.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
+        } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
           voterIndexToSummary.get(voterIndex).revealWithdrawalFeePenalties.push(claim);
           continue;
         } else {
           throw new Error(
-            `Unknown claim info: ${claim.info}, identityAddress: ${beneficiary}, voterIndex: ${voterIndex}`
+            `Unknown claim info: ${claim.rewardTypeTag}, identityAddress: ${beneficiary}, voterIndex: ${voterIndex}`
           );
         }
       } else if (claim.claimType === ClaimType.DIRECT) {
@@ -145,43 +145,45 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
     }
     voterIndex = delegationAddressToVoterIndex.get(beneficiary);
     if (voterIndex !== undefined) {
-      if (claim.info.startsWith(RewardTypePrefix.MEDIAN)) {
+      if (claim.rewardTypeTag.startsWith(RewardTypePrefix.MEDIAN)) {
         voterIndexToSummary.get(voterIndex).medianDelegationRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.SIGNING)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)) {
         voterIndexToSummary.get(voterIndex).signingDelegationRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.FINALIZATION)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)) {
         voterIndexToSummary.get(voterIndex).finalizationDelegationRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
         voterIndexToSummary.get(voterIndex).doubleSigningDelegationPenalties.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
         voterIndexToSummary.get(voterIndex).revealWithdrawalDelegationPenalties.push(claim);
         continue;
       } else {
         throw new Error(
-          `Unknown claim info: ${claim.info}, delegationAddress: ${beneficiary}, voterIndex: ${voterIndex}`
+          `Unknown claim info: ${claim.rewardTypeTag}, delegationAddress: ${beneficiary}, voterIndex: ${voterIndex}`
         );
       }
     }
     voterIndex = nodeIdToVoterIndex.get(beneficiary);
     if (voterIndex !== undefined) {
-      if (claim.info.startsWith(RewardTypePrefix.SIGNING)) {
+      if (claim.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)) {
         voterIndexToSummary.get(voterIndex).signingNodeIdRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.FINALIZATION)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)) {
         voterIndexToSummary.get(voterIndex).finalizationNodeIdRewards.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)) {
         voterIndexToSummary.get(voterIndex).doubleSigningNodeIdPenalties.push(claim);
         continue;
-      } else if (claim.info.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
+      } else if (claim.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)) {
         voterIndexToSummary.get(voterIndex).revealWithdrawalNodeIdPenalties.push(claim);
         continue;
       } else {
-        throw new Error(`Unknown claim info: ${claim.info}, nodeId: ${beneficiary}, voterIndex: ${voterIndex}`);
+        throw new Error(
+          `Unknown claim info: ${claim.rewardTypeTag}, nodeId: ${beneficiary}, voterIndex: ${voterIndex}`
+        );
       }
     }
     voterIndex = signingAddressToVoterIndex.get(beneficiary);
@@ -190,12 +192,14 @@ export function calculateVoterClaimSummaries(voters: TestVoter[], claims: IParti
         voterIndexToSummary.get(voterIndex).directClaims.push(claim);
         continue;
       }
-      throw new Error(`Unknown claim info: ${claim.info}, signingAddress: ${beneficiary}, voterIndex: ${voterIndex}`);
+      throw new Error(
+        `Unknown claim info: ${claim.rewardTypeTag}, signingAddress: ${beneficiary}, voterIndex: ${voterIndex}`
+      );
     }
 
     if (claim.claimType !== ClaimType.DIRECT) {
       throw new Error(
-        `Unknown claim info: ${claim.info}, beneficiary: ${beneficiary} not a voter, but claim is not DIRECT`
+        `Unknown claim info: ${claim.rewardTypeTag}, beneficiary: ${beneficiary} not a voter, but claim is not DIRECT`
       );
     }
     // DIRECT claim by external voter
@@ -266,7 +270,7 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
   }
   logger.log("CLAIM SUMMARY");
   logger.log(`Total value: ${flrFormat(totalValue)}(${totalValue.toString()})`);
-  logger.log(`Burned value: ${flrFormat(burned)} (${burned.toString()})`);
+  logger.log(`Burned value: ${flrFormat(burned)} (${burned.toString()}, ${Number(burned)/Number(totalValue)*100}%)`);
   logger.log("VOTER FEES (by identity address):");
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];

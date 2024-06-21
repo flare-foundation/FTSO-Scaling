@@ -5,8 +5,10 @@ import { RewardEpoch } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER, EPOCH_SETTINGS } from "../../configs/networks";
 import { FullVoterRegistrationInfo, RewardOffers } from "../../events";
 import { Feed } from "../../voting-types";
-import { bigIntReplacer } from "../big-number-serialization";
-import { REWARD_EPOCH_INFO_FILE } from "./constants";
+import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
+import { REWARD_EPOCH_INFO_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
+import { FUInflationRewardsOffered } from "../../events/FUInflationRewardsOffered";
+import { IncentiveOffered } from "../../events/IncentiveOffered";
 
 export interface RewardEpochInfo {
   rewardEpochId: number;
@@ -19,9 +21,16 @@ export interface RewardEpochInfo {
   expectedStartVotingRoundId: number;
   expectedEndVotingRoundId: number;
   endVotingRoundId?: number;
+  fuInflationRewardsOffered?: FUInflationRewardsOffered;
+  fuIncentivesOffered?: IncentiveOffered[];
 }
 
-export function getRewardEpochInfo(rewardEpoch: RewardEpoch, endVotingRoundId?: number): RewardEpochInfo {
+export function getRewardEpochInfo(
+  rewardEpoch: RewardEpoch,
+  endVotingRoundId?: number,
+  fuInflationRewardsOffered?: FUInflationRewardsOffered,
+  fuIncentivesOffered?: IncentiveOffered[]
+): RewardEpochInfo {
   const voterRegistrationInfo: FullVoterRegistrationInfo[] = [];
   for (const signingAddress of rewardEpoch.signingPolicy.voters) {
     const identityAddress = rewardEpoch.signingAddressToVoter.get(signingAddress.toLowerCase());
@@ -43,6 +52,8 @@ export function getRewardEpochInfo(rewardEpoch: RewardEpoch, endVotingRoundId?: 
     expectedEndVotingRoundId:
       EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpoch.rewardEpochId + 1) - 1,
     endVotingRoundId,
+    fuInflationRewardsOffered,
+    fuIncentivesOffered,
   };
   return result;
 }
@@ -55,9 +66,16 @@ export function getRewardEpochInfo(rewardEpoch: RewardEpoch, endVotingRoundId?: 
 export function serializeRewardEpochInfo(
   rewardEpochId: number,
   rewardEpochInfo: RewardEpochInfo,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  if (!existsSync(calculationFolder)) {
+    mkdirSync(calculationFolder);
+  }
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
   }
@@ -72,12 +90,16 @@ export function serializeRewardEpochInfo(
  */
 export function deserializeRewardEpochInfo(
   rewardEpochId: number,
+  tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): RewardEpochInfo {
-  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const rewardEpochFolder = path.join(
+    calculationFolder,
+    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
+  );
   const rewardEpochInfoPath = path.join(rewardEpochFolder, REWARD_EPOCH_INFO_FILE);
   if (!existsSync(rewardEpochInfoPath)) {
     throw new Error(`Reward epoch info file not found at ${rewardEpochInfoPath}`);
   }
-  return JSON.parse(readFileSync(rewardEpochInfoPath, "utf8"));
+  return JSON.parse(readFileSync(rewardEpochInfoPath, "utf8"), bigIntReviver);
 }

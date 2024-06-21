@@ -7,4 +7,6 @@ export enum RewardTypePrefix {
   FINALIZATION = "Finalization",
   DOUBLE_SIGNERS = "Double signers",
   REVEAL_OFFENDERS = "Reveal offenders",
+  FAST_UPDATES_ACCURACY = "Fast updates accuracy",
+  FULL_OFFER_CLAIM_BACK = "Full offer claim back",
 }

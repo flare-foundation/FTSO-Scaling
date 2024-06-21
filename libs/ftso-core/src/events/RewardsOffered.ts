@@ -29,7 +29,8 @@ export class RewardsOffered extends RawEventConstructible {
       (data: any) => new RewardsOffered(data)
     );
   }
-
+  // Sequential index of the offer for the reward epoch as they appear on the blockchain
+  offerIndex?: number;
   // reward epoch id
   rewardEpochId: number;
   // feed id - i.e. type + feed name

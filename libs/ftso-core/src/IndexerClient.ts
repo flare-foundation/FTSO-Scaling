@@ -134,12 +134,12 @@ export enum BlockAssuranceResult {
  */
 export class IndexerClient {
   constructor(
-    private readonly entityManager: EntityManager,
+    protected readonly entityManager: EntityManager,
     public readonly requiredHistoryTimeSec: number,
-    private readonly logger: ILogger
+    protected readonly logger: ILogger
   ) {}
 
-  private readonly encoding = EncodingUtils.instance;
+  protected readonly encoding = EncodingUtils.instance;
 
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.
@@ -159,7 +159,11 @@ export class IndexerClient {
     if (endTime) {
       query = query.andWhere("event.timestamp <= :endTime", { endTime });
     }
-    return query.orderBy("event.timestamp", "ASC").getMany();
+    return query
+      .orderBy("event.timestamp", "ASC")
+      .addOrderBy("event.block_number", "ASC")
+      .addOrderBy("event.log_index", "ASC")
+      .getMany();
   }
 
   /**
@@ -181,7 +185,11 @@ export class IndexerClient {
       query = query.andWhere("tx.timestamp <= :endTime", { endTime });
     }
 
-    return query.orderBy("tx.timestamp", "ASC").getMany();
+    return query
+      .orderBy("tx.timestamp", "ASC")
+      .addOrderBy("tx.block_number", "ASC")
+      .addOrderBy("tx.transaction_index", "ASC")
+      .getMany();
   }
 
   /**
@@ -189,7 +197,7 @@ export class IndexerClient {
    * @param startTime timestamp in seconds
    * @returns BlockAssuranceResult status (OK | NOT_OK)
    */
-  private async ensureLowerBlock(startTime: number): Promise<BlockAssuranceResult> {
+  protected async ensureLowerBlock(startTime: number): Promise<BlockAssuranceResult> {
     const queryFirst = this.entityManager
       .createQueryBuilder(TLPState, "state")
       .andWhere("state.name = :name", { name: FIRST_DATABASE_INDEX_STATE });
@@ -225,7 +233,7 @@ export class IndexerClient {
    * no timeout is given, it returns NOT_OK. But if timeout is given, it returns TIMEOUT_OK if the local time
    * is greater than endTime + timeout.
    */
-  private async ensureTopBlock(endTime: number, endTimeout?: number): Promise<BlockAssuranceResult> {
+  protected async ensureTopBlock(endTime: number, endTimeout?: number): Promise<BlockAssuranceResult> {
     const queryLast = this.entityManager
       .createQueryBuilder(TLPState, "state")
       .andWhere("state.name = :name", { name: LAST_DATABASE_INDEX_STATE });
@@ -250,7 +258,7 @@ export class IndexerClient {
   /**
    * Checks the indexer database for a given minimal timestamp range, possibly with given timeout.
    */
-  private async ensureEventRange(
+  protected async ensureEventRange(
     startTime: number,
     endTime: number,
     endTimeout?: number
@@ -327,6 +335,9 @@ export class IndexerClient {
       endTime
     );
     const rewardOffers = rewardOffersResults.map(event => RewardsOffered.fromRawEvent(event));
+    for (let i = 0; i < rewardOffers.length; i++) {
+      rewardOffers[i].offerIndex = i;
+    }
 
     const inflationOffersResults = await this.queryEvents(
       CONTRACTS.FtsoRewardOffersManager,
@@ -335,6 +346,9 @@ export class IndexerClient {
       endTime
     );
     const inflationOffers = inflationOffersResults.map(event => InflationRewardsOffered.fromRawEvent(event));
+    for (let i = 0; i < inflationOffers.length; i++) {
+      inflationOffers[i].offerIndex = rewardOffers.length + i;
+    }
 
     return {
       status,

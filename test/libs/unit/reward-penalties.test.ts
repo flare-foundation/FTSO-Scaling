@@ -26,7 +26,6 @@ describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
     PENALTY_FACTOR(),
     revealOffenders,
     votersWeights,
-    true,
     RewardTypePrefix.REVEAL_OFFENDERS
   );
 

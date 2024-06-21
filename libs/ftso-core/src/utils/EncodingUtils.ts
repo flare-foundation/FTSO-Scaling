@@ -76,7 +76,7 @@ export function decodeEvent<T>(
   smartContractName: string,
   eventName: string,
   data: TLPEvents,
-  transform: (data: any) => T
+  transform: (data: any, entity?: TLPEvents) => T
 ): T {
   const abiData = EncodingUtils.instance.getEventAbiData(smartContractName, eventName);
   function prefix0x(x: string) {
@@ -88,7 +88,7 @@ export function decodeEvent<T>(
     .filter(x => x && x != "NULL")
     .map(x => prefix0x(x));
   const decoded = decodeLog(inputs, prefix0x(data.data), topics);
-  return transform(decoded);
+  return transform(decoded, data);
 }
 
 /**

@@ -1,5 +1,6 @@
 import { Command, CommandRunner, Option } from "nest-commander";
-import { CalculatorService, OptionalCommandOptions } from "../services/calculator.service";
+import { CalculatorService } from "../services/calculator.service";
+import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { Logger } from "@nestjs/common";
 @Command({
   name: "ftso-reward-calculation-process",
@@ -21,7 +22,9 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
     try {
       await this.calculator.run(options);
     } catch (e) {
+      console.log(e);
       this.logger.error(e);
+      process.exit(1);
     }
   }
 
@@ -83,8 +86,16 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
+    flags: "-g, --calculateRewardCalculationData [boolean]",
+    description: "Calculates reward calculation data and serializes them for each voting round",
+  })
+  parseCalculateRewardCalculationData(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
     flags: "-c, --calculateClaims [boolean]",
-    description: "Calculates reward claims",
+    description: "Calculates reward claims and serializes them",
   })
   parseCalculateClaims(val: string): boolean {
     return JSON.parse(val);
@@ -99,10 +110,18 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
-    flags: "-o, --recoveryMode [boolean]",
+    flags: "-v, --recoveryMode [boolean]",
     description: "Calculates in recovery mode (using the last known state)",
   })
   parseRecoveryMode(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
+    flags: "-o, --calculateOffers [boolean]",
+    description: "Calculates partial reward offers",
+  })
+  parseOffers(val: string): boolean {
     return JSON.parse(val);
   }
 
@@ -129,5 +148,21 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   })
   parseRetryDelayMs(val: string): number {
     return Number(val);
+  }
+
+  @Option({
+    flags: "-y, --useFastUpdatesData [boolean]",
+    description: "Extracts data for fast updates rewarding",
+  })
+  parseUseFastUpdatesDataMode(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
+    flags: "-l, --incrementalCalculation [boolean]",
+    description: "Start incremental calculation for current reward epoch",
+  })
+  parseIncrementalCalculation(val: string): boolean {
+    return JSON.parse(val);
   }
 }
