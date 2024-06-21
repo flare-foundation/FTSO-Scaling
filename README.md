@@ -7,6 +7,10 @@ The repository contains services to support [FTSO Scaling protocol](./protocol/R
 
 The services are [Nest.js](https://nestjs.com/) applications which use logic  that is implemented in [FTSO core library](./libs/ftso-core/)
 
+# Reward calculation results
+
+Reward calculation results are available [here](./rewards-data).
+
 # Installation 
 
 ## FTSO data provider
