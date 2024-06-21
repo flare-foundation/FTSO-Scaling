@@ -9,7 +9,7 @@ The services are [Nest.js](https://nestjs.com/) applications which use logic  th
 
 # Reward calculation results
 
-Reward calculation results are available [here](./rewards-data).
+Reward calculation results are available [here](./rewards-data). See the documentation about [Reward calculator](./scripts/rewards/README.md) for details.
 
 # Installation 
 
