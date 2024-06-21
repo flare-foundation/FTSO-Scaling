@@ -51,9 +51,7 @@ export function calculateSigningRewards(
     const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
     const signatures = mostFrequentHashSignaturesBeforeDeadline(
       votingRoundId,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       data.signaturesMap!,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       data.dataForCalculations.totalSigningWeight!,
       deadlineTimestamp
     );
@@ -72,12 +70,10 @@ export function calculateSigningRewards(
       return [backClaim];
     }
     rewardEligibleSignatures = signatures.filter(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       signature => !doubleSigners.has(signature.messages.signer!.toLowerCase())
     );
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
     );
     let signatures = data.signaturesMap.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
@@ -236,7 +232,6 @@ export function mostFrequentHashSignaturesBeforeDeadline(
       if (signatureSubmission.messages.message.protocolId !== protocolId) {
         throw new Error("Critical error: Illegal protocol id");
       }
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       weightSum += signatureSubmission.messages.weight!;
     }
     hashToWeight.set(hash, weightSum);

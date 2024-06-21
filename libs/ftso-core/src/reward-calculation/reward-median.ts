@@ -42,7 +42,6 @@ export function calculateMedianRewardClaims(
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
       BigInt(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
       ) %
         2n ===
@@ -111,7 +110,6 @@ export function calculateMedianRewardClaims(
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
       submitAddress: submitAddress,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)!),
       iqr:
         (value > lowIQR && value < highIQR) ||
@@ -196,7 +194,6 @@ export function calculateMedianRewardClaims(
     const rewardClaim = generateMedianRewardClaimsForVoter(
       reward,
       offer,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       votersWeights.get(voterRecord.submitAddress)!
     );
     rewardClaims.push(...rewardClaim);

@@ -61,7 +61,6 @@ export function granulatedPartialOfferMap(
       rewardOffer
     );
     for (const votingEpochRewardOffer of votingEpochRewardOffers) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const votingRoundId = votingEpochRewardOffer.votingRoundId!;
       const feedId = votingEpochRewardOffer.feedId;
       const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();

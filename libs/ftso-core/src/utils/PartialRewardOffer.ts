@@ -50,7 +50,6 @@ export namespace PartialRewardOffer {
       secondaryBandWidthPPM: rewardOffer.secondaryBandWidthPPM,
       claimBackAddress: rewardOffer.claimBackAddress,
       isInflation: false,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       offerIndex: rewardOffer.offerIndex!,
     };
   }
@@ -77,7 +76,6 @@ export namespace PartialRewardOffer {
         secondaryBandWidthPPM: inflationRewardOffer.secondaryBandWidthPPMs[i],
         claimBackAddress: BURN_ADDRESS,
         isInflation: true,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         offerIndex: inflationRewardOffer.offerIndex!,
       });
     }

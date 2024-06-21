@@ -251,7 +251,6 @@ export async function partialRewardClaimsForVotingRound(
       const medianRewardClaims = calculateMedianRewardClaims(
         splitOffers.medianRewardOffer,
         medianResult,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.votersWeightsMap!
       );
 
@@ -282,9 +281,7 @@ export async function partialRewardClaimsForVotingRound(
       const revealWithdrawalPenalties = calculatePenalties(
         offer,
         PENALTY_FACTOR(),
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.revealOffendersSet!,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.votersWeightsMap!,
         RewardTypePrefix.REVEAL_OFFENDERS
       );
@@ -294,7 +291,6 @@ export async function partialRewardClaimsForVotingRound(
       const doubleSigners = calculateDoubleSigners(
         votingRoundId,
         FTSO2_PROTOCOL_ID,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.signaturesMap!
       );
 
@@ -310,7 +306,6 @@ export async function partialRewardClaimsForVotingRound(
         offer,
         PENALTY_FACTOR(),
         doubleSignersSubmit,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.votersWeightsMap!,
         RewardTypePrefix.DOUBLE_SIGNERS
       );

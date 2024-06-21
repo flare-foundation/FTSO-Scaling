@@ -20,7 +20,6 @@ export function extractRandomNumbers(
     }
     const randomNumberResult = data.nextVotingRoundRandomResult;
     if (randomNumberResult !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       randomNumbers.push(BigInt(data.nextVotingRoundRandomResult!));
     } else {
       randomNumbers.push(undefined);
@@ -68,7 +67,6 @@ export function processRandomNumberFixingRange(
         );
       }
       const newRandomNumber = BigInt(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
       ).toString();
       previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;
@@ -134,7 +132,6 @@ export async function runRandomNumberFixing(rewardEpochId: number, newEpochVotin
         );
       }
       const newRandomNumber = BigInt(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
       ).toString();
 

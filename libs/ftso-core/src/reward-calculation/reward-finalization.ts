@@ -52,7 +52,6 @@ export function calculateFinalizationRewardClaims(
   if (isFinalizationOutsideOfGracePeriod(votingRoundId, data.firstSuccessfulFinalization!)) {
     const otherFinalizerClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
