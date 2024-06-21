@@ -1,7 +1,7 @@
 import { globSync } from "glob";
 import { FullVoterRegistrationInfo } from "../libs/ftso-core/src/events";
 import { verifyWithMerkleProof } from "../libs/ftso-core/src/utils/MerkleTree";
-import { RewardClaim } from "../libs/ftso-core/src/utils/RewardClaim";
+import { ClaimType, RewardClaim } from "../libs/ftso-core/src/utils/RewardClaim";
 import {
   SDataForRewardCalculation,
   deserializeDataForRewardCalculation,
@@ -52,7 +52,13 @@ export function printClaimSummary(rewardEpochId: number) {
 
 export function verifyMerkleProofs(rewardEpochId: number) {
   const distributionData = deserializeRewardDistributionData(rewardEpochId);
+  let weightBasedCount = 0;
+  let totalValue = 0n;
   for (const claimWithProof of distributionData.rewardClaims) {
+    if(claimWithProof.body.claimType === ClaimType.MIRROR || claimWithProof.body.claimType === ClaimType.WNAT) {
+      weightBasedCount++;
+    }
+    totalValue += claimWithProof.body.amount;
     const leaf = RewardClaim.hashRewardClaim(claimWithProof.body);
     const result = verifyWithMerkleProof(leaf, claimWithProof.merkleProof, distributionData.merkleRoot);
     if (!result) {
@@ -60,6 +66,11 @@ export function verifyMerkleProofs(rewardEpochId: number) {
       return false;
     }
   }
+  if(weightBasedCount !== distributionData.noOfWeightBasedClaims) {
+    console.error(`Weight based claims count mismatch: ${weightBasedCount} vs ${distributionData.noOfWeightBasedClaims}`);
+    return false;
+  }
+  console.log(`Total value: ${totalValue}`);
   return true;
 }
 

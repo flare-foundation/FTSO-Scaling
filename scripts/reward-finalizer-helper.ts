@@ -242,6 +242,23 @@ async function sendMerkleProofs(rewardEpochId: number) {
   }
 }
 
+async function checkTotalRewardDataFromContract(rewardEpochId: number) {
+  const totals = await rewardManager.methods.getRewardEpochTotals(rewardEpochId).call();
+  const contractTotal = (totals as any)._totalRewardsWei;
+  const distributionData = deserializeRewardDistributionData(rewardEpochId);
+  let claimedTotal = 0n;
+  for(const claim of distributionData.rewardClaims) {
+    claimedTotal += claim.body.amount;
+  }
+  if(contractTotal !== claimedTotal) {
+    console.error(`Total rewards mismatch: ${contractTotal} vs ${claimedTotal}`);
+    return false;
+  } else {
+    console.log(`Total rewards match: ${contractTotal}`);
+    return true;
+  }
+}
+
 export async function main() {
   const action = process.argv[2];
   if (!action) {
@@ -284,6 +301,11 @@ export async function main() {
       console.log("Merkle proofs are valid");
     } else {
       console.error("Merkle proofs are invalid");
+    }
+    if(process.env.RPC) {
+      await checkTotalRewardDataFromContract(rewardEpochId);        
+    } else {
+      console.error("RPC is not set. Skipping check for totals from RewardManager contract.");
     }
   }
   if (action === "rewards") {

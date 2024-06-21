@@ -1,3 +1,7 @@
+# Reward calculation for Coston network
+# Setup the correct DB connection and run the script, e.g.
+# ./scripts/rewards/coston-db.sh
+
 export NETWORK=coston
 
 export DB_REQUIRED_INDEXER_HISTORY_TIME_SEC=86400
