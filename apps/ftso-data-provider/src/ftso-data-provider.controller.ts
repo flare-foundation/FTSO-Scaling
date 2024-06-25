@@ -1,4 +1,13 @@
-import { Controller, Get, InternalServerErrorException, Logger, Param, ParseIntPipe, UseGuards } from "@nestjs/common";
+import {
+  BeforeApplicationShutdown,
+  Controller,
+  Get,
+  InternalServerErrorException,
+  Logger,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
 import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
@@ -14,6 +23,7 @@ import {
 } from "./dto/data-provider-responses.dto";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
+import { sleepFor } from "../../../libs/ftso-core/src/utils/retry";
 
 enum ApiTagsEnum {
   PDP = "FTSO Protocol data provider",
@@ -23,9 +33,11 @@ enum ApiTagsEnum {
 @Controller("")
 @UseGuards(ApiKeyAuthGuard)
 @ApiSecurity("X-API-KEY")
-export class FtsoDataProviderController {
+export class FtsoDataProviderController implements BeforeApplicationShutdown {
   private readonly logger = new Logger(FtsoDataProviderController.name);
   constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}
+  private pendingReveals = new Set<number>();
+  private shutdownInitiated = false;
 
   // Protocol Data Provider APIs
 
@@ -38,9 +50,17 @@ export class FtsoDataProviderController {
     this.logger.log(
       `Calling GET on submit1 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
+    if (this.shutdownInitiated) {
+      this.logger.log(`Shutdown in progress. Rejecting request.`);
+      return {
+        status: PDPResponseStatusEnum.NOT_AVAILABLE,
+        data: undefined,
+      };
+    }
     const data = await this.ftsoDataProviderService.getCommitData(votingRoundId, submitAddress);
     const encodedData = data ? encodeCommitPayloadMessage(data) : undefined;
     this.logger.log(`Returning commit data for voting round ${votingRoundId}: `);
+    if (encodedData) this.pendingReveals.add(votingRoundId);
     return {
       status: encodedData ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
@@ -59,6 +79,7 @@ export class FtsoDataProviderController {
     const data = await this.ftsoDataProviderService.getRevealData(votingRoundId, submitAddress);
     const encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
     this.logger.log(`Returning reveal data for voting round ${votingRoundId}`);
+    if (encodedData) this.pendingReveals.delete(votingRoundId);
     return {
       status: encodedData ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
@@ -154,6 +175,24 @@ export class FtsoDataProviderController {
       votingRoundId,
       medianData: data,
     };
+  }
+
+  async beforeApplicationShutdown() {
+    this.shutdownInitiated = true;
+    this.logger.log(`Shutdown initiated, voting round commits disabled.`);
+
+    if (this.pendingReveals.size > 0) {
+      this.logger.warn(
+        `Pending reveals for rounds: ${[
+          ...this.pendingReveals,
+        ]}, waiting to complete. If you force kill the application now, you might get a reward penalty for intentionally not revealing voting round data.`
+      );
+    }
+    while (this.pendingReveals.size > 0) {
+      await sleepFor(1000);
+    }
+
+    this.logger.log(`No more pending reveals, safe to terminate.`);
   }
 }
 

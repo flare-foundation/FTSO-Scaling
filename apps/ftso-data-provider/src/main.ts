@@ -12,6 +12,7 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(FtsoDataProviderModule, { logger: logLevels });
+  app.enableShutdownHooks();
   app.useGlobalInterceptors(new BigIntInterceptor());
   app.use(helmet());
   const basePath = process.env.DATA_PROVIDER_CLIENT_BASE_PATH ?? "";
