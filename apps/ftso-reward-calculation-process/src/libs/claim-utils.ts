@@ -8,7 +8,10 @@ import {
 import { fixOffersForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
-import { getIncrementalCalculationsTempRewards, serializeIncrementalCalculationsTempRewards } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-rewards";
+import {
+  getIncrementalCalculationsTempRewards,
+  serializeIncrementalCalculationsTempRewards,
+} from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-rewards";
 import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
 import { IncrementalCalculationState } from "../interfaces/IncrementalCalculationState";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
@@ -16,14 +19,19 @@ import { extractRandomNumbers, processRandomNumberFixingRange } from "./random-n
 
 // claims
 
-export function claimAggregation(rewardEpochDuration: RewardEpochDuration, votingRoundId: number, logger: Logger, recordTempIncrementalRewards = false) {
+export function claimAggregation(
+  rewardEpochDuration: RewardEpochDuration,
+  votingRoundId: number,
+  logger: Logger,
+  recordTempIncrementalRewards = false
+) {
   logger.log(`Aggregating claims for voting round: ${votingRoundId}`);
   if (votingRoundId === rewardEpochDuration.startVotingRoundId) {
     aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId, votingRoundId, true);
   } else {
     aggregateRewardClaimsInStorage(rewardEpochDuration.rewardEpochId, votingRoundId - 1, votingRoundId, false);
   }
-  if(recordTempIncrementalRewards) {
+  if (recordTempIncrementalRewards) {
     const data = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, votingRoundId);
     serializeIncrementalCalculationsTempRewards(data);
   }
@@ -99,7 +107,8 @@ export function fixRandomNumbersAndOffers(state: IncrementalCalculationState, lo
       randomNumbers
     );
     logger.log(
-      `Offers fixed for reward epoch ${state.rewardEpochId + 1
+      `Offers fixed for reward epoch ${
+        state.rewardEpochId + 1
       } from voting rounds ${lastNextVotingRoundIdWithNoSecureRandom}-${state.nextVotingRoundIdWithNoSecureRandom - 1}.`
     );
   }
@@ -132,7 +141,6 @@ export async function calculateAndAggregateRemainingClaims(
       logger,
       false //options.useFastUpdatesData
     );
-    
 
     logger.log(`Claims calculated for voting round ${tmpVotingRoundId}.`);
     recordProgress(state.rewardEpochId);

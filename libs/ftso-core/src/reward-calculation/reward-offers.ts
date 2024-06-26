@@ -1,5 +1,5 @@
 import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
-import { InflationRewardsOffered, RewardOffers } from "../events";
+import { InflationRewardsOffered } from "../events";
 import {
   IFUPartialRewardOfferForRound,
   IPartialRewardOfferForEpoch,
@@ -34,43 +34,6 @@ export function distributeInflationRewardOfferToFeeds(
     return PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer);
   }
   throw new Error(`Mode ${inflationRewardOffer.mode} is not supported`);
-}
-
-/**
- * Given all reward offers for reward epoch it splits them into partial reward offers for voting rounds and feeds.
- * First inflation reward offers are used to generate partial reward offers for feeds.
- * Then each reward offer is split to partial reward offers for each voting round.
- * A map: votingRoundId => feedId => partialRewardOffer[] is returned containing all partial reward offers.
- */
-export function granulatedPartialOfferMap(
-  startVotingRoundId: number,
-  endVotingRoundId: number,
-  rewardOffers: RewardOffers
-): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
-  const rewardOfferMap = new Map<number, Map<string, IPartialRewardOfferForRound[]>>();
-  const allRewardOffers = rewardOffers.rewardOffers.map(rewardOffer =>
-    PartialRewardOffer.fromRewardOffered(rewardOffer)
-  );
-  for (const inflationRewardOffer of rewardOffers.inflationOffers) {
-    allRewardOffers.push(...PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer));
-  }
-  for (const rewardOffer of allRewardOffers) {
-    const votingEpochRewardOffers = PartialRewardOffer.splitToVotingRoundsEqually(
-      startVotingRoundId,
-      endVotingRoundId,
-      rewardOffer
-    );
-    for (const votingEpochRewardOffer of votingEpochRewardOffers) {
-      const votingRoundId = votingEpochRewardOffer.votingRoundId!;
-      const feedId = votingEpochRewardOffer.feedId;
-      const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
-      rewardOfferMap.set(votingRoundId, feedOffers);
-      const feedIdOffers = feedOffers.get(feedId) || [];
-      feedOffers.set(feedId, feedIdOffers);
-      feedIdOffers.push(votingEpochRewardOffer);
-    }
-  }
-  return rewardOfferMap;
 }
 
 export function adaptCommunityRewardOffer(rewardOffer: IPartialRewardOfferForEpoch): void {

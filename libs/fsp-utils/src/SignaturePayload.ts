@@ -16,11 +16,6 @@ export interface ISignaturePayload {
   weight?: number;
 }
 
-export interface DepositSignatureData {
-  message: string;
-  additionalData: string;
-}
-
 export namespace SignaturePayload {
   /**
    * Encodes signature payload into byte encoding, represented by 0x-prefixed hex string

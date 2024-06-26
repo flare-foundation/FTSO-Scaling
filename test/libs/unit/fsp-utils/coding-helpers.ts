@@ -21,17 +21,6 @@ export function defaultTestSigningPolicy(accounts: string[], N: number, singleWe
   return signingPolicyData;
 }
 
-export async function generateSignaturesEncoded(
-  privateKeys: string[],
-  messageHash: string,
-  count: number,
-  indices?: number[]
-): Promise<string> {
-  return ECDSASignatureWithIndex.encodeSignatureList(
-    await generateSignatures(privateKeys, messageHash, count, indices)
-  ).slice(2);
-}
-
 export async function generateSignatures(
   privateKeys: string[],
   messageHash: string,
