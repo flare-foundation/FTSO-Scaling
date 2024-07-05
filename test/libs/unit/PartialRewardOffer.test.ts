@@ -4,6 +4,7 @@ import Web3 from "web3";
 import { InflationRewardsOffered, RewardsOffered } from "../../../libs/ftso-core/src/events";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { toFeedId } from "../../utils/generators";
+import { splitToVotingRoundsEqually } from "./generator-rewards.test";
 
 describe(`PartialRewardOffer, ${getTestFile(__filename)}`, function () {
   //To be reviewed
@@ -74,7 +75,7 @@ describe(`PartialRewardOffer, ${getTestFile(__filename)}`, function () {
 
   it("Should split", function () {
     const partialRewardOffer = PartialRewardOffer.fromRewardOffered(rewardsOffered);
-    const splitPartialRewardOffer = PartialRewardOffer.splitToVotingRoundsEqually(10, 100, partialRewardOffer);
+    const splitPartialRewardOffer = splitToVotingRoundsEqually(10, 100, partialRewardOffer);
 
     expect(splitPartialRewardOffer.length).to.eq(91);
     expect(splitPartialRewardOffer[0].amount, "0").to.eq(12082545361n);

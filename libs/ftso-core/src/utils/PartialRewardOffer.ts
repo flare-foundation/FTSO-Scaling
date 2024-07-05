@@ -81,31 +81,4 @@ export namespace PartialRewardOffer {
     }
     return rewardOffers;
   }
-
-  /**
-   * Split reward offer into multiple offers with the same parameters but different voting round id and equally
-   * distributed amount.
-   * @param startVotingRoundId
-   * @param endVotingRoundId
-   * @param rewardOffer
-   */
-  export function splitToVotingRoundsEqually(
-    startVotingRoundId: number,
-    endVotingRoundId: number,
-    rewardOffer: IPartialRewardOfferForEpoch
-  ): IPartialRewardOfferForRound[] {
-    const offers: IPartialRewardOfferForRound[] = [];
-    const numberOfRounds = BigInt(endVotingRoundId - startVotingRoundId + 1);
-    const sharePerOne: bigint = rewardOffer.amount / numberOfRounds;
-    const remainder: bigint = rewardOffer.amount % numberOfRounds;
-
-    for (let i = startVotingRoundId; i <= endVotingRoundId; i++) {
-      offers.push({
-        ...rewardOffer,
-        votingRoundId: i,
-        amount: sharePerOne + (i - startVotingRoundId < remainder ? 1n : 0n),
-      });
-    }
-    return offers;
-  }
 }

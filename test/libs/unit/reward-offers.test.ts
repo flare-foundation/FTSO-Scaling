@@ -4,12 +4,12 @@ import { InflationRewardsOffered } from "../../../libs/ftso-core/src/events/Infl
 import { RewardsOffered } from "../../../libs/ftso-core/src/events/RewardsOffered";
 import {
   distributeInflationRewardOfferToFeeds,
-  granulatedPartialOfferMap,
   splitRewardOfferByTypes,
 } from "../../../libs/ftso-core/src/reward-calculation/reward-offers";
 import { generateAddress, generateInflationRewardOffer, generateRewardsOffer, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { granulatedPartialOfferMap } from "./generator-rewards.test";
 
 describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   const rewardEpochId = 1000;

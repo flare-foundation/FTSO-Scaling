@@ -59,11 +59,3 @@ export interface Feed {
    */
   decimals: number;
 }
-
-export enum FeedCategory {
-  None = 0,
-  Crypto = 1,
-  FX = 2,
-  Commodity = 3,
-  Stock = 4,
-}

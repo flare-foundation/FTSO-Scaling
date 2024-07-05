@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { globSync } from "glob";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
@@ -209,19 +209,4 @@ export function recordProgress(
   writeFileSync(statusFileProgressClaimCalculation, JSON.stringify(progressClaimCalculation));
   const statusFileProgressClaimAggregation = path.join(rewardEpochFolder, CLAIM_AGGREGATION_PROGRESS_FILE);
   writeFileSync(statusFileProgressClaimAggregation, JSON.stringify(progressClaimAggregation));
-}
-
-export function getAggregationProgress(
-  rewardEpochId: number,
-  tempRewardEpochFolder = false,
-  calculationFolder = CALCULATIONS_FOLDER()
-): ProgressReport | undefined {
-  const rewardEpochFolder = path.join(
-    calculationFolder,
-    `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochId}`
-  );
-  const statusFileProgressClaimAggregation = path.join(rewardEpochFolder, CLAIM_AGGREGATION_PROGRESS_FILE);
-  if (existsSync(statusFileProgressClaimAggregation)) {
-    return JSON.parse(readFileSync(statusFileProgressClaimAggregation).toString()) as ProgressReport;
-  }
 }

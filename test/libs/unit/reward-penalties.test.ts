@@ -6,6 +6,7 @@ import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRew
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { generateAddress, generateRewardsOffer, generateVotersWeights } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
+import { splitToVotingRoundsEqually } from "./generator-rewards.test";
 
 describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
   const votersWeights = generateVotersWeights(10);
@@ -19,7 +20,7 @@ describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
 
   const offerPartial = PartialRewardOffer.fromRewardOffered(offerFull);
 
-  const perRoundOffer = PartialRewardOffer.splitToVotingRoundsEqually(10, 109, offerPartial);
+  const perRoundOffer = splitToVotingRoundsEqually(10, 109, offerPartial);
 
   const penaltyClaims = calculatePenalties(
     perRoundOffer[0],
