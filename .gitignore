@@ -8,3 +8,4 @@ coverage
 .DS_Store
 calculations
 test-db
+exports-csv

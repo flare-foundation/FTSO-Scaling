@@ -1,19 +1,36 @@
+import { existsSync, mkdirSync } from "fs";
 import { claimsToCSV } from "../reward-claims-csv";
+import path from "path/posix";
 
+const EXPORT_CSV_FOLDER = "exports-csv"
 async function main() {
-  if (!process.argv[2]) {
-    throw new Error("no filename");
+  const network = process.env.NETWORK;
+  if(network !== "coston" && network !== "coston2" && network !== "songbird" && network !== "flare") {
+    throw new Error(`invalid network: '${network}'`);
   }
-  const filename = process.argv[2];
-  if (!process.argv[3]) {
-    throw new Error("No start reward epoch Id");
-  }
-  const rewardEpochId = parseInt(process.argv[3]);
-  let endRewardEpoch = rewardEpochId;
 
-  if (process.argv[4]) {
-    endRewardEpoch = parseInt(process.argv[4]);
+  if (!process.argv[2]) {
+    throw new Error("No reward epoch Id");
   }
+  const rewardEpochId = parseInt(process.argv[2]);
+ 
+  let endRewardEpoch = rewardEpochId;
+  if(process.argv[3]) {
+    endRewardEpoch = parseInt(process.argv[3]);
+  }
+  if (!existsSync(EXPORT_CSV_FOLDER)) {
+    mkdirSync(EXPORT_CSV_FOLDER);
+  }
+  let fname = `${rewardEpochId}.csv`;
+  if(endRewardEpoch !== rewardEpochId) {
+    fname = `${rewardEpochId}-${endRewardEpoch}.csv`;
+  }
+  const networkFolder = path.join(EXPORT_CSV_FOLDER, `${network}`);
+  if (!existsSync(networkFolder)) {
+    mkdirSync(networkFolder);
+  }
+
+  const filename = path.join(networkFolder, fname);
 
   claimsToCSV(rewardEpochId, endRewardEpoch, filename);
 }

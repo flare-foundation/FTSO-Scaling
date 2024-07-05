@@ -1,7 +1,9 @@
-import { writeFileSync } from "fs";
+import { appendFileSync, writeFileSync } from "fs";
+import { BURN_ADDRESS } from "../../libs/ftso-core/src/configs/networks";
 import { ClaimType, IPartialRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
 import { deserializePartialClaimsForVotingRoundId } from "../../libs/ftso-core/src/utils/stat-info/partial-claims";
 import { deserializeRewardEpochInfo } from "../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { flrFormat } from "../../test/utils/reward-claim-summaries";
 
 export interface CSVRewardClaim extends IPartialRewardClaim {
   rewardEpochId: number;
@@ -58,13 +60,13 @@ function getAllClaimsForRewardEpochRange(startRewardEpochId: number, endRewardEp
         i,
         (Number(rewardEpochInfo.voterRegistrationInfo[i].voterRegistrationInfo.wNatWeight) /
           Number(totalDelegationWeight)) *
-          100
+        100
       );
       voterIdToCappedDelegationWeightPct.set(
         i,
         (Number(rewardEpochInfo.voterRegistrationInfo[i].voterRegistrationInfo.wNatCappedWeight) /
           Number(totalCappedDelegationWeight)) *
-          100
+        100
       );
     }
     const endVotingRoundId = rewardEpochInfo.endVotingRoundId ?? Number.POSITIVE_INFINITY;
@@ -137,29 +139,27 @@ function decodeFeed(feedIdHex: string): string {
 
 export function claimsToCSV(startRewardEpochId: number, endRewardEpoch: number, filename: string) {
   let totalAmount = 0n;
+  let negativeAmount = 0n;
   let burnedAmount = 0n;
   const feedData = getAllClaimsForRewardEpochRange(startRewardEpochId, endRewardEpoch);
   let csv =
-    "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoterId,identityAddress,delegationAddress\n";
-  csv += feedData
-    .map(claim => {
-      return `${claim.votingRoundId},${claim.rewardEpochId},${claim.beneficiary},${claim.voterIndex},${
-        claim.signingWeightPct
-      },${claim.delegationWeightPct},${claim.cappedDelegationWeightPct},${Number(claim.amount).toString()}.0,${
-        ClaimType[claim.claimType]
-      },${decodeFeed(claim.feedId)},${claim.offerIndex ?? ""},${claim.protocolTag ?? ""},${claim.rewardTypeTag ?? ""},${
-        claim.rewardDetailTag
-      },${claim.burnedForVoterId ?? ""},${claim.identityAddress},${claim.delegationAddress}`;
-    })
-    .join("\n");
+    "votingRoundId,rewardEpochId,beneficiary,voterIndex,signingWeightPct,delegationWeightPct,cappedDelegationWeight,amount,claimType,feedId,offerIndex,protocolTag,rewardTypeTag,rewardDetailTag,burnedForVoterId,identityAddress,delegationAddress,amountNAT\n";
+  writeFileSync(filename, csv);
   for (const claim of feedData) {
     if (claim.amount > 0n) {
       totalAmount += claim.amount;
     }
-    if(claim.amount < 0n) {
-      burnedAmount += -claim.amount;
+    if (claim.amount < 0n) {
+      negativeAmount += -claim.amount;
     }
+    if (claim.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()) {
+      burnedAmount += claim.amount;
+    }
+    const line = `${claim.votingRoundId},${claim.rewardEpochId},${claim.beneficiary},${claim.voterIndex},${claim.signingWeightPct
+      },${claim.delegationWeightPct},${claim.cappedDelegationWeightPct},${claim.amount},${ClaimType[claim.claimType]
+      },${decodeFeed(claim.feedId)},${claim.offerIndex ?? ""},${claim.protocolTag ?? ""},${claim.rewardTypeTag ?? ""},${claim.rewardDetailTag
+      },${claim.burnedForVoterId ?? ""},${claim.identityAddress},${claim.delegationAddress},${Number(claim.amount) / Math.pow(10, 18)}\n`;
+      appendFileSync(filename, line);
   }
-  console.log(`Total: ${totalAmount}, burned: ${burnedAmount}`)
-  writeFileSync(filename, csv);
+  console.log(`Total: ${flrFormat(totalAmount)}(${totalAmount}), negative: ${flrFormat(negativeAmount)}(${negativeAmount}), burned: ${flrFormat(burnedAmount)}(${burnedAmount}, ${Math.round(Number(burnedAmount) / Number(totalAmount) * 10000) / 100}%)`)
 }
