@@ -12,7 +12,7 @@ the variable should have `0x`-prefixed comma separated list of private keys. A u
 Some calls which are not security sensitive can be thus carried out in the form similar to:
 
 ```bash
-env NETWORK=coston RPC=https://coston-api.flare.network/ext/bc/C/rpc <callAsBelow>
+env NETWORK=<network> RPC=https://coston-api.flare.network/ext/bc/C/rpc <callAsBelow>
 ```
 
 # Calculating reward data
@@ -42,7 +42,7 @@ Prints out text summary of when and by who signatures were deposited in a specif
 Env variable `NETWORK` must be set and data for the specific reward epoch must be calculated in the `calculations` folder.
 
 ```bash
-yarn NETWORK=coston ts-node scripts/analytics/run/signatures.ts <rewardEpochId>
+yarn NETWORK=<network> ts-node scripts/analytics/run/signatures.ts <rewardEpochId>
 ```
 
 ## Finalization stats
@@ -51,7 +51,7 @@ Prints out text summary of when and by who finalizations were carried out in a s
 Env variable `NETWORK` must be set and data for the specific reward epoch must be calculated in the `calculations` folder.
 
 ```bash
-env NETWORK=coston yarn ts-node scripts/analytics/run/finalizations.ts <rewardEpochId>
+env NETWORK=<network> yarn ts-node scripts/analytics/run/finalizations.ts <rewardEpochId>
 ```
 
 ## Reward stats
@@ -59,7 +59,7 @@ env NETWORK=coston yarn ts-node scripts/analytics/run/finalizations.ts <rewardEp
 Prints reward stats for a given reward epoch. Env variable `NETWORK` must be set.
 
 ```bash
-env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
+env NETWORK=<network> yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
 ```
 
 Note that this call also carries out the checks that all Merkle proofs match and that the sum of claims matches the total reward on smart contract. For the latter check to be carried out `RPC` env variable needs to be set.
@@ -67,7 +67,7 @@ Note that this call also carries out the checks that all Merkle proofs match and
 Alternatively, one can get CSV with breakdown of partial detailed reward claims.
 
 ```bash
-env NETWORK=coston yarn ts-node scripts/analytics/run/reward-claims-csv.ts test.csv <startRewardEpoch> <endRewardEpoch>
+env NETWORK=<network> yarn ts-node scripts/analytics/run/reward-claims-csv.ts <rewardEpoch>
 ```
 
 The CSV can be imported to Excel and filters can be used to analyze the detailed claims.
@@ -77,7 +77,7 @@ The CSV can be imported to Excel and filters can be used to analyze the detailed
 Prints up time and reward finalization stats.
 
 ```bash
-env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts finalizations <startRewardEpochId> [endRewardEpochId]
+env NETWORK=<network> yarn ts-node scripts/reward-finalizer-helper.ts finalizations <startRewardEpochId> [endRewardEpochId]
 ```
 
 ## Uninitialized weight based claims 
@@ -85,7 +85,7 @@ env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts finalizations
 Lists uninitialized weight based claims for a given reward epoch id.
 
 ```bash
-env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts uninitialized <rewardEpochId>
+env NETWORK=<network> yarn ts-node scripts/reward-finalizer-helper.ts uninitialized <rewardEpochId>
 ```
 
 ## Feed values
@@ -93,4 +93,11 @@ env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts uninitialized
 Prints feed values info for voting epochs in a given reward epoch for a given feed.
 ```bash
 yarn ts-node scripts/analytics/run/feeds.ts <rewardEpochId> <feedIdOrIndex> [startVotingRoundId] [endVotingRoundId]
+```
+
+## Extracting reward data
+
+Extracts reward data into `rewards-data` repo.
+```bash
+yarn ts-node scripts/analytics/run/extract-reward-data.ts <network> <rewardEpochId>
 ```

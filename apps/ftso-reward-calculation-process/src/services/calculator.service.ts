@@ -44,6 +44,7 @@ import { fullRoundOfferCalculation, initializeTemplateOffers } from "../libs/off
 import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
+import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
 
 if (process.env.FORCE_NOW) {
   const newNow = parseInt(process.env.FORCE_NOW) * 1000;
@@ -132,6 +133,10 @@ export class CalculatorService {
       rewardEpochInfo,
     };
     fixRandomNumbersAndOffers(state, logger);
+
+    const feedSelections = getIncrementalCalculationsFeedSelections(rewardEpochDuration.rewardEpochId, state.nextVotingRoundIdWithNoSecureRandom - 1);
+    serializeIncrementalCalculationsFeedSelections(feedSelections);
+
     await incrementalBatchClaimCatchup(rewardEpochDuration, state, options, logger);
     for (
       let votingRoundId = rewardEpochDuration.startVotingRoundId;
@@ -164,6 +169,10 @@ export class CalculatorService {
       logger.log(`Processing implications for ${state.votingRoundId}`);
       // await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
       fixRandomNumbersAndOffers(state, logger);
+
+      const feedSelections = getIncrementalCalculationsFeedSelections(rewardEpochDuration.rewardEpochId, state.nextVotingRoundIdWithNoSecureRandom - 1);
+      serializeIncrementalCalculationsFeedSelections(feedSelections);
+      
       await calculateAndAggregateRemainingClaims(this.dataManager, state, options, logger);
 
       const tempClaimData = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, state.nextVotingRoundForClaimCalculation - 1);
