@@ -87,9 +87,6 @@ export class TLPEvents {
   block_number: number;
 }
 
-export type ITLPTransaction = new () => TLPTransaction;
-export type ITLPEvents = new () => TLPEvents;
-
 @Entity("states")
 export class TLPState {
   @PrimaryColumn()
@@ -108,5 +105,3 @@ export class TLPState {
   @Column({ type: "datetime", precision: 3, nullable: true })
   updated: Date = new Date();
 }
-
-export type ITPLState = new () => TLPState;

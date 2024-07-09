@@ -6,15 +6,7 @@ import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClie
 import { VoterWeights } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
 import { DataForRewardCalculation, FastUpdatesDataForVotingRound } from "../../data-calculation-interfaces";
-import {
-  Address,
-  Feed,
-  MedianCalculationResult,
-  MedianCalculationSummary,
-  MessageHash,
-  RandomCalculationResult,
-} from "../../voting-types";
-import { ValueWithDecimals } from "../FeedValueEncoder";
+import { Address, Feed, MedianCalculationResult, MessageHash, RandomCalculationResult } from "../../voting-types";
 import { IRevealData } from "../RevealData";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_CALCULATION_DATA_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
@@ -77,11 +69,6 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
 export interface HashSignatures {
   hash: string;
   signatures: GenericSubmissionData<ISignaturePayload>[];
-}
-
-export interface SimplifiedMedianCalculationResult {
-  readonly feedValues: readonly ValueWithDecimals[];
-  readonly summary: MedianCalculationSummary;
 }
 
 /**

@@ -15,7 +15,7 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
 import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
-import { granulatedPartialOfferMap, splitRewardOfferByTypes } from "./reward-offers";
+import { splitRewardOfferByTypes } from "./reward-offers";
 
 import { DataManagerForRewarding } from "../DataManagerForRewarding";
 import { RewardEpoch } from "../RewardEpoch";
@@ -29,13 +29,11 @@ import {
   deserializeAggregatedClaimsForVotingRoundId,
   serializeAggregatedClaimsForVotingRoundId,
 } from "../utils/stat-info/aggregated-claims";
-import { OFFERS_FILE } from "../utils/stat-info/constants";
 import { serializeFeedValuesForVotingRoundId } from "../utils/stat-info/feed-values";
 import {
   createRewardCalculationFolders,
   deserializeGranulatedPartialOfferMap,
   deserializeGranulatedPartialOfferMapForFastUpdates,
-  serializeGranulatedPartialOfferMap,
 } from "../utils/stat-info/granulated-partial-offers-map";
 import {
   deserializePartialClaimsForVotingRoundId,
@@ -46,98 +44,11 @@ import {
   deserializeDataForRewardCalculation,
   serializeDataForRewardCalculation,
 } from "../utils/stat-info/reward-calculation-data";
-import {
-  deserializeRewardEpochInfo,
-  getRewardEpochInfo,
-  serializeRewardEpochInfo,
-} from "../utils/stat-info/reward-epoch-info";
-import { destroyStorage } from "../utils/stat-info/storage";
+import { deserializeRewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
 import { calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
 import { ILogger } from "../utils/ILogger";
-
-/**
- * Calculates merged reward claims for the given reward epoch.
- * It triggers reward distribution throughout voting rounds and feeds, yielding reward claims that get merged at the end.
- * The resulting reward claims are then returned and can be used to assemble reward Merkle tree representing the rewards for the epoch.
- */
-export async function rewardClaimsForRewardEpoch(
-  rewardEpochId: number,
-  randomGenerationBenchingWindow: number,
-  dataManager: DataManager,
-  rewardEpochManager: RewardEpochManager,
-  merge = true,
-  serialize = false,
-  forceDestroyStorage = false
-): Promise<IRewardClaim[] | IPartialRewardClaim[]> {
-  if (serialize && forceDestroyStorage) {
-    destroyStorage(rewardEpochId);
-  }
-  const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
-  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
-
-  const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, endVotingRoundId);
-  serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
-
-  // Partial offer generation from reward offers
-  // votingRoundId => feedId => partialOffer
-  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
-    startVotingRoundId,
-    endVotingRoundId,
-    rewardEpoch.rewardOffers
-  );
-
-  // Reward claim calculation
-  let allRewardClaims: IPartialRewardClaim[] = [];
-  for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
-    const rewardClaims = await partialRewardClaimsForVotingRound(
-      rewardEpochId,
-      votingRoundId,
-      randomGenerationBenchingWindow,
-      dataManager,
-      rewardOfferMap.get(votingRoundId),
-      true, // prepareData
-      merge,
-      serialize
-    );
-    allRewardClaims.push(...rewardClaims);
-    if (merge) {
-      allRewardClaims = RewardClaim.merge(allRewardClaims);
-    }
-  }
-  if (merge) {
-    return RewardClaim.convertToRewardClaims(rewardEpochId, allRewardClaims);
-  }
-  return allRewardClaims;
-}
-
-/**
- * Initializes reward epoch storage for the given reward epoch.
- * Creates calculation folders with granulated offer data.
- */
-export async function initializeRewardEpochStorageOld(
-  rewardEpochId: number,
-  rewardEpochManager: RewardEpochManager,
-  useExpectedEndIfNoSigningPolicyAfter = false,
-  calculationFolder = CALCULATIONS_FOLDER()
-): Promise<RewardEpochDuration> {
-  const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
-    rewardEpochId,
-    useExpectedEndIfNoSigningPolicyAfter
-  );
-  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
-  // Partial offer generation from reward offers
-  // votingRoundId => feedId => partialOffer
-  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
-    rewardEpochDuration.startVotingRoundId,
-    rewardEpochDuration.endVotingRoundId,
-    rewardEpoch.rewardOffers
-  );
-  // sync call
-  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, true, OFFERS_FILE, calculationFolder);
-  return rewardEpochDuration;
-}
 
 /**
  * Initializes reward epoch storage for the given reward epoch.
@@ -288,11 +199,7 @@ export async function partialRewardClaimsForVotingRound(
 
       // Calculate penalties for reveal double signers
       // get signingAddresses of double signers
-      const doubleSigners = calculateDoubleSigners(
-        votingRoundId,
-        FTSO2_PROTOCOL_ID,
-        data.signaturesMap!
-      );
+      const doubleSigners = calculateDoubleSigners(votingRoundId, FTSO2_PROTOCOL_ID, data.signaturesMap!);
 
       // convert signingAddresses to submitAddresses
       const doubleSignersSubmit = new Set(

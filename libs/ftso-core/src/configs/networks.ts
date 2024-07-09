@@ -141,7 +141,6 @@ const contracts = () => {
 export const CONTRACTS = contracts();
 
 export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
-export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // State names in indexer database
 export const LAST_CHAIN_INDEX_STATE = "last_chain_block";

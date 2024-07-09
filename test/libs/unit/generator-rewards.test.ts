@@ -6,15 +6,14 @@ import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import {
   BURN_ADDRESS,
+  CALCULATIONS_FOLDER,
   EPOCH_SETTINGS,
   RANDOM_GENERATION_BENCHING_WINDOW,
 } from "../../../libs/ftso-core/src/configs/networks";
 import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
 import {
   aggregateRewardClaimsInStorage,
-  initializeRewardEpochStorageOld,
   partialRewardClaimsForVotingRound,
-  rewardClaimsForRewardEpoch,
 } from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import {
@@ -66,6 +65,15 @@ import {
 } from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../libs/ftso-core/src/utils/stat-info/storage";
 import { toFeedId } from "../../utils/generators";
+import {
+  IPartialRewardOfferForEpoch,
+  IPartialRewardOfferForRound,
+  PartialRewardOffer,
+} from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { RewardEpochDuration } from "../../../libs/ftso-core/src/utils/RewardEpochDuration";
+import { OFFERS_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
+import { serializeGranulatedPartialOfferMap } from "../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
+import { RewardOffers } from "../../../libs/ftso-core/src/events";
 
 // Ensure that the networks are not loaded
 
@@ -693,3 +701,145 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     happyPathChecks(voters, claims, mergedClaims);
   });
 });
+
+/**
+ * Initializes reward epoch storage for the given reward epoch.
+ * Creates calculation folders with granulated offer data.
+ */
+export async function initializeRewardEpochStorageOld(
+  rewardEpochId: number,
+  rewardEpochManager: RewardEpochManager,
+  useExpectedEndIfNoSigningPolicyAfter = false,
+  calculationFolder = CALCULATIONS_FOLDER()
+): Promise<RewardEpochDuration> {
+  const rewardEpochDuration = await rewardEpochManager.getRewardEpochDurationRange(
+    rewardEpochId,
+    useExpectedEndIfNoSigningPolicyAfter
+  );
+  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(rewardEpochDuration.startVotingRoundId);
+  // Partial offer generation from reward offers
+  // votingRoundId => feedId => partialOffer
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
+    rewardEpochDuration.startVotingRoundId,
+    rewardEpochDuration.endVotingRoundId,
+    rewardEpoch.rewardOffers
+  );
+  // sync call
+  serializeGranulatedPartialOfferMap(rewardEpochDuration, rewardOfferMap, true, OFFERS_FILE, calculationFolder);
+  return rewardEpochDuration;
+}
+
+/**
+ * Calculates merged reward claims for the given reward epoch.
+ * It triggers reward distribution throughout voting rounds and feeds, yielding reward claims that get merged at the end.
+ * The resulting reward claims are then returned and can be used to assemble reward Merkle tree representing the rewards for the epoch.
+ */
+export async function rewardClaimsForRewardEpoch(
+  rewardEpochId: number,
+  randomGenerationBenchingWindow: number,
+  dataManager: DataManager,
+  rewardEpochManager: RewardEpochManager,
+  merge = true,
+  serialize = false,
+  forceDestroyStorage = false
+): Promise<IRewardClaim[] | IPartialRewardClaim[]> {
+  if (serialize && forceDestroyStorage) {
+    destroyStorage(rewardEpochId);
+  }
+  const { startVotingRoundId, endVotingRoundId } = await rewardEpochManager.getRewardEpochDurationRange(rewardEpochId);
+  const rewardEpoch = await rewardEpochManager.getRewardEpochForVotingEpochId(startVotingRoundId);
+
+  const rewardEpochInfo = getRewardEpochInfo(rewardEpoch, endVotingRoundId);
+  serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo);
+
+  // Partial offer generation from reward offers
+  // votingRoundId => feedId => partialOffer
+  const rewardOfferMap: Map<number, Map<string, IPartialRewardOfferForRound[]>> = granulatedPartialOfferMap(
+    startVotingRoundId,
+    endVotingRoundId,
+    rewardEpoch.rewardOffers
+  );
+
+  // Reward claim calculation
+  let allRewardClaims: IPartialRewardClaim[] = [];
+  for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    const rewardClaims = await partialRewardClaimsForVotingRound(
+      rewardEpochId,
+      votingRoundId,
+      randomGenerationBenchingWindow,
+      dataManager,
+      rewardOfferMap.get(votingRoundId),
+      true, // prepareData
+      merge,
+      serialize
+    );
+    allRewardClaims.push(...rewardClaims);
+    if (merge) {
+      allRewardClaims = RewardClaim.merge(allRewardClaims);
+    }
+  }
+  if (merge) {
+    return RewardClaim.convertToRewardClaims(rewardEpochId, allRewardClaims);
+  }
+  return allRewardClaims;
+}
+
+/**
+ * Given all reward offers for reward epoch it splits them into partial reward offers for voting rounds and feeds.
+ * First inflation reward offers are used to generate partial reward offers for feeds.
+ * Then each reward offer is split to partial reward offers for each voting round.
+ * A map: votingRoundId => feedId => partialRewardOffer[] is returned containing all partial reward offers.
+ */
+export function granulatedPartialOfferMap(
+  startVotingRoundId: number,
+  endVotingRoundId: number,
+  rewardOffers: RewardOffers
+): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
+  const rewardOfferMap = new Map<number, Map<string, IPartialRewardOfferForRound[]>>();
+  const allRewardOffers = rewardOffers.rewardOffers.map(rewardOffer =>
+    PartialRewardOffer.fromRewardOffered(rewardOffer)
+  );
+  for (const inflationRewardOffer of rewardOffers.inflationOffers) {
+    allRewardOffers.push(...PartialRewardOffer.fromInflationRewardOfferedEquallyDistributed(inflationRewardOffer));
+  }
+  for (const rewardOffer of allRewardOffers) {
+    const votingEpochRewardOffers = splitToVotingRoundsEqually(startVotingRoundId, endVotingRoundId, rewardOffer);
+    for (const votingEpochRewardOffer of votingEpochRewardOffers) {
+      const votingRoundId = votingEpochRewardOffer.votingRoundId!;
+      const feedId = votingEpochRewardOffer.feedId;
+      const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
+      rewardOfferMap.set(votingRoundId, feedOffers);
+      const feedIdOffers = feedOffers.get(feedId) || [];
+      feedOffers.set(feedId, feedIdOffers);
+      feedIdOffers.push(votingEpochRewardOffer);
+    }
+  }
+  return rewardOfferMap;
+}
+
+/**
+ * Split reward offer into multiple offers with the same parameters but different voting round id and equally
+ * distributed amount.
+ * @param startVotingRoundId
+ * @param endVotingRoundId
+ * @param rewardOffer
+ */
+export function splitToVotingRoundsEqually(
+  startVotingRoundId: number,
+  endVotingRoundId: number,
+  rewardOffer: IPartialRewardOfferForEpoch
+): IPartialRewardOfferForRound[] {
+  const offers: IPartialRewardOfferForRound[] = [];
+  const numberOfRounds = BigInt(endVotingRoundId - startVotingRoundId + 1);
+  const sharePerOne: bigint = rewardOffer.amount / numberOfRounds;
+  const remainder: bigint = rewardOffer.amount % numberOfRounds;
+
+  for (let i = startVotingRoundId; i <= endVotingRoundId; i++) {
+    offers.push({
+      ...rewardOffer,
+      votingRoundId: i,
+      amount: sharePerOne + (i - startVotingRoundId < remainder ? 1n : 0n),
+    });
+  }
+  return offers;
+}
