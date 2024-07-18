@@ -1,0 +1,1616 @@
+{
+  "rewardEpochId": 207,
+  "signingPolicy": {
+    "rewardEpochId": 207,
+    "startVotingRoundId": 695520,
+    "threshold": 32753,
+    "seed": "0x12e48dfce717328ac546d256e3150fb39a78310c197e9ff8a0aa9f2d7ccfb565",
+    "voters": [
+      "0x4ef3181091c42310c0d0957ca7b6a53ccc6104d8",
+      "0x526a35584129879950c1b044f5627812217b833a",
+      "0x07e54122fb187daa7e10b39d9e670c5f894e4190",
+      "0x5bb7e630a3c14d4f4d889b1c7488f7affc8da0e1",
+      "0x85ddaaa17e3906bc1be051f6161ebe2ef68998c5",
+      "0x9e475034972d8acc3fe28e9a950d73a7631254e4",
+      "0x0cd4562cb47830cfc2acbca68c99d4c50e962f88",
+      "0xb25f584a52cc31541f6d783abe700c078f618bb4",
+      "0xf8394735c8977d2287a28279a8e62a135fa94406",
+      "0xea851ec9ba36f1741c4acdde72f5b41b1903af57",
+      "0x2a4bac7f442a4cd30faf3a1aeee74940c456ddf1",
+      "0x0e879d2836196f9bb212eaa5d6b206fa633a8370",
+      "0x91abe8c9b87c7d48f4fd70af31e418ce6d336896",
+      "0xe5c465582969717375f38202d6f615581daf2728",
+      "0x31e412e114629702281533cc657be76ad928283b",
+      "0xf0c331bdcf75295a726834194178c951d2281799",
+      "0x40567b5f30c90f35a3d3a5c57702bef6813d9a39",
+      "0xfe28f67f7e33f9702476da4a851148b8d594b453",
+      "0x7564fb077b65a1fc4fd42cf8c4948ad5ff11f0c4",
+      "0x680cb53763d589b2835ff522cbeea507dba9f74c",
+      "0xa5508a7f423082b16a281c7e6109b2af5251438d",
+      "0x4f29816fddfecef74b05639718eb719f719def4e",
+      "0x0c88a5cd336a2b2a81f16e09a23582300489f4de",
+      "0x81050097cbdc0b3d58fe0db4469775db7f538304",
+      "0x285ee7a4ec946ad5f6edae1611dbc4bc0510c783",
+      "0x70538a23d7a825eabf80e26dfacfd8c9d61c205d",
+      "0x3ce683e9aab8da737f67d25d910a281970e38f3d",
+      "0x86339bbf3e57c6026ce678617dec27f2cc5dbd62",
+      "0x493e5d0833646f99e4b414e9de5a10d8cb9b5c5a",
+      "0x338119f38fc07f29aa96449251353d9e4684da6d",
+      "0x4dfcbc3a1529fb3c07245095fba7830063d71c34",
+      "0x493560bac93dfc176e5663cfc830af04209e95fa",
+      "0x1c884cf954ec8f15d7bf16b9d50402cc5c94b5fd",
+      "0x558298090e6e5d439e792c9d1a3cde189a14037c",
+      "0xcd67d20a68801832a26bc7877639a1f03dd480b7",
+      "0x8481da9fb718e36121d67be580531fac1ef1349f",
+      "0xb4d13ca9e17c52d61ffc06c2bc75e3a751517b4b",
+      "0xfb7b095ed8ab9082ae44c511a597c5c7da4216ca",
+      "0x5da692a7ee11e292bddf8ea15bd388f3bec1347a",
+      "0x458bd1c5faeb843c8be9c512f7eb3a14ec5fb6f5",
+      "0x2eecbb469af133d136f011ce3f27ecf9524bb7c3",
+      "0x53bce8b63c3357717d87a816e3414e2103a85d27",
+      "0xa1c5ad0b4a24b70b786b6143b066a8c54388f01f",
+      "0x4d02abb622560b15a98a1c572fb3063852d8a7de",
+      "0x0fb8fe4480de02093a828beb554d09cb5c31895a",
+      "0x5483a24b91fd1fcb8ba1c5ae54c85d9b61d62198",
+      "0xfd9abd602150d39d819eb71ee8d6809c157d9a82",
+      "0x6b526660dcb12b70dd76595a886fb7430e44c855",
+      "0x519468fd9811661f490cb921b499d2388bc9426b",
+      "0xf9b5da7af59bf8c8b68ef1743a4dcdca213b583e",
+      "0xc54543235c0fae5a724338293d3cb4e82428683c",
+      "0xfb021c01f924c416d1fed247161963efc2ae7604",
+      "0x21ef03f609aad7db7224d3f8fd90f5593d2607ca",
+      "0xaa4d1f2b94370229bc20c3582e1d940ec783de12",
+      "0x3dc9c7417016818d4f70e489311c428f97cb699d",
+      "0xaa88d168a86ee8c8dafce663bfe713d256c2a0f3",
+      "0x295d1dceafda82dca22f6323b9b7889a2920c789",
+      "0x5b0ff409b17df4b717ea0c5035d0a961c502fca8",
+      "0xc139f933a6b44aa698e649cc8f142ce02fd19213",
+      "0x3228f985b49eda79c8dd5e967b63ab562edf7eaa"
+    ],
+    "weights": [
+      374,
+      375,
+      386,
+      2191,
+      375,
+      376,
+      427,
+      1383,
+      1334,
+      371,
+      575,
+      2191,
+      2191,
+      371,
+      402,
+      2191,
+      380,
+      2191,
+      371,
+      2191,
+      1,
+      2191,
+      1707,
+      1580,
+      2191,
+      384,
+      30,
+      2191,
+      1754,
+      384,
+      2191,
+      542,
+      647,
+      419,
+      2191,
+      704,
+      398,
+      483,
+      1237,
+      1887,
+      903,
+      2191,
+      2191,
+      2191,
+      397,
+      1561,
+      417,
+      1487,
+      2191,
+      1621,
+      1,
+      371,
+      377,
+      374,
+      2,
+      1,
+      378,
+      2163,
+      2191,
+      739
+    ],
+    "signingPolicyBytes": "0x003c0000cf000a9ce07ff112e48dfce717328ac546d256e3150fb39a78310c197e9ff8a0aa9f2d7ccfb5654ef3181091c42310c0d0957ca7b6a53ccc6104d80176526a35584129879950c1b044f5627812217b833a017707e54122fb187daa7e10b39d9e670c5f894e419001825bb7e630a3c14d4f4d889b1c7488f7affc8da0e1088f85ddaaa17e3906bc1be051f6161ebe2ef68998c501779e475034972d8acc3fe28e9a950d73a7631254e401780cd4562cb47830cfc2acbca68c99d4c50e962f8801abb25f584a52cc31541f6d783abe700c078f618bb40567f8394735c8977d2287a28279a8e62a135fa944060536ea851ec9ba36f1741c4acdde72f5b41b1903af5701732a4bac7f442a4cd30faf3a1aeee74940c456ddf1023f0e879d2836196f9bb212eaa5d6b206fa633a8370088f91abe8c9b87c7d48f4fd70af31e418ce6d336896088fe5c465582969717375f38202d6f615581daf2728017331e412e114629702281533cc657be76ad928283b0192f0c331bdcf75295a726834194178c951d2281799088f40567b5f30c90f35a3d3a5c57702bef6813d9a39017cfe28f67f7e33f9702476da4a851148b8d594b453088f7564fb077b65a1fc4fd42cf8c4948ad5ff11f0c40173680cb53763d589b2835ff522cbeea507dba9f74c088fa5508a7f423082b16a281c7e6109b2af5251438d00014f29816fddfecef74b05639718eb719f719def4e088f0c88a5cd336a2b2a81f16e09a23582300489f4de06ab81050097cbdc0b3d58fe0db4469775db7f538304062c285ee7a4ec946ad5f6edae1611dbc4bc0510c783088f70538a23d7a825eabf80e26dfacfd8c9d61c205d01803ce683e9aab8da737f67d25d910a281970e38f3d001e86339bbf3e57c6026ce678617dec27f2cc5dbd62088f493e5d0833646f99e4b414e9de5a10d8cb9b5c5a06da338119f38fc07f29aa96449251353d9e4684da6d01804dfcbc3a1529fb3c07245095fba7830063d71c34088f493560bac93dfc176e5663cfc830af04209e95fa021e1c884cf954ec8f15d7bf16b9d50402cc5c94b5fd0287558298090e6e5d439e792c9d1a3cde189a14037c01a3cd67d20a68801832a26bc7877639a1f03dd480b7088f8481da9fb718e36121d67be580531fac1ef1349f02c0b4d13ca9e17c52d61ffc06c2bc75e3a751517b4b018efb7b095ed8ab9082ae44c511a597c5c7da4216ca01e35da692a7ee11e292bddf8ea15bd388f3bec1347a04d5458bd1c5faeb843c8be9c512f7eb3a14ec5fb6f5075f2eecbb469af133d136f011ce3f27ecf9524bb7c3038753bce8b63c3357717d87a816e3414e2103a85d27088fa1c5ad0b4a24b70b786b6143b066a8c54388f01f088f4d02abb622560b15a98a1c572fb3063852d8a7de088f0fb8fe4480de02093a828beb554d09cb5c31895a018d5483a24b91fd1fcb8ba1c5ae54c85d9b61d621980619fd9abd602150d39d819eb71ee8d6809c157d9a8201a16b526660dcb12b70dd76595a886fb7430e44c85505cf519468fd9811661f490cb921b499d2388bc9426b088ff9b5da7af59bf8c8b68ef1743a4dcdca213b583e0655c54543235c0fae5a724338293d3cb4e82428683c0001fb021c01f924c416d1fed247161963efc2ae7604017321ef03f609aad7db7224d3f8fd90f5593d2607ca0179aa4d1f2b94370229bc20c3582e1d940ec783de1201763dc9c7417016818d4f70e489311c428f97cb699d0002aa88d168a86ee8c8dafce663bfe713d256c2a0f30001295d1dceafda82dca22f6323b9b7889a2920c789017a5b0ff409b17df4b717ea0c5035d0a961c502fca80873c139f933a6b44aa698e649cc8f142ce02fd19213088f3228f985b49eda79c8dd5e967b63ab562edf7eaa02e3",
+    "timestamp": 1721021548
+  },
+  "voterRegistrationInfo": [
+    {
+      "voterRegistered": {
+        "voter": "0xbc1682730ae5bd0aed7d210da330ed581d9f2c4d",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x4ef3181091c42310c0d0957ca7b6a53ccc6104d8",
+        "submitAddress": "0xc280fcabd9cb4524d84e3ea9f7f970e123fec53e",
+        "submitSignaturesAddress": "0x2dfab774b46ec7195aa430b4e301ea97061873bc",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9534413468024212098"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xbc1682730ae5bd0aed7d210da330ed581d9f2c4d",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x833dde54a28a3070a086cc8919beaa7a0134de46",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20217401530415302980523690",
+        "wNatCappedWeight": "20217401530415302980523690",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x527e5e829763885008e171493c0e8d4a1ec48239",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x526a35584129879950c1b044f5627812217b833a",
+        "submitAddress": "0xe6c5024a337451e32f18f4b043bdb2d755897f7e",
+        "submitSignaturesAddress": "0xfb341c48679a52973f778df1dd5c50a8e03010b0",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9556309897127664360"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x527e5e829763885008e171493c0e8d4a1ec48239",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x86ec5c8ce7a4dd7762cff205d64bfc0c272feb6d",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20279333185088488473584727",
+        "wNatCappedWeight": "20279333185088488473584727",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x08d094dc09a0baf05ec7e2a881a02da54c26442b",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x07e54122fb187daa7e10b39d9e670c5f894e4190",
+        "submitAddress": "0x5d71ee71f5ce23c647162f31beafa6ee5b8a1e0b",
+        "submitSignaturesAddress": "0x05a9886f643224b79a3572694005c5fc1e319d74",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9840422072958069729"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x08d094dc09a0baf05ec7e2a881a02da54c26442b",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x9225db8b30a59d8dd15448e2e5918bd160262b5d",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "21087173628240856852939153",
+        "wNatCappedWeight": "21087173628240856852939153",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x342c8c165db96a60efedd2e3480ae5398a1fd322",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x5bb7e630a3c14d4f4d889b1c7488f7affc8da0e1",
+        "submitAddress": "0xc7aeb460f425667d4fb16e0c0c42325b031030a0",
+        "submitSignaturesAddress": "0x0beb25d66cdd056ac4ff46c2c85937a27f644f86",
+        "publicKeyPart1": "0x038d51351495bc3cc20fd1316e58ce28a327e5fe712a70606af238d6110d381e",
+        "publicKeyPart2": "0x20383e5731dc31c42712205966c438969f7694f79900efffb34c606d12c24440",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x342c8c165db96a60efedd2e3480ae5398a1fd322",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xde4051b333b3063fd28267cd4412dd25233d0ae1",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "257763542167588969954455209",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xaa14f00460efa76418f9ce265fe6dbb259b59d3f",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x85ddaaa17e3906bc1be051f6161ebe2ef68998c5",
+        "submitAddress": "0xfac6ac7f8124418c389aeb225ceb1872eedac401",
+        "submitSignaturesAddress": "0x9cb870ddd75d722a57d35d1ce93526546710aae0",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9570966164112379392"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xaa14f00460efa76418f9ce265fe6dbb259b59d3f",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x04bd6870d801d68cd58163900b8eed6bddda29cb",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20320818901686580080453189",
+        "wNatCappedWeight": "20320818901686580080453189",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x01f24cb1de93f218f6627d496e6318bea65f2f34",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x9e475034972d8acc3fe28e9a950d73a7631254e4",
+        "submitAddress": "0x854d6971733c84a8a62bab6f62a588a9e1e33f92",
+        "submitSignaturesAddress": "0x2e98485ba7f43d418e7380592e50a155ec8840a4",
+        "publicKeyPart1": "0x1529a7aa863f5f9bb74c3d4acf15ec970443bc44fd530a12a18a6f2bb3af75b7",
+        "publicKeyPart2": "0x09de5e46ae24922f2e96e7564601c1e9f8c6df448e3e9f6c9dcc19e3246fe64a",
+        "registrationWeight": "9588743489864004102"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x01f24cb1de93f218f6627d496e6318bea65f2f34",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x0d3852ad415477ffc39ce9351bd4dedbbd585833",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20371155071715978647475744",
+        "wNatCappedWeight": "20371155071715978647475744",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xec056b0ef36de1d63031fdbb9bcef5feb36fb27f",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x0cd4562cb47830cfc2acbca68c99d4c50e962f88",
+        "submitAddress": "0x1a2c2cf93667b0936c2e2e057fafc8637df56642",
+        "submitSignaturesAddress": "0xee75cd37b1a6815cc6e8ea27cf735524c170c57a",
+        "publicKeyPart1": "0x20f54d0d08d51d97844e91a8f05307250bbb7f0915b974806c079444d088332b",
+        "publicKeyPart2": "0x27aaa90d1f09c41615b5eeb9c03649e8787f4ac5d67e1ddab98010a725e93746",
+        "registrationWeight": "10880741596096196664"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xec056b0ef36de1d63031fdbb9bcef5feb36fb27f",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x7c255e428e95bebc76e944d49d4f460c84b3a3c3",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "24110797872309114622439346",
+        "wNatCappedWeight": "24110797872309114622439346",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xc1d269e9d2a39c6a285eaaf53eb9fe9b7245c87e",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xb25f584a52cc31541f6d783abe700c078f618bb4",
+        "submitAddress": "0xeb431aca7d7b626c8635de8842a8ca4a25c53ab1",
+        "submitSignaturesAddress": "0xdf4a3adb26d23cf51380b31d5ffc3c94d06697b7",
+        "publicKeyPart1": "0x0e7a4499d35d90c55a060f7e6b9e5a0c9d04e5154b7fa049e75ded80cc15b583",
+        "publicKeyPart2": "0x05e5acbbb75a703cd424266f6ff2ac9bbc39a1ee881fdd1e3ec91869f8f9bf89",
+        "registrationWeight": "35255039411394140016"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xc1d269e9d2a39c6a285eaaf53eb9fe9b7245c87e",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x58cd43e9fcdbd4d0f507ab4f6029db8032746da8",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "115601027655072266250279491",
+        "wNatCappedWeight": "115601027655072266250279491",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xe6b81db3e09ee36611555d053a1bf8cb99fc2f1b",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xf8394735c8977d2287a28279a8e62a135fa94406",
+        "submitAddress": "0xfd4a5a16825398afe0dab56bcd7df14748166b7b",
+        "submitSignaturesAddress": "0x74a4a3756893700d350404ae96e388fc3f486ade",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "34001756743912770078"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xe6b81db3e09ee36611555d053a1bf8cb99fc2f1b",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x733a73408d8e106b6ac999ccd9f3d308bcaeb7b5",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "110154430069037936973831950",
+        "wNatCappedWeight": "110154430069037936973831950",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xc9aae1c39de077aeb7d7bc5b018acc4c71504a84",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xea851ec9ba36f1741c4acdde72f5b41b1903af57",
+        "submitAddress": "0x1037187c620b36e8c19ea1bd134f1c79417c3798",
+        "submitSignaturesAddress": "0x31f99aa33a86bb5dec2362ffadde8e1a7d07e830",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9460631290634267400"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xc9aae1c39de077aeb7d7bc5b018acc4c71504a84",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x0501b6306b03a9eede8165d4b9abcb4915937b89",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20009069050043574551415393",
+        "wNatCappedWeight": "20009069050043574551415393",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x28603d496801086f503d80b5d321ecad13ca3afc",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x2a4bac7f442a4cd30faf3a1aeee74940c456ddf1",
+        "submitAddress": "0x8051e1447d2dbc375c218605f623898edffe0a28",
+        "submitSignaturesAddress": "0x399b78562110e9be3ac52a3e2628f6fc413147eb",
+        "publicKeyPart1": "0x181e06575c697a3596e4d1126773729e45778f639493e78b08c3dc62352d3a11",
+        "publicKeyPart2": "0x243b25fd67ef0ea51d30a210954b0e47997b7c319d84185536194e5e710e53dd",
+        "registrationWeight": "14666401825076647552"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x28603d496801086f503d80b5d321ecad13ca3afc",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x2c293599ca61bb53e8ff82c8a19c2a8b883ea23f",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "35900304881257584992378720",
+        "wNatCappedWeight": "35900304881257584992378720",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x89f7498a8db97ff7d8ef323e480cb18db44a1309",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x0e879d2836196f9bb212eaa5d6b206fa633a8370",
+        "submitAddress": "0x216e8856902c0e90170e1a4f1bc8659c1b200afc",
+        "submitSignaturesAddress": "0xdeb6752c4120e1ee876ef39a3034c146fae189f8",
+        "publicKeyPart1": "0x09527f5f57482741588df7c7ece2801b77497a50c525983d20121c08259f60a2",
+        "publicKeyPart2": "0x10582db660b71b08db2eb6c6059561358f63c44db072a64c2aededdf3ded9428",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x89f7498a8db97ff7d8ef323e480cb18db44a1309",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x0f80af5b905a9a34f69e74412c4a00b231d26daa",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "305506469101593658771206136",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x44eb776cd95ae59b2eda2ce354557427361e75da",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x91abe8c9b87c7d48f4fd70af31e418ce6d336896",
+        "submitAddress": "0xb9f0f796bebca28c9813452c9b1b5719d89604e3",
+        "submitSignaturesAddress": "0xd8659e7ef5d329509bcefcad0b6d6b3622bc49c7",
+        "publicKeyPart1": "0x022d6391aceb4cc55efcb5a17e96f49931c32ee271832aa6b024ef0223cccc6b",
+        "publicKeyPart2": "0x12cbf13b2eb7431ef6c24548977d6e8a25f135aae18f311343d2749bb73cdf46",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x44eb776cd95ae59b2eda2ce354557427361e75da",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x633ce03ea66d910c15869e1552fdccc2bf9aad87",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "290415248490600753607830682",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xa6b95941845b229ad7b2cd4c3c6de3ad9d0865ff",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xe5c465582969717375f38202d6f615581daf2728",
+        "submitAddress": "0x1b7202d589b133cb4179b6d034e047bda2620303",
+        "submitSignaturesAddress": "0x4cfffa315ff2ae0902deecc58189941a0c29b822",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9464105445285786921"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xa6b95941845b229ad7b2cd4c3c6de3ad9d0865ff",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x664e070592063bfe5072f0ac25c6c11e5ccf9928",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20018863993264024148410256",
+        "wNatCappedWeight": "20018863993264024148410256",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xd249c7e0bdb6f407604260350ed56e7dd5254e51",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x31e412e114629702281533cc657be76ad928283b",
+        "submitAddress": "0x9247b83e99cb6d1a4546c2efea7595137a0532e7",
+        "submitSignaturesAddress": "0xbb654271f2a2debfdb3e702067fe9aaa484a3981",
+        "publicKeyPart1": "0x1c45b94cfc6175b40338b6155bc5a0c72b5c514ef7cdab54812edf61a2639696",
+        "publicKeyPart2": "0x0298fe3014b702cb1c7c61c6be071b6d229d7d40ec32b7f6426947887851a3f0",
+        "registrationWeight": "10244356499529416698"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xd249c7e0bdb6f407604260350ed56e7dd5254e51",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xb53d69b2519ac9f6d65cff8e7824bf09f7064d61",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "22249123760088933530342443",
+        "wNatCappedWeight": "22249123760088933530342443",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x3ed54c61ec0ff7c144d547c2d032392864e66ca2",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xf0c331bdcf75295a726834194178c951d2281799",
+        "submitAddress": "0x0bf38d9067a250c0f470ddbd123c4210270ea710",
+        "submitSignaturesAddress": "0xac9cbd0f0b6ccc7ef984981f4c4d8a6a858fc79f",
+        "publicKeyPart1": "0x017d5ddba0bccf8b1f245efa0bbc6d44eae746ee72028fc9175ba0c054c4d0d6",
+        "publicKeyPart2": "0x05fdb63cbcfe808e40c5697942b7d12418711054a60e80fc39e5d1948d9f11ba",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x3ed54c61ec0ff7c144d547c2d032392864e66ca2",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x04a8b3171fbbfe4554b55190b43e709c4b672030",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "290630499131554394551224868",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xd9ddd06b3e603f451dd8a16574ca9d3df564742b",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x40567b5f30c90f35a3d3a5c57702bef6813d9a39",
+        "submitAddress": "0xb410331e0f29f9cf5792a18982bf416a7768fdec",
+        "submitSignaturesAddress": "0x88311d4876d761837fe70e771a4d4a5beb9da887",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9702168507989455190"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xd9ddd06b3e603f451dd8a16574ca9d3df564742b",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x4eb408fa585a5c66e523a4ae5f5706374ec9e8c7",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20693080383111170855742194",
+        "wNatCappedWeight": "20693080383111170855742194",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x6c2209754845df0fc01d048c3f3c3537b5d35b9c",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xfe28f67f7e33f9702476da4a851148b8d594b453",
+        "submitAddress": "0x8ca22a091f467d4e4d0e0357b6cd6d963e426689",
+        "submitSignaturesAddress": "0xfba9e89bf31ad6a0a7079e6ea4775b09b49efdd2",
+        "publicKeyPart1": "0x0b9f23f04efd418dc45c183010cd0ded815083d7882e27434166c41c871f136e",
+        "publicKeyPart2": "0x042ea2b42f276bcd05fd1c6ff1456301591db6e287dc316396c9e9f49235cb59",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x6c2209754845df0fc01d048c3f3c3537b5d35b9c",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x1b00870092a929d160492daf8e734b4bca033266",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "269456382673719535854523615",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x3b1860969c6e00aef35c48a1bbbe15a3017d558d",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x7564fb077b65a1fc4fd42cf8c4948ad5ff11f0c4",
+        "submitAddress": "0x2e7f8ad95d306aac5551663930334c4f0376b6bd",
+        "submitSignaturesAddress": "0xce3f771d79fd256071f49ce942baf9e9f457a2b6",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9457642024416570272"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x3b1860969c6e00aef35c48a1bbbe15a3017d558d",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xb76865823f68b48b02bb9604a2cd886eb49a9f3d",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20000644000000000000000000",
+        "wNatCappedWeight": "20000644000000000000000000",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x0c660191434484428a563614e0aa9d2041772953",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x680cb53763d589b2835ff522cbeea507dba9f74c",
+        "submitAddress": "0x85be5ecda6b130ed06de1f79d5f1d3ba88a4577f",
+        "submitSignaturesAddress": "0x732d031eddea4b28b3860962cb30d451eb562502",
+        "publicKeyPart1": "0x1520f9b758bd6d8e5c9b1fb3dc5f2300f4b493022e552e5beea4d74df85f8076",
+        "publicKeyPart2": "0x2d011bf5ed09ad60d4f5d6454cf1415f7291cc5ef2555a33207142ce39c3ba21",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x0c660191434484428a563614e0aa9d2041772953",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x2d7bf53ed6117ad1dcd6416d460481522a16afdf",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "379229824971500465907904287",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xb6b43be1178c356f9c2b8a8030451559fcc7ae8a",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xa5508a7f423082b16a281c7e6109b2af5251438d",
+        "submitAddress": "0xe6a702b38a3c39d16e1eaa6da0780f529e93727e",
+        "submitSignaturesAddress": "0x217f2b6c5835b142acf748d9f21e00e376c3fa2c",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "39615986369546296"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xb6b43be1178c356f9c2b8a8030451559fcc7ae8a",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x82f954918b9fb81e59b83606e82b2fc0d5bdc1ac",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "13505000000000000000000",
+        "wNatCappedWeight": "13505000000000000000000",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x19585c914aea4d985e034399c581b35014ec94ef",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x4f29816fddfecef74b05639718eb719f719def4e",
+        "submitAddress": "0x991b71d7380e89354ea71007eb744316829b62ae",
+        "submitSignaturesAddress": "0x8b31c922bfc7f969585fda3e86faa873b72e88e4",
+        "publicKeyPart1": "0x0bea4ddaa37c9f34160604d5ca90f1ce2b353caa1df54d580447bac6fa269686",
+        "publicKeyPart2": "0x0ed29f25b00c1ebb59d916e4ec7e932f9838d9ef7c459160dbbd41e79901568c",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x19585c914aea4d985e034399c581b35014ec94ef",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xb5ecb64526f777eb6f02d4a83abab1fad26b1c00",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "270073673468809590405329825",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x661a71e863c887e68aa8c9348e8aa60e48a868ad",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x0c88a5cd336a2b2a81f16e09a23582300489f4de",
+        "submitAddress": "0x6ee543bd1cf7afa237233c29e7562665c82b89ed",
+        "submitSignaturesAddress": "0xc9852851b353900647246edcb8162227dadf8373",
+        "publicKeyPart1": "0x0cfa9f1092d8f1fc832c09290f7487a64ba5e6af06ffda2995332629b6cc4cd2",
+        "publicKeyPart2": "0x14a7f03ec75504640b019bd34a18f647edd49a14adda989cebc2f7d742f67a9a",
+        "registrationWeight": "43488432262871352537"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x661a71e863c887e68aa8c9348e8aa60e48a868ad",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x53caedda4339ed74272ecfef85b657def18fa2e4",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "152931993328572270705843680",
+        "wNatCappedWeight": "152931993328572270705843680",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xee6f6572cfeb3467ce5f3572bea7c5fd6d2b1725",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x81050097cbdc0b3d58fe0db4469775db7f538304",
+        "submitAddress": "0x5d62d85f7903eca56c65521172bda8904a1e0937",
+        "submitSignaturesAddress": "0xe0fb39dcf3eb2d3ae7088263b0fba6bea04c523f",
+        "publicKeyPart1": "0x18673471e9c217c8feb7d1aebe40e3e861e393c8f047e81f54b5793468b70d9e",
+        "publicKeyPart2": "0x2ef26bfda81a314ee18a857d21c4bd045a9d19836bfb63222a7e94fd6ed59edf",
+        "registrationWeight": "40268894429589455494"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xee6f6572cfeb3467ce5f3572bea7c5fd6d2b1725",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xfb9197720329a80191ba140844e96dccad149014",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "138025602381439101433759045",
+        "wNatCappedWeight": "138025602381439101433759045",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xb4466be43f01e8a615490098aaf18a1dc5c56568",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x285ee7a4ec946ad5f6edae1611dbc4bc0510c783",
+        "submitAddress": "0xe191a91f55bd34192fbf8c573d6880df7e0ea19a",
+        "submitSignaturesAddress": "0x5ebc2d21e383f5649ed3a0a8a44fcb98a3d91912",
+        "publicKeyPart1": "0x0f53a52074b0b790186e8ecef811d2cd5587930fba2889e58364e6eb3daa6a56",
+        "publicKeyPart2": "0x1af7e68a852452b4585344a4567066b4f7a37ab03a3e3f119d4ce88b9c8a505e",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xb4466be43f01e8a615490098aaf18a1dc5c56568",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xbf61db1cdb43d196309824473fa82e5b17581159",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "228296314107106031135276224",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xd6c5f3e3a8a76ec73f2fafaf06ef9da57796ddf0",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x70538a23d7a825eabf80e26dfacfd8c9d61c205d",
+        "submitAddress": "0x71aec2bc126654d116386864b5f3babce0ca87e0",
+        "submitSignaturesAddress": "0xe0dcf787fa4ea43fc949878a1d85a740a25b9958",
+        "publicKeyPart1": "0x14494c8ae19aa0207a389b4ff39ca27f81849b75f4423aea48a840b28acfee46",
+        "publicKeyPart2": "0x2368b5c80b8536633a8df31963c0821346f5a7b5a7bb4822d18c280d4a6f87df",
+        "registrationWeight": "9783608162737291734"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xd6c5f3e3a8a76ec73f2fafaf06ef9da57796ddf0",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x43cab70e8edefef8c648c4fc0863dd9d8ff5776a",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20925000002027988169272636",
+        "wNatCappedWeight": "20925000002027988169272636",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x736e7225cc876f30ba124c2bfb8c0ed133f6c7c9",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x3ce683e9aab8da737f67d25d910a281970e38f3d",
+        "submitAddress": "0x451426f65b79b006e82af3d30541476be73df660",
+        "submitSignaturesAddress": "0x790faf4f80fb3ba3087894fe8d6aeb7d4c0ba8e4",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "777714635163577984"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x736e7225cc876f30ba124c2bfb8c0ed133f6c7c9",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x42187c751cf91a543c6c913e9f95701ead19729a",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "715200000000000000000000",
+        "wNatCappedWeight": "715200000000000000000000",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xbe311f1640b700f76d17c009a505487c23b0312c",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x86339bbf3e57c6026ce678617dec27f2cc5dbd62",
+        "submitAddress": "0x7ce5f38ba4b9a11a462c0235159052cf5d026972",
+        "submitSignaturesAddress": "0xd224ab1433acb76a26c669b451589707b88a39b7",
+        "publicKeyPart1": "0x07704246b5cde7de97bb90e401bd673d1b873b06c1bcd123ec76ac549c7d9797",
+        "publicKeyPart2": "0x0a868035a203f9e1097ac3ba2f8be9ad4655a3eb4deee864c8f15ae1d1120ecb",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xbe311f1640b700f76d17c009a505487c23b0312c",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x6d323e71e141ce2d7b752313c8a654a9c9d1b377",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "217413737676951379018444019",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xb3c9aa09f22a06122d3608ef075f14e001561470",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x493e5d0833646f99e4b414e9de5a10d8cb9b5c5a",
+        "submitAddress": "0x38f01976677021a2599c1d155206037ecb28c1e5",
+        "submitSignaturesAddress": "0x49e99eab73f135b384dddd3ccdb9cd1cf0e1736d",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "44702727843428368916"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xb3c9aa09f22a06122d3608ef075f14e001561470",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x499017adb21d6f70480e4e6224cf4144071c1461",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "158651991591330928330260699",
+        "wNatCappedWeight": "158651991591330928330260699",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x01caaaa7b40aa13ab2a04087d262b5558e695607",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x338119f38fc07f29aa96449251353d9e4684da6d",
+        "submitAddress": "0xbe9f00d70c357c663b63cf5972d4c59c851a7618",
+        "submitSignaturesAddress": "0x7e5a5371517f855e10d27394483dbab123da5d9d",
+        "publicKeyPart1": "0x1ec9ba90b04ed361a44ef0b46cc173f423c6a95f9d86688553d16780eae163de",
+        "publicKeyPart2": "0x182db0c31609bbdd2fb5c9b29dbaca96c0ee2c9cd6885d71b3c20a7d7bd279ee",
+        "registrationWeight": "9804924355955862627"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x01caaaa7b40aa13ab2a04087d262b5558e695607",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x35149714467f2fe71b46eeb4d11689ed8728bd25",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20985813057632500962595067",
+        "wNatCappedWeight": "20985813057632500962595067",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x4f84caab4a53aabbad2dfe1013d2bb53edbf2f0a",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x4dfcbc3a1529fb3c07245095fba7830063d71c34",
+        "submitAddress": "0xe0bfd268e193103cb3e8331725414d7644f05e35",
+        "submitSignaturesAddress": "0x80cfaefb05c359dd29f5b2dbb740efe3fab6ec0a",
+        "publicKeyPart1": "0x29fa1941fded80680943e0f6ff83f73c447f1f06048c7b5a51c601dfaee6c8ee",
+        "publicKeyPart2": "0x1bd09a839857613e4d118ffc74a0ef4fb2605e58d50e11dc9b5e0443a2e8d80e",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x4f84caab4a53aabbad2dfe1013d2bb53edbf2f0a",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xef4ef2f3b8c69282846a98341095baa018247553",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "218900061781375979227715355",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xd6122bb3d05454b4e4cc9883064a96607eb835bf",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x493560bac93dfc176e5663cfc830af04209e95fa",
+        "submitAddress": "0xfa84cf492ea6e648c09ed1048182ce6f2058bd9f",
+        "submitSignaturesAddress": "0xc2b2481e6bc2026a39042a3e039e98f4f2f224f3",
+        "publicKeyPart1": "0x06dc8be1f3c8a9549bf5f44ea3b07220eb7350847db291f3b94496fef4f8713b",
+        "publicKeyPart2": "0x1966cf66617d52f3eb96f7fb11602929352a0ceb766af9bd59d8710e284c3477",
+        "registrationWeight": "13814334348411010960"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xd6122bb3d05454b4e4cc9883064a96607eb835bf",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xd9200cc419bde28b169ad8c904d2687a15a4bf9f",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "33146687741597587497109416",
+        "wNatCappedWeight": "33146687741597587497109416",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x4ddd9f80f88f53c730ce7c6041f17583447dd968",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x1c884cf954ec8f15d7bf16b9d50402cc5c94b5fd",
+        "submitAddress": "0xc58b13d32dcf08eb23d2105159982377982b2777",
+        "submitSignaturesAddress": "0x099ae1a237a4a7696672986c2155fe8b80abe906",
+        "publicKeyPart1": "0x097b88396d0d61f660834184551f26f88aa9aab5b5c14fe4834e0c6a98dfee04",
+        "publicKeyPart2": "0x1bb72537f20333ac48bac2fc86d360de9a3f6c46af0899f7c835969ec5670661",
+        "registrationWeight": "16483823285178782361"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x4ddd9f80f88f53c730ce7c6041f17583447dd968",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x819eab111bd9a6e595187a914240529d2efff21f",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "41951170319395547008356124",
+        "wNatCappedWeight": "41951170319395547008356124",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xc5261026e08ec6dc23162ef7eb1248548715be76",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x558298090e6e5d439e792c9d1a3cde189a14037c",
+        "submitAddress": "0x3eb6a7ec0453b176a46a81ae49255e913b7e4749",
+        "submitSignaturesAddress": "0xfa0bc9ee91340b02d0d0a608b3cff23c38eda75b",
+        "publicKeyPart1": "0x1dfb1e7daaeb023e7c9809a65de2b13df63859eb182b75aa8f3cc080ba35a7a5",
+        "publicKeyPart2": "0x1fb8dc0e03fc55f326faa81b7ec0ec0dbd4695e071af15acabc5793a352affae",
+        "registrationWeight": "10695207637061607130"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xc5261026e08ec6dc23162ef7eb1248548715be76",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x9565d813a3a0cea62b3bdb9a4e236dcb5910c4f0",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "23564186977556003827814272",
+        "wNatCappedWeight": "23564186977556003827814272",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x18c8af2eac14282e207c67c405325e5a4a401a9f",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xcd67d20a68801832a26bc7877639a1f03dd480b7",
+        "submitAddress": "0xc19b486b078cbbbc569f8eb3df3e691990f3ef8e",
+        "submitSignaturesAddress": "0xbdcbb346b27866aba638b89fcf00a6e9c970ebe8",
+        "publicKeyPart1": "0x1ba957530ad233ea61260ce1b41d308b5be16dfa425c2ec1baad13254eb484f9",
+        "publicKeyPart2": "0x1cc87e44959627cb86fa24e14bdbaf33950206fbfd996d0e87c9aecf8f4a9fd9",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x18c8af2eac14282e207c67c405325e5a4a401a9f",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xa174d46ef49d7d4a0328f9910222689e9eab2f45",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "235386467764704621288202859",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xbb99dda7b6dce88908dcd684ab7bf1a90f084401",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x8481da9fb718e36121d67be580531fac1ef1349f",
+        "submitAddress": "0x41c2c30b9bd902ce3710903f27f5024da49c509e",
+        "submitSignaturesAddress": "0x9be9e883fdaa4cf0353bd5677e2d27973e9cee82",
+        "publicKeyPart1": "0x22206bab9c235f82ad230aa2a69cb3aac02507fe40e8c8451f918dd8175f6ba1",
+        "publicKeyPart2": "0x2f0a19f8fc166486c0edda4ba51ac9ad8f31917a2522a2c4737ca3edaa743995",
+        "registrationWeight": "17959463933244671292"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xbb99dda7b6dce88908dcd684ab7bf1a90f084401",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x010a16c53f33e4d93892f00897965578b55a8cfc",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "47031774101714147267820097",
+        "wNatCappedWeight": "47031774101714147267820097",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x625598caf40c63eb62860260cfd343d5fa4d88d4",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xb4d13ca9e17c52d61ffc06c2bc75e3a751517b4b",
+        "submitAddress": "0x9ee69d3b7c8099ab0e604bbac544e77e2066d38c",
+        "submitSignaturesAddress": "0x898c46bf51bd9a241b6b7d8a99089c954ccece60",
+        "publicKeyPart1": "0x2ed3380b8ee9e4a749af5613593c6945cb1b44ded98e1c486cf442cc8a21575f",
+        "publicKeyPart2": "0x1f963f15b0b0c5748b917d7347110f6ec4cf676e0902bf362ff731e4d42e942a",
+        "registrationWeight": "10141110045327531708"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x625598caf40c63eb62860260cfd343d5fa4d88d4",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x2d3bde536ad297f2ea74965f02c9e42f4780fb6a",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "21950649926039918010758600",
+        "wNatCappedWeight": "21950649926039918010758600",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xc5d2411d9ff188ebed494d93efb52e87bb14b75d",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xfb7b095ed8ab9082ae44c511a597c5c7da4216ca",
+        "submitAddress": "0x9431cf3c0d0e0e547984f446322bc9086e198a8e",
+        "submitSignaturesAddress": "0xab77981e9841e1ba46be2f752360c981e887907b",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "12324935400191906030"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xc5d2411d9ff188ebed494d93efb52e87bb14b75d",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x4f7f5f8ef4a3cc11f94e875393ee909eb5f824ea",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "28469481741848703664193443",
+        "wNatCappedWeight": "28469481741848703664193443",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xd288c3ef25ebf79e7c53ea37dcdfb0710f3ed173",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x5da692a7ee11e292bddf8ea15bd388f3bec1347a",
+        "submitAddress": "0x2d4da92b99b98dd4a0744fa563bf27b30aee6b0b",
+        "submitSignaturesAddress": "0xa587056d4d028003b0241051bbff7ec2691d84f9",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "31529357039201100560"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xd288c3ef25ebf79e7c53ea37dcdfb0710f3ed173",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x0708a4c813594b7e0218cb4a5d8b75c76abfc859",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "99606340646984227933296248",
+        "wNatCappedWeight": "99606340646984227933296248",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x23075d2210f1ac5f8ead459be03ea7337d10afa0",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x458bd1c5faeb843c8be9c512f7eb3a14ec5fb6f5",
+        "submitAddress": "0x9c9e9f692cbd46dde072314972a9a512a58cdceb",
+        "submitSignaturesAddress": "0xa2f7d4e93be921be2f4a504d78002e451f47ea7b",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "48080992790153629292"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x23075d2210f1ac5f8ead459be03ea7337d10afa0",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x229458a754cd1aeba8a0c87f59e22777d593b85a",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "174836161483844894634243304",
+        "wNatCappedWeight": "174836161483844894634243304",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xa0e1fba30e75e2d0d6c428cff4b3b6a06233422b",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x2eecbb469af133d136f011ce3f27ecf9524bb7c3",
+        "submitAddress": "0x39a875a881bf934ba1483f2bdae8c1a19125cbbf",
+        "submitSignaturesAddress": "0x4976bed181eb89de7e5a12b8b343f787a3f7ea05",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "23017216517326049760"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xa0e1fba30e75e2d0d6c428cff4b3b6a06233422b",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x6bf25c0256cbe8969424f6994e19cf5e0a3c23bb",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "65474248595473890117332662",
+        "wNatCappedWeight": "65474248595473890117332662",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x1cbf078705c907510fdb711cf3c6e9b8e583f156",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x53bce8b63c3357717d87a816e3414e2103a85d27",
+        "submitAddress": "0x959fe25a0f1b4e1bea43c57c611afb62442124b0",
+        "submitSignaturesAddress": "0xe8d23036eea8c64a05eb5cbe919c4fdfaecda5fb",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x1cbf078705c907510fdb711cf3c6e9b8e583f156",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x6c6b3560704da8a2c33b1bb00e88ba343807e565",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "235409046928187410591515661",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x7429e0c70306834e2b210cf3feb306342f456ce7",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xa1c5ad0b4a24b70b786b6143b066a8c54388f01f",
+        "submitAddress": "0xf01f5a31a07a046cd63d5ec27e82d12e6a89762f",
+        "submitSignaturesAddress": "0xdce533e7f4b46b992ebae38bf81a0f56d65cd88e",
+        "publicKeyPart1": "0x177ccd52148eb4beee49a8aedcfd3b9a9efa625c2c12fc5f0da79828fc17eacf",
+        "publicKeyPart2": "0x25a3ce7b3e2465869eb4b7441aacb42fe0eafdc9c66885cd3d89d596bd33e815",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x7429e0c70306834e2b210cf3feb306342f456ce7",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x69141e890f3a79cd2cff552c0b71508be23712dc",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "364154579986737867218061991",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x037c3e6a8f65ad2d810f26db3439d96e48156858",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x4d02abb622560b15a98a1c572fb3063852d8a7de",
+        "submitAddress": "0xd8da39f97c10b1787e3af6adb95b36785ac25e8a",
+        "submitSignaturesAddress": "0x14f52de797635262e985bbbad661280223f536ee",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x037c3e6a8f65ad2d810f26db3439d96e48156858",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xc9ac8f034d295962a6a975b717b691437605bbb6",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "230824371119257549475681664",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x75306a2ae227b444e2501908ade7c4c2b1e22423",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x0fb8fe4480de02093a828beb554d09cb5c31895a",
+        "submitAddress": "0xa96bd136f602b17a1d405a11844f0f60a479b1fa",
+        "submitSignaturesAddress": "0x43c7c5bbafd15ea506ce14b47a45081713678f7d",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "10129678854392382376"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x75306a2ae227b444e2501908ade7c4c2b1e22423",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xe70d5351a842131c66aaebc4bd604912bf3cba72",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "21917673529589931334822229",
+        "wNatCappedWeight": "21917673529589931334822229",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xdbb159ee372d58d2653023bf1c5ab5678b842870",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x5483a24b91fd1fcb8ba1c5ae54c85d9b61d62198",
+        "submitAddress": "0x9f061f18fde13b8afb4ad002d40b94d26f86c9b6",
+        "submitSignaturesAddress": "0x9fc23f0dcc1c46ef3647201442f4dacc01971b11",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "39783777259204435602"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xdbb159ee372d58d2653023bf1c5ab5678b842870",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x0fa72d3912d1c530ab1f6a8a9fb61c672947e964",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "135813042637046605770276372",
+        "wNatCappedWeight": "135813042637046605770276372",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x65ae92f3473d75815f2a86298b76a608f94e1575",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xfd9abd602150d39d819eb71ee8d6809c157d9a82",
+        "submitAddress": "0x8982e007397edc5e6efe3978fa5ee2e19ec62070",
+        "submitSignaturesAddress": "0x094d9cf2c4474a3680363e7c1d1b1c4bffbd0b2a",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "10627050742675147692"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x65ae92f3473d75815f2a86298b76a608f94e1575",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xe304af184b9ca77e3576aef834a4dc1a43ebfa70",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "23364174667374154599889387",
+        "wNatCappedWeight": "23364174667374154599889387",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xab3dae93cd52f6e2a0809dc19567c79ac3b1e225",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x6b526660dcb12b70dd76595a886fb7430e44c855",
+        "submitAddress": "0x7573043e973cf04d8b920fb9170471d44a291fe1",
+        "submitSignaturesAddress": "0x61a39010fcc0bb7e1b81f880751ab832a797091f",
+        "publicKeyPart1": "0x1245a51163f6d8dbfac2eb1c35379be9ec6ff5d9fbe13046eeb1be0d0c15e48c",
+        "publicKeyPart2": "0x26e9ba22fe2bfde0f03b1d49d24f47340d6b3abd19457b80321492877e73358e",
+        "registrationWeight": "37884626276004003777"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xab3dae93cd52f6e2a0809dc19567c79ac3b1e225",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x2de2c741658f0ae7b2ddd8eadd179911564af119",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "127238184755893482317705698",
+        "wNatCappedWeight": "127238184755893482317705698",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x98bbe5658da8b31fbd3f07157a2cff4d10c0f22e",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x519468fd9811661f490cb921b499d2388bc9426b",
+        "submitAddress": "0xe8a41662716c769b139860a947f3d4ef084084f1",
+        "submitSignaturesAddress": "0x074f47e258d65780faa3d4ee365565f506fc083c",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x98bbe5658da8b31fbd3f07157a2cff4d10c0f22e",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x5f3c5991de3f0713715a733ee125785d516ceb16",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "234573109561263731771953683",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x00620f4659bc546284dab2720373c606727f073a",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xf9b5da7af59bf8c8b68ef1743a4dcdca213b583e",
+        "submitAddress": "0x57857265f6015f2193fc4e924055172b54826fb1",
+        "submitSignaturesAddress": "0xa5277c53daabc9cbc885ffbc4a4a4ccf46655620",
+        "publicKeyPart1": "0x21024f152b5f6805aa3f9c6e083d845ab8737093cb694cb46f7db4868d088297",
+        "publicKeyPart2": "0x1458b2fb6835496a95116829a5ff309611871ab6d5ee9acc0cdc0425483a9962",
+        "registrationWeight": "41297080613378410575"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x00620f4659bc546284dab2720373c606727f073a",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xca60cd408a5e447897258cdb1f699478c71cc55e",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "142744471898090456519541174",
+        "wNatCappedWeight": "142744471898090456519541174",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xce1008d12bb6e5aa47905d1f3bd97042217ffeab",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xc54543235c0fae5a724338293d3cb4e82428683c",
+        "submitAddress": "0x6925860da98b82cf5030d27c008ca8964a99da32",
+        "submitSignaturesAddress": "0xf483a2894922426b22d525a26f5b7c6d2375a0f6",
+        "publicKeyPart1": "0x114cd1e03262b78dad4d83232ad5fa5ede7317ed6a32b3fb31bf940aff0f1399",
+        "publicKeyPart2": "0x27e29910bffb365ad76d9e581d55021251b8cacd4953071af14c8f09de3e46fc",
+        "registrationWeight": "26762107606524628"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xce1008d12bb6e5aa47905d1f3bd97042217ffeab",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x1b2a733641745ea090de7d0b1c7921d8d124cf8e",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "8005000000000000000000",
+        "wNatCappedWeight": "8005000000000000000000",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xcf3a3e5797a960c67e0e4b23d4594246ffb9d935",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xfb021c01f924c416d1fed247161963efc2ae7604",
+        "submitAddress": "0xa8bbba017b2ce496bbed4cfc0fb5d1afd4f23772",
+        "submitSignaturesAddress": "0xf417294c5a65535d4a33259c73eea39373977c65",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9467354346098034798"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xcf3a3e5797a960c67e0e4b23d4594246ffb9d935",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xaf31ca175bbe0c6dd667c8403b65a33b28238afa",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20028027782865717231338158",
+        "wNatCappedWeight": "20028027782865717231338158",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x7e74f48ee5575e028d6bebd77e368761f1d74a2a",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x21ef03f609aad7db7224d3f8fd90f5593d2607ca",
+        "submitAddress": "0xcf1392b41ff06ab51d6f1bdf69e7cd706141a8ba",
+        "submitSignaturesAddress": "0xe8c7a135f1005eb66b135075a3ef9106b4da5c4f",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9611294226825909150"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x7e74f48ee5575e028d6bebd77e368761f1d74a2a",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x4619ae2f09cf5e6da873c501a12d86aacbd7962b",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20435061221330258433494379",
+        "wNatCappedWeight": "20435061221330258433494379",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0xfe193a0f95bbeee5a5c8306bca5cedfa65114460",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xaa4d1f2b94370229bc20c3582e1d940ec783de12",
+        "submitAddress": "0x917445462e58e32af317fb5271d7eb028438f87f",
+        "submitSignaturesAddress": "0xb46f83efe04bc1fc9ca480cba861e65f35940352",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "9552115980310397130"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0xfe193a0f95bbeee5a5c8306bca5cedfa65114460",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x78a99aa32cde18b33b150941fbf718715d15af6a",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20267477482728216255125177",
+        "wNatCappedWeight": "20267477482728216255125177",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x63edab9d9ca1c2cec9c72ec86d65fa97e6afbd01",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x3dc9c7417016818d4f70e489311c428f97cb699d",
+        "submitAddress": "0xc2b6b9c7f34a361fc8b45abd39c3b048157240c1",
+        "submitSignaturesAddress": "0xeab1b6dbed9ce1a3bed66ecf0b3e3e2a1c60e1c2",
+        "publicKeyPart1": "0x1bfa8d8c61f1442eea99fd1df52857de94e54c22da3c2920ec1656696b7e716b",
+        "publicKeyPart2": "0x1a9cfb1e6d330f49550100ebd5374e4542278ac4742e33c947225e806b59288e",
+        "registrationWeight": "53182915226486220"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x63edab9d9ca1c2cec9c72ec86d65fa97e6afbd01",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x3bd7f7f409b178d0ae66d0160b0c2de89eb5496a",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20000000000000000000000",
+        "wNatCappedWeight": "20000000000000000000000",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x7fbec5e3be491c419a9e5822b40e0edd00f18393",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xaa88d168a86ee8c8dafce663bfe713d256c2a0f3",
+        "submitAddress": "0x8d6808ecece66ae0f199cbe374f42230f4fe9d8f",
+        "submitSignaturesAddress": "0x61d892e36094c1466278c3384a2110875921b3b5",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "31622700000000000"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x7fbec5e3be491c419a9e5822b40e0edd00f18393",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x81ad5965e2aed828ca445288b8700f173dbb4fe0",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "10000000000000000000000",
+        "wNatCappedWeight": "10000000000000000000000",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x317edfb00ca5065590f6662ee33264b5c27b7c31",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x295d1dceafda82dca22f6323b9b7889a2920c789",
+        "submitAddress": "0x0280799e02545dc838f816d2c9ce74e0a415c44b",
+        "submitSignaturesAddress": "0xe699d488af51096060b465ef9a08d41e7f3b642b",
+        "publicKeyPart1": "0x21cb0a4e2e1291bd91e79914219eb83c7ebd8af894aca30b8a64c0485f1d276e",
+        "publicKeyPart2": "0x29af737364be864ec9828c7a459e51b96526324a8f8004c61edd97c1f161b290",
+        "registrationWeight": "9651369396534883680"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x317edfb00ca5065590f6662ee33264b5c27b7c31",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x821bde578955b35f9f2c9022268e5bc748994f71",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "20548747157712076057935770",
+        "wNatCappedWeight": "20548747157712076057935770",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x8ddd48b520df91f05c5d8c19b2cee59abe65978a",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x5b0ff409b17df4b717ea0c5035d0a961c502fca8",
+        "submitAddress": "0x92bf54ae8aed699a038e8d8b0e62e5b511f56dc5",
+        "submitSignaturesAddress": "0x351cc97c268f5dc8eeeddded15b0bd0825e683f6",
+        "publicKeyPart1": "0x18384be720b40837649785e0d74caa7d99b2b8f8dd0b921564da2a3cd3177baf",
+        "publicKeyPart2": "0x1f16806f5df1d59e0fd25c66a832baf92525312669c309adec891783cf0313b6",
+        "registrationWeight": "55106828489305460421"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x8ddd48b520df91f05c5d8c19b2cee59abe65978a",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x1c602a30335187a97d8061ffffd4522796de82bf",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "209704253487032581476047349",
+        "wNatCappedWeight": "209704253487032581476047349",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x4985138d5efab799caa5abb09eb7dbc87dd5141a",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0xc139f933a6b44aa698e649cc8f142ce02fd19213",
+        "submitAddress": "0xe50c2243dd448dfcbd037463dc8d9f0787bfb17a",
+        "submitSignaturesAddress": "0x822526f4768eff2d4ba0b037bef08d7410c18c52",
+        "publicKeyPart1": "0x068d5e485eac0bc51a908beea82bd4b9bfb112fe4475f5393dddc58aaa519bf8",
+        "publicKeyPart2": "0x2b1b4e961c53f93698efea97e2296fbf0db1d6f381b918e94432a071f9b4987c",
+        "registrationWeight": "55836180925363218592"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x4985138d5efab799caa5abb09eb7dbc87dd5141a",
+        "rewardEpochId": 207,
+        "delegationAddress": "0xccd522393233052dd0dfeaadc124a0a9bb87fd08",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "213768570675018487199810491",
+        "wNatCappedWeight": "213413042524994656657495083",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    },
+    {
+      "voterRegistered": {
+        "voter": "0x90c0edf240397d461ebe7df9b41ee9b4415f3432",
+        "rewardEpochId": 207,
+        "signingPolicyAddress": "0x3228f985b49eda79c8dd5e967b63ab562edf7eaa",
+        "submitAddress": "0x68a88c2dfd9863e65cbafdb2dd490d28b8aed8df",
+        "submitSignaturesAddress": "0x2acbf71bcf87862492f710a3ecf0677816f9b4c1",
+        "publicKeyPart1": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "publicKeyPart2": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "registrationWeight": "18836608185220010610"
+      },
+      "voterRegistrationInfo": {
+        "voter": "0x90c0edf240397d461ebe7df9b41ee9b4415f3432",
+        "rewardEpochId": 207,
+        "delegationAddress": "0x86b8012c254cbe2fe63a5b7f64cb1a039bab2047",
+        "delegationFeeBIPS": 2000,
+        "wNatWeight": "50119161405364920277925290",
+        "wNatCappedWeight": "50119161405364920277925290",
+        "nodeIds": [],
+        "nodeWeights": []
+      }
+    }
+  ],
+  "canonicalFeedOrder": [
+    {
+      "id": "0x014144412f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01414c474f2f555344000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x014152422f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01415641582f555344000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01424e422f55534400000000000000000000000000",
+      "decimals": 4
+    },
+    {
+      "id": "0x014254432f55534400000000000000000000000000",
+      "decimals": 2
+    },
+    {
+      "id": "0x01444f47452f555344000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x014554482f55534400000000000000000000000000",
+      "decimals": 3
+    },
+    {
+      "id": "0x0146494c2f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01464c522f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x014c54432f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x014d415449432f5553440000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x015347422f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01534f4c2f55534400000000000000000000000000",
+      "decimals": 4
+    },
+    {
+      "id": "0x01555344432f555344000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01555344542f555344000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x015844432f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x01584c4d2f55534400000000000000000000000000",
+      "decimals": 5
+    },
+    {
+      "id": "0x015852502f55534400000000000000000000000000",
+      "decimals": 5
+    }
+  ],
+  "rewardOffers": {
+    "rewardOffers": [],
+    "inflationOffers": [
+      {
+        "offerIndex": 0,
+        "rewardEpochId": 207,
+        "feedIds": [
+          "0x01464c522f55534400000000000000000000000000",
+          "0x015347422f55534400000000000000000000000000",
+          "0x014254432f55534400000000000000000000000000",
+          "0x015852502f55534400000000000000000000000000",
+          "0x014c54432f55534400000000000000000000000000",
+          "0x01584c4d2f55534400000000000000000000000000",
+          "0x01444f47452f555344000000000000000000000000",
+          "0x014144412f55534400000000000000000000000000",
+          "0x01414c474f2f555344000000000000000000000000",
+          "0x014554482f55534400000000000000000000000000",
+          "0x0146494c2f55534400000000000000000000000000",
+          "0x014152422f55534400000000000000000000000000",
+          "0x01415641582f555344000000000000000000000000",
+          "0x01424e422f55534400000000000000000000000000",
+          "0x014d415449432f5553440000000000000000000000",
+          "0x01534f4c2f55534400000000000000000000000000",
+          "0x01555344432f555344000000000000000000000000",
+          "0x01555344542f555344000000000000000000000000",
+          "0x015844432f55534400000000000000000000000000"
+        ],
+        "decimals": [
+          5,
+          5,
+          2,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          5,
+          5,
+          5,
+          4,
+          5,
+          4,
+          5,
+          5,
+          5
+        ],
+        "amount": "3645833333333333333182685",
+        "minRewardedTurnoutBIPS": 5000,
+        "primaryBandRewardSharePPM": 700000,
+        "secondaryBandWidthPPMs": [
+          400,
+          500,
+          100,
+          150,
+          200,
+          200,
+          200,
+          200,
+          200,
+          150,
+          200,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          400
+        ],
+        "mode": 2
+      }
+    ]
+  },
+  "votePowerBlock": 65334188,
+  "votePowerTimestamp": 1721019702,
+  "expectedStartVotingRoundId": 695520,
+  "expectedEndVotingRoundId": 698879,
+  "endVotingRoundId": 698879
+}
