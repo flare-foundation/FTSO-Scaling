@@ -243,10 +243,11 @@ export async function partialRewardClaimsForVotingRound(
     }
     const fuFeedValueMap = new Map<string, FUFeedValue>();
     if (
-      rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length !== data.fastUpdatesData.feedValues.length
+      rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length > data.fastUpdatesData.feedValues.length
     ) {
-      throw new Error("Critical error: Feed configurations and feed values do not match");
+      throw new Error("Critical error: Feed configurations contain more feeds then feed values");
     }
+    // if new feeds are introduced during the voting round, they are ignored
     for (let i = 0; i < rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length; i++) {
       const feedConfiguration = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations[i];
       const value = data.fastUpdatesData.feedValues[i];

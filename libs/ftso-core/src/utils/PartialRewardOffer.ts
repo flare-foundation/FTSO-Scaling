@@ -36,6 +36,7 @@ export interface IFUPartialRewardOfferForRound {
   feedId: string;
   amount: bigint;
   rewardBandValue: number;
+  shouldBeBurned?: boolean;
 }
 
 export namespace PartialRewardOffer {
