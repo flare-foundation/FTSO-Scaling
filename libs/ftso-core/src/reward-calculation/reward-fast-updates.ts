@@ -1,4 +1,4 @@
-import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID } from "../configs/networks";
+import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID, TOTAL_BIPS } from "../configs/networks";
 import { FUFeedValue } from "../data-calculation-interfaces";
 import { FastUpdateFeedConfiguration } from "../events/FUInflationRewardsOffered";
 import { ILogger } from "../utils/ILogger";
@@ -131,7 +131,7 @@ export function calculateFastUpdatesClaims(
       );
     }
     const voterAmount = sharePerOne + (i < remainder ? 1n : 0n);
-    const feeAmount = (voterAmount * BigInt(feeBIPS)) / TOTAL_PPM;
+    const feeAmount = (voterAmount * BigInt(feeBIPS)) / TOTAL_BIPS;
     const feeClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
       beneficiary: identityAddress,
