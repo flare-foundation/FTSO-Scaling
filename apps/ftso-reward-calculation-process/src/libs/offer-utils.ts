@@ -53,7 +53,7 @@ export async function fullRoundOfferCalculation(options: OptionalCommandOptions)
     const fuRewardOfferMap: Map<
       number,
       Map<string, IFUPartialRewardOfferForRound[]>
-    > = granulatedPartialOfferMapForFastUpdates(rewardEpochInfo);
+    > = granulatedPartialOfferMapForFastUpdates(rewardEpochInfo, randomNumbers);
     serializeGranulatedPartialOfferMap(rewardEpochDuration, fuRewardOfferMap, false, FU_OFFERS_FILE);
   }
 }

@@ -36,6 +36,21 @@ export function calculateFastUpdatesClaims(
   signingAddressToFeeBips: Map<Address, number>,
   logger: ILogger
 ): IPartialRewardClaim[] {
+  if (offer.shouldBeBurned) {
+    const fullOfferBackClaim: IPartialRewardClaim = {
+      votingRoundId: offer.votingRoundId,
+      beneficiary: BURN_ADDRESS,
+      amount: offer.amount,
+      claimType: ClaimType.DIRECT,
+      offerIndex: 0,
+      // feedId: offer.feedId,  // should be undefined
+      protocolTag: "" + FTSO2_FAST_UPDATES_PROTOCOL_ID,
+      rewardTypeTag: RewardTypePrefix.FULL_OFFER_CLAIM_BACK,
+      rewardDetailTag: "", // no additional tag
+    };
+    return [fullOfferBackClaim];
+  }
+
   if (signingPolicyAddressesSubmitted.length === 0 || medianResult.data.finalMedian.isEmpty) {
     const backClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
