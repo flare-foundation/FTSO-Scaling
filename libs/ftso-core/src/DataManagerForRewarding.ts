@@ -192,7 +192,7 @@ export class DataManagerForRewarding extends DataManager {
       }
       while (
         endIndexSignatures < signaturesResponse.data.signatures.length &&
-        signaturesResponse.data.signatures[endIndexSignatures].timestamp < endTime
+        signaturesResponse.data.signatures[endIndexSignatures].timestamp <= endTime
       ) {
         endIndexSignatures++;
       }
@@ -204,7 +204,7 @@ export class DataManagerForRewarding extends DataManager {
       }
       while (
         endIndexFinalizations < signaturesResponse.data.finalizations.length &&
-        signaturesResponse.data.finalizations[endIndexFinalizations].timestamp < endTime
+        signaturesResponse.data.finalizations[endIndexFinalizations].timestamp <= endTime
       ) {
         endIndexFinalizations++;
       }
