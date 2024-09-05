@@ -23,12 +23,12 @@
               "type": "uint120"
             },
             {
-              "internalType": "enum IRewardManager.ClaimType",
+              "internalType": "enum RewardsV2Interface.ClaimType",
               "name": "claimType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct IRewardManager.RewardClaim",
+          "internalType": "struct RewardsV2Interface.RewardClaim",
           "name": "_claim",
           "type": "tuple"
         }
@@ -65,17 +65,17 @@
                   "type": "uint120"
                 },
                 {
-                  "internalType": "enum IRewardManager.ClaimType",
+                  "internalType": "enum RewardsV2Interface.ClaimType",
                   "name": "claimType",
                   "type": "uint8"
                 }
               ],
-              "internalType": "struct IRewardManager.RewardClaim",
+              "internalType": "struct RewardsV2Interface.RewardClaim",
               "name": "body",
               "type": "tuple"
             }
           ],
-          "internalType": "struct IRewardManager.RewardClaimWithProof",
+          "internalType": "struct RewardsV2Interface.RewardClaimWithProof",
           "name": "_proof",
           "type": "tuple"
         }
