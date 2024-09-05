@@ -37,7 +37,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
 const COSTON2_CONFIG: NetworkContractAddresses = {
   FlareSystemsManager: { name: "FlareSystemsManager", address: "0xA90Db6D10F856799b10ef2A77EBCbF460aC71e52" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x1b7ffab226b66b5eCBdC79a42287BC09C05bCb33" },
-  RewardManager: { name: "RewardManager", address: "0x7A0bFB85387314d7F8C0FcCD9D9B74A76115c322" },
+  RewardManager: { name: "RewardManager", address: "0xB4f43E342c5c77e6fe060c0481Fe313Ff2503454" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x4087D4B5E009Af9FF41db910205439F82C3dc63c" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x9aF60c16192330EC98d04Ec9675d22dBb9892951" },
