@@ -35,17 +35,17 @@ const COSTON_CONFIG: NetworkContractAddresses = {
 };
 
 const COSTON2_CONFIG: NetworkContractAddresses = {
-  FlareSystemsManager: { name: "FlareSystemsManager", address: "0xbC1F76CEB521Eb5484b8943B5462D08ea96617A1" },
-  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0xd7107a7Ddb6ff24ff76ecFF2E06b9c4a3D8DCb88" },
-  RewardManager: { name: "RewardManager", address: "0x2F10597B3c9Fd42031cb18818eF2Ab88b18Ceff8" },
+  FlareSystemsManager: { name: "FlareSystemsManager", address: "0xA90Db6D10F856799b10ef2A77EBCbF460aC71e52" },
+  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x1b7ffab226b66b5eCBdC79a42287BC09C05bCb33" },
+  RewardManager: { name: "RewardManager", address: "0x7A0bFB85387314d7F8C0FcCD9D9B74A76115c322" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
-  Relay: { name: "Relay", address: "0x5CdF9eAF3EB8b44fB696984a1420B56A7575D250" },
-  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x9D7207b1410De031523356882637dd01F460E958" },
-  VoterRegistry: { name: "VoterRegistry", address: "0x3BFdbe79BEf39Bae3F85636f525AcD3051Df4f64" },
+  Relay: { name: "Relay", address: "0x4087D4B5E009Af9FF41db910205439F82C3dc63c" },
+  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x9aF60c16192330EC98d04Ec9675d22dBb9892951" },
+  VoterRegistry: { name: "VoterRegistry", address: "0xc6E40401395DCc648bC4bBb38fE4552423cD9BAC" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
-  FastUpdater: { name: "FastUpdater", address: "" },
-  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "0x0B162CA3acf3482d3357972e12d794434085D839" },
+  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "0xC71C1C6E6FB31eF6D948B2C074fA0d38a07D4f68" },
 };
 
 const SONGBIRD_CONFIG: NetworkContractAddresses = {
@@ -298,7 +298,7 @@ const initialRewardEpochId = () => {
     case "coston":
       return 2466;
     case "coston2":
-      return 2654;
+      return 3110;
     case "songbird":
       return 183;
     case "local-test":
