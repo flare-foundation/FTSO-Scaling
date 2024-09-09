@@ -45,7 +45,10 @@ const COSTON2_CONFIG: NetworkContractAddresses = {
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "0x0B162CA3acf3482d3357972e12d794434085D839" },
-  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "0xC71C1C6E6FB31eF6D948B2C074fA0d38a07D4f68" },
+  FastUpdateIncentiveManager: {
+    name: "FastUpdateIncentiveManager",
+    address: "0xC71C1C6E6FB31eF6D948B2C074fA0d38a07D4f68",
+  },
 };
 
 const SONGBIRD_CONFIG: NetworkContractAddresses = {
@@ -59,10 +62,30 @@ const SONGBIRD_CONFIG: NetworkContractAddresses = {
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116" },
-  FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006" },
+  FastUpdateIncentiveManager: {
+    name: "FastUpdateIncentiveManager",
+    address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006",
+  },
 };
 
-export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird";
+const FLARE_CONFIG: NetworkContractAddresses = {
+  FlareSystemsManager: { name: "FlareSystemsManager", address: "0x89e50DC0380e597ecE79c8494bAAFD84537AD0D4" },
+  FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x244EA7f173895968128D5847Df2C75B1460ac685" },
+  RewardManager: { name: "RewardManager", address: "0xC8f55c5aA2C752eE285Bd872855C749f4ee6239B" },
+  Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
+  Relay: { name: "Relay", address: "0xea077600E3065F4FAd7161a6D0977741f2618eec" },
+  FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x67c4B11c710D35a279A41cff5eb089Fe72748CF8" },
+  VoterRegistry: { name: "VoterRegistry", address: "0x2580101692366e2f331e891180d9ffdF861Fce83" },
+  FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
+  ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
+  FastUpdater: { name: "FastUpdater", address: "0xdBF71d7840934EB82FA10173103D4e9fd4054dd1" },
+  FastUpdateIncentiveManager: {
+    name: "FastUpdateIncentiveManager",
+    address: "0xd648e8ACA486Ce876D641A0F53ED1F2E9eF4885D",
+  },
+};
+
+export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird" | "flare";
 
 const contracts = () => {
   const network = process.env.NETWORK as networks;
@@ -74,6 +97,8 @@ const contracts = () => {
       return COSTON_CONFIG;
     case "songbird":
       return SONGBIRD_CONFIG;
+    case "flare":
+      return FLARE_CONFIG;
     case "from-env": {
       console.log(
         `Loading contract addresses from environment variables, as specified in .env NETWORK: ${process.env.NETWORK}`
@@ -155,6 +180,7 @@ const ftso2ProtocolId = () => {
     case "local-test":
     case "coston2":
     case "songbird":
+    case "flare":
       return 100;
     default:
       // Ensure exhaustive checking
@@ -174,6 +200,7 @@ const ftso2FastUpdatesProtocolId = () => {
     case "local-test":
     case "coston2":
     case "songbird":
+    case "flare":
       return 255;
     default:
       // Ensure exhaustive checking
@@ -215,6 +242,14 @@ const epochSettings = () => {
     case "songbird":
       return new EpochSettings(
         1658429955, // ES_FIRST_VOTING_ROUND_START_TS
+        90, //ES_VOTING_EPOCH_DURATION_SECONDS
+        0, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
+        3360, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
+        45 //FTSO_REVEAL_DEADLINE_SECONDS
+      );
+    case "flare":
+      return new EpochSettings(
+        1658430000, // ES_FIRST_VOTING_ROUND_START_TS
         90, //ES_VOTING_EPOCH_DURATION_SECONDS
         0, //ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID
         3360, //ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS
@@ -270,6 +305,8 @@ const randomGenerationBenchingWindow = () => {
       return 20;
     case "songbird":
       return 20;
+    case "flare":
+      return 20;
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
@@ -301,6 +338,8 @@ const initialRewardEpochId = () => {
       return 3110;
     case "songbird":
       return 183;
+    case "flare":
+      return 223;
     case "local-test":
       return 0;
     default:
@@ -320,6 +359,7 @@ const burnAddress = () => {
     case "coston2":
     case "coston":
     case "songbird":
+    case "flare":
       return "0x000000000000000000000000000000000000dEaD";
     default:
       // Ensure exhaustive checking
@@ -342,6 +382,7 @@ const additionalRewardFinalizationWindows = () => {
     case "coston":
     case "coston2":
     case "songbird":
+    case "flare":
     case "local-test":
       return 0;
     default:
@@ -409,6 +450,8 @@ const penaltyFactor = () => {
       return 30n;
     case "songbird":
       return 30n;
+    case "flare":
+      return 30n;
     case "local-test":
       return 30n;
     default:
@@ -442,6 +485,8 @@ const gracePeriodForSignaturesDurationSec = () => {
     case "coston2":
       return 10; // 10 seconds
     case "songbird":
+      return 10; // 10 seconds
+    case "flare":
       return 10; // 10 seconds
     case "local-test":
       return 10; // 10 seconds
@@ -479,6 +524,8 @@ const gracePeriodForFinalizationDurationSec = () => {
       return 20; // seconds
     case "songbird":
       return 20; // seconds
+    case "flare":
+      return 20; // 20 seconds
     case "local-test":
       return 20; // seconds
     default:
@@ -530,6 +577,8 @@ const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
       return 3000;
     case "songbird":
       return 3000;
+    case "flare":
+      return 3000;
     case "local-test":
       return 3000;
     default:
@@ -562,6 +611,8 @@ const finalizationVoterSelectionThresholdWeightBips = () => {
     case "coston2":
       return 500;
     case "songbird":
+      return 500;
+    case "flare":
       return 500;
     case "local-test":
       return 500;
