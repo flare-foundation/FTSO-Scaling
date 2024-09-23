@@ -1,6 +1,7 @@
 import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered } from "../events";
 import {
+  IFDCPartialRewardOfferForRound,
   IFUPartialRewardOfferForRound,
   IPartialRewardOfferForEpoch,
   IPartialRewardOfferForRound,
@@ -289,6 +290,41 @@ export function granulatedPartialOfferMapForFastUpdates(
     const feedIdOffers = feedOffers.get(selectedFeedConfig.feedId) || [];
     feedOffers.set(selectedFeedConfig.feedId, feedIdOffers);
     feedIdOffers.push(feedOfferForVoting);
+  }
+  return rewardOfferMap;
+}
+
+export function granulatedPartialOfferMapForFDC(
+  rewardEpochInfo: RewardEpochInfo,
+): Map<number, IFDCPartialRewardOfferForRound> {
+  const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+  const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
+  if (startVotingRoundId === undefined || endVotingRoundId === undefined) {
+    throw new Error("Start or end voting round id is undefined");
+  }
+
+  // Calculate total amount of rewards for the reward epoch
+  let totalAmount = rewardEpochInfo.fdcInflationRewardsOffered.amount;
+
+  if (process.env.TEST_FDC_INFLATION_REWARD_AMOUNT) {
+    totalAmount = BigInt(process.env.TEST_FDC_INFLATION_REWARD_AMOUNT);
+  }
+  // Create a map of votingRoundId -> rewardOffer
+  const rewardOfferMap = new Map<number, IFDCPartialRewardOfferForRound>();
+  const numberOfVotingRounds = endVotingRoundId - startVotingRoundId + 1;
+  const sharePerOne: bigint = totalAmount / BigInt(numberOfVotingRounds);
+  const remainder: number = Number(totalAmount % BigInt(numberOfVotingRounds));
+
+  for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+    let amount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
+
+    // Create adapted offer with selected feed
+    const feedOfferForVoting: IFDCPartialRewardOfferForRound = {
+      votingRoundId,
+      amount,
+    };
+
+    rewardOfferMap.set(votingRoundId, feedOfferForVoting);
   }
   return rewardOfferMap;
 }

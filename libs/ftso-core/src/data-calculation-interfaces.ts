@@ -1,6 +1,7 @@
 import { ISignaturePayload } from "../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
+import { AttestationRequest } from "./events/AttestationRequest";
 import { IRevealData } from "./utils/RevealData";
 import { Address, Feed, MessageHash } from "./voting-types";
 
@@ -26,15 +27,21 @@ export interface DataForCalculations extends DataForCalculationsPartial {
   benchingWindowRevealOffenders: Set<Address>;
   // Reward epoch
   rewardEpoch: RewardEpoch;
+  // valid eligible bit-votes
+  validEligibleBitVotes?: Map<Address, string>;
 }
 
 export interface DataForRewardCalculation {
+  // FTSO Scaling
   dataForCalculations: DataForCalculations;
   signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
   finalizations: ParsedFinalizationData[];
   // might be undefined, if such finalization does not exist in an observed range
   firstSuccessfulFinalization?: ParsedFinalizationData;
+  // FAST UPDATES
   fastUpdatesData?: FastUpdatesDataForVotingRound;
+  // FDC
+  fdcData?: FDCDataForVotingRound;
 }
 
 export interface FastUpdatesDataForVotingRound {
@@ -42,6 +49,32 @@ export interface FastUpdatesDataForVotingRound {
   feedValues: bigint[];
   feedDecimals: number[];
   signingPolicyAddressesSubmitted: string[];
+}
+
+export interface FDCDataForVotingRound {
+  votingRoundId: number;
+  // List of attestation requests to be processed
+  attestationRequests: AttestationRequest[];
+  // List of bitvotes for the consensus bitvote
+  // Only last bitvote for each data provider is included
+  // submit address is used to assign to data provider
+  bitVotes: GenericSubmissionData<string>[];
+  // signature data, include the unsigned message, which should be consensus bitvote
+  // Might be multiple signatures by the same data provider
+  // All signatures for FDC protocol in the observed range are included and sorted in the order of arrival
+  signatures: GenericSubmissionData<ISignaturePayload>[];
+  // First successful finalization
+  // might be undefined, if such finalization does not exist in an observed range
+  // If defined then we can check if signatures are correct
+  firstSuccessfulFinalization?: ParsedFinalizationData;
+  // All finalizations in the observed range
+  finalizations: ParsedFinalizationData[];
+  // Filtered signatures that match the first finalized protocol Merkle root message
+  // One per eligible data provider
+  rewardedSignatures?: GenericSubmissionData<ISignaturePayload>[];
+  // Majority bitvote attached to the finalized signatures
+  // All signers that have unmatching majority bitvote are considered as offenders
+  majorityBitVote?: string;
 }
 
 export interface FUFeedValue {

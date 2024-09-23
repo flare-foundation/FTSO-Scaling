@@ -162,7 +162,8 @@ export class CalculatorService {
         state.votingRoundId,
         options.retryDelayMs,
         logger,
-        options.useFastUpdatesData
+        options.useFastUpdatesData,
+        options.useFDCData
       );
       // The call above may create additional folder
       state.maxVotingRoundIdFolder = Math.max(state.maxVotingRoundIdFolder, state.votingRoundId);
@@ -205,6 +206,7 @@ export class CalculatorService {
       batchSize: options.batchSize,
       numberOfWorkers: options.numberOfWorkers,
       useFastUpdatesData: options.useFastUpdatesData,
+      useFDCData: options.useFDCData,
     } as OptionalCommandOptions;
     const rewardEpochDuration = await runCalculateRewardCalculationTopJob(
       this.indexerClient,
@@ -217,6 +219,7 @@ export class CalculatorService {
     newOptions.tempRewardEpochFolder = true;
     newOptions.useExpectedEndIfNoSigningPolicyAfter = true;
     newOptions.useFastUpdatesData = false;
+    newOptions.useFDCData = false;
     const rewardEpochDuration2 = await runCalculateRewardCalculationTopJob(
       this.indexerClient,
       this.rewardEpochManager,
@@ -234,6 +237,7 @@ export class CalculatorService {
       batchSize: options.batchSize,
       numberOfWorkers: options.numberOfWorkers,
       useFastUpdatesData: options.useFastUpdatesData,
+      useFDCData: options.useFDCData,
     } as OptionalCommandOptions;
     await runCalculateRewardClaimsTopJob(adaptedOptions);
   }

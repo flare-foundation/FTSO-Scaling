@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../PartialRewardOffer";
+import { IFDCPartialRewardOfferForRound, IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../PartialRewardOffer";
 import { RewardEpochDuration } from "../RewardEpochDuration";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
-import { FU_OFFERS_FILE, OFFERS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
+import { FDC_OFFERS_FILE, FU_OFFERS_FILE, OFFERS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 
 export interface FeedOffers<T> {
   readonly feedId: string;
@@ -62,6 +62,45 @@ export function serializeGranulatedPartialOfferMap(
     writeFileSync(offersPath, JSON.stringify(offersPerVotingRound, bigIntReplacer));
   }
 }
+
+/**
+ * Serializes granulated partial offer map to disk.
+ * It creates necessary folders and structure of form
+ *  `<calculationsFolder>/<rewardEpochId>/<votingRoundId>/OFFERS_FILE`
+ * The `OFFERS_FILE` files contain relevant granulated offers for all feeds.
+ */
+export function serializeGranulatedPartialOfferMapForFDC(
+  rewardEpochDuration: RewardEpochDuration,
+  rewardOfferMap: Map<number, IFDCPartialRewardOfferForRound>,
+  regenerate = true,
+  file = FDC_OFFERS_FILE,
+  calculationFolder = CALCULATIONS_FOLDER()
+): void {
+  if (!existsSync(calculationFolder)) {
+    mkdirSync(calculationFolder);
+  }
+  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochDuration.rewardEpochId}`);
+  if (regenerate && existsSync(rewardEpochFolder)) {
+    rmSync(rewardEpochFolder, { recursive: true });
+  }
+  if (!existsSync(rewardEpochFolder)) {
+    mkdirSync(rewardEpochFolder);
+  }
+  for (let i = rewardEpochDuration.startVotingRoundId; i <= rewardEpochDuration.endVotingRoundId; i++) {
+    const votingRoundFolder = path.join(rewardEpochFolder, `${i}`);
+    if (!existsSync(votingRoundFolder)) {
+      mkdirSync(votingRoundFolder);
+    }
+    const votingRoundOffer = rewardOfferMap.get(i);
+    if (!votingRoundOffer) {
+      throw new Error(`Critical error: No offer for voting round ${i}`);
+    }
+    const offersPath = path.join(votingRoundFolder, file);
+    writeFileSync(offersPath, JSON.stringify(votingRoundOffer, bigIntReplacer));
+  }
+}
+
+
 
 /**
  * Creates necessary folders for reward epoch calculations. These include

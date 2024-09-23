@@ -6,6 +6,8 @@ import { FastUpdateFeeds } from "./events/FastUpdateFeeds";
 import { FastUpdateFeedsSubmitted } from "./events/FastUpdateFeedsSubmitted";
 import { IncentiveOffered } from "./events/IncentiveOffered";
 import { FUInflationRewardsOffered } from "./events/FUInflationRewardsOffered";
+import { FDCInflationRewardsOffered } from "./events/FDCInflationRewardsOffered";
+import { AttestationRequest } from "./events/AttestationRequest";
 
 export class IndexerClientForRewarding extends IndexerClient {
   constructor(
@@ -148,4 +150,53 @@ export class IndexerClientForRewarding extends IndexerClient {
       data,
     };
   }
+
+  /**
+   * Extract AttestationRequest events from the indexer that match the range of voting rounds.
+   */
+  public async getAttestationRequestEvents(
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<AttestationRequest[]>> {
+    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
+    // strictly containing in the range
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    const eventName = AttestationRequest.eventName;
+    const status = await this.ensureEventRange(startTime, endTime);
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
+    if (status !== BlockAssuranceResult.OK) {
+      return { status };
+    }
+
+    const data = result.map(event => AttestationRequest.fromRawEvent(event));
+    return {
+      status,
+      data,
+    };
+  }
+
+
+  /**
+   * Extract FDCInflationRewardsOffered events from the indexer that match the range of voting rounds.
+   */
+  public async getFDCInflationRewardsOfferedEvents(
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<FDCInflationRewardsOffered[]>> {
+    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
+    // strictly containing in the range
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    const eventName = FDCInflationRewardsOffered.eventName;
+    const status = await this.ensureEventRange(startTime, endTime);
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
+    if (status !== BlockAssuranceResult.OK) {
+      return { status };
+    }
+    const data = result.map(event => FDCInflationRewardsOffered.fromRawEvent(event));
+    return {
+      status,
+      data,
+    };
+  }
+
 }

@@ -89,6 +89,7 @@ export async function partialRewardClaimsForVotingRound(
   merge = true,
   serializeResults = false,
   useFastUpdatesData = false,
+  useFDCData = false,
   logger: ILogger = console,
   calculationFolder = CALCULATIONS_FOLDER()
 ): Promise<IPartialRewardClaim[]> {
@@ -294,6 +295,12 @@ export async function partialRewardClaimsForVotingRound(
       }
     }
   }
+
+  if(useFDCData) {
+    // TODO
+    // ddd
+  }
+
   if (serializeResults) {
     serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims, calculationFolder);
   }
@@ -363,6 +370,7 @@ export async function prepareDataForRewardCalculationsForRange(
   randomGenerationBenchingWindow: number,
   dataManager: DataManagerForRewarding,
   useFastUpdatesData: boolean,
+  useFDCData: boolean,
   tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
@@ -370,7 +378,8 @@ export async function prepareDataForRewardCalculationsForRange(
     firstVotingRoundId,
     lastVotingRoundId,
     randomGenerationBenchingWindow,
-    useFastUpdatesData
+    useFastUpdatesData,
+    useFDCData
   );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);

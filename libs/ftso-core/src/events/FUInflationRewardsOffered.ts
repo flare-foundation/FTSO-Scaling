@@ -42,6 +42,6 @@ export class FUInflationRewardsOffered extends RawEventConstructible {
   // Feed values in the order of feedIds
   feedConfigurations: FastUpdateFeedConfiguration[];
 
-  // feed decimals
+  // amount
   amount: bigint;
 }

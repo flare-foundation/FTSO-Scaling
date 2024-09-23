@@ -54,6 +54,7 @@ export async function runCalculateRewardClaimsTopJob(options: OptionalCommandOpt
       endVotingRoundId: endBatch,
       isWorker: true,
       useFastUpdatesData: options.useFastUpdatesData,
+      useFDCData: options.useFDCData,
     };
 
     // logger.log(batchOptions);
@@ -90,7 +91,8 @@ export async function runCalculateRewardClaimWorker(
       false, // don't aggregate
       options.retryDelayMs,
       logger,
-      options.useFastUpdatesData
+      options.useFastUpdatesData,
+      options.useFDCData
     );
     recordProgress(rewardEpochId);
   }

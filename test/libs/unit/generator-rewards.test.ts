@@ -605,7 +605,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         true, // prepare data for reward calculations
         merge,
         serializeResults,
-        false // do not use fast updates data
+        false, // do not use fast updates data
+        false // do not use FDC updates data
       );
       claims.push(...rewardClaims);
     }
@@ -663,7 +664,8 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
         true, // prepare data for reward calculations
         merge,
         serializeResults,
-        false // do not use fast updates data
+        false, // do not use fast updates data
+        false // do not use FDC updates data
       );
       logStatus(ProgressType.CLAIM_CALCULATION);
     }
@@ -771,7 +773,9 @@ export async function rewardClaimsForRewardEpoch(
       rewardOfferMap.get(votingRoundId),
       true, // prepareData
       merge,
-      serialize
+      serialize,
+      false, // do not use fast updates data
+      false // do not use FDC updates data
     );
     allRewardClaims.push(...rewardClaims);
     if (merge) {

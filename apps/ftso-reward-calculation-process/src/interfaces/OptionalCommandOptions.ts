@@ -20,6 +20,7 @@ export interface OptionalCommandOptions {
   isWorker?: boolean;
   recoveryMode?: boolean;
   useFastUpdatesData?: boolean;
+  useFDCData?: boolean;
   tempRewardEpochFolder?: boolean;
   incrementalCalculation?: boolean;
 }

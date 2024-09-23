@@ -114,6 +114,7 @@ export async function calculationOfRewardCalculationDataForRange(
   retryDelayMs: number,
   logger: Logger,
   useFastUpdatesData: boolean,
+  useFDCData: boolean,
   tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
@@ -131,6 +132,7 @@ export async function calculationOfRewardCalculationDataForRange(
         RANDOM_GENERATION_BENCHING_WINDOW(),
         dataManager,
         useFastUpdatesData,
+        useFDCData,
         tempRewardEpochFolder,
         calculationFolder
       );

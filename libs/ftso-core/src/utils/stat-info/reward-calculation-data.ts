@@ -5,7 +5,7 @@ import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
 import { VoterWeights } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { DataForRewardCalculation, FastUpdatesDataForVotingRound } from "../../data-calculation-interfaces";
+import { DataForRewardCalculation, FDCDataForVotingRound, FastUpdatesDataForVotingRound } from "../../data-calculation-interfaces";
 import { Address, Feed, MedianCalculationResult, MessageHash, RandomCalculationResult } from "../../voting-types";
 import { IRevealData } from "../RevealData";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
@@ -17,6 +17,10 @@ export interface RevealRecords {
   data: IRevealData;
 }
 
+export interface BitVoteRecords {
+  submitAddress: string;
+  data: string;
+}
 export interface VoterWeightData {
   submitAddress: string;
   weight: bigint;
@@ -32,6 +36,7 @@ export interface SDataForCalculation {
   randomGenerationBenchingWindow: number;
   benchingWindowRevealOffenders: string[];
   feedOrder: Feed[];
+  validEligibleBitVotes: BitVoteRecords[];
   // Not serialized, reconstructed on augmentation
   validEligibleRevealsMap?: Map<string, IRevealData>;
   revealOffendersSet?: Set<string>;
@@ -41,13 +46,19 @@ export interface SDataForCalculation {
   signingAddressToSubmitAddress?: Map<Address, Address>;
   votersWeightsMap?: Map<Address, VoterWeights>;
   signerToSigningWeight?: Map<Address, number>;
+  validEligibleBitVotesMap?: Map<Address, string>;
 }
 
 export function prepareDataForCalculations(rewardEpochId: number, data: DataForRewardCalculation): SDataForCalculation {
   const validEligibleReveals: RevealRecords[] = [];
+  const validEligibleBitVotes: BitVoteRecords[] = [];
   for (const [submitAddress, revealData] of data.dataForCalculations.validEligibleReveals.entries()) {
     validEligibleReveals.push({ submitAddress, data: revealData });
   }
+  for (const [submitAddress, bitVote] of data.dataForCalculations.validEligibleBitVotes.entries()) {
+    validEligibleBitVotes.push({ submitAddress, data: bitVote });
+  }
+
   const voterMedianVotingWeights: VoterWeightData[] = [];
   for (const [submitAddress, weight] of data.dataForCalculations.voterMedianVotingWeights.entries()) {
     voterMedianVotingWeights.push({ submitAddress, weight });
@@ -62,6 +73,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     randomGenerationBenchingWindow: data.dataForCalculations.randomGenerationBenchingWindow,
     benchingWindowRevealOffenders: [...data.dataForCalculations.benchingWindowRevealOffenders],
     feedOrder: data.dataForCalculations.feedOrder,
+    validEligibleBitVotes,
   };
   return result;
 }
@@ -87,6 +99,7 @@ export interface SDataForRewardCalculation {
   medianCalculationResults: MedianCalculationResult[];
   randomResult: SimplifiedRandomCalculationResult;
   fastUpdatesData?: FastUpdatesDataForVotingRound;
+  fdcData?: FDCDataForVotingRound;
   // usually added after results of the next voting round are known
   nextVotingRoundRandomResult?: string;
   eligibleFinalizers: string[];
@@ -148,6 +161,7 @@ export function serializeDataForRewardCalculation(
     randomResult: simplifyRandomCalculationResult(randomResult),
     eligibleFinalizers: eligibleFinalizationRewardVotersInGracePeriod,
     fastUpdatesData: rewardCalculationData.fastUpdatesData,
+    fdcData: rewardCalculationData.fdcData,
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }
@@ -182,6 +196,12 @@ function augmentDataForCalculation(data: SDataForCalculation, rewardEpochInfo: R
   for (const reveal of data.validEligibleReveals) {
     validEligibleRevealsMap.set(reveal.submitAddress.toLowerCase(), reveal.data);
   }
+
+  const validEligibleBitVoteMap = new Map<string, string>();
+  for (const bitVote of data.validEligibleBitVotes) {
+    validEligibleBitVoteMap.set(bitVote.submitAddress.toLowerCase(), bitVote.data);
+  }
+
   const revealOffendersSet = new Set<string>(data.revealOffenders);
   const voterMedianVotingWeightsSet = new Map<string, bigint>();
   for (const voter of data.voterMedianVotingWeights) {
@@ -191,6 +211,7 @@ function augmentDataForCalculation(data: SDataForCalculation, rewardEpochInfo: R
     data.benchingWindowRevealOffenders.map(address => address.toLowerCase())
   );
   data.validEligibleRevealsMap = validEligibleRevealsMap;
+  data.validEligibleBitVotesMap = validEligibleBitVoteMap;
   data.revealOffendersSet = revealOffendersSet;
   data.voterMedianVotingWeightsSet = voterMedianVotingWeightsSet;
   data.benchingWindowRevealOffendersSet = benchingWindowRevealOffendersSet;

@@ -1,16 +1,19 @@
 import { DataAvailabilityStatus, DataManager, DataMangerResponse, SignAndFinalizeSubmissionData } from "./DataManager";
-import { BlockAssuranceResult } from "./IndexerClient";
+import { BlockAssuranceResult, SubmissionData } from "./IndexerClient";
 import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { ContractMethodNames } from "./configs/contracts";
-import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "./configs/networks";
+import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FDC_PROTOCOL_ID, FTSO2_PROTOCOL_ID } from "./configs/networks";
 import {
   DataForCalculations,
   DataForRewardCalculation,
+  FDCDataForVotingRound,
   FastUpdatesDataForVotingRound,
 } from "./data-calculation-interfaces";
 import { ILogger } from "./utils/ILogger";
+import { errorString } from "./utils/error";
+import { Address } from "./voting-types";
 
 /**
  * Helps in extracting data in a consistent way for FTSO scaling feed median calculations, random number calculation and rewarding.
@@ -85,6 +88,7 @@ export class DataManagerForRewarding extends DataManager {
     }
 
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+      //////// FTSO Scaling ////////
       const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
       const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
       // this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
@@ -110,11 +114,14 @@ export class DataManagerForRewarding extends DataManager {
       if (!process.env.REMOVE_ANNOYING_MESSAGES) {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
       }
+      //////// FDC ////////
+      const validEligibleBitVotes: Map<Address, string> = this.extractValidEligibleBitVotes(mappingsResponse.data.submit2, rewardEpoch);
       const dataForRound = {
         ...partialData,
         randomGenerationBenchingWindow,
         benchingWindowRevealOffenders,
         rewardEpoch,
+        validEligibleBitVotes
       } as DataForCalculations;
       result.push(dataForRound);
     }
@@ -142,7 +149,8 @@ export class DataManagerForRewarding extends DataManager {
     firstVotingRoundId: number,
     lastVotingRoundId: number,
     randomGenerationBenchingWindow: number,
-    useFastUpdatesData: boolean
+    useFastUpdatesData: boolean,
+    useFDCData: boolean
   ): Promise<DataMangerResponse<DataForRewardCalculation[]>> {
     const dataForCalculationsResponse = await this.getDataForCalculationsForVotingRoundRange(
       firstVotingRoundId,
@@ -164,6 +172,7 @@ export class DataManagerForRewarding extends DataManager {
       };
     }
     let fastUpdatesData: FastUpdatesDataForVotingRound[] = [];
+    let fdcData: FDCDataForVotingRound[] = [];
     if (useFastUpdatesData) {
       const fastUpdatesDataResponse = await this.getFastUpdatesDataForVotingRoundRange(
         firstVotingRoundId,
@@ -176,6 +185,20 @@ export class DataManagerForRewarding extends DataManager {
       }
       fastUpdatesData = fastUpdatesDataResponse.data;
     }
+    if (useFDCData) {
+      const fdcDataResponse = await this.getFDCDataForVotingRoundRange(
+        firstVotingRoundId,
+        lastVotingRoundId
+      );
+      if (fdcDataResponse.status !== DataAvailabilityStatus.OK) {
+        return {
+          status: fdcDataResponse.status,
+        };
+      }
+      fdcData = fdcDataResponse.data;
+    }
+
+    ///    
     const result: DataForRewardCalculation[] = [];
     let startIndexSignatures = 0;
     let endIndexSignatures = 0;
@@ -236,6 +259,7 @@ export class DataManagerForRewarding extends DataManager {
         finalizations,
         firstSuccessfulFinalization,
         fastUpdatesData: fastUpdatesData[votingRoundId - firstVotingRoundId],
+        fdcData: fdcData[votingRoundId - firstVotingRoundId],
       };
       result.push(dataForRound);
     }
@@ -330,5 +354,67 @@ export class DataManagerForRewarding extends DataManager {
       status: DataAvailabilityStatus.OK,
       data: result,
     };
+  }
+
+  public async getFDCDataForVotingRoundRange(
+    firstVotingRoundId: number,
+    lastVotingRoundId: number
+  ): Promise<DataMangerResponse<FDCDataForVotingRound[]>> {
+
+    const attestationRequestsResponse = await this.indexerClient.getAttestationRequestEvents(firstVotingRoundId, lastVotingRoundId);
+    if (attestationRequestsResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    // const feedUpdates = await this.indexerClient.getFastUpdateFeedsSubmittedEvents(
+    //   firstVotingRoundId,
+    //   lastVotingRoundId
+    // );
+    // if (feedUpdates.status !== BlockAssuranceResult.OK) {
+    //   return {
+    //     status: DataAvailabilityStatus.NOT_OK,
+    //   };
+    // }
+    const result: FDCDataForVotingRound[] = [];
+    for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+      // const fastUpdateFeeds = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId];
+      // const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
+      const value: any = {//FDCDataForVotingRound = {
+        votingRoundId,
+        // attestationRequests: attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
+      };
+      result.push(value);
+    }
+    return {
+      status: DataAvailabilityStatus.OK,
+      data: result,
+    };
+  }
+
+  public extractValidEligibleBitVotes(submissionDataArray: SubmissionData[], rewardEpoch: RewardEpoch): Map<Address, string> {
+    const voterToLastBitVote = new Map<Address, string>();
+    for (const submission of submissionDataArray) {
+      for (const message of submission.messages) {
+        if (
+          message.protocolId === FDC_PROTOCOL_ID &&
+          message.votingRoundId + 1 === submission.votingEpochIdFromTimestamp
+        ) {
+          try {
+            const submitAddress = submission.submitAddress.toLowerCase();
+            if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
+              voterToLastBitVote.set(submitAddress, message.payload);
+            } else {
+              if (!process.env.REMOVE_ANNOYING_MESSAGES) {
+                this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+              }
+            }
+          } catch (e) {
+            this.logger.warn(`Unparsable reveal message: ${message.payload}, error: ${errorString(e)}`);
+          }
+        }
+      }
+    }
+    return voterToLastBitVote;
   }
 }

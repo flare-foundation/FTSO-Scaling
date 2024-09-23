@@ -39,6 +39,13 @@ export interface IFUPartialRewardOfferForRound {
   shouldBeBurned?: boolean;
 }
 
+export interface IFDCPartialRewardOfferForRound {
+  votingRoundId: number;
+  amount: bigint;
+  shouldBeBurned?: boolean;
+}
+
+
 export namespace PartialRewardOffer {
   export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOfferForEpoch {
     return {
