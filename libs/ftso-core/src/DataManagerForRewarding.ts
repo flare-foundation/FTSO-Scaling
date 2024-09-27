@@ -367,22 +367,13 @@ export class DataManagerForRewarding extends DataManager {
         status: DataAvailabilityStatus.NOT_OK,
       };
     }
-    // const feedUpdates = await this.indexerClient.getFastUpdateFeedsSubmittedEvents(
-    //   firstVotingRoundId,
-    //   lastVotingRoundId
-    // );
-    // if (feedUpdates.status !== BlockAssuranceResult.OK) {
-    //   return {
-    //     status: DataAvailabilityStatus.NOT_OK,
-    //   };
-    // }
     const result: FDCDataForVotingRound[] = [];
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
       // const fastUpdateFeeds = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId];
       // const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
-      const value: any = {//FDCDataForVotingRound = {
+      const value: FDCDataForVotingRound = {
         votingRoundId,
-        // attestationRequests: attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
+        attestationRequests: attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
       };
       result.push(value);
     }
