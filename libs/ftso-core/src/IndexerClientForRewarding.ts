@@ -46,8 +46,7 @@ export class IndexerClientForRewarding extends IndexerClient {
           processed = event.votingRoundId;
         } else {
           throw new Error(
-            `FastUpdateFeeds events are not continuous from ${startVotingRoundId} to ${endVotingRoundId}: expected ${
-              processed + 1
+            `FastUpdateFeeds events are not continuous from ${startVotingRoundId} to ${endVotingRoundId}: expected ${processed + 1
             }, got ${event.votingRoundId}`
           );
         }
@@ -157,7 +156,7 @@ export class IndexerClientForRewarding extends IndexerClient {
   public async getAttestationRequestEvents(
     startVotingRoundId: number,
     endVotingRoundId: number
-  ): Promise<IndexerResponse<AttestationRequest[]>> {
+  ): Promise<IndexerResponse<AttestationRequest[][]>> {
     const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
@@ -168,7 +167,18 @@ export class IndexerClientForRewarding extends IndexerClient {
       return { status };
     }
 
-    const data = result.map(event => AttestationRequest.fromRawEvent(event));
+    const allAttestationRequests = result.map(event => AttestationRequest.fromRawEvent(event));
+    const data: AttestationRequest[][] = [];
+    let i = 0;
+    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      const attestationRequestsInVotingRound: AttestationRequest[] = [];
+      const votingEpochEndTime = EPOCH_SETTINGS().votingEpochStartSec(votingRoundId + 1) - 1;
+      while (i < allAttestationRequests.length && allAttestationRequests[i].timestamp <= votingEpochEndTime) {
+        attestationRequestsInVotingRound.push(allAttestationRequests[i]);
+        i++;
+      }
+      data.push(attestationRequestsInVotingRound);
+    }
     return {
       status,
       data,

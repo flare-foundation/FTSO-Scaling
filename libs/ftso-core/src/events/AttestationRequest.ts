@@ -9,6 +9,7 @@ export class AttestationRequest extends RawEventConstructible {
     super();
     this.data = data.data;
     this.fee = BigInt(data.fee);
+    this.timestamp = data.timestamp;
   }
 
   static fromRawEvent(event: any): AttestationRequest {
@@ -25,4 +26,7 @@ export class AttestationRequest extends RawEventConstructible {
 
   // feed decimals
   fee: bigint;
+
+  // timestamp
+  timestamp: number; 
 }
