@@ -49,7 +49,7 @@ async function main() {
     REWARD_DISTRIBUTION_DATA_FILE, 
     REWARD_EPOCH_INFO_FILE
   ];
-
+  process.env.NETWORK = network;
   const sourceFolder = path.join(CALCULATIONS_FOLDER(), `${rewardEpochId}`);
 
   for(const fileName of files) {
