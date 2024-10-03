@@ -18,6 +18,7 @@ import {
   ExternalMedianResponse,
   ExternalResponse,
   ExternalResponseStatusEnum,
+  ExternalRewardEpochResponse,
   PDPResponse,
   PDPResponseStatusEnum,
 } from "./dto/data-provider-responses.dto";
@@ -174,6 +175,20 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
       status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
       votingRoundId,
       medianData: data,
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("rewardEpochFeedConfiguration/:votingRoundId")
+  async rewardEpochConfiguration(
+    @Param("votingRoundId", ParseIntPipe) votingRoundId: number
+  ): Promise<ExternalRewardEpochResponse> {
+    const data = await this.ftsoDataProviderService.getRewardEpoch(votingRoundId);
+
+    return {
+      status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
+      rewardEpochId: data.rewardEpochId,
+      rewardEpochFeedConfiguration: data,
     };
   }
 

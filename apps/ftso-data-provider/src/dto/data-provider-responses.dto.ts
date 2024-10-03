@@ -1,5 +1,6 @@
 // PDP (Protocol Data Provider) Response
 
+import { RewardEpoch } from "../../../../libs/ftso-core/src/RewardEpoch";
 import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
 import { FeedResultWithProof, TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
 import { MedianCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
@@ -59,6 +60,25 @@ export type ExternalMedianResponse =
   | ExternalMedianResponseOk
   | ExternalMedianResponseNotAvailable
   | ExternalMedianResponseTooEarly;
+
+interface ExternalRewardEpochResponseOk {
+  status: ExternalResponseStatusEnum.OK;
+  rewardEpochId: number;
+  rewardEpochFeedConfiguration: RewardEpoch;
+}
+
+interface ExternalRewardEpochResponseNotAvailable {
+  status: ExternalResponseStatusEnum.NOT_AVAILABLE;
+}
+
+interface ExternalRewardEpochResponseTooEarly {
+  status: ExternalResponseStatusEnum.TOO_EARLY;
+}
+
+export type ExternalRewardEpochResponse =
+  | ExternalRewardEpochResponseOk
+  | ExternalRewardEpochResponseNotAvailable
+  | ExternalRewardEpochResponseTooEarly;
 
 export interface JSONAbiDefinition {
   abiName: string;
