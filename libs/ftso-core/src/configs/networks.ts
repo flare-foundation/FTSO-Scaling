@@ -660,6 +660,8 @@ export const CALCULATIONS_FOLDER = () => {
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
       ((_: never): void => {})(network);
   }
-}
+};
+
+export const FEEDS_RENAMING_FILE = () => "libs/ftso-core/src/reward-calculation/feeds-renaming.json";
 
 export const FUTURE_VOTING_ROUNDS = () => 30;
