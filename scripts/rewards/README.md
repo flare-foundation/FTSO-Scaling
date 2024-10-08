@@ -171,12 +171,14 @@ When finalizing the following [reward detail tags](../../libs/ftso-core/src/rewa
 **Detailed reward calculation data** can be obtained using reward calculation scripts.
 - [`coston-db.sh`](./coston-db.sh)
 - [`songbird-db.sh`](./songbird-db.sh)
+- [`flare-db.sh`](./flare-db.sh)
 The data is calculated into the folder `calculations`. For each reward epoch `rewardEpochId` the data are stored into the folder
 `calculations/<rewardEpochId>` and within that folder the specific data for each voting round (`votingRoundId`) are stored in the folders 
 `calculations/<rewardEpochId>/<votingRoundId>`.
 
 ### Public reward data
 
+Data calculated by Flare Newtworks are published on [https://github.com/flare-foundation/fsp-rewards](https://github.com/flare-foundation/fsp-rewards).
 Public reward data includes the following files:
 - `reward-epoch-info.json` - extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
 - `reward-distribution-data.json` - all aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib).
@@ -206,9 +208,15 @@ In folders `calculations/<rewardEpochId>/<votingRoundId>`:
 Claiming is done using the function [`claim(...)`](https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/blob/main/contracts/userInterfaces/IRewardManager.sol?ref_type=heads#L85) on `RewardManager` smart contract.
 Delegators and stake delegators can use the claim function without any proofs, once somebody (usually this is done by a dedicated bot, but it may be done essentially by anyone) initializes all the reward claims of claim type `2-WNAT` and `3-MIRROR` (the latter is relevant on Flare and Coston2 only). Initialization is done using (multiple) calls of function [`initialiseWeightBasedClaims(...)`](https://gitlab.com/flarenetwork/flare-smart-contracts-v2/-/blob/main/contracts/userInterfaces/IRewardManager.sol?ref_type=heads#L115). Once all the proofs of those types of claims for some reward epoch id are initialized, claiming without proofs by delegators and stake delegators are enabled for that reward epoch id. Note that such claims actually claim all the rewards for the reward owner address, also unclaimed rewards from previous reward epochs, up to the claimed one.
 
-On the other hand, data providers wanting to get their fees (claim type `1-FEE` and direct claims `0-DIRECT`) need to provide an array of claims with Merkle proofs as the last parameter of `claim(...)` function. If this is done using one of the explorers, the claims with Merkle proofs structs should be encoded as array tuples. Such encoding that can be immediately used in explorer interface is provided in files `reward-distribution-data-tuples.json`. For example:
+On the other hand, data providers wanting to get their fees (claim type `1-FEE` and direct claims `0-DIRECT`) need to provide an array of claims with Merkle proofs as the last parameter of `claim(...)` function. 
 
-Consider the following file [`rewards-data/songbird/196/reward-distribution-data-tuples.json`](../../rewards-data/songbird/196/reward-distribution-data-tuples.json). The first tuple-encoded claim in the array under the key `rewardClaims` looks like this:
+On the explorers, function `4. claim` can be used:
+- [Songbird explorer](https://songbird-explorer.flare.network/address/0x8A80583BD5A5Cd8f68De585163259D61Ea8dc904/write-contract#address-tabs),
+- [Flare explorer](https://flare-explorer.flare.network/address/0xC8f55c5aA2C752eE285Bd872855C749f4ee6239B/write-contract#address-tabs).
+
+In case a new version of the explorer is used, data from `reward-distribution-data.json` can be entered into interface that allows input per struct fields. In the older version of the explorer the claims with Merkle proofs structs should be encoded as array tuples. Such encoding that can be immediately used in explorer interface is provided in files `reward-distribution-data-tuples.json`. For example:
+
+Consider the following file [`songbird/196/reward-distribution-data-tuples.json`](https://raw.githubusercontent.com/flare-foundation/fsp-rewards/refs/heads/main/songbird/196/reward-distribution-data-tuples.json) in the [reward publication repository](https://github.com/flare-foundation/fsp-rewards). The first tuple-encoded claim in the array under the key `rewardClaims` looks like this:
 
 ```
 [
@@ -229,8 +237,6 @@ Consider the following file [`rewards-data/songbird/196/reward-distribution-data
   ]
 ]
 ```
-
-[Songbird explorer](https://songbird-explorer.flare.network/address/0x8A80583BD5A5Cd8f68De585163259D61Ea8dc904/write-contract#address-tabs) can be used for claiming (function `4. claim`).
 
 The following parameters should be provided:
 - `_rewardOwner` - `beneficiary` in the list of `_proofs`.
