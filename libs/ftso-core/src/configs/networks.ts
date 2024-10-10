@@ -22,7 +22,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0xC9534cB913150aD3e98D792857689B55e2404212" },
   RewardManager: { name: "RewardManager", address: "0xA17197b7Bdff7Be7c3Da39ec08981FB716B70d3A" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
-  Relay: { name: "Relay", address: "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC" },
+  Relay: { name: "Relay", address: "0xA300E71257547e645CD7241987D3B75f2012E0E3" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9" },
   VoterRegistry: { name: "VoterRegistry", address: "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
