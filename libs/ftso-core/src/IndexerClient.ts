@@ -390,7 +390,22 @@ export class IndexerClient {
   ): Promise<IndexerResponse<SigningPolicyInitialized[]>> {
     const eventName = SigningPolicyInitialized.eventName;
     const status = await this.ensureLowerBlock(fromStartTime);
-    const result = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
+
+    const result: TLPEvents[] = [];
+
+    // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
+    if (CONTRACTS.Relay.address == "0xA300E71257547e645CD7241987D3B75f2012E0E3") {
+      const oldRelay = {
+        ...CONTRACTS.Relay,
+        address: "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC", // Old Relay address for Coston
+      };
+
+      result.push(...(await this.queryEvents(oldRelay, eventName, fromStartTime)));
+    }
+    // END TEMP CHANGE
+
+    result.push(...(await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime)));
+
     const data = result.map(event => SigningPolicyInitialized.fromRawEvent(event));
     return {
       status,
