@@ -5,6 +5,7 @@ import {
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
   FTSO2_PROTOCOL_ID,
   PENALTY_FACTOR,
+  FEEDS_RENAMING_FILE,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
@@ -49,6 +50,7 @@ import { calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
 import { ILogger } from "../utils/ILogger";
+import { existsSync, readFileSync } from "fs";
 
 /**
  * Initializes reward epoch storage for the given reward epoch.
@@ -259,8 +261,19 @@ export async function partialRewardClaimsForVotingRound(
       } as FUFeedValue);
     }
     const signingPolicyAddressesSubmitted = data.fastUpdatesData.signingPolicyAddressesSubmitted;
+    // Renaming on Fast Updates happens after renaming for Ftso Scaling
+    const feedRenamingMap: Map<string, string> = new Map<string, string>();
+    if (existsSync(FEEDS_RENAMING_FILE())) {
+      const feedRenamingData = JSON.parse(readFileSync(FEEDS_RENAMING_FILE(), "utf8"));
+      for (const feed of feedRenamingData) {
+        feedRenamingMap.set(feed.oldFeedId, feed.newFeedId);
+      }
+    }
     for (const [feedId, offers] of fuFeedOffers.entries()) {
-      const medianResult = medianCalculationMap.get(feedId);
+      const medianResult =
+        medianCalculationMap.get(feedId) == undefined
+          ? medianCalculationMap.get(feedRenamingMap.get(feedId))
+          : medianCalculationMap.get(feedId);
       if (medianResult === undefined) {
         // This should never happen
         throw new Error("Critical error: Median result is undefined");

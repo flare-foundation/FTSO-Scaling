@@ -11,6 +11,7 @@ import Web3 from "web3";
 
 export interface IRewardDistributionData {
   rewardEpochId: number;
+  network: string;
   rewardClaims: IRewardClaimWithProof[];
   noOfWeightBasedClaims: number;
   merkleRoot: string;
@@ -41,6 +42,7 @@ export function serializeRewardDistributionData(
   ).length;
   const result: IRewardDistributionData = {
     rewardEpochId,
+    network: process.env.NETWORK!,
     rewardClaims: rewardClaimsWithProof,
     noOfWeightBasedClaims,
     merkleRoot,

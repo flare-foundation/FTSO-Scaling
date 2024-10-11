@@ -640,6 +640,28 @@ export const FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS = () => {
  */
 export const CAPPED_STAKING_FEE_BIPS = 2000;
 
-export const CALCULATIONS_FOLDER = () => "calculations";
+export const CALCULATIONS_FOLDER = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+      return "calculations/from-env";
+    case "coston":
+      return "calculations/coston";
+    case "coston2":
+      return "calculations/coston2";
+    case "songbird":
+      return "calculations/songbird";
+    case "flare":
+      return "calculations/flare";
+    case "local-test":
+      return "calculations/local-test";
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => {})(network);
+  }
+};
+
+export const FEEDS_RENAMING_FILE = () => "libs/ftso-core/src/reward-calculation/feeds-renaming.json";
 
 export const FUTURE_VOTING_ROUNDS = () => 30;
