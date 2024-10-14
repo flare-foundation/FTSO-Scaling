@@ -394,13 +394,21 @@ export class IndexerClient {
     const result: TLPEvents[] = [];
 
     // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
-    if (CONTRACTS.Relay.address == "0xA300E71257547e645CD7241987D3B75f2012E0E3") {
-      const oldRelay = {
-        ...CONTRACTS.Relay,
-        address: "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC", // Old Relay address for Coston
-      };
+    const network = process.env.NETWORK as networks;
 
-      result.push(...(await this.queryEvents(oldRelay, eventName, fromStartTime)));
+    const oldSongbirdRelay = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
+    if (network == "songbird" && CONTRACTS.Relay.address != oldSongbirdRelay) {
+      this.logger.log(`Querying old Relay address for Songbird: ${oldSongbirdRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
+      );
+    }
+    const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
+    if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
+      this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
+      );
     }
     // END TEMP CHANGE
 
