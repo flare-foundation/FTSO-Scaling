@@ -1,11 +1,13 @@
 import { DataAvailabilityStatus, DataManager } from "../DataManager";
 import { RewardEpochManager } from "../RewardEpochManager";
 import {
+  BURN_ADDRESS,
   CALCULATIONS_FOLDER,
+  FEEDS_RENAMING_FILE,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
+  FTSO2_FAST_UPDATES_PROTOCOL_ID,
   FTSO2_PROTOCOL_ID,
   PENALTY_FACTOR,
-  FEEDS_RENAMING_FILE,
 } from "../configs/networks";
 import { calculateMedianResults } from "../ftso-calculation/ftso-median";
 import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
@@ -18,11 +20,13 @@ import { calculateFinalizationRewardClaims } from "./reward-finalization";
 import { calculateMedianRewardClaims } from "./reward-median";
 import { splitRewardOfferByTypes } from "./reward-offers";
 
+import { existsSync, readFileSync } from "fs";
 import { DataManagerForRewarding } from "../DataManagerForRewarding";
 import { RewardEpoch } from "../RewardEpoch";
 import { FUFeedValue } from "../data-calculation-interfaces";
 import { FastUpdateFeedConfiguration } from "../events/FUInflationRewardsOffered";
 import { calculateRandom } from "../ftso-calculation/ftso-random";
+import { ILogger } from "../utils/ILogger";
 import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import {
@@ -46,11 +50,9 @@ import {
   serializeDataForRewardCalculation,
 } from "../utils/stat-info/reward-calculation-data";
 import { deserializeRewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
-import { calculateFastUpdatesClaims } from "./reward-fast-updates";
+import { FastUpdatesRewardClaimType, calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { ILogger } from "../utils/ILogger";
-import { existsSync, readFileSync } from "fs";
 
 /**
  * Initializes reward epoch storage for the given reward epoch.
@@ -230,7 +232,35 @@ export async function partialRewardClaimsForVotingRound(
       }
     }
   }
-  if (useFastUpdatesData) {
+  const network = process.env.NETWORK;
+  const isContractChange = network == "coston" && votingRoundId == 779191;
+
+  if (useFastUpdatesData && isContractChange) {
+    const fuFeedOffers = deserializeGranulatedPartialOfferMapForFastUpdates(
+      rewardEpochId,
+      votingRoundId,
+      calculationFolder
+    );
+    for (const [feedId, offers] of fuFeedOffers.entries()) {
+      for (const offer of offers) {
+        allRewardClaims.push({
+          votingRoundId: offer.votingRoundId,
+          beneficiary: BURN_ADDRESS,
+          amount: offer.amount,
+          claimType: ClaimType.DIRECT,
+          offerIndex: 0,
+          // feedId: offer.feedId,  // should be undefined
+          protocolTag: "" + FTSO2_FAST_UPDATES_PROTOCOL_ID,
+          rewardTypeTag: RewardTypePrefix.FULL_OFFER_CLAIM_BACK,
+          rewardDetailTag: FastUpdatesRewardClaimType.CONTRACT_CHANGE, 
+        });
+      }
+    }
+    if (merge) {
+      allRewardClaims = RewardClaim.merge(allRewardClaims);
+    }
+  }
+  if (useFastUpdatesData && !isContractChange) {
     const fuFeedOffers = deserializeGranulatedPartialOfferMapForFastUpdates(
       rewardEpochId,
       votingRoundId,

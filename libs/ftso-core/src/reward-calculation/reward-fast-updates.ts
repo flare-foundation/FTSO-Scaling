@@ -15,6 +15,7 @@ export enum FastUpdatesRewardClaimType {
   MISSED_BAND = "MISSING_BAND",
   FEE = "FEE",
   PARTICIPATION = "PARTICIPATION",
+  CONTRACT_CHANGE = "CONTRACT_CHANGE",
 }
 
 /**

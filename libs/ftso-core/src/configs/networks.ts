@@ -27,7 +27,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
   VoterRegistry: { name: "VoterRegistry", address: "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
-  FastUpdater: { name: "FastUpdater", address: "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9" },
+  FastUpdater: { name: "FastUpdater", address: "0xB8336A96b4b8af89f60EA080002214191Bc8293A" },
   FastUpdateIncentiveManager: {
     name: "FastUpdateIncentiveManager",
     address: "0x8c45666369B174806E1AB78D989ddd79a3267F3b",
@@ -54,14 +54,14 @@ const COSTON2_CONFIG: NetworkContractAddresses = {
 const SONGBIRD_CONFIG: NetworkContractAddresses = {
   FlareSystemsManager: { name: "FlareSystemsManager", address: "0x421c69E22f48e14Fc2d2Ee3812c59bfb81c38516" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0x5aB9cB258a342001C4663D9526A1c54cCcF8C545" },
-  RewardManager: { name: "RewardManager", address: "0x8A80583BD5A5Cd8f68De585163259D61Ea8dc904" },
+  RewardManager: { name: "RewardManager", address: "0xE26AD68b17224951b5740F33926Cc438764eB9a7" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
-  Relay: { name: "Relay", address: "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4" },
+  Relay: { name: "Relay", address: "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x126FAeEc75601dA3354c0b5Cc0b60C85fCbC3A5e" },
   VoterRegistry: { name: "VoterRegistry", address: "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
-  FastUpdater: { name: "FastUpdater", address: "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116" },
+  FastUpdater: { name: "FastUpdater", address: "0x7D9F73FD9bC4607daCB618FF895585f98BFDD06B" },
   FastUpdateIncentiveManager: {
     name: "FastUpdateIncentiveManager",
     address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006",
@@ -159,7 +159,7 @@ const contracts = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -185,7 +185,7 @@ const ftso2ProtocolId = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -205,7 +205,7 @@ const ftso2FastUpdatesProtocolId = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -266,7 +266,7 @@ const epochSettings = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -310,7 +310,7 @@ const randomGenerationBenchingWindow = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -345,7 +345,7 @@ const initialRewardEpochId = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -364,7 +364,7 @@ const burnAddress = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -388,7 +388,7 @@ const additionalRewardFinalizationWindows = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -457,7 +457,7 @@ const penaltyFactor = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -493,7 +493,7 @@ const gracePeriodForSignaturesDurationSec = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -531,7 +531,7 @@ const gracePeriodForFinalizationDurationSec = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -584,7 +584,7 @@ const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -619,7 +619,7 @@ const finalizationVoterSelectionThresholdWeightBips = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -658,7 +658,7 @@ export const CALCULATIONS_FOLDER = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
