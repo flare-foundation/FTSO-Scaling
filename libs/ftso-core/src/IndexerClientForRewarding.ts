@@ -38,7 +38,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     const network = process.env.NETWORK as networks;
     
     const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
-    if (network == "songbird" && CONTRACTS.Relay.address != oldSongbirdFastUpdater) {
+    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater) {
       this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldSongbirdFastUpdater }, eventName, startTime, endTime))
@@ -46,7 +46,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
-    if (network == "coston" && CONTRACTS.Relay.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
+    if (network == "coston" && CONTRACTS.FastUpdater.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
       this.logger.log(`Querying old FastUpdater address for Coston: ${oldCostonFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldCostonFastUpdater }, eventName, startTime, endTime))
@@ -120,7 +120,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     const network = process.env.NETWORK as networks;
     
     const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
-    if (network == "songbird" && CONTRACTS.Relay.address != oldSongbirdFastUpdater) {
+    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater) {
       this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldSongbirdFastUpdater }, eventName, startTime, endTime))
@@ -128,7 +128,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
-    if (network == "coston" && CONTRACTS.Relay.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
+    if (network == "coston" && CONTRACTS.FastUpdater.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
       this.logger.log(`Querying old FastUpdater address for Coston: ${oldCostonFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldCostonFastUpdater }, eventName, startTime, endTime))

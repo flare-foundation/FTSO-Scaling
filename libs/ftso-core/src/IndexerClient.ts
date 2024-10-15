@@ -588,6 +588,14 @@ export class IndexerClient {
       };
     }
 
+    const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
+    if (network === "songbird" && CONTRACTS.Relay.address != oldSongbirdRelayAddress) {
+      oldRelay = {
+        ...CONTRACTS.Relay,
+        address: oldSongbirdRelayAddress,
+      };
+    }
+
     if (oldRelay !== undefined) {
       oldTransactionsResults = await this.queryTransactions(
         oldRelay,
