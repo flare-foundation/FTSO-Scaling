@@ -1,13 +1,12 @@
 import { EntityManager } from "typeorm";
 import { BlockAssuranceResult, IndexerClient, IndexerResponse } from "./IndexerClient";
 import { ILogger } from "./utils/ILogger";
-import { CONTRACTS, EPOCH_SETTINGS, networks } from "./configs/networks";
+import { CONTRACTS, COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, EPOCH_SETTINGS, networks } from "./configs/networks";
 import { FastUpdateFeeds } from "./events/FastUpdateFeeds";
 import { FastUpdateFeedsSubmitted } from "./events/FastUpdateFeedsSubmitted";
 import { IncentiveOffered } from "./events/IncentiveOffered";
 import { FUInflationRewardsOffered } from "./events/FUInflationRewardsOffered";
 import { TLPEvents } from "./orm/entities";
-
 export class IndexerClientForRewarding extends IndexerClient {
   constructor(
     protected readonly entityManager: EntityManager,
@@ -47,7 +46,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
-    if (network == "coston" && CONTRACTS.Relay.address !== oldCostonFastUpdater) {
+    if (network == "coston" && CONTRACTS.Relay.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
       this.logger.log(`Querying old FastUpdater address for Coston: ${oldCostonFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldCostonFastUpdater }, eventName, startTime, endTime))
@@ -71,7 +70,7 @@ export class IndexerClientForRewarding extends IndexerClient {
         } else {
           // this.logger.error(`Missing FastUpdateFeeds event: expected ${processed + 1}, got ${event.votingRoundId}`);
           // processed++;
-          if(network == "coston" && processed + 1 == 779191) {            
+          if(network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {            
             while(processed + 1 < event.votingRoundId) {
               this.logger.error(`Missing FastUpdateFeeds event for Coston: ${processed + 1}`);
               data.push("CONTRACT_CHANGE" as any);
@@ -129,7 +128,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
-    if (network == "coston" && CONTRACTS.Relay.address !== oldCostonFastUpdater) {
+    if (network == "coston" && CONTRACTS.Relay.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
       this.logger.log(`Querying old FastUpdater address for Coston: ${oldCostonFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldCostonFastUpdater }, eventName, startTime, endTime))

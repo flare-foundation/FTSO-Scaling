@@ -20,7 +20,7 @@ const TEST_CONFIG: NetworkContractAddresses = {
 const COSTON_CONFIG: NetworkContractAddresses = {
   FlareSystemsManager: { name: "FlareSystemsManager", address: "0x85680Dd93755Fe5d0789773fd0896cEE51F9e358" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0xC9534cB913150aD3e98D792857689B55e2404212" },
-  RewardManager: { name: "RewardManager", address: "0xA17197b7Bdff7Be7c3Da39ec08981FB716B70d3A" },
+  RewardManager: { name: "RewardManager", address: "0x2ade9972E7f27200872D378acF7a1BaD8D696FC5" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0xA300E71257547e645CD7241987D3B75f2012E0E3" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9" },
@@ -665,3 +665,5 @@ export const CALCULATIONS_FOLDER = () => {
 export const FEEDS_RENAMING_FILE = () => "libs/ftso-core/src/reward-calculation/feeds-renaming.json";
 
 export const FUTURE_VOTING_ROUNDS = () => 30;
+
+export const COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 779191;
