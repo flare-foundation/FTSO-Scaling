@@ -403,7 +403,7 @@ export class IndexerClient {
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
       );
     }
-    const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
+    const oldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
     if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
       this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
       result.push(
