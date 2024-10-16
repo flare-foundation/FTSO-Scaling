@@ -406,13 +406,13 @@ export class IndexerClient {
       );
     }
 
-    // const secondOldSongbirdRelay = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    // if (network == "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelay) {
-    //   this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
-    //   result.push(
-    //     ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
-    //   );
-    // }
+    const secondOldSongbirdRelay = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
+    if (network == "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelay) {
+      this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
+      );
+    }
 
     const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
     if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
