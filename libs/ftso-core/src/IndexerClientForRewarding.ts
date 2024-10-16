@@ -1,7 +1,7 @@
 import { EntityManager } from "typeorm";
 import { BlockAssuranceResult, IndexerClient, IndexerResponse } from "./IndexerClient";
 import { ILogger } from "./utils/ILogger";
-import { CONTRACTS, EPOCH_SETTINGS } from "./configs/networks";
+import { CONTRACTS, COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, EPOCH_SETTINGS, SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, networks } from "./configs/networks";
 import { FastUpdateFeeds } from "./events/FastUpdateFeeds";
 import { FastUpdateFeedsSubmitted } from "./events/FastUpdateFeedsSubmitted";
 import { IncentiveOffered } from "./events/IncentiveOffered";
@@ -9,6 +9,7 @@ import { FUInflationRewardsOffered } from "./events/FUInflationRewardsOffered";
 import { FDCInflationRewardsOffered } from "./events/FDCInflationRewardsOffered";
 import { AttestationRequest } from "./events/AttestationRequest";
 
+import { TLPEvents } from "./orm/entities";
 export class IndexerClientForRewarding extends IndexerClient {
   constructor(
     protected readonly entityManager: EntityManager,
@@ -30,12 +31,38 @@ export class IndexerClientForRewarding extends IndexerClient {
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 2);
     const eventName = FastUpdateFeeds.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
-    const result = await this.queryEvents(CONTRACTS.FastUpdater, eventName, startTime, endTime);
-
-    const data: FastUpdateFeeds[] = [];
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
+
+    const result: TLPEvents[] = [];
+
+    // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
+    const network = process.env.NETWORK as networks;
+
+    const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
+    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater
+      && startVotingRoundId <= SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
+      this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldSongbirdFastUpdater }, eventName, startTime, endTime))
+      );
+    }
+
+    const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
+    if (network == "coston" && CONTRACTS.FastUpdater.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
+      this.logger.log(`Querying old FastUpdater address for Coston: ${oldCostonFastUpdater}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldCostonFastUpdater }, eventName, startTime, endTime))
+      );
+    }
+
+    // END TEMP CHANGE
+
+    result.push(...(await this.queryEvents(CONTRACTS.FastUpdater, eventName, startTime, endTime)));
+    IndexerClient.sortEvents(result);
+
+    const data: FastUpdateFeeds[] = [];
     let processed = -1;
     for (let i = 0; i < result.length; i++) {
       const event = FastUpdateFeeds.fromRawEvent(result[i]);
@@ -45,6 +72,19 @@ export class IndexerClientForRewarding extends IndexerClient {
           data.push(event);
           processed = event.votingRoundId;
         } else {
+          // this.logger.error(`Missing FastUpdateFeeds event: expected ${processed + 1}, got ${event.votingRoundId}`);
+          // processed++;
+          if ((network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)
+            || (network == "songbird" && processed + 1 == SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)) {
+            while (processed + 1 < event.votingRoundId) {
+              this.logger.error(`Missing FastUpdateFeeds event for Coston: ${processed + 1}`);
+              data.push("CONTRACT_CHANGE" as any);
+              processed++;
+            }
+            data.push(event);
+            processed++;
+            continue;
+          }
           throw new Error(
             `FastUpdateFeeds events are not continuous from ${startVotingRoundId} to ${endVotingRoundId}: expected ${processed + 1
             }, got ${event.votingRoundId}`
@@ -74,10 +114,35 @@ export class IndexerClientForRewarding extends IndexerClient {
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1);
     const eventName = FastUpdateFeedsSubmitted.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
-    const result = await this.queryEvents(CONTRACTS.FastUpdater, eventName, startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
+
+    const result: TLPEvents[] = [];
+
+    // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
+    const network = process.env.NETWORK as networks;
+
+    const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
+    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater && startVotingRoundId <= SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
+      this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldSongbirdFastUpdater }, eventName, startTime, endTime))
+      );
+    }
+
+    const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
+    if (network == "coston" && CONTRACTS.FastUpdater.address !== oldCostonFastUpdater && startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
+      this.logger.log(`Querying old FastUpdater address for Coston: ${oldCostonFastUpdater}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldCostonFastUpdater }, eventName, startTime, endTime))
+      );
+    }
+
+    // END TEMP CHANGE
+
+    result.push(...(await this.queryEvents(CONTRACTS.FastUpdater, eventName, startTime, endTime)));
+    IndexerClient.sortEvents(result);
     const votingRoundIdToEvents = new Map<number, FastUpdateFeedsSubmitted[]>();
 
     for (let i = 0; i < result.length; i++) {
