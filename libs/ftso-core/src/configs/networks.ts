@@ -667,3 +667,4 @@ export const FEEDS_RENAMING_FILE = () => "libs/ftso-core/src/reward-calculation/
 export const FUTURE_VOTING_ROUNDS = () => 30;
 
 export const COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 779191;
+export const SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 99999999999999; // temporary set to very high to not have effect 

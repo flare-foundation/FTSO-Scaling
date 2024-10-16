@@ -1,7 +1,7 @@
 import { EntityManager } from "typeorm";
 import { BlockAssuranceResult, IndexerClient, IndexerResponse } from "./IndexerClient";
 import { ILogger } from "./utils/ILogger";
-import { CONTRACTS, COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, EPOCH_SETTINGS, networks } from "./configs/networks";
+import { CONTRACTS, COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, EPOCH_SETTINGS, SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, networks } from "./configs/networks";
 import { FastUpdateFeeds } from "./events/FastUpdateFeeds";
 import { FastUpdateFeedsSubmitted } from "./events/FastUpdateFeedsSubmitted";
 import { IncentiveOffered } from "./events/IncentiveOffered";
@@ -33,12 +33,13 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const result: TLPEvents[] = [];
-    
+
     // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
     const network = process.env.NETWORK as networks;
-    
+
     const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
-    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater) {
+    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater
+      && startVotingRoundId <= SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
       this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldSongbirdFastUpdater }, eventName, startTime, endTime))
@@ -70,8 +71,9 @@ export class IndexerClientForRewarding extends IndexerClient {
         } else {
           // this.logger.error(`Missing FastUpdateFeeds event: expected ${processed + 1}, got ${event.votingRoundId}`);
           // processed++;
-          if(network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {            
-            while(processed + 1 < event.votingRoundId) {
+          if ((network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)
+            || (network == "songbird" && processed + 1 == SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)) {
+            while (processed + 1 < event.votingRoundId) {
               this.logger.error(`Missing FastUpdateFeeds event for Coston: ${processed + 1}`);
               data.push("CONTRACT_CHANGE" as any);
               processed++;
@@ -81,8 +83,7 @@ export class IndexerClientForRewarding extends IndexerClient {
             continue;
           }
           throw new Error(
-            `FastUpdateFeeds events are not continuous from ${startVotingRoundId} to ${endVotingRoundId}: expected ${
-              processed + 1
+            `FastUpdateFeeds events are not continuous from ${startVotingRoundId} to ${endVotingRoundId}: expected ${processed + 1
             }, got ${event.votingRoundId}`
           );
         }
@@ -118,9 +119,9 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
     const network = process.env.NETWORK as networks;
-    
+
     const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
-    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater) {
+    if (network == "songbird" && CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater && startVotingRoundId <= SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
       this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.FastUpdater, address: oldSongbirdFastUpdater }, eventName, startTime, endTime))
