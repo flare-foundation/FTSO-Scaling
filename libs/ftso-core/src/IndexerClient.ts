@@ -405,6 +405,15 @@ export class IndexerClient {
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
       );
     }
+
+    // const secondOldSongbirdRelay = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
+    // if (network == "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelay) {
+    //   this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
+    //   result.push(
+    //     ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
+    //   );
+    // }
+
     const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
     if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
       this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
@@ -412,6 +421,15 @@ export class IndexerClient {
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
       );
     }
+
+    // const secondOldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+    // if (network == "coston" && CONTRACTS.Relay.address != secondOldCostonRelay) {
+    //   this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
+    //   result.push(
+    //     ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
+    //   );
+    // }
+
     // END TEMP CHANGE
 
     result.push(...(await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime)));
@@ -576,7 +594,9 @@ export class IndexerClient {
     }
     // TEMP CHANGE
     let oldTransactionsResults: TLPTransaction[] = [];
+    let secondOldTransactionsResults: TLPTransaction[] = [];
     let oldRelay: ContractDefinitions | undefined;
+    let secondOldRelay: ContractDefinitions | undefined;
     const network = process.env.NETWORK as networks;
 
     // Do this for every network with change
@@ -588,6 +608,15 @@ export class IndexerClient {
       };
     }
 
+    // const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+    // if (network === "coston" && CONTRACTS.Relay.address != secondOldCostonRelayAddress) {
+    //   secondOldRelay = {
+    //     ...CONTRACTS.Relay,
+    //     address: secondOldCostonRelayAddress,
+    //   };
+    // }
+
+
     const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
     if (network === "songbird" && CONTRACTS.Relay.address != oldSongbirdRelayAddress) {
       oldRelay = {
@@ -595,6 +624,13 @@ export class IndexerClient {
         address: oldSongbirdRelayAddress,
       };
     }
+    // const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
+    // if (network === "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelayAddress) {
+    //   secondOldRelay = {
+    //     ...CONTRACTS.Relay,
+    //     address: secondOldSongbirdRelayAddress,
+    //   };
+    // }
 
     if (oldRelay !== undefined) {
       oldTransactionsResults = await this.queryTransactions(
@@ -604,6 +640,16 @@ export class IndexerClient {
         endTime
       );
     }
+
+    if (secondOldRelay !== undefined) {
+      secondOldTransactionsResults = await this.queryTransactions(
+        secondOldRelay,
+        ContractMethodNames.relay,
+        startTime,
+        endTime
+      );
+    }
+
     // END TEMP CHANGE
     let newTransactionsResults = await this.queryTransactions(
       CONTRACTS.Relay,
@@ -622,6 +668,10 @@ export class IndexerClient {
         transactionsResults: oldTransactionsResults
       },
       {
+        address: secondOldRelay?.address,
+        transactionsResults: secondOldTransactionsResults
+      },
+      {
         address: CONTRACTS.Relay.address,
         transactionsResults: newTransactionsResults
       }
@@ -630,7 +680,8 @@ export class IndexerClient {
     let finalizations: FinalizationData[] = [];
     for (let txListPair of jointTransactionResults) {
       const { address, transactionsResults } = txListPair;
-      const isOldRelay = oldRelay !== undefined && address === oldRelay.address;
+      const isOldRelay = (oldRelay !== undefined && address === oldRelay.address)
+        || (secondOldRelay !== undefined && address === secondOldRelay.address);
       const tmpFinalizations: FinalizationData[] = transactionsResults.map(tx => {
         const timestamp = tx.timestamp;
         const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
@@ -646,7 +697,7 @@ export class IndexerClient {
           isOldRelay
         } as FinalizationData;
       });
-      finalizations = finalizations.concat(tmpFinalizations);
+      finalizations.push(...tmpFinalizations);
     }
 
     return {
