@@ -422,13 +422,13 @@ export class IndexerClient {
       );
     }
 
-    // const secondOldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    // if (network == "coston" && CONTRACTS.Relay.address != secondOldCostonRelay) {
-    //   this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
-    //   result.push(
-    //     ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
-    //   );
-    // }
+    const secondOldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+    if (network == "coston" && CONTRACTS.Relay.address != secondOldCostonRelay) {
+      this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
+      );
+    }
 
     // END TEMP CHANGE
 
@@ -608,13 +608,13 @@ export class IndexerClient {
       };
     }
 
-    // const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    // if (network === "coston" && CONTRACTS.Relay.address != secondOldCostonRelayAddress) {
-    //   secondOldRelay = {
-    //     ...CONTRACTS.Relay,
-    //     address: secondOldCostonRelayAddress,
-    //   };
-    // }
+    const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+    if (network === "coston" && CONTRACTS.Relay.address != secondOldCostonRelayAddress) {
+      secondOldRelay = {
+        ...CONTRACTS.Relay,
+        address: secondOldCostonRelayAddress,
+      };
+    }
 
 
     const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
