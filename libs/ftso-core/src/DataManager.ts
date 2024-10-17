@@ -355,6 +355,7 @@ export class DataManager {
     rewardEpoch: RewardEpoch,
     submissions: SubmissionData[],
     protocolId = FTSO2_PROTOCOL_ID,
+    providedMessageHash: MessageHash | undefined = undefined,
     logger: ILogger
   ): Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> {
     const signatureMap = new Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>();
@@ -366,7 +367,10 @@ export class DataManager {
             signaturePayload.message.votingRoundId === votingRoundId &&
             signaturePayload.message.protocolId === protocolId
           ) {
-            const messageHash = ProtocolMessageMerkleRoot.hash(signaturePayload.message);
+            // - Override the messageHash if provided
+            // - Require 
+            xxx
+            let messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
             signaturePayload.messageHash = messageHash;
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
             if (!rewardEpoch.isEligibleSignerAddress(signer)) {

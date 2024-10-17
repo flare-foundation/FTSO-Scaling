@@ -51,10 +51,12 @@ export interface FastUpdatesDataForVotingRound {
   signingPolicyAddressesSubmitted: string[];
 }
 
-export interface FDCDataForVotingRound {
+export interface PartialFDCDataForVotingRound {
   votingRoundId: number;
   // List of attestation requests to be processed
   attestationRequests: AttestationRequest[];
+}
+export interface FDCDataForVotingRound extends PartialFDCDataForVotingRound{
   // List of bitvotes for the consensus bitvote
   // Only last bitvote for each data provider is included
   // submit address is used to assign to data provider

@@ -1,3 +1,4 @@
+import { first } from "rxjs";
 import { DataAvailabilityStatus, DataManager, DataMangerResponse, SignAndFinalizeSubmissionData } from "./DataManager";
 import { BlockAssuranceResult, SubmissionData } from "./IndexerClient";
 import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
@@ -10,6 +11,7 @@ import {
   DataForRewardCalculation,
   FDCDataForVotingRound,
   FastUpdatesDataForVotingRound,
+  PartialFDCDataForVotingRound,
 } from "./data-calculation-interfaces";
 import { ILogger } from "./utils/ILogger";
 import { errorString } from "./utils/error";
@@ -172,7 +174,8 @@ export class DataManagerForRewarding extends DataManager {
       };
     }
     let fastUpdatesData: FastUpdatesDataForVotingRound[] = [];
-    let fdcData: FDCDataForVotingRound[] = [];
+    let partialFdcData: PartialFDCDataForVotingRound[] = [];
+
     if (useFastUpdatesData) {
       const fastUpdatesDataResponse = await this.getFastUpdatesDataForVotingRoundRange(
         firstVotingRoundId,
@@ -186,16 +189,16 @@ export class DataManagerForRewarding extends DataManager {
       fastUpdatesData = fastUpdatesDataResponse.data;
     }
     if (useFDCData) {
-      const fdcDataResponse = await this.getFDCDataForVotingRoundRange(
+      const partialFdcDataResponse = await this.getFDCDataForVotingRoundRange(
         firstVotingRoundId,
         lastVotingRoundId
       );
-      if (fdcDataResponse.status !== DataAvailabilityStatus.OK) {
+      if (partialFdcDataResponse.status !== DataAvailabilityStatus.OK) {
         return {
-          status: fdcDataResponse.status,
+          status: partialFdcDataResponse.status,
         };
       }
-      fdcData = fdcDataResponse.data;
+      partialFdcData = partialFdcDataResponse.data;
     }
 
     ///    
@@ -253,13 +256,41 @@ export class DataManagerForRewarding extends DataManager {
         FTSO2_PROTOCOL_ID
       );
       const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
+
+      const fdcSignatures = DataManager.extractSignatures(
+        votingRoundId,
+        rewardEpoch,
+        votingRoundSignatures,
+        FDC_PROTOCOL_ID,
+        this.logger
+      );
+      const fdcFinalizations = this.extractFinalizations(
+        votingRoundId,
+        rewardEpoch,
+        votingRoundFinalizations,
+        FTSO2_PROTOCOL_ID
+      );
+      const fdcFirstSuccessfulFinalization = fdcFinalizations.find(finalization => finalization.successfulOnChain);
+
+      const partialData = partialFdcData[votingRoundId - firstVotingRoundId];
+      if(partialData.votingRoundId !== votingRoundId) {
+        throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
+      }
+      const fdcData: FDCDataForVotingRound = {
+        ...partialData,
+        bitVotes: dataForCalculations.validEligibleBitVotes,
+        signatures: [], // TODO
+        finalizations: fdcFinalizations,
+        firstSuccessfulFinalization: fdcFirstSuccessfulFinalization
+      }
+
       const dataForRound: DataForRewardCalculation = {
         dataForCalculations,
         signatures,
         finalizations,
         firstSuccessfulFinalization,
         fastUpdatesData: fastUpdatesData[votingRoundId - firstVotingRoundId],
-        fdcData: fdcData[votingRoundId - firstVotingRoundId],
+        fdcData
       };
       result.push(dataForRound);
     }
@@ -369,7 +400,7 @@ export class DataManagerForRewarding extends DataManager {
   public async getFDCDataForVotingRoundRange(
     firstVotingRoundId: number,
     lastVotingRoundId: number
-  ): Promise<DataMangerResponse<FDCDataForVotingRound[]>> {
+  ): Promise<DataMangerResponse<PartialFDCDataForVotingRound[]>> {
 
     const attestationRequestsResponse = await this.indexerClient.getAttestationRequestEvents(firstVotingRoundId, lastVotingRoundId);
     if (attestationRequestsResponse.status !== BlockAssuranceResult.OK) {
@@ -377,11 +408,11 @@ export class DataManagerForRewarding extends DataManager {
         status: DataAvailabilityStatus.NOT_OK,
       };
     }
-    const result: FDCDataForVotingRound[] = [];
+    const result: PartialFDCDataForVotingRound[] = [];
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
       // const fastUpdateFeeds = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId];
       // const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
-      const value: FDCDataForVotingRound = {
+      const value: PartialFDCDataForVotingRound = {
         votingRoundId,
         attestationRequests: attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
       };
