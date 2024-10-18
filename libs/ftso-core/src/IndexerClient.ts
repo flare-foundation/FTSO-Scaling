@@ -624,13 +624,14 @@ export class IndexerClient {
         address: oldSongbirdRelayAddress,
       };
     }
-    // const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    // if (network === "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelayAddress) {
-    //   secondOldRelay = {
-    //     ...CONTRACTS.Relay,
-    //     address: secondOldSongbirdRelayAddress,
-    //   };
-    // }
+    
+    const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
+    if (network === "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelayAddress) {
+      secondOldRelay = {
+        ...CONTRACTS.Relay,
+        address: secondOldSongbirdRelayAddress,
+      };
+    }
 
     if (oldRelay !== undefined) {
       oldTransactionsResults = await this.queryTransactions(
