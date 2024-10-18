@@ -5,6 +5,7 @@ import { Address, VotingEpochId } from "./voting-types";
 
 import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
 import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
+import { ContractDefinitions, ContractMethodNames } from "./configs/contracts";
 import {
   CONTRACTS,
   EPOCH_SETTINGS,
@@ -12,7 +13,6 @@ import {
   LAST_DATABASE_INDEX_STATE,
   networks,
 } from "./configs/networks";
-import { ContractDefinitions, ContractMethodNames } from "./configs/contracts";
 import {
   FullVoterRegistrationInfo,
   InflationRewardsOffered,
@@ -49,12 +49,14 @@ export type SubmissionData = GenericSubmissionData<IPayloadMessage<string>[]>;
  */
 export interface FinalizationData extends GenericSubmissionData<string> {
   successfulOnChain: boolean;
+  isOldRelay?: boolean;
 }
 /**
  * Parsed finalization data from finalization calls (relay()) on Relay contract.
  */
 export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMessage> {
   successfulOnChain: boolean;
+  isOldRelay?: boolean;
 }
 
 /**
@@ -137,7 +139,7 @@ export class IndexerClient {
     protected readonly entityManager: EntityManager,
     public readonly requiredHistoryTimeSec: number,
     protected readonly logger: ILogger
-  ) {}
+  ) { }
 
   protected readonly encoding = EncodingUtils.instance;
 
@@ -403,16 +405,35 @@ export class IndexerClient {
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
       );
     }
-    const oldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+
+    const secondOldSongbirdRelay = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
+    if (network == "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelay) {
+      this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
+      );
+    }
+
+    const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
     if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
       this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
       );
     }
+
+    const secondOldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+    if (network == "coston" && CONTRACTS.Relay.address != secondOldCostonRelay) {
+      this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
+      );
+    }
+
     // END TEMP CHANGE
 
     result.push(...(await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime)));
+    IndexerClient.sortEvents(result);
 
     const data = result.map(event => SigningPolicyInitialized.fromRawEvent(event));
     return {
@@ -558,6 +579,7 @@ export class IndexerClient {
   /**
    * Queries indexer database for all finalization transactions on the Relay contract in a given timestamp range.
    * It returns the result if the indexer database ensures the data availability in the given timestamp range.
+   * The data may not be in order as it appears on blockchain. 
    */
   public async getFinalizationDataInRange(
     startTime: number,
@@ -570,30 +592,143 @@ export class IndexerClient {
         data: [],
       };
     }
-    const transactionsResults = await this.queryTransactions(
+    // TEMP CHANGE
+    let oldTransactionsResults: TLPTransaction[] = [];
+    let secondOldTransactionsResults: TLPTransaction[] = [];
+    let oldRelay: ContractDefinitions | undefined;
+    let secondOldRelay: ContractDefinitions | undefined;
+    const network = process.env.NETWORK as networks;
+
+    // Do this for every network with change
+    const oldCostonRelayAddress = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
+    if (network === "coston" && CONTRACTS.Relay.address != oldCostonRelayAddress) {
+      oldRelay = {
+        ...CONTRACTS.Relay,
+        address: oldCostonRelayAddress,
+      };
+    }
+
+    const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
+    if (network === "coston" && CONTRACTS.Relay.address != secondOldCostonRelayAddress) {
+      secondOldRelay = {
+        ...CONTRACTS.Relay,
+        address: secondOldCostonRelayAddress,
+      };
+    }
+
+
+    const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
+    if (network === "songbird" && CONTRACTS.Relay.address != oldSongbirdRelayAddress) {
+      oldRelay = {
+        ...CONTRACTS.Relay,
+        address: oldSongbirdRelayAddress,
+      };
+    }
+    
+    const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
+    if (network === "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelayAddress) {
+      secondOldRelay = {
+        ...CONTRACTS.Relay,
+        address: secondOldSongbirdRelayAddress,
+      };
+    }
+
+    if (oldRelay !== undefined) {
+      oldTransactionsResults = await this.queryTransactions(
+        oldRelay,
+        ContractMethodNames.relay,
+        startTime,
+        endTime
+      );
+    }
+
+    if (secondOldRelay !== undefined) {
+      secondOldTransactionsResults = await this.queryTransactions(
+        secondOldRelay,
+        ContractMethodNames.relay,
+        startTime,
+        endTime
+      );
+    }
+
+    // END TEMP CHANGE
+    let newTransactionsResults = await this.queryTransactions(
       CONTRACTS.Relay,
       ContractMethodNames.relay,
       startTime,
       endTime
     );
-    const finalizations: FinalizationData[] = transactionsResults.map(tx => {
-      const timestamp = tx.timestamp;
-      const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
-      return {
-        submitAddress: "0x" + tx.from_address,
-        relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
-        votingEpochIdFromTimestamp: votingEpochId,
-        transactionIndex: tx.transaction_index,
-        timestamp,
-        blockNumber: tx.block_number,
-        messages: tx.input,
-        successfulOnChain: tx.status > 0,
-      } as FinalizationData;
-    });
+
+    interface Pair {
+      address: string | undefined;
+      transactionsResults: TLPTransaction[];
+    }
+    const jointTransactionResults: Pair[] = [
+      {
+        address: oldRelay?.address,
+        transactionsResults: oldTransactionsResults
+      },
+      {
+        address: secondOldRelay?.address,
+        transactionsResults: secondOldTransactionsResults
+      },
+      {
+        address: CONTRACTS.Relay.address,
+        transactionsResults: newTransactionsResults
+      }
+    ];
+
+    let finalizations: FinalizationData[] = [];
+    for (let txListPair of jointTransactionResults) {
+      const { address, transactionsResults } = txListPair;
+      const isOldRelay = (oldRelay !== undefined && address === oldRelay.address)
+        || (secondOldRelay !== undefined && address === secondOldRelay.address);
+      const tmpFinalizations: FinalizationData[] = transactionsResults.map(tx => {
+        const timestamp = tx.timestamp;
+        const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
+        return {
+          submitAddress: "0x" + tx.from_address,
+          relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
+          votingEpochIdFromTimestamp: votingEpochId,
+          transactionIndex: tx.transaction_index,
+          timestamp,
+          blockNumber: tx.block_number,
+          messages: tx.input,
+          successfulOnChain: tx.status > 0,
+          isOldRelay
+        } as FinalizationData;
+      });
+      finalizations.push(...tmpFinalizations);
+    }
 
     return {
       status: ensureRange,
       data: finalizations,
     };
+  }
+
+
+  public static sortEvents(events: TLPEvents[]): TLPEvents[] {
+    return events.sort((a, b) => {
+      if (a.timestamp < b.timestamp) {
+        return -1;
+      }
+      if (a.timestamp > b.timestamp) {
+        return 1;
+      }
+      if (a.block_number < b.block_number) {
+        return -1;
+      }
+      if (a.block_number > b.block_number) {
+        return 1;
+      }
+      if (a.log_index < b.log_index) {
+        return -1;
+      }
+      if (a.log_index > b.log_index) {
+        return 1;
+      }
+      return 0;
+    });
   }
 }

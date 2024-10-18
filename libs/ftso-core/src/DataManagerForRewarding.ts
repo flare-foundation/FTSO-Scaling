@@ -318,6 +318,16 @@ export class DataManagerForRewarding extends DataManager {
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
       const fastUpdateFeeds = feedValuesResponse.data[votingRoundId - firstVotingRoundId];
       const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
+      // Handles the 'undefined' value in fastUpdateFeeds - this can happen on FastUpdater contract change
+      if(!fastUpdateFeeds) {
+        throw new Error(`FastUpdateFeeds is undefined for voting round ${votingRoundId}`);
+      }
+
+      if (fastUpdateFeeds as any === "CONTRACT_CHANGE") {
+        result.push(undefined);
+        this.logger.error(`WARN: FastUpdateFeeds contract change for voting round ${votingRoundId}`);
+        continue;
+      }
       const value: FastUpdatesDataForVotingRound = {
         votingRoundId,
         feedValues: fastUpdateFeeds.feeds,

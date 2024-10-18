@@ -20,14 +20,14 @@ const TEST_CONFIG: NetworkContractAddresses = {
 const COSTON_CONFIG: NetworkContractAddresses = {
   FlareSystemsManager: { name: "FlareSystemsManager", address: "0x85680Dd93755Fe5d0789773fd0896cEE51F9e358" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0xC9534cB913150aD3e98D792857689B55e2404212" },
-  RewardManager: { name: "RewardManager", address: "0xA17197b7Bdff7Be7c3Da39ec08981FB716B70d3A" },
+  RewardManager: { name: "RewardManager", address: "0x2ade9972E7f27200872D378acF7a1BaD8D696FC5" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x92a6E1127262106611e1e129BB64B6D8654273F7" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9" },
   VoterRegistry: { name: "VoterRegistry", address: "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
-  FastUpdater: { name: "FastUpdater", address: "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9" },
+  FastUpdater: { name: "FastUpdater", address: "0xB8336A96b4b8af89f60EA080002214191Bc8293A" },
   FastUpdateIncentiveManager: {
     name: "FastUpdateIncentiveManager",
     address: "0x8c45666369B174806E1AB78D989ddd79a3267F3b",
@@ -159,7 +159,7 @@ const contracts = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -185,7 +185,7 @@ const ftso2ProtocolId = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -205,7 +205,7 @@ const ftso2FastUpdatesProtocolId = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -266,7 +266,7 @@ const epochSettings = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -310,7 +310,7 @@ const randomGenerationBenchingWindow = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -345,7 +345,7 @@ const initialRewardEpochId = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -364,7 +364,7 @@ const burnAddress = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -388,7 +388,7 @@ const additionalRewardFinalizationWindows = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -457,7 +457,7 @@ const penaltyFactor = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -493,7 +493,7 @@ const gracePeriodForSignaturesDurationSec = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -531,7 +531,7 @@ const gracePeriodForFinalizationDurationSec = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -584,7 +584,7 @@ const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -619,7 +619,7 @@ const finalizationVoterSelectionThresholdWeightBips = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
@@ -658,10 +658,18 @@ export const CALCULATIONS_FOLDER = () => {
     default:
       // Ensure exhaustive checking
       // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => {})(network);
+      ((_: never): void => { })(network);
   }
 };
 
 export const FEEDS_RENAMING_FILE = () => "libs/ftso-core/src/reward-calculation/feeds-renaming.json";
 
 export const FUTURE_VOTING_ROUNDS = () => 30;
+
+// Used to limit querying of too old events and handling the missing event for the voting round
+export const COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 779191;
+
+// set to start voting round id of epoch 234
+// on Songbird there was no missing event for the voting round
+// Only used to filter out the old events
+export const SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 786240; 
