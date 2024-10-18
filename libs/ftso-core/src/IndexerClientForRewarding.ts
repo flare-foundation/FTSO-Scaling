@@ -69,10 +69,8 @@ export class IndexerClientForRewarding extends IndexerClient {
           data.push(event);
           processed = event.votingRoundId;
         } else {
-          // this.logger.error(`Missing FastUpdateFeeds event: expected ${processed + 1}, got ${event.votingRoundId}`);
-          // processed++;
-          if ((network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)
-            || (network == "songbird" && processed + 1 == SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)) {
+          // On Coston one event is missing hence special handling
+          if (network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
             while (processed + 1 < event.votingRoundId) {
               this.logger.error(`Missing FastUpdateFeeds event for Coston: ${processed + 1}`);
               data.push("CONTRACT_CHANGE" as any);
