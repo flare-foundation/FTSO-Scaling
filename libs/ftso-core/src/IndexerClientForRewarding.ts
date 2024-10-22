@@ -106,7 +106,9 @@ export class IndexerClientForRewarding extends IndexerClient {
     endVotingRoundId: number
   ): Promise<IndexerResponse<FastUpdateFeedsSubmitted[][]>> {
     const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
-    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    // Adding extra round as buffer to ensure all events are captured, as there are cases where FastUpdateFeedsSubmitted events are emitted slightly outside the voting epoch.
+    // This is safe to do as we only process events containing votingRoundId within the range.
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 2);
     const eventName = FastUpdateFeedsSubmitted.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
