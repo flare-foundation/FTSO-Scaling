@@ -72,10 +72,8 @@ export class IndexerClientForRewarding extends IndexerClient {
           data.push(event);
           processed = event.votingRoundId;
         } else {
-          // this.logger.error(`Missing FastUpdateFeeds event: expected ${processed + 1}, got ${event.votingRoundId}`);
-          // processed++;
-          if ((network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)
-            || (network == "songbird" && processed + 1 == SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID)) {
+          // On Coston one event is missing hence special handling
+          if (network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
             while (processed + 1 < event.votingRoundId) {
               this.logger.error(`Missing FastUpdateFeeds event for Coston: ${processed + 1}`);
               data.push("CONTRACT_CHANGE" as any);
@@ -111,7 +109,9 @@ export class IndexerClientForRewarding extends IndexerClient {
     endVotingRoundId: number
   ): Promise<IndexerResponse<FastUpdateFeedsSubmitted[][]>> {
     const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
-    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    // Adding extra round as buffer to ensure all events are captured, as there are cases where FastUpdateFeedsSubmitted events are emitted slightly outside the voting epoch.
+    // This is safe to do as we only process events containing votingRoundId within the range.
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 2);
     const eventName = FastUpdateFeedsSubmitted.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
