@@ -5,11 +5,14 @@ import { RawEventConstructible } from "./RawEventConstructible";
 
 export class AttestationRequest extends RawEventConstructible {
   static eventName = "AttestationRequest";
-  constructor(data: any) {
+  constructor(data: any, timestamp: number) {
     super();
+    if(timestamp === undefined) {
+      throw new Error("Timestamp is required");
+    }
     this.data = data.data;
     this.fee = BigInt(data.fee);
-    this.timestamp = data.timestamp;
+    this.timestamp = timestamp;
   }
 
   static fromRawEvent(event: any): AttestationRequest {
@@ -17,7 +20,7 @@ export class AttestationRequest extends RawEventConstructible {
       CONTRACTS.FdcHub.name,
       AttestationRequest.eventName,
       event,
-      (data: any) => new AttestationRequest(data)
+      (data: any, entity: any) => new AttestationRequest(data, entity.timestamp)
     );
   }
 

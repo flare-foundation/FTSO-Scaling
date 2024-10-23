@@ -1,6 +1,7 @@
-import { first } from "rxjs";
+import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
+import { ISignaturePayload } from "../../fsp-utils/src/SignaturePayload";
 import { DataAvailabilityStatus, DataManager, DataMangerResponse, SignAndFinalizeSubmissionData } from "./DataManager";
-import { BlockAssuranceResult, SubmissionData } from "./IndexerClient";
+import { BlockAssuranceResult, GenericSubmissionData, SubmissionData } from "./IndexerClient";
 import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
@@ -15,7 +16,7 @@ import {
 } from "./data-calculation-interfaces";
 import { ILogger } from "./utils/ILogger";
 import { errorString } from "./utils/error";
-import { Address } from "./voting-types";
+import { Address, MessageHash } from "./voting-types";
 
 /**
  * Helps in extracting data in a consistent way for FTSO scaling feed median calculations, random number calculation and rewarding.
@@ -117,13 +118,13 @@ export class DataManagerForRewarding extends DataManager {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
       }
       //////// FDC ////////
-      const validEligibleBitVotes: Map<Address, string> = this.extractValidEligibleBitVotes(mappingsResponse.data.submit2, rewardEpoch);
+      const validEligibleBitVotes: SubmissionData[] = this.extractSubmissionsWithValidEligibleBitVotes(mappingsResponse.data.submit2, rewardEpoch);
       const dataForRound = {
         ...partialData,
         randomGenerationBenchingWindow,
         benchingWindowRevealOffenders,
         rewardEpoch,
-        validEligibleBitVotes
+        validEligibleBitVoteSubmissions: validEligibleBitVotes
       } as DataForCalculations;
       result.push(dataForRound);
     }
@@ -247,6 +248,7 @@ export class DataManagerForRewarding extends DataManager {
         rewardEpoch,
         votingRoundSignatures,
         FTSO2_PROTOCOL_ID,
+        undefined,
         this.logger
       );
       const finalizations = this.extractFinalizations(
@@ -257,31 +259,43 @@ export class DataManagerForRewarding extends DataManager {
       );
       const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
 
-      const fdcSignatures = DataManager.extractSignatures(
-        votingRoundId,
-        rewardEpoch,
-        votingRoundSignatures,
-        FDC_PROTOCOL_ID,
-        this.logger
-      );
-      const fdcFinalizations = this.extractFinalizations(
-        votingRoundId,
-        rewardEpoch,
-        votingRoundFinalizations,
-        FTSO2_PROTOCOL_ID
-      );
-      const fdcFirstSuccessfulFinalization = fdcFinalizations.find(finalization => finalization.successfulOnChain);
+      let fdcData: FDCDataForVotingRound | undefined;
 
-      const partialData = partialFdcData[votingRoundId - firstVotingRoundId];
-      if(partialData.votingRoundId !== votingRoundId) {
-        throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
-      }
-      const fdcData: FDCDataForVotingRound = {
-        ...partialData,
-        bitVotes: dataForCalculations.validEligibleBitVotes,
-        signatures: [], // TODO
-        finalizations: fdcFinalizations,
-        firstSuccessfulFinalization: fdcFirstSuccessfulFinalization
+      if (useFDCData) {
+        const fdcFinalizations = this.extractFinalizations(
+          votingRoundId,
+          rewardEpoch,
+          votingRoundFinalizations,
+          FDC_PROTOCOL_ID
+        );
+        const fdcFirstSuccessfulFinalization = fdcFinalizations.find(finalization => finalization.successfulOnChain);
+        let fdcSignatures = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
+        if (fdcFirstSuccessfulFinalization) {
+          if (!fdcFirstSuccessfulFinalization.messages.protocolMessageMerkleRoot) {
+            throw new Error(`Protocol message merkle root is missing for FDC finalization ${fdcFirstSuccessfulFinalization.messages.protocolMessageHash}`);
+          }
+          RelayMessage.augment(fdcFirstSuccessfulFinalization.messages);
+          fdcSignatures = DataManager.extractSignatures(
+            votingRoundId,
+            rewardEpoch,
+            votingRoundSignatures,
+            FDC_PROTOCOL_ID,
+            fdcFirstSuccessfulFinalization.messages.protocolMessageHash,
+            this.logger
+          );
+        }
+        
+        const partialData = partialFdcData[votingRoundId - firstVotingRoundId];
+        if (partialData.votingRoundId !== votingRoundId) {
+          throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
+        }        
+        fdcData = {
+          ...partialData,
+          bitVotes: dataForCalculations.validEligibleBitVoteSubmissions,
+          signaturesMap: fdcSignatures,
+          finalizations: fdcFinalizations,
+          firstSuccessfulFinalization: fdcFirstSuccessfulFinalization,
+        }
       }
 
       const dataForRound: DataForRewardCalculation = {
@@ -374,7 +388,7 @@ export class DataManagerForRewarding extends DataManager {
       const fastUpdateFeeds = feedValuesResponse.data[votingRoundId - firstVotingRoundId];
       const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
       // Handles the 'undefined' value in fastUpdateFeeds - this can happen on FastUpdater contract change
-      if(!fastUpdateFeeds) {
+      if (!fastUpdateFeeds) {
         throw new Error(`FastUpdateFeeds is undefined for voting round ${votingRoundId}`);
       }
 
@@ -424,8 +438,12 @@ export class DataManagerForRewarding extends DataManager {
     };
   }
 
-  public extractValidEligibleBitVotes(submissionDataArray: SubmissionData[], rewardEpoch: RewardEpoch): Map<Address, string> {
-    const voterToLastBitVote = new Map<Address, string>();
+  /**
+   * Extracts all submissions that have in payload a valid eligible bit vote for the given reward epoch.
+   * Note that payloads may contain messages from other protocols!
+   */
+  public extractSubmissionsWithValidEligibleBitVotes(submissionDataArray: SubmissionData[], rewardEpoch: RewardEpoch): SubmissionData[] {
+    const voterToLastBitVote = new Map<Address, SubmissionData>();
     for (const submission of submissionDataArray) {
       for (const message of submission.messages) {
         if (
@@ -435,10 +453,10 @@ export class DataManagerForRewarding extends DataManager {
           try {
             const submitAddress = submission.submitAddress.toLowerCase();
             if (rewardEpoch.isEligibleSubmitAddress(submitAddress)) {
-              voterToLastBitVote.set(submitAddress, message.payload);
+              voterToLastBitVote.set(submitAddress, submission);
             } else {
               if (!process.env.REMOVE_ANNOYING_MESSAGES) {
-                this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+                this.logger.warn(`Non-eligible submit1 found for address ${submitAddress}`);
               }
             }
           } catch (e) {
@@ -447,6 +465,6 @@ export class DataManagerForRewarding extends DataManager {
         }
       }
     }
-    return voterToLastBitVote;
+    return [...voterToLastBitVote.values()];
   }
 }

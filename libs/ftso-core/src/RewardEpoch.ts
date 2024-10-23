@@ -38,6 +38,8 @@ export class RewardEpoch {
   readonly submitAddressToVoter = new Map<Address, Address>();
   // delegateAddress => identityAddress
   readonly delegationAddressToVoter = new Map<Address, Address>();
+  // submitSignaturesAddress => signingAddress
+  readonly submitSignatureAddressToSigningAddress = new Map<Address, Address>();
 
   readonly submitAddressToCappedWeight = new Map<Address, bigint>();
   readonly submitAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
@@ -136,6 +138,11 @@ export class RewardEpoch {
         fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
       );
 
+      this.submitSignatureAddressToSigningAddress.set(
+        fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress.toLowerCase(), 
+        fullVoterRegistrationInfo.voterRegistered.signingPolicyAddress.toLowerCase()
+      )
+
       this.submitAddressToVoterRegistrationInfo.set(
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
         fullVoterRegistrationInfo
@@ -185,6 +192,10 @@ export class RewardEpoch {
     return !!this.signingAddressToVoter.get(signerAddress.toLowerCase());
   }
 
+  public getSigningAddressFromSubmitSignatureAddress(submitSignatureAddress: Address): Address | undefined {
+    return this.submitSignatureAddressToSigningAddress.get(submitSignatureAddress.toLowerCase());
+  }
+  
   /**
    * Returns weight for participation in median voting.
    * @param submissionAddress

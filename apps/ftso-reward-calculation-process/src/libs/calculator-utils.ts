@@ -138,7 +138,7 @@ export async function calculationOfRewardCalculationDataForRange(
       );
       done = true;
     } catch (e) {
-      // console.log(e);
+      console.log(e);
       logger.error(
         `Error while calculating reward calculation data for voting rounds ${firstVotingRoundId}-${lastVotingRoundId} in reward epoch ${rewardEpochId}: ${e}`
       );

@@ -19,6 +19,7 @@ import {
   EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
   GENESIS_REWARD_EPOCH_START_EVENT,
+  WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH,
 } from "./configs/networks";
 import {
   DataForCalculations,
@@ -28,8 +29,8 @@ import {
 import { CommitData, ICommitData } from "./utils/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./utils/RevealData";
-import { Address, Feed, MessageHash } from "./voting-types";
 import { errorString } from "./utils/error";
+import { Address, Feed, MessageHash } from "./voting-types";
 
 /**
  * Data availability status for data manager responses.
@@ -200,6 +201,7 @@ export class DataManager {
       dataForCalculationsResponse.data.rewardEpoch,
       signaturesResponse.data.signatures,
       FTSO2_PROTOCOL_ID,
+      undefined,
       this.logger
     );
     const finalizations = this.extractFinalizations(
@@ -369,16 +371,41 @@ export class DataManager {
           ) {
             // - Override the messageHash if provided
             // - Require 
-            xxx
+
             let messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
-            signaturePayload.messageHash = messageHash;
+
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
-            if (!rewardEpoch.isEligibleSignerAddress(signer)) {
+            // submit signature address should match the signingPolicyAddress
+            const expectedSigner = rewardEpoch.getSigningAddressFromSubmitSignatureAddress(submission.submitAddress.toLowerCase());
+            // if the expected signer is not found, the signature is not valid for rewarding
+            if (!expectedSigner) {
               continue;
             }
-            signaturePayload.signer = signer;
-            signaturePayload.weight = rewardEpoch.signerToSigningWeight(signer);
-            signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(signer);
+            // In case of FTSO Scaling, we have message hash as a part of payload
+            // the signer is incorrect
+            if (!providedMessageHash) {
+              if (!rewardEpoch.isEligibleSignerAddress(signer)) {
+                continue;
+              }
+              signaturePayload.messageHash = messageHash;
+              signaturePayload.signer = signer;
+              signaturePayload.weight = rewardEpoch.signerToSigningWeight(signer);
+              signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(signer);
+            } else {
+              if (signer !== expectedSigner) {
+                if (!rewardEpoch.isEligibleSignerAddress(expectedSigner)) {
+                  continue;
+                }
+                // wrong signature by eligible signer                
+                signaturePayload.messageHash = WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH;
+              } else {
+                signaturePayload.messageHash = providedMessageHash;
+              }
+              signaturePayload.signer = expectedSigner;
+              signaturePayload.weight = rewardEpoch.signerToSigningWeight(expectedSigner);
+              signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(expectedSigner);
+            }
+
             if (
               signaturePayload.weight === undefined ||
               signaturePayload.signer === undefined ||
