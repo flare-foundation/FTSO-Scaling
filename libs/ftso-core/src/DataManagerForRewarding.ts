@@ -6,11 +6,15 @@ import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { ContractMethodNames } from "./configs/contracts";
-import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FDC_PROTOCOL_ID, FTSO2_PROTOCOL_ID } from "./configs/networks";
+import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FDC_PROTOCOL_ID, FTSO2_PROTOCOL_ID, WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH } from "./configs/networks";
 import {
   DataForCalculations,
   DataForRewardCalculation,
   FDCDataForVotingRound,
+  FDCEligibleSigner,
+  FDCOffender,
+  FDCOffense,
+  FDCRewardData,
   FastUpdatesDataForVotingRound,
   PartialFDCDataForVotingRound,
 } from "./data-calculation-interfaces";
@@ -260,6 +264,7 @@ export class DataManagerForRewarding extends DataManager {
       const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
 
       let fdcData: FDCDataForVotingRound | undefined;
+      let fdcRewardData: FDCRewardData | undefined;
 
       if (useFDCData) {
         const fdcFinalizations = this.extractFinalizations(
@@ -275,26 +280,34 @@ export class DataManagerForRewarding extends DataManager {
             throw new Error(`Protocol message merkle root is missing for FDC finalization ${fdcFirstSuccessfulFinalization.messages.protocolMessageHash}`);
           }
           RelayMessage.augment(fdcFirstSuccessfulFinalization.messages);
+          const consensusMessageHash = fdcFirstSuccessfulFinalization.messages.protocolMessageHash;
           fdcSignatures = DataManager.extractSignatures(
             votingRoundId,
             rewardEpoch,
             votingRoundSignatures,
             FDC_PROTOCOL_ID,
-            fdcFirstSuccessfulFinalization.messages.protocolMessageHash,
+            consensusMessageHash,
             this.logger
           );
+          fdcRewardData = DataManagerForRewarding.extractFDCRewardData(
+            consensusMessageHash,
+            dataForCalculations.validEligibleBitVoteSubmissions,
+            fdcSignatures,
+            rewardEpoch
+          )
         }
-        
+
         const partialData = partialFdcData[votingRoundId - firstVotingRoundId];
         if (partialData.votingRoundId !== votingRoundId) {
           throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
-        }        
+        }
         fdcData = {
           ...partialData,
           bitVotes: dataForCalculations.validEligibleBitVoteSubmissions,
           signaturesMap: fdcSignatures,
           finalizations: fdcFinalizations,
           firstSuccessfulFinalization: fdcFirstSuccessfulFinalization,
+          ...fdcRewardData
         }
       }
 
@@ -441,6 +454,7 @@ export class DataManagerForRewarding extends DataManager {
   /**
    * Extracts all submissions that have in payload a valid eligible bit vote for the given reward epoch.
    * Note that payloads may contain messages from other protocols!
+   * If data provider submits multiple bitvotes, the last submission is considered
    */
   public extractSubmissionsWithValidEligibleBitVotes(submissionDataArray: SubmissionData[], rewardEpoch: RewardEpoch): SubmissionData[] {
     const voterToLastBitVote = new Map<Address, SubmissionData>();
@@ -466,5 +480,145 @@ export class DataManagerForRewarding extends DataManager {
       }
     }
     return [...voterToLastBitVote.values()];
+  }
+
+  /**
+   * Given finalized messageHash it calculates consensus bitvote, filters out eligible signers and determines 
+   * offenders.
+   */
+  public static extractFDCRewardData(
+    messageHash: string,
+    bitVoteSubmissions: SubmissionData[],
+    fdcSignatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>,
+    rewardEpoch: RewardEpoch,
+  ): FDCRewardData | undefined {
+    const voteCounter = new Map<string, number>();
+    //
+    const eligibleSigners: FDCEligibleSigner[] = [];
+    const offenseMap = new Map<Address, FDCOffender>();
+    if (!messageHash) {
+      throw new Error("Consensus message hash is required");
+    }
+    const signatures = fdcSignatures.get(messageHash);
+    if (!signatures) {
+      // TODO: log warning
+      return undefined;
+    }
+    for (const signature of signatures) {
+      const consensusBitVoteCandidate = signature.messages.unsignedMessage?.toLowerCase();
+      if (!consensusBitVoteCandidate) {
+        continue;
+      }
+      voteCounter.set(consensusBitVoteCandidate, (voteCounter.get(consensusBitVoteCandidate) || 0) + signature.messages.weight)
+    }
+    const maxCount = Math.max(...voteCounter.values());
+    const maxHashes = [...voteCounter.entries()].filter(([_, count]) => count === maxCount).map(([hash, _]) => hash);
+    maxHashes.sort();
+    // if it happens there are multiple maxHashes we take the first in lexicographical order
+    const consensusBitVote = maxHashes[0];
+
+    // TODO:
+    // should we require 50%+ weight on maxHash?
+    // const consensusBitVoteWeight = voteCounter.get(consensusBitVote);
+    // if(consensusBitVoteWeight < rewardEpoch.signingPolicy.threshold) {
+    //   return undefined;
+    // }
+
+    const submitSignatureAddressToBitVote = new Map<Address, string>();
+    for (const submission of bitVoteSubmissions) {
+      const submitSignatureAddress = rewardEpoch.getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress).toLowerCase();
+      const message = submission.messages.find(m => m.protocolId === FDC_PROTOCOL_ID);
+      if (message && message.payload) {
+        submitSignatureAddressToBitVote.set(submitSignatureAddress, message.payload.toLowerCase());
+      }
+    }
+
+    const submitSignatureSenders = new Set<Address>();
+
+    for (const signature of signatures) {
+      // too late
+      if (signature.relativeTimestamp >= 90) {
+        continue;
+      }
+      const submitSignatureAddress = signature.submitAddress.toLowerCase()
+      submitSignatureSenders.add(submitSignatureAddress);
+      const bitVote = submitSignatureAddressToBitVote.get(submitSignatureAddress);
+      const eligibleSigner: FDCEligibleSigner = {
+        submitSignatureAddress: signature.submitAddress.toLowerCase(),
+        relativeTimestamp: signature.relativeTimestamp,
+        bitVote,
+        dominatesConsensusBitVote: DataManagerForRewarding.isConsensusVoteDominated(consensusBitVote, bitVote),
+        weight: signature.messages.weight,
+      }
+      eligibleSigners.push(eligibleSigner);
+    }
+
+    for (const submission of bitVoteSubmissions) {
+      const submitSignatureAddress = rewardEpoch.getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress).toLowerCase();
+      if (!submitSignatureSenders.has(submitSignatureAddress)) {
+        const offender: FDCOffender = {
+          submitSignatureAddress,
+          offenses: [FDCOffense.NO_REVEAL_ON_BITVOTE]
+        }
+        offenseMap.set(submitSignatureAddress, offender);
+      }
+    }
+
+    const wrongSignatures = fdcSignatures.get(WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH);
+    if (wrongSignatures) {
+      for (const signature of wrongSignatures) {
+        const submitSignatureAddress = signature.submitAddress.toLowerCase();
+        if(!rewardEpoch.isEligibleSubmitSignatureAddress(submitSignatureAddress)) {
+          continue;
+        }
+        const offender = offenseMap.get(submitSignatureAddress) || {
+          submitSignatureAddress,
+          offenses: []
+        }
+        offender.offenses.push(FDCOffense.WRONG_SIGNATURE);
+        offenseMap.set(submitSignatureAddress, offender);
+      }
+    }
+
+    for(const signature of signatures) {
+      const submitSignatureAddress = signature.submitAddress.toLowerCase();
+      const consensusBitVoteCandidate = signature.messages.unsignedMessage?.toLowerCase();
+      if(consensusBitVoteCandidate !== consensusBitVote) {
+        const offender = offenseMap.get(submitSignatureAddress) || {
+          submitSignatureAddress,
+          offenses: []
+        }  
+        offender.offenses.push(FDCOffense.BAD_CONSENSUS_BITVOTE_CANDIDATE);
+        offenseMap.set(submitSignatureAddress, offender);
+      }
+    }
+
+    const fdcOffenders = [...offenseMap.values()];
+    fdcOffenders.sort((a, b) => a.submitSignatureAddress.localeCompare(b.submitSignatureAddress));
+    const result: FDCRewardData = {
+      eligibleSigners,
+      consensusBitVote,
+      fdcOffenders      
+    };
+
+    return result;
+  }
+
+  public static isConsensusVoteDominated(consensusBitVote: string, bitVote?: string): boolean {
+    if (!bitVote) {
+      return false;
+    }
+    let h1 = consensusBitVote.startsWith("0x") ? consensusBitVote.slice(2) : consensusBitVote;
+    let h2 = bitVote.startsWith("0x") ? bitVote.slice(2) : bitVote;
+    if (h1.length !== h2.length) {
+      const mLen = Math.max(h1.length, h2.length);
+      h1 = h1.padEnd(mLen, "0");
+      h2 = h2.padEnd(mLen, "0");
+    }
+    const buf1 = Buffer.from(h1, "hex");
+    const buf2 = Buffer.from(h2, "hex");
+    // AND operation
+    const bufResult = buf1.map((b, i) => b & buf2[i]);
+    return buf1.equals(bufResult);
   }
 }

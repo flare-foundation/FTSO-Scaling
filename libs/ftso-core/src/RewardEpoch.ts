@@ -40,6 +40,8 @@ export class RewardEpoch {
   readonly delegationAddressToVoter = new Map<Address, Address>();
   // submitSignaturesAddress => signingAddress
   readonly submitSignatureAddressToSigningAddress = new Map<Address, Address>();
+  // submitSignaturesAddress => identityAddress
+  readonly submitSignatureAddressToVoter = new Map<Address, Address>();
 
   readonly submitAddressToCappedWeight = new Map<Address, bigint>();
   readonly submitAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
@@ -139,9 +141,14 @@ export class RewardEpoch {
       );
 
       this.submitSignatureAddressToSigningAddress.set(
-        fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress.toLowerCase(), 
+        fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress.toLowerCase(),
         fullVoterRegistrationInfo.voterRegistered.signingPolicyAddress.toLowerCase()
       )
+
+      this.submitSignatureAddressToVoter.set(
+        fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress.toLowerCase(),
+        voter
+      );
 
       this.submitAddressToVoterRegistrationInfo.set(
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
@@ -192,10 +199,18 @@ export class RewardEpoch {
     return !!this.signingAddressToVoter.get(signerAddress.toLowerCase());
   }
 
+  public isEligibleSubmitSignatureAddress(submitSignatureAddress: Address): boolean {
+    return !!this.submitSignatureAddressToVoter.get(submitSignatureAddress.toLowerCase());
+  }
+
   public getSigningAddressFromSubmitSignatureAddress(submitSignatureAddress: Address): Address | undefined {
     return this.submitSignatureAddressToSigningAddress.get(submitSignatureAddress.toLowerCase());
   }
-  
+
+  public getSubmitSignatureAddressFromSubmitAddress(submitAddress: Address): Address | undefined {
+    return this.submitAddressToVoterRegistrationInfo.get(submitAddress.toLowerCase())?.voterRegistered.submitSignaturesAddress;
+  }
+
   /**
    * Returns weight for participation in median voting.
    * @param submissionAddress

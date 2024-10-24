@@ -57,7 +57,46 @@ export interface PartialFDCDataForVotingRound {
   // List of attestation requests to be processed
   attestationRequests: AttestationRequest[];
 }
-export interface FDCDataForVotingRound extends PartialFDCDataForVotingRound{
+
+/**
+ * Represents a signer, that:
+ * - has submitted a signature for voting round N, before the end of the voting round N + 1
+ * - signature signed the consensus bitvote
+ * - might or might not have submitted a bitvote
+ */
+export interface FDCEligibleSigner {
+  submitSignatureAddress: string;
+  // Relative timestamp in voting epoch N + 1
+  relativeTimestamp: number;
+  bitVote?: string;
+  dominatesConsensusBitVote: boolean;
+  weight: number;
+}
+
+
+export enum FDCOffense {
+  NO_REVEAL_ON_BITVOTE = "NO_REVEAL_ON_BITVOTE",
+  WRONG_SIGNATURE = "WRONG_SIGNATURE",
+  BAD_CONSENSUS_BITVOTE_CANDIDATE = "BAD_CONSENSUS_BITVOTE_CANDIDATE",
+}
+export interface FDCOffender {
+  submitSignatureAddress: string;
+  offenses: FDCOffense[];
+}
+
+export interface FDCRewardData {
+  // ----- These data is added after the reward calculation for log ------
+  // Filtered signatures that match the first finalized protocol Merkle root message
+  // One per eligible data provider
+  eligibleSigners?: FDCEligibleSigner[];
+  // Majority bitvote attached to the finalized signatures
+  // All signers that have unmatching majority bitvote are considered as offenders
+  consensusBitVote?: string;
+  // FDC offenders
+  fdcOffenders?: FDCOffender[];
+}
+
+export interface FDCDataForVotingRound extends PartialFDCDataForVotingRound, FDCRewardData {
   // List of bitvotes for the consensus bitvote
   // Only last bitvote for each data provider is included
   // submit address is used to assign to data provider
@@ -72,13 +111,6 @@ export interface FDCDataForVotingRound extends PartialFDCDataForVotingRound{
   firstSuccessfulFinalization?: ParsedFinalizationData;
   // All finalizations in the observed range
   finalizations: ParsedFinalizationData[];
-  // ----- These data is added after the reward calculation for log ------
-  // Filtered signatures that match the first finalized protocol Merkle root message
-  // One per eligible data provider
-  rewardedSignatures?: GenericSubmissionData<ISignaturePayload>[];
-  // Majority bitvote attached to the finalized signatures
-  // All signers that have unmatching majority bitvote are considered as offenders
-  majorityBitVote?: string;
 }
 
 export interface SFDCDataForVotingRound {
@@ -88,9 +120,10 @@ export interface SFDCDataForVotingRound {
   signatures: HashSignatures[];
   firstSuccessfulFinalization?: ParsedFinalizationData;
   finalizations: ParsedFinalizationData[];
+  eligibleSigners: FDCEligibleSigner[];
+  consensusBitVote: string;
+  fdcOffenders: FDCOffender[];
   signaturesMap?: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
-  rewardedSignatures?: GenericSubmissionData<ISignaturePayload>[];
-  majorityBitVote?: string;
 }
 
 export interface FUFeedValue {

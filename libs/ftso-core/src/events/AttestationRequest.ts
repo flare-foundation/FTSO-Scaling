@@ -32,4 +32,7 @@ export class AttestationRequest extends RawEventConstructible {
 
   // timestamp
   timestamp: number; 
+
+  // confirmed
+  confirmed: boolean = false;
 }
