@@ -56,6 +56,8 @@ export interface PartialFDCDataForVotingRound {
   votingRoundId: number;
   // List of attestation requests to be processed
   attestationRequests: AttestationRequest[];
+  // list of non-duplication indices
+  nonDuplicationIndices: number[];
 }
 
 /**
@@ -91,9 +93,11 @@ export interface FDCRewardData {
   eligibleSigners?: FDCEligibleSigner[];
   // Majority bitvote attached to the finalized signatures
   // All signers that have unmatching majority bitvote are considered as offenders
-  consensusBitVote?: string;
+  consensusBitVote?: bigint;
   // FDC offenders
   fdcOffenders?: FDCOffender[];
+  // Consensus bitVote indices
+  consensusBitVoteIndices?: number[];
 }
 
 export interface FDCDataForVotingRound extends PartialFDCDataForVotingRound, FDCRewardData {
@@ -121,8 +125,9 @@ export interface SFDCDataForVotingRound {
   firstSuccessfulFinalization?: ParsedFinalizationData;
   finalizations: ParsedFinalizationData[];
   eligibleSigners: FDCEligibleSigner[];
-  consensusBitVote: string;
+  consensusBitVote: bigint;
   fdcOffenders: FDCOffender[];
+  consensusBitVoteIndices: number[];
   signaturesMap?: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
 }
 

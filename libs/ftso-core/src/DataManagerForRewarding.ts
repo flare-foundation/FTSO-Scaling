@@ -18,6 +18,7 @@ import {
   FastUpdatesDataForVotingRound,
   PartialFDCDataForVotingRound,
 } from "./data-calculation-interfaces";
+import { AttestationRequest } from "./events/AttestationRequest";
 import { ILogger } from "./utils/ILogger";
 import { errorString } from "./utils/error";
 import { Address, MessageHash } from "./voting-types";
@@ -122,7 +123,7 @@ export class DataManagerForRewarding extends DataManager {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
       }
       //////// FDC ////////
-      const validEligibleBitVotes: SubmissionData[] = this.extractSubmissionsWithValidEligibleBitVotes(mappingsResponse.data.submit2, rewardEpoch);
+      const validEligibleBitVotes: SubmissionData[] = this.extractSubmissionsWithValidEligibleBitVotes(reveals, rewardEpoch);
       const dataForRound = {
         ...partialData,
         randomGenerationBenchingWindow,
@@ -265,6 +266,7 @@ export class DataManagerForRewarding extends DataManager {
 
       let fdcData: FDCDataForVotingRound | undefined;
       let fdcRewardData: FDCRewardData | undefined;
+      let consensusBitVoteIndices: number[] = [];
 
       if (useFDCData) {
         const fdcFinalizations = this.extractFinalizations(
@@ -301,13 +303,17 @@ export class DataManagerForRewarding extends DataManager {
         if (partialData.votingRoundId !== votingRoundId) {
           throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
         }
+        if (partialData && partialData.nonDuplicationIndices && fdcRewardData && fdcRewardData.consensusBitVote !== undefined) {
+          consensusBitVoteIndices = DataManagerForRewarding.bitVoteIndicesNum(fdcRewardData.consensusBitVote, partialData.nonDuplicationIndices);
+        }
         fdcData = {
           ...partialData,
           bitVotes: dataForCalculations.validEligibleBitVoteSubmissions,
           signaturesMap: fdcSignatures,
           finalizations: fdcFinalizations,
           firstSuccessfulFinalization: fdcFirstSuccessfulFinalization,
-          ...fdcRewardData
+          ...fdcRewardData,
+          consensusBitVoteIndices,
         }
       }
 
@@ -437,11 +443,11 @@ export class DataManagerForRewarding extends DataManager {
     }
     const result: PartialFDCDataForVotingRound[] = [];
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
-      // const fastUpdateFeeds = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId];
-      // const fastUpdateSubmissions = feedUpdates.data[votingRoundId - firstVotingRoundId];
+      const attestationRequests = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
       const value: PartialFDCDataForVotingRound = {
         votingRoundId,
-        attestationRequests: attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
+        attestationRequests,
+        nonDuplicationIndices: DataManagerForRewarding.uniqueRequestsIndices(attestationRequests),
       };
       result.push(value);
     }
@@ -492,7 +498,7 @@ export class DataManagerForRewarding extends DataManager {
     fdcSignatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>,
     rewardEpoch: RewardEpoch,
   ): FDCRewardData | undefined {
-    const voteCounter = new Map<string, number>();
+    const voteCounter = new Map<bigint, number>();
     //
     const eligibleSigners: FDCEligibleSigner[] = [];
     const offenseMap = new Map<Address, FDCOffender>();
@@ -506,23 +512,28 @@ export class DataManagerForRewarding extends DataManager {
     }
     for (const signature of signatures) {
       const consensusBitVoteCandidate = signature.messages.unsignedMessage?.toLowerCase();
-      if (!consensusBitVoteCandidate) {
+      if (!consensusBitVoteCandidate || consensusBitVoteCandidate.length < 6) {
         continue;
       }
-      voteCounter.set(consensusBitVoteCandidate, (voteCounter.get(consensusBitVoteCandidate) || 0) + signature.messages.weight)
+      const bitVoteNum = BigInt("0x" + consensusBitVoteCandidate.slice(6));
+      // Note that 0n is also a legit consensus bitvote meaning no confirmations (but might not be rewarded)
+      voteCounter.set(bitVoteNum, (voteCounter.get(bitVoteNum) || 0) + signature.messages.weight)
     }
-    const maxCount = Math.max(...voteCounter.values());
-    const maxHashes = [...voteCounter.entries()].filter(([_, count]) => count === maxCount).map(([hash, _]) => hash);
-    maxHashes.sort();
-    // if it happens there are multiple maxHashes we take the first in lexicographical order
-    const consensusBitVote = maxHashes[0];
+    let consensusBitVote: bigint | undefined;
+    if (voteCounter.size > 0) {
+      const maxCount = Math.max(...voteCounter.values());
+      const maxBitVotes = [...voteCounter.entries()].filter(([_, count]) => count === maxCount).map(([bitVote, _]) => bitVote);
+      maxBitVotes.sort();
+      // if it happens there are multiple maxHashes we take the first in lexicographical order
+      consensusBitVote = maxBitVotes[0];
 
-    // TODO:
-    // should we require 50%+ weight on maxHash?
-    // const consensusBitVoteWeight = voteCounter.get(consensusBitVote);
-    // if(consensusBitVoteWeight < rewardEpoch.signingPolicy.threshold) {
-    //   return undefined;
-    // }
+      // TODO:
+      // should we require 50%+ weight on maxHash?
+      // const consensusBitVoteWeight = voteCounter.get(consensusBitVote);
+      // if(consensusBitVoteWeight < rewardEpoch.signingPolicy.threshold) {
+      //   return undefined;
+      // }
+    }
 
     const submitSignatureAddressToBitVote = new Map<Address, string>();
     for (const submission of bitVoteSubmissions) {
@@ -547,7 +558,7 @@ export class DataManagerForRewarding extends DataManager {
         submitSignatureAddress: signature.submitAddress.toLowerCase(),
         relativeTimestamp: signature.relativeTimestamp,
         bitVote,
-        dominatesConsensusBitVote: DataManagerForRewarding.isConsensusVoteDominated(consensusBitVote, bitVote),
+        dominatesConsensusBitVote: consensusBitVote === undefined ? undefined : DataManagerForRewarding.isConsensusVoteDominated(consensusBitVote, bitVote),
         weight: signature.messages.weight,
       }
       eligibleSigners.push(eligibleSigner);
@@ -568,7 +579,7 @@ export class DataManagerForRewarding extends DataManager {
     if (wrongSignatures) {
       for (const signature of wrongSignatures) {
         const submitSignatureAddress = signature.submitAddress.toLowerCase();
-        if(!rewardEpoch.isEligibleSubmitSignatureAddress(submitSignatureAddress)) {
+        if (!rewardEpoch.isEligibleSubmitSignatureAddress(submitSignatureAddress)) {
           continue;
         }
         const offender = offenseMap.get(submitSignatureAddress) || {
@@ -579,15 +590,21 @@ export class DataManagerForRewarding extends DataManager {
         offenseMap.set(submitSignatureAddress, offender);
       }
     }
-
-    for(const signature of signatures) {
+    for (const signature of signatures) {
       const submitSignatureAddress = signature.submitAddress.toLowerCase();
       const consensusBitVoteCandidate = signature.messages.unsignedMessage?.toLowerCase();
-      if(consensusBitVoteCandidate !== consensusBitVote) {
+      if (!consensusBitVoteCandidate) {
+        continue;
+      }
+      let isOffense = consensusBitVoteCandidate.length < 6;
+      if (!isOffense) {
+        isOffense = BigInt("0x" + consensusBitVoteCandidate.slice(6)) !== consensusBitVote;
+      }
+      if (isOffense) {
         const offender = offenseMap.get(submitSignatureAddress) || {
           submitSignatureAddress,
           offenses: []
-        }  
+        }
         offender.offenses.push(FDCOffense.BAD_CONSENSUS_BITVOTE_CANDIDATE);
         offenseMap.set(submitSignatureAddress, offender);
       }
@@ -598,22 +615,69 @@ export class DataManagerForRewarding extends DataManager {
     const result: FDCRewardData = {
       eligibleSigners,
       consensusBitVote,
-      fdcOffenders      
+      fdcOffenders
     };
 
     return result;
   }
 
-  public static isConsensusVoteDominated(consensusBitVote: string, bitVote?: string): boolean {
+  public static uniqueRequestsIndices(attestationRequests: AttestationRequest[]): number[] {
+    const encountered = new Set<string>();
+    const result: number[] = [];
+    for (let i = 0; i < attestationRequests.length; i++) {
+      const request = attestationRequests[i];
+      if (!encountered.has(request.data)) {
+        result.push(i);
+        encountered.add(request.data);
+      }
+    }
+    return result;
+  }
+
+  public static bitVoteIndices(bitVote: string, indices: number[]): number[] | undefined {
+    if (!bitVote || bitVote.length < 4) {
+      return undefined
+    }
+    const length = parseInt(bitVote.slice(2, 4), 16);
+    if (length !== indices.length) {
+      throw new Error(`Bitvote length mismatch: ${length} !== ${indices.length}`);
+    }
+
+    const result: number[] = [];
+    let bitVoteNum = BigInt("0x" + bitVote.slice(4));
+    return DataManagerForRewarding.bitVoteIndicesNum(bitVoteNum, indices);
+  }
+
+  public static bitVoteIndicesNum(bitVoteNum: bigint, indices: number[]): number[] {
+    const result: number[] = [];
+    for (let i = 0; i < indices.length; i++) {
+      if (bitVoteNum % 2n === 1n) {
+        result.push(indices[i]);
+      }
+      bitVoteNum /= 2n;
+    }
+    if (bitVoteNum !== 0n) {
+      throw new Error(`bitVoteNum not fully consumed: ${bitVoteNum}`);
+    }
+    return result;
+  }
+
+  public static isConsensusVoteDominated(consensusBitVote: bigint, bitVote?: string): boolean {
     if (!bitVote) {
       return false;
     }
-    let h1 = consensusBitVote.startsWith("0x") ? consensusBitVote.slice(2) : consensusBitVote;
-    let h2 = bitVote.startsWith("0x") ? bitVote.slice(2) : bitVote;
+    // Remove 0x prefix and first 2 bytes, used for the length
+    let h1 = consensusBitVote.toString(16);
+    // Ensure even length
+    if (h1.length % 2 !== 0) {
+      h1 = "0" + h1;
+    }
+    // This one is always even length
+    let h2 = bitVote.startsWith("0x") ? bitVote.slice(6) : bitVote.slice(4);
     if (h1.length !== h2.length) {
       const mLen = Math.max(h1.length, h2.length);
-      h1 = h1.padEnd(mLen, "0");
-      h2 = h2.padEnd(mLen, "0");
+      h1 = h1.padStart(mLen, "0");
+      h2 = h2.padStart(mLen, "0");
     }
     const buf1 = Buffer.from(h1, "hex");
     const buf2 = Buffer.from(h2, "hex");

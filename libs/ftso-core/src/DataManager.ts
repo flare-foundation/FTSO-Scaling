@@ -68,8 +68,6 @@ export interface CommitsAndReveals {
 export interface CommitAndRevealSubmissionsMappingsForRange {
   votingRoundIdToCommits: Map<number, SubmissionData[]>;
   votingRoundIdToReveals: Map<number, SubmissionData[]>;
-  submit1?: SubmissionData[];
-  submit2?: SubmissionData[];
 }
 
 export interface SignAndFinalizeSubmissionData {
@@ -283,8 +281,6 @@ export class DataManager {
       data: {
         votingRoundIdToCommits,
         votingRoundIdToReveals,
-        submit1: commitSubmissionResponse.data,
-        submit2: revealSubmissionResponse.data,
       },
     };
   }

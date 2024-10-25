@@ -157,6 +157,7 @@ export function serializeDataForRewardCalculation(
       finalizations: rewardCalculationData.fdcData.finalizations,
       eligibleSigners: rewardCalculationData.fdcData.eligibleSigners,
       consensusBitVote: rewardCalculationData.fdcData.consensusBitVote,
+      consensusBitVoteIndices: rewardCalculationData.fdcData.consensusBitVoteIndices,
       fdcOffenders: rewardCalculationData.fdcData.fdcOffenders,    
     }
   }
