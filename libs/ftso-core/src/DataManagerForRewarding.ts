@@ -304,7 +304,13 @@ export class DataManagerForRewarding extends DataManager {
           throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
         }
         if (partialData && partialData.nonDuplicationIndices && fdcRewardData && fdcRewardData.consensusBitVote !== undefined) {
-          consensusBitVoteIndices = DataManagerForRewarding.bitVoteIndicesNum(fdcRewardData.consensusBitVote, partialData.nonDuplicationIndices);
+          consensusBitVoteIndices = DataManagerForRewarding.bitVoteIndicesNum(fdcRewardData.consensusBitVote, partialData.nonDuplicationIndices.length);
+          for (const bitVoteIndex of consensusBitVoteIndices) {
+            for (const [i, originalIndex] of partialData.nonDuplicationIndices[bitVoteIndex].entries()) {
+              partialData.attestationRequests[originalIndex].confirmed = true;
+              partialData.attestationRequests[originalIndex].duplicate = i > 0;
+            }
+          }
         }
         fdcData = {
           ...partialData,
@@ -443,7 +449,7 @@ export class DataManagerForRewarding extends DataManager {
     }
     const result: PartialFDCDataForVotingRound[] = [];
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
-      const attestationRequests = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId],
+      const attestationRequests = attestationRequestsResponse.data[votingRoundId - firstVotingRoundId];
       const value: PartialFDCDataForVotingRound = {
         votingRoundId,
         attestationRequests,
@@ -621,38 +627,40 @@ export class DataManagerForRewarding extends DataManager {
     return result;
   }
 
-  public static uniqueRequestsIndices(attestationRequests: AttestationRequest[]): number[] {
-    const encountered = new Set<string>();
-    const result: number[] = [];
+  public static uniqueRequestsIndices(attestationRequests: AttestationRequest[]): number[][] {
+    const encountered = new Map<string, number>();
+    const result: number[][] = [];
     for (let i = 0; i < attestationRequests.length; i++) {
       const request = attestationRequests[i];
-      if (!encountered.has(request.data)) {
-        result.push(i);
-        encountered.add(request.data);
+      if (!encountered.get(request.data)) {
+        encountered.set(request.data, i);
+        result.push([i]);
+      } else {
+        result[encountered.get(request.data)].push(i);
       }
     }
     return result;
   }
 
-  public static bitVoteIndices(bitVote: string, indices: number[]): number[] | undefined {
+  public static bitVoteIndices(bitVote: string, len: number): number[] | undefined {
     if (!bitVote || bitVote.length < 4) {
       return undefined
     }
     const length = parseInt(bitVote.slice(2, 4), 16);
-    if (length !== indices.length) {
-      throw new Error(`Bitvote length mismatch: ${length} !== ${indices.length}`);
+    if (length !== len) {
+      throw new Error(`Bitvote length mismatch: ${length} !== ${len}`);
     }
 
     const result: number[] = [];
     let bitVoteNum = BigInt("0x" + bitVote.slice(4));
-    return DataManagerForRewarding.bitVoteIndicesNum(bitVoteNum, indices);
+    return DataManagerForRewarding.bitVoteIndicesNum(bitVoteNum, len);
   }
 
-  public static bitVoteIndicesNum(bitVoteNum: bigint, indices: number[]): number[] {
+  public static bitVoteIndicesNum(bitVoteNum: bigint, len: number): number[] {
     const result: number[] = [];
-    for (let i = 0; i < indices.length; i++) {
+    for (let i = 0; i < len; i++) {
       if (bitVoteNum % 2n === 1n) {
-        result.push(indices[i]);
+        result.push(i);
       }
       bitVoteNum /= 2n;
     }

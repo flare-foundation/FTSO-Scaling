@@ -35,4 +35,7 @@ export class AttestationRequest extends RawEventConstructible {
 
   // confirmed
   confirmed: boolean = false;
+
+  // duplicate
+  duplicate: boolean = false;
 }

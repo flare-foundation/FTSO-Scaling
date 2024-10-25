@@ -57,7 +57,7 @@ export interface PartialFDCDataForVotingRound {
   // List of attestation requests to be processed
   attestationRequests: AttestationRequest[];
   // list of non-duplication indices
-  nonDuplicationIndices: number[];
+  nonDuplicationIndices: number[][];
 }
 
 /**
