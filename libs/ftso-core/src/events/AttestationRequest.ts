@@ -7,7 +7,7 @@ export class AttestationRequest extends RawEventConstructible {
   static eventName = "AttestationRequest";
   constructor(data: any, timestamp: number) {
     super();
-    if(timestamp === undefined) {
+    if (timestamp === undefined) {
       throw new Error("Timestamp is required");
     }
     this.data = data.data;
@@ -24,6 +24,14 @@ export class AttestationRequest extends RawEventConstructible {
     );
   }
 
+  static getId(attestationRequest: AttestationRequest): string {
+    // 0x + 64 bytes in hex
+    if (attestationRequest.data.length < 130) {
+      return undefined;
+    }
+    return attestationRequest.data.substring(0, 130);
+  }
+
   // Feed values in the order of feedIds
   data: string;
 
@@ -31,7 +39,7 @@ export class AttestationRequest extends RawEventConstructible {
   fee: bigint;
 
   // timestamp
-  timestamp: number; 
+  timestamp: number;
 
   // confirmed
   confirmed: boolean = false;

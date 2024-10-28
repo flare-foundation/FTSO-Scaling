@@ -5,7 +5,7 @@ import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
 import { VoterWeights } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { DataForRewardCalculation, FDCDataForVotingRound, FastUpdatesDataForVotingRound, SFDCDataForVotingRound } from "../../data-calculation-interfaces";
+import { DataForRewardCalculation, FastUpdatesDataForVotingRound, SFDCDataForVotingRound } from "../../data-calculation-interfaces";
 import { Address, Feed, MedianCalculationResult, MessageHash, RandomCalculationResult } from "../../voting-types";
 import { IRevealData } from "../RevealData";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
@@ -136,7 +136,7 @@ export function serializeDataForRewardCalculation(
     hashSignatures.push(hashRecord);
   }
 
-  
+
   let fdcData: SFDCDataForVotingRound | undefined;
 
   if (rewardCalculationData.fdcData) {
@@ -158,7 +158,7 @@ export function serializeDataForRewardCalculation(
       eligibleSigners: rewardCalculationData.fdcData.eligibleSigners,
       consensusBitVote: rewardCalculationData.fdcData.consensusBitVote,
       consensusBitVoteIndices: rewardCalculationData.fdcData.consensusBitVoteIndices,
-      fdcOffenders: rewardCalculationData.fdcData.fdcOffenders,    
+      fdcOffenders: rewardCalculationData.fdcData.fdcOffenders,
     }
   }
 
