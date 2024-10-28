@@ -237,6 +237,12 @@ export class FtsoDataProviderService {
     ];
   }
 
+  async getRewardEpoch(votingRoundId: number): Promise<RewardEpoch> {
+    const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
+
+    return rewardEpoch;
+  }
+
   // Internal methods
 
   private async getFeedValuesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
