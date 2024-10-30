@@ -282,7 +282,9 @@ export function augmentDataForRewardCalculation(
     signaturesMap.set(hashSignature.hash, hashSignature.signatures);
   }
   data.signaturesMap = signaturesMap;
-  augmentFdcDataForRewardCalculation(data.fdcData);
+  if (data.fdcData) {
+    augmentFdcDataForRewardCalculation(data.fdcData);
+  }
 }
 
 /**
