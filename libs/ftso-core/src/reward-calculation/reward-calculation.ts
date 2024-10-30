@@ -3,6 +3,7 @@ import { RewardEpochManager } from "../RewardEpochManager";
 import {
   BURN_ADDRESS,
   CALCULATIONS_FOLDER,
+  FDC_PROTOCOL_ID,
   FEEDS_RENAMING_FILE,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
   FTSO2_FAST_UPDATES_PROTOCOL_ID,
@@ -39,6 +40,7 @@ import {
   createRewardCalculationFolders,
   deserializeGranulatedPartialOfferMap,
   deserializeGranulatedPartialOfferMapForFastUpdates,
+  deserializeOffersForFDC,
 } from "../utils/stat-info/granulated-partial-offers-map";
 import {
   deserializePartialClaimsForVotingRoundId,
@@ -53,6 +55,8 @@ import { deserializeRewardEpochInfo } from "../utils/stat-info/reward-epoch-info
 import { FastUpdatesRewardClaimType, calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
+import { calculateSigningRewardsForFDC, splitFDCRewardOfferByTypes } from "./fdc/reward-fdc-signing";
+import { calculateFdcPenalties } from "./fdc/reward-fdc-penalties";
 
 /**
  * Initializes reward epoch storage for the given reward epoch.
@@ -188,6 +192,9 @@ export async function partialRewardClaimsForVotingRound(
 
       const finalizationRewardClaims = calculateFinalizationRewardClaims(
         splitOffers.finalizationRewardOffer,
+        FTSO2_PROTOCOL_ID,
+        data.firstSuccessfulFinalization,
+        data.finalizations,
         data,
         new Set(data.eligibleFinalizers),
         medianEligibleVoters
@@ -253,7 +260,7 @@ export async function partialRewardClaimsForVotingRound(
           // feedId: offer.feedId,  // should be undefined
           protocolTag: "" + FTSO2_FAST_UPDATES_PROTOCOL_ID,
           rewardTypeTag: RewardTypePrefix.FULL_OFFER_CLAIM_BACK,
-          rewardDetailTag: FastUpdatesRewardClaimType.CONTRACT_CHANGE, 
+          rewardDetailTag: FastUpdatesRewardClaimType.CONTRACT_CHANGE,
         });
       }
     }
@@ -339,9 +346,60 @@ export async function partialRewardClaimsForVotingRound(
     }
   }
 
-  if(useFDCData) {
-    // TODO
-    // ddd
+  if (useFDCData) {
+    // read offers
+    const offers = deserializeOffersForFDC(rewardEpochId, votingRoundId, calculationFolder);
+    for (const offer of offers) {
+      // We set the claim back address to burn address by default
+      offer.claimBackAddress = BURN_ADDRESS.toLowerCase();
+      if (offer.shouldBeBurned) {
+        const fullOfferBackClaim: IPartialRewardClaim = {
+          votingRoundId,
+          beneficiary: offer.claimBackAddress,
+          amount: offer.amount,
+          claimType: ClaimType.DIRECT,
+          // offerIndex: offer.offerIndex,
+          protocolTag: "" + FDC_PROTOCOL_ID,
+          rewardTypeTag: RewardTypePrefix.PARTIAL_FDC_OFFER_CLAIM_BACK,
+          rewardDetailTag: "", // no additional tag
+        };
+        allRewardClaims.push(fullOfferBackClaim);
+        continue;
+      }
+      const splitOffers = splitFDCRewardOfferByTypes(offer);
+
+      const fdCFinalizationRewardClaims = calculateFinalizationRewardClaims(
+        splitOffers.finalizationRewardOffer,
+        FDC_PROTOCOL_ID,
+        data.fdcData.firstSuccessfulFinalization,
+        data.fdcData.finalizations,
+        data,
+        new Set(data.eligibleFinalizers),
+        new Set(data.eligibleFinalizers)
+      );
+
+      const fdcSigningRewardClaims = calculateSigningRewardsForFDC(
+        splitOffers.signingRewardOffer,
+        data,
+        rewardEpochInfo
+      );
+
+      const fdcPenalties = calculateFdcPenalties(
+        offer,
+        rewardEpochInfo,
+        data,
+        PENALTY_FACTOR(),
+        data.dataForCalculations.votersWeightsMap!,
+        RewardTypePrefix.REVEAL_OFFENDERS
+      )
+
+      allRewardClaims.push(...fdCFinalizationRewardClaims);
+      allRewardClaims.push(...fdcSigningRewardClaims);
+      allRewardClaims.push(...fdcPenalties);
+      if (merge) {
+        allRewardClaims = RewardClaim.merge(allRewardClaims);
+      }
+    }
   }
 
   if (serializeResults) {

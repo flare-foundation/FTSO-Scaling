@@ -556,6 +556,7 @@ export class DataManager {
     const revealOffenders = this.getRevealOffenders(commitsAndReveals.votingRoundId, eligibleCommits, eligibleReveals);
     const voterMedianVotingWeights = new Map<Address, bigint>();
     const orderedVotersSubmissionAddresses = rewardEpoch.orderedVotersSubmitAddresses;
+    const orderedVotersSubmitSignatureAddresses = rewardEpoch.orderedVotersSubmitSignatureAddresses;
     for (const submitAddress of orderedVotersSubmissionAddresses) {
       voterMedianVotingWeights.set(submitAddress, rewardEpoch.ftsoMedianVotingWeight(submitAddress));
     }
@@ -563,6 +564,7 @@ export class DataManager {
     const result: DataForCalculationsPartial = {
       votingRoundId: commitsAndReveals.votingRoundId,
       orderedVotersSubmitAddresses: orderedVotersSubmissionAddresses,
+      orderedVotersSubmitSignatureAddresses,
       validEligibleReveals,
       revealOffenders,
       voterMedianVotingWeights,

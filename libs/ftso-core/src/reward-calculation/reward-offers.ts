@@ -1,11 +1,11 @@
+import { deserializeAttestationRequestAppearances } from "../../../../apps/ftso-reward-calculation-process/src/libs/fdc-utils";
 import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered } from "../events";
 import {
-  IFDCPartialRewardOfferForRound,
   IFUPartialRewardOfferForRound,
   IPartialRewardOfferForEpoch,
   IPartialRewardOfferForRound,
-  PartialRewardOffer,
+  PartialRewardOffer
 } from "../utils/PartialRewardOffer";
 import { RewardEpochDuration } from "../utils/RewardEpochDuration";
 import { OFFERS_FILE } from "../utils/stat-info/constants";
@@ -13,15 +13,16 @@ import {
   deserializeGranulatedPartialOfferMap,
   serializeGranulatedPartialOfferMap,
 } from "../utils/stat-info/granulated-partial-offers-map";
+import { deserializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 import { RewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
 
 /**
  * A split of partial reward offer into three parts:
  */
-export interface SplitRewardOffer<T> {
-  readonly medianRewardOffer: T;
-  readonly signingRewardOffer: T;
-  readonly finalizationRewardOffer: T;
+export interface SplitRewardOffer {
+  readonly medianRewardOffer: IPartialRewardOfferForRound;
+  readonly signingRewardOffer: IPartialRewardOfferForRound;
+  readonly finalizationRewardOffer: IPartialRewardOfferForRound;
 }
 
 /**
@@ -209,11 +210,11 @@ export function fixOffersForRandomFeedSelection(
  * These split offers are used as inputs into reward calculation for specific types
  * of rewards.
  */
-export function splitRewardOfferByTypes<T extends IPartialRewardOfferForEpoch>(offer: T): SplitRewardOffer<T> {
+export function splitRewardOfferByTypes(offer: IPartialRewardOfferForRound): SplitRewardOffer {
   const forSigning = (offer.amount * SIGNING_BIPS()) / TOTAL_BIPS;
   const forFinalization = (offer.amount * FINALIZATION_BIPS()) / TOTAL_BIPS;
   const forMedian = offer.amount - forSigning - forFinalization;
-  const result: SplitRewardOffer<T> = {
+  const result: SplitRewardOffer = {
     medianRewardOffer: {
       ...offer,
       amount: forMedian,
@@ -296,35 +297,80 @@ export function granulatedPartialOfferMapForFastUpdates(
 
 export function granulatedPartialOfferMapForFDC(
   rewardEpochInfo: RewardEpochInfo,
-): Map<number, IFDCPartialRewardOfferForRound> {
+): Map<number, IPartialRewardOfferForRound[]> {
   const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
   const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
   if (startVotingRoundId === undefined || endVotingRoundId === undefined) {
     throw new Error("Start or end voting round id is undefined");
   }
+  const attestationCount = deserializeAttestationRequestAppearances(rewardEpochInfo.rewardEpochId);
+  const attestationCountMap = new Map<string, number>();
+  for (const attestation of attestationCount) {
+    attestationCountMap.set(attestation.attestationRequestId, attestation.count);
+  }
+
+  let totalWeight = 0;
+  let burnWeight = 0;
+  for(const config of rewardEpochInfo.fdcInflationRewardsOffered.fdcConfigurations) {
+    const id = (config.attestationType + config.source.slice(2)).toLowerCase();
+    const appearances = attestationCountMap.get(id) || 0;
+    totalWeight += config.inflationShare;
+    if(appearances < config.minRequestsThreshold) {
+      burnWeight += config.inflationShare;
+    }
+  }
 
   // Calculate total amount of rewards for the reward epoch
-  let totalAmount = rewardEpochInfo.fdcInflationRewardsOffered.amount;
+  const totalBurnAmount = (BigInt(burnWeight)*rewardEpochInfo.fdcInflationRewardsOffered.amount)/BigInt(totalWeight);
+  // const totalBurnAmount = 0n;
+  let totalAmount = rewardEpochInfo.fdcInflationRewardsOffered.amount - totalBurnAmount;
 
   if (process.env.TEST_FDC_INFLATION_REWARD_AMOUNT) {
     totalAmount = BigInt(process.env.TEST_FDC_INFLATION_REWARD_AMOUNT);
   }
   // Create a map of votingRoundId -> rewardOffer
-  const rewardOfferMap = new Map<number, IFDCPartialRewardOfferForRound>();
+  const rewardOfferMap = new Map<number, IPartialRewardOfferForRound[]>();
   const numberOfVotingRounds = endVotingRoundId - startVotingRoundId + 1;
   const sharePerOne: bigint = totalAmount / BigInt(numberOfVotingRounds);
   const remainder: number = Number(totalAmount % BigInt(numberOfVotingRounds));
+  const burnSharePerOne: bigint = totalBurnAmount / BigInt(numberOfVotingRounds);
+  const burnShareRemainder: number = Number(totalBurnAmount % BigInt(numberOfVotingRounds));
 
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
-    let amount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
+    const amount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
+    const burnAmount = burnSharePerOne + (votingRoundId - startVotingRoundId < burnShareRemainder ? 1n : 0n);
 
-    // Create adapted offer with selected feed
-    const feedOfferForVoting: IFDCPartialRewardOfferForRound = {
+    const roundDataForCalculation = deserializeDataForRewardCalculation(rewardEpochInfo.rewardEpochId, votingRoundId);
+    const attestationRequests = roundDataForCalculation?.fdcData?.attestationRequests;
+    if(!attestationRequests) {
+      throw new Error(`Missing attestation requests for voting round ${votingRoundId}`);
+    }
+    let feeAmount = 0n;
+    let feeBurnAmount = 0n;
+    for(const attestationRequest of attestationRequests) {
+      if(attestationRequest.confirmed) {
+        feeAmount += attestationRequest.fee;
+      } else {
+        feeBurnAmount += attestationRequest.fee;
+      }
+    }
+    const offerForVotingRound: IPartialRewardOfferForRound = {
       votingRoundId,
-      amount,
+      amount: amount + feeAmount,
+      feeAmount,
+      feeBurnAmount,
     };
 
-    rewardOfferMap.set(votingRoundId, feedOfferForVoting);
+    const burnOfferForVotingRound: IPartialRewardOfferForRound = {
+      votingRoundId,
+      amount: burnAmount + feeBurnAmount,
+      shouldBeBurned: true,
+    }
+
+    rewardOfferMap.set(votingRoundId, [
+      offerForVotingRound, 
+      burnOfferForVotingRound
+    ]);
   }
   return rewardOfferMap;
 }

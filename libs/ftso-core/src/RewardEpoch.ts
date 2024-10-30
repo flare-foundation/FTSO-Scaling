@@ -24,6 +24,7 @@ export interface VoterWeights {
 
 export class RewardEpoch {
   readonly orderedVotersSubmitAddresses: Address[] = [];
+  readonly orderedVotersSubmitSignatureAddresses: Address[] = [];
 
   public readonly rewardOffers: RewardOffers;
   public readonly signingPolicy: SigningPolicyInitialized;
@@ -155,6 +156,7 @@ export class RewardEpoch {
         fullVoterRegistrationInfo
       );
       this.orderedVotersSubmitAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
+      this.orderedVotersSubmitSignatureAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress);
 
       this.signingAddressToDelegationAddress.set(
         voterSigningAddress,
@@ -209,6 +211,26 @@ export class RewardEpoch {
 
   public getSubmitSignatureAddressFromSubmitAddress(submitAddress: Address): Address | undefined {
     return this.submitAddressToVoterRegistrationInfo.get(submitAddress.toLowerCase())?.voterRegistered.submitSignaturesAddress;
+  }
+
+  public getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress: Address): Address | undefined {
+    const voterAddress = this.submitSignatureAddressToVoter.get(submitSignatureAddress.toLowerCase());
+    if (!voterAddress) {
+      return undefined;
+    }
+    return this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.submitAddress;
+  }
+
+  public getSigningWeightForSubmitSignatureAddress(submitSignatureAddress: Address): number | undefined {
+    const voterAddress = this.submitSignatureAddressToVoter.get(submitSignatureAddress.toLowerCase());
+    if (!voterAddress) {
+      return undefined;
+    }
+    const signingAddress = this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.signingPolicyAddress;
+    if (!signingAddress) {
+      return undefined;
+    }
+    return this.signingAddressToSigningWeight.get(signingAddress);
   }
 
   /**

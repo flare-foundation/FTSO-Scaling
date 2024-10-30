@@ -25,10 +25,28 @@ export interface IPartialRewardOfferForEpoch {
   offerIndex: number;
 }
 
-export interface IPartialRewardOfferForRound extends IPartialRewardOfferForEpoch {
+export interface IPartialRewardOfferForRound {
   // voting round id
   votingRoundId: number;
+  // hex encoded feed id
+  feedId?: string;
+  // amount (in wei) of reward in native coin
+  amount: bigint;
+  // minimal reward eligibility turnout threshold in BIPS (basis points)
+  minRewardedTurnoutBIPS?: number;
+  // primary band reward share in PPM (parts per million)
+  primaryBandRewardSharePPM?: number;
+  // secondary band width in PPM (parts per million) in relation to the median
+  secondaryBandWidthPPM?: number;
+  // address that can claim undistributed part of the reward (or burn address)
+  claimBackAddress?: Address;
+  // indicates if the reward is from inflation
+  isInflation?: boolean;
+  // Reward offer index - link to the initial reward offer
+  offerIndex?: number;
   shouldBeBurned?: boolean;
+  feeAmount?: bigint;
+  feeBurnAmount?: bigint;
 }
 
 export interface IFUPartialRewardOfferForRound {
@@ -36,12 +54,6 @@ export interface IFUPartialRewardOfferForRound {
   feedId: string;
   amount: bigint;
   rewardBandValue: number;
-  shouldBeBurned?: boolean;
-}
-
-export interface IFDCPartialRewardOfferForRound {
-  votingRoundId: number;
-  amount: bigint;
   shouldBeBurned?: boolean;
 }
 
@@ -88,5 +100,22 @@ export namespace PartialRewardOffer {
       });
     }
     return rewardOffers;
+  }
+
+  export function remapToPartialOfferForRound(
+    partialOffer: IPartialRewardOfferForEpoch,
+    votingRoundId: number
+  ): IPartialRewardOfferForRound {
+    return {
+      votingRoundId,
+      feedId: partialOffer.feedId,
+      amount: partialOffer.amount,
+      minRewardedTurnoutBIPS: partialOffer.minRewardedTurnoutBIPS,
+      primaryBandRewardSharePPM: partialOffer.primaryBandRewardSharePPM,
+      secondaryBandWidthPPM: partialOffer.secondaryBandWidthPPM,
+      claimBackAddress: partialOffer.claimBackAddress,
+      isInflation: partialOffer.isInflation,
+      offerIndex: partialOffer.offerIndex,
+    };
   }
 }

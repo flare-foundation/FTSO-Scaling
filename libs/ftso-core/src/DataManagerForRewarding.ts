@@ -562,6 +562,8 @@ export class DataManagerForRewarding extends DataManager {
       const bitVote = submitSignatureAddressToBitVote.get(submitSignatureAddress);
       const eligibleSigner: FDCEligibleSigner = {
         submitSignatureAddress: signature.submitAddress.toLowerCase(),
+        timestamp: signature.timestamp,
+        votingEpochIdFromTimestamp: signature.votingEpochIdFromTimestamp,
         relativeTimestamp: signature.relativeTimestamp,
         bitVote,
         dominatesConsensusBitVote: consensusBitVote === undefined ? undefined : DataManagerForRewarding.isConsensusVoteDominated(consensusBitVote, bitVote),
@@ -572,9 +574,12 @@ export class DataManagerForRewarding extends DataManager {
 
     for (const submission of bitVoteSubmissions) {
       const submitSignatureAddress = rewardEpoch.getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress).toLowerCase();
+      const submissionAddress = rewardEpoch.getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress).toLowerCase();
       if (!submitSignatureSenders.has(submitSignatureAddress)) {
         const offender: FDCOffender = {
           submitSignatureAddress,
+          submissionAddress,
+          weight: rewardEpoch.getSigningWeightForSubmitSignatureAddress(submitSignatureAddress),
           offenses: [FDCOffense.NO_REVEAL_ON_BITVOTE]
         }
         offenseMap.set(submitSignatureAddress, offender);
@@ -585,11 +590,14 @@ export class DataManagerForRewarding extends DataManager {
     if (wrongSignatures) {
       for (const signature of wrongSignatures) {
         const submitSignatureAddress = signature.submitAddress.toLowerCase();
+        const submissionAddress = rewardEpoch.getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress).toLowerCase();
         if (!rewardEpoch.isEligibleSubmitSignatureAddress(submitSignatureAddress)) {
           continue;
         }
         const offender = offenseMap.get(submitSignatureAddress) || {
           submitSignatureAddress,
+          submissionAddress,
+          weight: rewardEpoch.getSigningWeightForSubmitSignatureAddress(submitSignatureAddress),
           offenses: []
         }
         offender.offenses.push(FDCOffense.WRONG_SIGNATURE);
@@ -598,10 +606,12 @@ export class DataManagerForRewarding extends DataManager {
     }
     for (const signature of signatures) {
       const submitSignatureAddress = signature.submitAddress.toLowerCase();
+      const submissionAddress = rewardEpoch.getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress).toLowerCase();
       const consensusBitVoteCandidate = signature.messages.unsignedMessage?.toLowerCase();
       if (!consensusBitVoteCandidate) {
         continue;
       }
+      // 0x + 2 bytes length
       let isOffense = consensusBitVoteCandidate.length < 6;
       if (!isOffense) {
         isOffense = BigInt("0x" + consensusBitVoteCandidate.slice(6)) !== consensusBitVote;
@@ -609,6 +619,8 @@ export class DataManagerForRewarding extends DataManager {
       if (isOffense) {
         const offender = offenseMap.get(submitSignatureAddress) || {
           submitSignatureAddress,
+          submissionAddress,
+          weight: rewardEpoch.getSigningWeightForSubmitSignatureAddress(submitSignatureAddress),
           offenses: []
         }
         offender.offenses.push(FDCOffense.BAD_CONSENSUS_BITVOTE_CANDIDATE);

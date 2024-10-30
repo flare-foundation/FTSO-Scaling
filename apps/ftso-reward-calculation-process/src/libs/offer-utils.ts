@@ -4,9 +4,8 @@ import {
   granulatedPartialOfferMapForRandomFeedSelection,
 } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
 import {
-  IFDCPartialRewardOfferForRound,
   IFUPartialRewardOfferForRound,
-  IPartialRewardOfferForRound,
+  IPartialRewardOfferForRound
 } from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { FDC_OFFERS_FILE, FU_OFFERS_FILE, OFFERS_FILE } from "../../../../libs/ftso-core/src/utils/stat-info/constants";
@@ -60,9 +59,9 @@ export async function fullRoundOfferCalculation(options: OptionalCommandOptions)
   }
 
   if (options.useFDCData) {
-    const fdcRewardOfferMap: Map<number, IFDCPartialRewardOfferForRound>
+    const fdcRewardOfferMap: Map<number, IPartialRewardOfferForRound[]>
       = granulatedPartialOfferMapForFDC(rewardEpochInfo);
-      serializeGranulatedPartialOfferMapForFDC(rewardEpochDuration, fdcRewardOfferMap, false, FDC_OFFERS_FILE);
+    serializeGranulatedPartialOfferMapForFDC(rewardEpochDuration, fdcRewardOfferMap, false, FDC_OFFERS_FILE);
   }
 }
 

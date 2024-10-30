@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { IFDCPartialRewardOfferForRound, IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../PartialRewardOffer";
+import { IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../PartialRewardOffer";
 import { RewardEpochDuration } from "../RewardEpochDuration";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { FDC_OFFERS_FILE, FU_OFFERS_FILE, OFFERS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
@@ -71,7 +71,7 @@ export function serializeGranulatedPartialOfferMap(
  */
 export function serializeGranulatedPartialOfferMapForFDC(
   rewardEpochDuration: RewardEpochDuration,
-  rewardOfferMap: Map<number, IFDCPartialRewardOfferForRound>,
+  rewardOfferMap: Map<number, IPartialRewardOfferForRound[]>,
   regenerate = true,
   file = FDC_OFFERS_FILE,
   calculationFolder = CALCULATIONS_FOLDER()
@@ -176,3 +176,22 @@ export function deserializeGranulatedPartialOfferMapForFastUpdates(
   }
   return feedOffers;
 }
+
+export function deserializeOffersForFDC(
+  rewardEpochId: number,
+  votingRoundId: number,
+  calculationFolder = CALCULATIONS_FOLDER()
+): IPartialRewardOfferForRound[] {
+  const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
+  const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
+  const offersPath = path.join(votingRoundFolder, FDC_OFFERS_FILE);
+  if (!existsSync(offersPath)) {
+    throw new Error(`Critical error: No FDC offers for voting round ${votingRoundId}`);
+  }
+  const offersPerVotingRound: IPartialRewardOfferForRound[] = JSON.parse(
+    readFileSync(offersPath, "utf8"),
+    bigIntReviver
+  );
+  return offersPerVotingRound;
+}
+

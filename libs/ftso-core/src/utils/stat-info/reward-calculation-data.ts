@@ -26,6 +26,7 @@ export interface SDataForCalculation {
   rewardEpochId: number;
   votingRoundId: number;
   orderedVotersSubmitAddresses: string[];
+  orderedVotersSubmitSignatureAddresses: string[];
   validEligibleReveals: RevealRecords[];
   revealOffenders: string[];
   voterMedianVotingWeights: VoterWeightData[];
@@ -57,6 +58,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     rewardEpochId,
     votingRoundId: data.dataForCalculations.votingRoundId,
     orderedVotersSubmitAddresses: data.dataForCalculations.orderedVotersSubmitAddresses,
+    orderedVotersSubmitSignatureAddresses: data.dataForCalculations.orderedVotersSubmitSignatureAddresses,
     validEligibleReveals,
     revealOffenders: [...data.dataForCalculations.revealOffenders],
     voterMedianVotingWeights,

@@ -11,6 +11,8 @@ export interface DataForCalculationsPartial {
   votingRoundId: number;
   // Ordered list of submitAddresses matching the order in the signing policy
   orderedVotersSubmitAddresses: Address[];
+  // Ordered list of submitSignatureAddresses matching the order in the signing policy
+  orderedVotersSubmitSignatureAddresses: Address[];
   // Reveals from eligible submitAddresses that match to existing commits
   validEligibleReveals: Map<Address, IRevealData>;
   // submitAddresses of eligible voters that committed but withheld or provided wrong reveals in the voting round
@@ -68,6 +70,8 @@ export interface PartialFDCDataForVotingRound {
  */
 export interface FDCEligibleSigner {
   submitSignatureAddress: string;
+  votingEpochIdFromTimestamp: number;
+  timestamp: number;
   // Relative timestamp in voting epoch N + 1
   relativeTimestamp: number;
   bitVote?: string;
@@ -82,8 +86,10 @@ export enum FDCOffense {
   BAD_CONSENSUS_BITVOTE_CANDIDATE = "BAD_CONSENSUS_BITVOTE_CANDIDATE",
 }
 export interface FDCOffender {
+  submissionAddress: string;
   submitSignatureAddress: string;
   offenses: FDCOffense[];
+  weight: number;
 }
 
 export interface FDCRewardData {

@@ -9,4 +9,5 @@ export enum RewardTypePrefix {
   REVEAL_OFFENDERS = "Reveal offenders",
   FAST_UPDATES_ACCURACY = "Fast updates accuracy",
   FULL_OFFER_CLAIM_BACK = "Full offer claim back",
+  PARTIAL_FDC_OFFER_CLAIM_BACK = "Partial FDC offer claim back",
 }
