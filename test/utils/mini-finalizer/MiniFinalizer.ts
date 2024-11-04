@@ -170,6 +170,7 @@ export class MiniFinalizer {
       rewardEpoch,
       signatures,
       protocolId,
+      undefined,
       this.logger
     );
     if (!finalizationMap) {
