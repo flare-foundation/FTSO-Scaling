@@ -1,3 +1,4 @@
+import { sign } from "crypto";
 import { ECDSASignature } from "../../fsp-utils/src/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
@@ -361,9 +362,15 @@ export class DataManager {
       for (const message of submission.messages) {
         try {
           const signaturePayload = SignaturePayload.decode(message.payload);
+          if(signaturePayload.message && signaturePayload.message.protocolId !== message.protocolId) {
+            throw new Error(`Protocol id mismatch in signed message. Expected ${message.protocolId}, got ${signaturePayload.message.protocolId}`);
+          }
+          if(signaturePayload.message && signaturePayload.message.votingRoundId !== message.votingRoundId) {
+            throw new Error(`Voting round id mismatch in signed message. Expected ${message.votingRoundId}, got ${signaturePayload.message.votingRoundId}`);
+          }
           if (
-            signaturePayload.message.votingRoundId === votingRoundId &&
-            signaturePayload.message.protocolId === protocolId
+            message.votingRoundId === votingRoundId &&
+            message.protocolId === protocolId
           ) {
             // - Override the messageHash if provided
             // - Require 
@@ -422,6 +429,7 @@ export class DataManager {
             signatures.set(signer, submissionData);
           }
         } catch (e) {
+          console.log(e)
           logger.warn(`Issues with parsing submission message: ${e.message}`);
         }
       }
