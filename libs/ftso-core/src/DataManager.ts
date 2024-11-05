@@ -1,8 +1,4 @@
-import { sign } from "crypto";
-import { ECDSASignature } from "../../fsp-utils/src/ECDSASignature";
-import { ProtocolMessageMerkleRoot } from "../../fsp-utils/src/ProtocolMessageMerkleRoot";
 import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
-import { ISignaturePayload, SignaturePayload } from "../../fsp-utils/src/SignaturePayload";
 import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
 import {
   BlockAssuranceResult,
@@ -19,8 +15,7 @@ import {
   ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
   EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
-  GENESIS_REWARD_EPOCH_START_EVENT,
-  WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH,
+  GENESIS_REWARD_EPOCH_START_EVENT
 } from "./configs/networks";
 import {
   DataForCalculations,
@@ -31,7 +26,7 @@ import { CommitData, ICommitData } from "./utils/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./utils/RevealData";
 import { errorString } from "./utils/error";
-import { Address, Feed, MessageHash } from "./voting-types";
+import { Address, Feed } from "./voting-types";
 
 /**
  * Data availability status for data manager responses.
@@ -163,65 +158,6 @@ export class DataManager {
   }
 
   /**
-   * Provides the data for reward calculation given the voting round id and the random generation benching window.
-   * Since calculation of rewards takes place when all the data is surely on the blockchain, no timeout queries are relevant here.
-   * The data for reward calculation is composed of:
-   * - data for median calculation
-   * - signatures for the given voting round id in given rewarding window
-   * - finalizations for the given voting round id in given rewarding window
-   * Data for median calculation is used to calculate the median feed value for each feed in the rewarding boundaries.
-   * The data also contains the RewardEpoch objects, which contains all reward offers.
-   * Signatures and finalizations are used to calculate the rewards for signature deposition and finalizations.
-   * Each finalization is checked if it is valid and finalizable. Note that only one such finalization is fully executed on chain, while
-   * others are reverted. Nevertheless, all finalizations in rewarded window are considered for the reward calculation, since a certain
-   * subset is eligible for a reward if submitted in due time.
-   */
-  public async getDataForRewardCalculation(
-    votingRoundId: number,
-    randomGenerationBenchingWindow: number
-  ): Promise<DataMangerResponse<DataForRewardCalculation>> {
-    const dataForCalculationsResponse = await this.getDataForCalculations(
-      votingRoundId,
-      randomGenerationBenchingWindow
-    );
-    if (dataForCalculationsResponse.status !== DataAvailabilityStatus.OK) {
-      return {
-        status: dataForCalculationsResponse.status,
-      };
-    }
-    const signaturesResponse = await this.getSignAndFinalizeSubmissionDataForVotingRound(votingRoundId);
-    if (signaturesResponse.status !== DataAvailabilityStatus.OK) {
-      return {
-        status: signaturesResponse.status,
-      };
-    }
-    const signatures = DataManager.extractSignatures(
-      votingRoundId,
-      dataForCalculationsResponse.data.rewardEpoch,
-      signaturesResponse.data.signatures,
-      FTSO2_PROTOCOL_ID,
-      undefined,
-      this.logger
-    );
-    const finalizations = this.extractFinalizations(
-      votingRoundId,
-      dataForCalculationsResponse.data.rewardEpoch,
-      signaturesResponse.data.finalizations,
-      FTSO2_PROTOCOL_ID
-    );
-    const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
-    return {
-      status: DataAvailabilityStatus.OK,
-      data: {
-        dataForCalculations: dataForCalculationsResponse.data,
-        signatures,
-        finalizations,
-        firstSuccessfulFinalization,
-      },
-    };
-  }
-
-  /**
    * Creates a pair of mappings
    * 1. votingRoundId -> commit submissions, chronologically ordered
    * 2. votingRoundId -> reveal submissions, chronologically ordered, too late filtered out
@@ -333,123 +269,6 @@ export class DataManager {
         finalizations,
       },
     };
-  }
-
-  /**
-   * Extract signature payloads for the given voting round id from the given submissions.
-   * Each signature is filtered out for the correct voting round id, protocol id and eligible signer.
-   * Signatures are returned in the form of a map
-   * from message hash to a list of signatures to submission data containing parsed signature payload.
-   * The last signed message for a specific message hash is considered.
-   * ASSUMPTION: all signature submissions for voting round id, hence contained ,
-   * between reveal deadline for votingRoundId (hence in voting epoch votingRoundId + 1) and
-   * the end of the voting epoch votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS
-   * @param votingRoundId
-   * @param rewardEpoch
-   * @param submissions
-   * @returns
-   */
-  public static extractSignatures(
-    votingRoundId: number,
-    rewardEpoch: RewardEpoch,
-    submissions: SubmissionData[],
-    protocolId = FTSO2_PROTOCOL_ID,
-    providedMessageHash: MessageHash | undefined = undefined,
-    logger: ILogger
-  ): Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> {
-    const signatureMap = new Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>();
-    for (const submission of submissions) {
-      for (const message of submission.messages) {
-        try {
-          const signaturePayload = SignaturePayload.decode(message.payload);
-          if(signaturePayload.message && signaturePayload.message.protocolId !== message.protocolId) {
-            throw new Error(`Protocol id mismatch in signed message. Expected ${message.protocolId}, got ${signaturePayload.message.protocolId}`);
-          }
-          if(signaturePayload.message && signaturePayload.message.votingRoundId !== message.votingRoundId) {
-            throw new Error(`Voting round id mismatch in signed message. Expected ${message.votingRoundId}, got ${signaturePayload.message.votingRoundId}`);
-          }
-          if (
-            message.votingRoundId === votingRoundId &&
-            message.protocolId === protocolId
-          ) {
-            // - Override the messageHash if provided
-            // - Require 
-
-            let messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
-
-            const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
-            // submit signature address should match the signingPolicyAddress
-            const expectedSigner = rewardEpoch.getSigningAddressFromSubmitSignatureAddress(submission.submitAddress.toLowerCase());
-            // if the expected signer is not found, the signature is not valid for rewarding
-            if (!expectedSigner) {
-              continue;
-            }
-            // In case of FTSO Scaling, we have message hash as a part of payload
-            // the signer is incorrect
-            if (!providedMessageHash) {
-              if (!rewardEpoch.isEligibleSignerAddress(signer)) {
-                continue;
-              }
-              signaturePayload.messageHash = messageHash;
-              signaturePayload.signer = signer;
-              signaturePayload.weight = rewardEpoch.signerToSigningWeight(signer);
-              signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(signer);
-            } else {
-              if (signer !== expectedSigner) {
-                if (!rewardEpoch.isEligibleSignerAddress(expectedSigner)) {
-                  continue;
-                }
-                // wrong signature by eligible signer                
-                signaturePayload.messageHash = WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH;
-              } else {
-                signaturePayload.messageHash = providedMessageHash;
-              }
-              signaturePayload.signer = expectedSigner;
-              signaturePayload.weight = rewardEpoch.signerToSigningWeight(expectedSigner);
-              signaturePayload.index = rewardEpoch.signerToVotingPolicyIndex(expectedSigner);
-            }
-
-            if (
-              signaturePayload.weight === undefined ||
-              signaturePayload.signer === undefined ||
-              signaturePayload.index === undefined
-            ) {
-              // assert: this should never happen
-              throw new Error(
-                `Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`
-              );
-            }
-            const signatures =
-              signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
-            const submissionData: GenericSubmissionData<ISignaturePayload> = {
-              ...submission,
-              messages: signaturePayload,
-            };
-            signatureMap.set(messageHash, signatures);
-            signatures.set(signer, submissionData);
-          }
-        } catch (e) {
-          console.log(e)
-          logger.warn(`Issues with parsing submission message: ${e.message}`);
-        }
-      }
-    }
-    const result = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
-    for (const [hash, sigMap] of signatureMap.entries()) {
-      const values = [...sigMap.values()];
-      DataManager.sortSubmissionDataArray(values);
-      // consider only the first sent signature of a sender as rewardable
-      const existingSenderAddresses = new Set<Address>();
-      const filteredSignatureSubmissions: GenericSubmissionData<ISignaturePayload>[] = [];
-      for (const submission of values) {
-        if (!existingSenderAddresses.has(submission.submitAddress.toLowerCase())) {
-          filteredSignatureSubmissions.push(submission);
-          existingSenderAddresses.add(submission.submitAddress.toLowerCase());
-        }
-      }
-      result.set(hash, filteredSignatureSubmissions);
-    }
-    return result;
   }
 
   /**

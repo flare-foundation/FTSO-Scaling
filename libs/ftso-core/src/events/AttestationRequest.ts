@@ -2,7 +2,10 @@ import { CONTRACTS } from "../configs/networks";
 import { decodeEvent } from "../utils/EncodingUtils";
 import { RawEventConstructible } from "./RawEventConstructible";
 
-
+/**
+ * Represents and event emitted on submission of an attestation request on 
+ * FdcHub smart contract.
+ */
 export class AttestationRequest extends RawEventConstructible {
   static eventName = "AttestationRequest";
   constructor(data: any, timestamp: number) {
@@ -24,7 +27,11 @@ export class AttestationRequest extends RawEventConstructible {
     );
   }
 
-  static getId(attestationRequest: AttestationRequest): string {
+  /**
+   * Gets the attestation request prefix.
+   * The prefix consists of the first 64 bytes of the data.
+   */  
+  static getPrefix(attestationRequest: AttestationRequest): string {
     // 0x + 64 bytes in hex
     if (attestationRequest.data.length < 130) {
       return undefined;
@@ -41,9 +48,9 @@ export class AttestationRequest extends RawEventConstructible {
   // timestamp
   timestamp: number;
 
-  // confirmed
+  // whether the attestation got confirmed in the voting round
   confirmed: boolean = false;
 
-  // duplicate
+  // whether the attestations is a duplicate
   duplicate: boolean = false;
 }

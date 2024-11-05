@@ -67,7 +67,7 @@ export function calculateSigningRewardsForFDC(
          offerIndex: offer.offerIndex,
          feedId: offer.feedId,
          protocolTag: "" + FDC_PROTOCOL_ID,
-         rewardTypeTag: RewardTypePrefix.SIGNING,
+         rewardTypeTag: RewardTypePrefix.FDC_SIGNING,
          rewardDetailTag: SigningRewardClaimType.NO_TIMELY_FINALIZATION,
       };
       return [backClaim];
@@ -115,14 +115,14 @@ export function calculateSigningRewardsForFDC(
                   offerIndex: offer.offerIndex,
                   feedId: offer.feedId,
                   protocolTag: "" + FDC_PROTOCOL_ID,
-                  rewardTypeTag: RewardTypePrefix.SIGNING,
+                  rewardTypeTag: RewardTypePrefix.FDC_SIGNING,
                   rewardDetailTag: SigningRewardClaimType.NON_DOMINATING_BITVOTE,
                };
                allClaims.push(burnClaim);
             }
          }
          allClaims.push(
-            ...generateSigningWeightBasedClaimsForVoter(voterAmount, offer, voterWeights, RewardTypePrefix.SIGNING, FDC_PROTOCOL_ID)
+            ...generateSigningWeightBasedClaimsForVoter(voterAmount, offer, voterWeights, RewardTypePrefix.FDC_SIGNING, FDC_PROTOCOL_ID)
          );         
       }
    }
@@ -137,7 +137,7 @@ export function calculateSigningRewardsForFDC(
          offerIndex: offer.offerIndex,
          feedId: offer.feedId,
          protocolTag: "" + FDC_PROTOCOL_ID,
-         rewardTypeTag: RewardTypePrefix.SIGNING,
+         rewardTypeTag: RewardTypePrefix.FDC_SIGNING,
          rewardDetailTag: SigningRewardClaimType.CLAIM_BACK_OF_NON_SIGNERS_SHARE,
       };
       allClaims.push(backClaim);

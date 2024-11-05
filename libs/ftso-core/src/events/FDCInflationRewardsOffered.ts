@@ -15,6 +15,9 @@ export interface FdcConfiguration {
   mode: bigint;
 }
 
+/**
+ * Represents an event emitted on offering inflation rewards on FdcHub smart contract.
+ */
 export class FDCInflationRewardsOffered extends RawEventConstructible {
   static eventName = "InflationRewardsOffered";
   constructor(data: any) {

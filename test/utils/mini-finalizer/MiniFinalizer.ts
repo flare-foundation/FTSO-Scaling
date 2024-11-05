@@ -9,6 +9,7 @@ import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { CONTRACTS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
 
+import { DataManagerForRewarding } from "../../../libs/ftso-core/src/DataManagerForRewarding";
 import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
 import { TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
 import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
@@ -165,7 +166,7 @@ export class MiniFinalizer {
     }
     const signatures = submitSignaturesSubmissionResponse.data;
     DataManager.sortSubmissionDataArray(signatures);
-    const finalizationMap = DataManager.extractSignatures(
+    const finalizationMap = DataManagerForRewarding.extractSignatures(
       votingRoundId,
       rewardEpoch,
       signatures,

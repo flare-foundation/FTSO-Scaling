@@ -35,7 +35,7 @@ export function calculateAttestationTypeAppearances(rewardEpochId: number): void
       }
       for (const attestationRequest of attestationRequests) {
          if (attestationRequest.confirmed && !attestationRequest.duplicate) {            
-            const id = AttestationRequest.getId(attestationRequest);
+            const id = AttestationRequest.getPrefix(attestationRequest);
             if (id) {
                attestationTypeCount.set(id, (attestationTypeCount.get(id) || 0) + 1);
             }

@@ -54,7 +54,6 @@ export namespace SignaturePayload {
     if (!/^[0-9a-f]*$/.test(encodedSignaturePayloadInternal)) {
       throw Error(`Invalid format - not hex string: ${encodedSignaturePayload}`);
     }
-    // if (encodedSignaturePayloadInternal.length < 2 + 38 * 2 + 65 * 2) {
     if (encodedSignaturePayloadInternal.length < 2 + 65 * 2) {
       throw Error(`Invalid format - too short: ${encodedSignaturePayload}`);
     }

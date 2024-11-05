@@ -34,6 +34,7 @@ async function main() {
   let ftsoScalingOfferAmount = 0n;
   let fastUpdatesOfferAmount = 0n;
   let fdcOfferAmount = 0n;
+  let fdcOfferBurn = 0n;
   for (let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId; votingRoundId <= rewardEpochInfo.endVotingRoundId; votingRoundId++) {
     const ftsoOfferClaims = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId, calculationFolder);
     for (let [_, offers] of ftsoOfferClaims.entries()) {
@@ -51,6 +52,9 @@ async function main() {
     const offers = deserializeOffersForFDC(rewardEpochId, votingRoundId, calculationFolder);
     for (let offer of offers) {
       fdcOfferAmount += offer.amount;
+      if(offer.shouldBeBurned) {
+        fdcOfferBurn += offer.amount;
+      }
     }
     const data = deserializeDataForRewardCalculation(
       rewardEpochId,
@@ -67,6 +71,7 @@ async function main() {
   console.log(`FTSO Scaling Funds: ${ftsoScalingFunds - ftsoScalingOfferAmount}`);
   console.log(`Fast Updates Funds: ${fastUpdatesFunds - fastUpdatesOfferAmount}`);
   console.log(`FDC Funds: ${fdcFunds - fdcOfferAmount}`);
+  console.log(`FDC Offer Burn: ${fdcOfferBurn}`);
 }
 
 main()

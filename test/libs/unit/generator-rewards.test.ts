@@ -1,7 +1,6 @@
 import FakeTimers from "@sinonjs/fake-timers";
 import { expect } from "chai";
 import { DataSource, EntityManager } from "typeorm";
-import { DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import {
@@ -49,7 +48,18 @@ import {
   setupEpochSettings,
 } from "../../utils/test-epoch-settings";
 
+import { DataManagerForRewarding } from "../../../libs/ftso-core/src/DataManagerForRewarding";
+import { IndexerClientForRewarding } from "../../../libs/ftso-core/src/IndexerClientForRewarding";
+import { RewardOffers } from "../../../libs/ftso-core/src/events";
+import {
+  IPartialRewardOfferForEpoch,
+  IPartialRewardOfferForRound,
+  PartialRewardOffer,
+} from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { RewardEpochDuration } from "../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
+import { OFFERS_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
+import { serializeGranulatedPartialOfferMap } from "../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
 import {
   ProgressType,
   printProgress,
@@ -65,15 +75,6 @@ import {
 } from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../libs/ftso-core/src/utils/stat-info/storage";
 import { toFeedId } from "../../utils/generators";
-import {
-  IPartialRewardOfferForEpoch,
-  IPartialRewardOfferForRound,
-  PartialRewardOffer,
-} from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
-import { RewardEpochDuration } from "../../../libs/ftso-core/src/utils/RewardEpochDuration";
-import { OFFERS_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
-import { serializeGranulatedPartialOfferMap } from "../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
-import { RewardOffers } from "../../../libs/ftso-core/src/events";
 
 // Ensure that the networks are not loaded
 
@@ -241,9 +242,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
+    const indexerClient = new IndexerClientForRewarding(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
-    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+    const dataManager = new DataManagerForRewarding(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
@@ -302,9 +303,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
+    const indexerClient = new IndexerClientForRewarding(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
-    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+    const dataManager = new DataManagerForRewarding(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
@@ -391,9 +392,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
+    const indexerClient = new IndexerClientForRewarding(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
-    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+    const dataManager = new DataManagerForRewarding(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
@@ -452,9 +453,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
+    const indexerClient = new IndexerClientForRewarding(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
-    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+    const dataManager = new DataManagerForRewarding(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
@@ -523,9 +524,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
+    const indexerClient = new IndexerClientForRewarding(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
-    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+    const dataManager = new DataManagerForRewarding(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const benchingWindowRevealOffenders = 1;
@@ -568,9 +569,9 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
       2 * EPOCH_SETTINGS().rewardEpochDurationInVotingEpochs * EPOCH_SETTINGS().votingEpochDurationSeconds;
     const earliestTimestamp = Math.floor(clock.Date.now() / 1000) - requiredHistoryTimeSec;
     logger.log("Earliest timestamp", earliestTimestamp);
-    const indexerClient = new IndexerClient(entityManager, requiredHistoryTimeSec, console);
+    const indexerClient = new IndexerClientForRewarding(entityManager, requiredHistoryTimeSec, console);
     const rewardEpochManger = new RewardEpochManager(indexerClient);
-    const dataManager = new DataManager(indexerClient, rewardEpochManger, console);
+    const dataManager = new DataManagerForRewarding(indexerClient, rewardEpochManger, console);
 
     const votingRoundId = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
     const rewardEpoch = await rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
@@ -739,7 +740,7 @@ export async function initializeRewardEpochStorageOld(
 export async function rewardClaimsForRewardEpoch(
   rewardEpochId: number,
   randomGenerationBenchingWindow: number,
-  dataManager: DataManager,
+  dataManager: DataManagerForRewarding,
   rewardEpochManager: RewardEpochManager,
   merge = true,
   serialize = false,

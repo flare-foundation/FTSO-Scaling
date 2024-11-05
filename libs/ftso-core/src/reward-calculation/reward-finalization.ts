@@ -33,7 +33,8 @@ export function calculateFinalizationRewardClaims(
   finalizations: ParsedFinalizationData[],
   data: SDataForRewardCalculation,
   eligibleFinalizationRewardVotersInGracePeriod: Set<Address>, // signing addresses of the voters that are eligible for finalization reward
-  eligibleVoters: Set<Address> // signing addresses of the voters that are eligible for finalization reward
+  eligibleVoters: Set<Address>, // signing addresses of the voters that are eligible for finalization reward
+  rewardType: RewardTypePrefix
 ): IPartialRewardClaim[] {
   if (!firstSuccessfulFinalization) {
     const backClaim: IPartialRewardClaim = {
@@ -44,7 +45,7 @@ export function calculateFinalizationRewardClaims(
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
       protocolTag: "" + protocolId,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.NO_FINALIZATION,
     };
     return [backClaim];
@@ -60,7 +61,7 @@ export function calculateFinalizationRewardClaims(
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
       protocolTag: "" + protocolId,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.OUTSIDE_OF_GRACE_PERIOD,
     };
     return [otherFinalizerClaim];
@@ -80,7 +81,7 @@ export function calculateFinalizationRewardClaims(
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
       protocolTag: "" + protocolId,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.FINALIZED_BUT_NO_ELIGIBLE_VOTERS,
     };
     return [burnClaim];
@@ -127,7 +128,7 @@ export function calculateFinalizationRewardClaims(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= 1n;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, RewardTypePrefix.FINALIZATION, protocolId)
+      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId)
     );
   }
 
@@ -148,7 +149,7 @@ export function calculateFinalizationRewardClaims(
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
       protocolTag: "" + protocolId,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.CLAIM_BACK_FOR_UNDISTRIBUTED_REWARDS,
     });
   }

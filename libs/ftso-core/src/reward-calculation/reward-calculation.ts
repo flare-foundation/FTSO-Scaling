@@ -91,7 +91,7 @@ export async function partialRewardClaimsForVotingRound(
   rewardEpochId: number,
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
-  dataManager: DataManager,
+  dataManager: DataManagerForRewarding,
   feedOffersParam: Map<string, IPartialRewardOfferForRound[]> | undefined,
   prepareData = true,
   merge = true,
@@ -197,7 +197,8 @@ export async function partialRewardClaimsForVotingRound(
         data.finalizations,
         data,
         new Set(data.eligibleFinalizers),
-        medianEligibleVoters
+        medianEligibleVoters,
+        RewardTypePrefix.FINALIZATION
       );
 
       // Calculate penalties for reveal withdrawal offenders
@@ -375,7 +376,8 @@ export async function partialRewardClaimsForVotingRound(
         data.fdcData.finalizations,
         data,
         new Set(data.eligibleFinalizers),
-        new Set(data.eligibleFinalizers)
+        new Set(data.eligibleFinalizers),
+        RewardTypePrefix.FDC_FINALIZATION
       );
 
       const fdcSigningRewardClaims = calculateSigningRewardsForFDC(
@@ -412,7 +414,7 @@ export async function prepareDataForRewardCalculations(
   rewardEpochId: number,
   votingRoundId: number,
   randomGenerationBenchingWindow: number,
-  dataManager: DataManager,
+  dataManager: DataManagerForRewarding,
   calculationFolder = CALCULATIONS_FOLDER()
 ) {
   const rewardDataForCalculationResponse = await dataManager.getDataForRewardCalculation(
