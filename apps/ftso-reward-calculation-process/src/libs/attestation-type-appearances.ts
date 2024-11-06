@@ -13,6 +13,9 @@ export interface FDCAttestationRequestAppearances {
    count: number;
 }
 
+/**
+ * Calculates the number of appearances of each attestation type in the given reward epoch.
+ */
 export function calculateAttestationTypeAppearances(rewardEpochId: number): void {
    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
 
@@ -77,7 +80,9 @@ export function serializeAttestationRequestAppearances(
    writeFileSync(appearancesPath, JSON.stringify(appearances));
 }
 
-
+/**
+ * Deserializes attestation request appearances data. 
+ */
 export function deserializeAttestationRequestAppearances(
    rewardEpochId: number,
    calculationFolder = CALCULATIONS_FOLDER()

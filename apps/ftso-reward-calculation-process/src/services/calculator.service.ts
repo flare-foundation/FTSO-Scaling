@@ -45,7 +45,7 @@ import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
 import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
-import { calculateAttestationTypeAppearances } from "../libs/fdc-utils";
+import { calculateAttestationTypeAppearances } from "../libs/attestation-type-appearances";
 
 if (process.env.FORCE_NOW) {
   const newNow = parseInt(process.env.FORCE_NOW) * 1000;

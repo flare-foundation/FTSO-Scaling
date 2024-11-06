@@ -1,4 +1,4 @@
-import { deserializeAttestationRequestAppearances } from "../../../../apps/ftso-reward-calculation-process/src/libs/fdc-utils";
+import { deserializeAttestationRequestAppearances } from "../../../../apps/ftso-reward-calculation-process/src/libs/attestation-type-appearances";
 import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { InflationRewardsOffered } from "../events";
 import {
