@@ -38,6 +38,11 @@ export function distributeInflationRewardOfferToFeeds(
   throw new Error(`Mode ${inflationRewardOffer.mode} is not supported`);
 }
 
+/**
+ * Adapts community reward offer to default data.
+ * Community reward offers can have specific data about primary and seconary bands, which are ignored and 
+ * overridden by default values.
+ */
 export function adaptCommunityRewardOffer(rewardOffer: IPartialRewardOfferForEpoch): void {
   rewardOffer.minRewardedTurnoutBIPS = 0;
   rewardOffer.primaryBandRewardSharePPM = 1000000;
@@ -158,6 +163,13 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
   return rewardOfferMap;
 }
 
+/**
+ * Prepares FTSO Scaling offers according to random number choice.
+ * Among all the offers for all available feeds one feed is selected using the 
+ * provided random number.
+ * This is done for the range of voting rounds.
+ * If the random number is undefined, the offer is marked for burning.
+ */
 export function fixOffersForRandomFeedSelection(
   rewardEpochId: number,
   startVotingRoundId: number,
@@ -231,6 +243,9 @@ export function splitRewardOfferByTypes(offer: IPartialRewardOfferForRound): Spl
   return result;
 }
 
+/**
+ * Creates a map of partial reward offers for each voting round in the reward epoch for fast updates.
+ */
 export function granulatedPartialOfferMapForFastUpdates(
   rewardEpochInfo: RewardEpochInfo,
   randomNumbers: (bigint | undefined)[],
@@ -295,6 +310,9 @@ export function granulatedPartialOfferMapForFastUpdates(
   return rewardOfferMap;
 }
 
+/**
+ * Creates a map of partial reward offers for each voting round in the reward epoch for FDC.
+ */
 export function granulatedPartialOfferMapForFDC(
   rewardEpochInfo: RewardEpochInfo,
 ): Map<number, IPartialRewardOfferForRound[]> {
@@ -311,18 +329,17 @@ export function granulatedPartialOfferMapForFDC(
 
   let totalWeight = 0;
   let burnWeight = 0;
-  for(const config of rewardEpochInfo.fdcInflationRewardsOffered.fdcConfigurations) {
+  for (const config of rewardEpochInfo.fdcInflationRewardsOffered.fdcConfigurations) {
     const id = (config.attestationType + config.source.slice(2)).toLowerCase();
     const appearances = attestationCountMap.get(id) || 0;
     totalWeight += config.inflationShare;
-    if(appearances < config.minRequestsThreshold) {
+    if (appearances < config.minRequestsThreshold) {
       burnWeight += config.inflationShare;
     }
   }
 
   // Calculate total amount of rewards for the reward epoch
-  const totalBurnAmount = (BigInt(burnWeight)*rewardEpochInfo.fdcInflationRewardsOffered.amount)/BigInt(totalWeight);
-  // const totalBurnAmount = 0n;
+  const totalBurnAmount = (BigInt(burnWeight) * rewardEpochInfo.fdcInflationRewardsOffered.amount) / BigInt(totalWeight);
   let totalAmount = rewardEpochInfo.fdcInflationRewardsOffered.amount - totalBurnAmount;
 
   if (process.env.TEST_FDC_INFLATION_REWARD_AMOUNT) {
@@ -342,15 +359,16 @@ export function granulatedPartialOfferMapForFDC(
 
     const roundDataForCalculation = deserializeDataForRewardCalculation(rewardEpochInfo.rewardEpochId, votingRoundId);
     const attestationRequests = roundDataForCalculation?.fdcData?.attestationRequests;
-    if(!attestationRequests) {
+    if (!attestationRequests) {
       throw new Error(`Missing attestation requests for voting round ${votingRoundId}`);
     }
     let feeAmount = 0n;
     let feeBurnAmount = 0n;
-    for(const attestationRequest of attestationRequests) {
-      if(attestationRequest.confirmed) {
+    for (const attestationRequest of attestationRequests) {
+      if (attestationRequest.confirmed) {
         feeAmount += attestationRequest.fee;
       } else {
+        // fees for unconfirmed requests are burned
         feeBurnAmount += attestationRequest.fee;
       }
     }
@@ -368,7 +386,7 @@ export function granulatedPartialOfferMapForFDC(
     }
 
     rewardOfferMap.set(votingRoundId, [
-      offerForVotingRound, 
+      offerForVotingRound,
       burnOfferForVotingRound
     ]);
   }
