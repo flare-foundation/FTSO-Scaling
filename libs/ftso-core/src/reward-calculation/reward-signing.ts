@@ -27,6 +27,7 @@ export enum SigningRewardClaimType {
   NO_TIMELY_FINALIZATION = "NO_TIMELY_FINALIZATION",
   CLAIM_BACK_OF_NON_SIGNERS_SHARE = "CLAIM_BACK_OF_NON_SIGNERS_SHARE",
   NON_DOMINATING_BITVOTE = "NON_DOMINATING_BITVOTE", 
+  EMPTY_BITVOTE = "EMPTY_BITVOTE",
 }
 /**
  * Given an offer and data for reward calculation it calculates signing rewards for the offer.

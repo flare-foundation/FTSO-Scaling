@@ -57,6 +57,7 @@ export function calculateSigningRewardsForFDC(
    rewardEpochInfo: RewardEpochInfo
 ): IPartialRewardClaim[] {
    const votingRoundId = data.dataForCalculations.votingRoundId;
+   // if no successful finalization, nothing to decide - burn all
    if (!data.fdcData?.firstSuccessfulFinalization) {
       // burn all
       const backClaim: IPartialRewardClaim = {
@@ -69,6 +70,22 @@ export function calculateSigningRewardsForFDC(
          protocolTag: "" + FDC_PROTOCOL_ID,
          rewardTypeTag: RewardTypePrefix.FDC_SIGNING,
          rewardDetailTag: SigningRewardClaimType.NO_TIMELY_FINALIZATION,
+      };
+      return [backClaim];
+   }
+
+   if (data.fdcData.consensusBitVote === undefined || data.fdcData.consensusBitVote === 0n) {
+      // burn all
+      const backClaim: IPartialRewardClaim = {
+         votingRoundId,
+         beneficiary: offer.claimBackAddress.toLowerCase(),
+         amount: offer.amount,
+         claimType: ClaimType.DIRECT,
+         offerIndex: offer.offerIndex,
+         feedId: offer.feedId,
+         protocolTag: "" + FDC_PROTOCOL_ID,
+         rewardTypeTag: RewardTypePrefix.FDC_SIGNING,
+         rewardDetailTag: SigningRewardClaimType.EMPTY_BITVOTE,
       };
       return [backClaim];
    }
@@ -102,14 +119,14 @@ export function calculateSigningRewardsForFDC(
          undistributedAmount -= voterAmount;
          undistributedWeight -= BigInt(voterData.weight);
          const voterWeights = data.dataForCalculations.votersWeightsMap!.get(submitAddress);
-         if(!voterData.dominatesConsensusBitVote) {
+         if (!voterData.dominatesConsensusBitVote) {
             // burn 20%
             const burnAmount = 200000n * voterAmount / 1000000n;
             voterAmount -= burnAmount;
-            if(burnAmount > 0n) {
+            if (burnAmount > 0n) {
                const burnClaim: IPartialRewardClaim = {
                   votingRoundId,
-                  beneficiary: submitAddress.toLowerCase(),
+                  beneficiary: offer.claimBackAddress.toLowerCase(),
                   amount: burnAmount,
                   claimType: ClaimType.DIRECT,
                   offerIndex: offer.offerIndex,
@@ -123,7 +140,7 @@ export function calculateSigningRewardsForFDC(
          }
          allClaims.push(
             ...generateSigningWeightBasedClaimsForVoter(voterAmount, offer, voterWeights, RewardTypePrefix.FDC_SIGNING, FDC_PROTOCOL_ID)
-         );         
+         );
       }
    }
 
