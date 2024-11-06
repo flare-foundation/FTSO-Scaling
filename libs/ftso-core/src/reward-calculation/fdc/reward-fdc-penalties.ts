@@ -32,7 +32,7 @@ export function calculateFdcPenalties(
     if (offender.weight > 0) {
       penalty = (-BigInt(offender.weight) * offer.amount * penaltyFactor) / totalWeight;
     }
-    if (penalty > 0n) {
+    if (penalty < 0n) {
       penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FDC_PROTOCOL_ID));
     }
   }

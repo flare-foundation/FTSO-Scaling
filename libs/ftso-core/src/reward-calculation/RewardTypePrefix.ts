@@ -12,4 +12,5 @@ export enum RewardTypePrefix {
   PARTIAL_FDC_OFFER_CLAIM_BACK = "Partial FDC offer claim back",
   FDC_SIGNING = "FDC signing",
   FDC_FINALIZATION =  "FDC finalization",
+  FDC_OFFENDERS = "FDC offenders",
 }

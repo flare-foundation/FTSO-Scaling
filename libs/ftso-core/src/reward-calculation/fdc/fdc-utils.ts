@@ -73,6 +73,7 @@ function isConsensusVoteDominated(consensusBitVote: bigint, bitVote?: string): b
       h1 = "0" + h1;
    }
    // This one is always even length
+   // first 2-bytes are skipped (length)
    let h2 = bitVote.startsWith("0x") ? bitVote.slice(6) : bitVote.slice(4);
    if (h1.length !== h2.length) {
       const mLen = Math.max(h1.length, h2.length);
@@ -81,35 +82,47 @@ function isConsensusVoteDominated(consensusBitVote: bigint, bitVote?: string): b
    }
    const buf1 = Buffer.from(h1, "hex");
    const buf2 = Buffer.from(h2, "hex");
-   // AND operation
+   // AND operation should not decrease the number of 1s
    const bufResult = buf1.map((b, i) => b & buf2[i]);
    return buf1.equals(bufResult);
 }
 
 /**
- * Given finalized messageHash it calculates consensus bitvote, filters out eligible signers and determines 
+ * Given finalized messageHash it calculates consensus bit-vote, filters out eligible signers and determines 
  * offenders.
+ * Message hash of the finalized (consensus) message is required or exception is thrown.
+ * The @param fdcSignatures is expected to be a map containing at most 2 keys:
+ * - messageHash
+ * - WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH
+ * If there are no signatures for the messageHash, the function returns undefined.
  */
 export function extractFDCRewardData(
    messageHash: string,
    bitVoteSubmissions: SubmissionData[],
    fdcSignatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>,
    rewardEpoch: RewardEpoch,
-): FDCRewardData | undefined {
+): FDCRewardData {
+   // consensus bitvote -> weight
    const voteCounter = new Map<bigint, number>();
-   //
+   // List of records about signers which are eligible for the reward.
+   // Note that a subset of those is later rewarded
    const eligibleSigners: FDCEligibleSigner[] = [];
+   // submitSignatureAddress -> FDCOffender
    const offenseMap = new Map<Address, FDCOffender>();
    if (!messageHash) {
       throw new Error("Consensus message hash is required");
    }
    const signatures = fdcSignatures.get(messageHash);
    if (!signatures) {
-      // TODO: log warning
-      return undefined;
+      return {
+         eligibleSigners: [],
+         consensusBitVote: undefined,
+         fdcOffenders: []
+      };
    }
    for (const signature of signatures) {
       const consensusBitVoteCandidate = signature.messages.unsignedMessage?.toLowerCase();
+      // first 2 bytes are length
       if (!consensusBitVoteCandidate || consensusBitVoteCandidate.length < 6) {
          continue;
       }
@@ -122,7 +135,7 @@ export function extractFDCRewardData(
       const maxCount = Math.max(...voteCounter.values());
       const maxBitVotes = [...voteCounter.entries()].filter(([_, count]) => count === maxCount).map(([bitVote, _]) => bitVote);
       maxBitVotes.sort();
-      // if it happens there are multiple maxHashes we take the first in lexicographical order
+      // if it happens there are multiple maxHashes we take the first in order
       consensusBitVote = maxBitVotes[0];
 
       // TODO:
@@ -135,7 +148,7 @@ export function extractFDCRewardData(
 
    const submitSignatureAddressToBitVote = new Map<Address, string>();
    for (const submission of bitVoteSubmissions) {
-      const submitSignatureAddress = rewardEpoch.getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress).toLowerCase();
+      const submitSignatureAddress = rewardEpoch.getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress.toLowerCase()).toLowerCase();
       const message = submission.messages.find(m => m.protocolId === FDC_PROTOCOL_ID);
       if (message && message.payload) {
          submitSignatureAddressToBitVote.set(submitSignatureAddress, message.payload.toLowerCase());
@@ -203,6 +216,7 @@ export function extractFDCRewardData(
       if (!consensusBitVoteCandidate) {
          continue;
       }
+      // Offense is either wrong bitvote message or not matching the consensus bitvote
       // 0x + 2 bytes length
       let isOffense = consensusBitVoteCandidate.length < 6;
       if (!isOffense) {
@@ -221,7 +235,11 @@ export function extractFDCRewardData(
    }
 
    const fdcOffenders = [...offenseMap.values()];
+   // Fix the orders for determinism
    fdcOffenders.sort((a, b) => a.submitSignatureAddress.localeCompare(b.submitSignatureAddress));
+   for(const offender of fdcOffenders) {
+      offender.offenses.sort();
+   }
    const result: FDCRewardData = {
       eligibleSigners,
       consensusBitVote,

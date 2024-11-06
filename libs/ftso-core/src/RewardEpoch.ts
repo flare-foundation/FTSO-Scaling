@@ -210,7 +210,7 @@ export class RewardEpoch {
   }
 
   public getSubmitSignatureAddressFromSubmitAddress(submitAddress: Address): Address | undefined {
-    return this.submitAddressToVoterRegistrationInfo.get(submitAddress.toLowerCase())?.voterRegistered.submitSignaturesAddress;
+    return this.submitAddressToVoterRegistrationInfo.get(submitAddress.toLowerCase())?.voterRegistered.submitSignaturesAddress.toLowerCase();
   }
 
   public getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress: Address): Address | undefined {
@@ -218,7 +218,7 @@ export class RewardEpoch {
     if (!voterAddress) {
       return undefined;
     }
-    return this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.submitAddress;
+    return this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.submitAddress.toLowerCase();
   }
 
   public getSigningWeightForSubmitSignatureAddress(submitSignatureAddress: Address): number | undefined {
@@ -226,7 +226,7 @@ export class RewardEpoch {
     if (!voterAddress) {
       return undefined;
     }
-    const signingAddress = this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.signingPolicyAddress;
+    const signingAddress = this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.signingPolicyAddress.toLowerCase();
     if (!signingAddress) {
       return undefined;
     }
