@@ -180,11 +180,11 @@ export class IndexerClientForRewarding extends IndexerClient {
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = IncentiveOffered.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
-    const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
 
+    const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
     const data = result.map(event => IncentiveOffered.fromRawEvent(event));
     return {
       status,
@@ -227,10 +227,10 @@ export class IndexerClientForRewarding extends IndexerClient {
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = AttestationRequest.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
-    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
 
     const allAttestationRequests = result.map(event => AttestationRequest.fromRawEvent(event));
     const data: AttestationRequest[][] = [];
@@ -262,11 +262,11 @@ export class IndexerClientForRewarding extends IndexerClient {
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = FDCInflationRewardsOffered.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
-    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
+    const status = await this.ensureEventRange(startTime, endTime);    
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);    
     const data = result.map(event => FDCInflationRewardsOffered.fromRawEvent(event));
     return {
       status,

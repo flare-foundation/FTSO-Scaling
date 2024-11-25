@@ -382,7 +382,6 @@ export class DataManagerForRewarding extends DataManager {
       partialFdcData = partialFdcDataResponse.data;
     }
 
-    ///    
     const result: DataForRewardCalculation[] = [];
     let startIndexSignatures = 0;
     let endIndexSignatures = 0;

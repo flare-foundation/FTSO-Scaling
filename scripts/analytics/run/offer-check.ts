@@ -29,7 +29,8 @@ async function main() {
     fastUpdatesFunds += incentive.offerAmount;
   }
 
-  let fdcFunds = rewardEpochInfo.fdcInflationRewardsOffered.amount
+  let fdcFunds = rewardEpochInfo.fdcInflationRewardsOffered?.amount || 0n;
+  const noFDC = rewardEpochInfo.fdcInflationRewardsOffered === undefined;
 
   let ftsoScalingOfferAmount = 0n;
   let fastUpdatesOfferAmount = 0n;
@@ -49,10 +50,10 @@ async function main() {
       }
     }
 
-    const offers = deserializeOffersForFDC(rewardEpochId, votingRoundId, calculationFolder);
+    const offers = noFDC ? [] : deserializeOffersForFDC(rewardEpochId, votingRoundId, calculationFolder);
     for (let offer of offers) {
       fdcOfferAmount += offer.amount;
-      if(offer.shouldBeBurned) {
+      if (offer.shouldBeBurned) {
         fdcOfferBurn += offer.amount;
       }
     }
@@ -63,13 +64,15 @@ async function main() {
       calculationFolder
     );
 
-    for (let attestationRequest of data.fdcData.attestationRequests) {
-      fdcFunds += attestationRequest.fee;
+    if (!noFDC) {
+      for (let attestationRequest of data.fdcData.attestationRequests) {
+        fdcFunds += attestationRequest.fee;
+      }
     }
   }
 
-  console.log(`FTSO Scaling Funds: ${ftsoScalingFunds - ftsoScalingOfferAmount}`);
-  console.log(`Fast Updates Funds: ${fastUpdatesFunds - fastUpdatesOfferAmount}`);
+  console.log(`FTSO Scaling Funds: ${ftsoScalingOfferAmount}$ {ftsoScalingFunds - ftsoScalingOfferAmount}`);
+  console.log(`Fast Updates Funds: ${fastUpdatesOfferAmount} ${fastUpdatesFunds - fastUpdatesOfferAmount}`);
   console.log(`FDC Funds: ${fdcFunds - fdcOfferAmount}`);
   console.log(`FDC Offer Burn: ${fdcOfferBurn}`);
 }
