@@ -8,10 +8,10 @@ export DB_REQUIRED_INDEXER_HISTORY_TIME_SEC=86400
 export VOTING_ROUND_HISTORY_SIZE=10000
 export INDEXER_TOP_TIMEOUT=1000
 export DB_HOST=127.0.0.1
-export DB_PORT=3337
-export DB_USERNAME=root
-export DB_PASSWORD=root
-export DB_NAME=flare_ftso_indexer
+export DB_PORT=3306
+export DB_USERNAME=ftso-indxr-sgb-rdr
+export DB_PASSWORD=$(gcloud secrets versions access latest --project flare-network-production --secret="ftso_v2_c_chain_indexer_sgb_db_reader_password")
+export DB_NAME=flare_ftso_indexer_songbird
 
 export REMOVE_ANNOYING_MESSAGES=true
 

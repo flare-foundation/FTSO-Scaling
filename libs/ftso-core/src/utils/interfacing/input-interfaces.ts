@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+
 export interface Delegator {
    // pChain address, like flare123l344hlugpg0r2ntdl6fn45qyp0f5m2xakc0r
    pAddress: string;
@@ -58,4 +60,9 @@ export interface ValidatorInfo {
    nodeRewardAmount: string;
    // validator reward amount in wei
    validatorRewardAmount: string;
+}
+
+export function readStakingInfo(fname: string): ValidatorInfo[] {
+   const data = readFileSync(fname, 'utf8');
+   return JSON.parse(data);
 }
