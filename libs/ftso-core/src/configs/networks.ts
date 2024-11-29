@@ -716,6 +716,54 @@ export const COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 779191;
 // set to start voting round id of epoch 234
 // on Songbird there was no missing event for the voting round
 // Only used to filter out the old events
-export const SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 786240; 
+export const SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 786240;
 
 export const WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH = "WRONG_SIGNATURE";
+
+export const STAKING_DATA_BASE_FOLDER = "staking-data";
+
+export const STAKING_DATA_FOLDER = () => {
+  const network = process.env.NETWORK as networks;
+  const STAKING_DATA_BASE_FOLDER = "staking-data";
+  switch (network) {
+    case "from-env":
+      return `${STAKING_DATA_BASE_FOLDER}/from-env`;
+    case "coston":
+      return `${STAKING_DATA_BASE_FOLDER}/coston`;
+    case "coston2":
+      return `${STAKING_DATA_BASE_FOLDER}/coston2`;
+    case "songbird":
+      return `${STAKING_DATA_BASE_FOLDER}/songbird`;
+    case "flare":
+      return `${STAKING_DATA_BASE_FOLDER}/flare`;
+    case "local-test":
+      return `${STAKING_DATA_BASE_FOLDER}/local-test`;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => { })(network);
+  }
+};
+
+export const PASSES_DATA_FOLDER = () => {
+  const network = process.env.NETWORK as networks;
+  const PASSES_DATA_BASE_FOLDER = "passes-data";
+  switch (network) {
+    case "from-env":
+      return `${PASSES_DATA_BASE_FOLDER}/from-env`;
+    case "coston":
+      return `${PASSES_DATA_BASE_FOLDER}/coston`;
+    case "coston2":
+      return `${PASSES_DATA_BASE_FOLDER}/coston2`;
+    case "songbird":
+      return `${PASSES_DATA_BASE_FOLDER}/songbird`;
+    case "flare":
+      return `${PASSES_DATA_BASE_FOLDER}/flare`;
+    case "local-test":
+      return `${PASSES_DATA_BASE_FOLDER}/local-test`;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => { })(network);
+  }
+};
