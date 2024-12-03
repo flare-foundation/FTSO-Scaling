@@ -1,91 +1,41 @@
-import { readStakingInfo } from "../../utils/interfacing/input-interfaces";
+import { DataProviderPasses, readPassesInfo, readStakingInfo } from "./input-interfaces";
 import { deserializeDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
 import { deserializeRewardEpochInfo } from "../../utils/stat-info/reward-epoch-info";
-
-const TOTAL_PPM = 1000000n;
-const FTSO_SCALING_AVAILABILITY_THRESHOLD_PPM = 800000n;   // 80%
-const FTSO_SCALING_CLOSENESS_THRESHOLD_PPM = 5000n;        // 0.5%
-const FU_THRESHOLD_PPM = 800000n;                          // 60%
-const FU_CONSIDERATION_THRESHOLD_PPM = 2000n;              // 0.2% of the weight
-const STAKING_UPTIME_THRESHOLD_PPM = 800000n;              // 80%
-
-export interface ConditionSummary {
-   // whether a minimal condition is met
-   conditionMet: boolean;
-   // allows for a pass to be earned, if condition is met
-   // if any criteria has this flag on true, the pass cannot be earned
-   obstructsPass?: boolean;
-}
-
-export interface FeedHits {
-   // feed id
-   feedId: string;
-   // out of 3360
-   hits: number;
-}
-
-export interface FtsoScalingConditionSummary extends ConditionSummary {
-   totalHits: number;
-   feedHits: FeedHits[];
-}
-
-export interface FUConditionSummary extends ConditionSummary {
-   // total updates by all providers in the reward epoch
-   totalUpdatesByAll: number;
-   // updates by the provider in the reward epoch
-   updates: number;
-   //exempt due to low weight
-   tooLowWeight: boolean;
-   // expected PPM share based on the share of the weight
-   expectedUpdatesPPM: bigint;
-}
-
-export interface NodeStakingConditions {
-   // node id as 20 byte hex string
-   nodeId: string;
-   // uptime sufficient
-   uptimeOk: boolean;
-   // self bond in GWei
-   selfBond: bigint;
-   // mirrored stake in GWei
-   totalMirroredStake: bigint;
-   // total stake amount in GWei
-   totalStakeAmount: bigint;
-}
-
-export interface StakingConditionSummary extends ConditionSummary {
-   // total self bond in Gwei
-   totalSelfBond: bigint;
-   // total stake amount in Gwei
-   stake: bigint;
-   // stake with uptime
-   stakeWithUptime: bigint;
-   // node conditions
-   nodeConditions: NodeStakingConditions[];
-}
-
-export interface DataProviderConditions {
-   // voter identity address
-   voterAddress: string;
-   // voter index
-   voterIndex: number;
-   // passes held
-   passesHeld: number;
-   // strikes
-   strikes: number;
-   // ftso scaling conditions
-   ftsoScaling: FtsoScalingConditionSummary;
-   // fast update conditions
-   fastUpdates: FUConditionSummary;
-   // staking conditions
-   staking: StakingConditionSummary;
-}
+import {
+   FTSO_SCALING_AVAILABILITY_THRESHOLD_PPM,
+   FTSO_SCALING_CLOSENESS_THRESHOLD_PPM,
+   FU_CONSIDERATION_THRESHOLD_PPM, FU_THRESHOLD_PPM,
+   MAX_NUMBER_OF_PASSES,
+   STAKING_MIN_DESIRED_SELF_BOND_GWEI,
+   STAKING_MIN_DESIRED_STAKE_GWEI,
+   STAKING_MIN_SELF_BOND_GWEI,
+   STAKING_UPTIME_THRESHOLD_PPM,
+   TOTAL_PPM
+} from "./minimal-conditions-constants";
+import {
+   DataProviderConditions,
+   FUConditionSummary,
+   FeedHits,
+   FtsoScalingConditionSummary,
+   NodeStakingConditions,
+   StakingConditionSummary
+} from "./minimal-conditions-interfaces";
 
 export function calculateMinimalConditions(
    rewardEpochId: number,
+   requirePassesFile: boolean
 ): DataProviderConditions[] {
    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
+   // returns undefined if the file is not found
+   let passesInputData = readPassesInfo(rewardEpochId - 1);
+   if (requirePassesFile && passesInputData === undefined) {
+      throw new Error(`Passes file not found for reward epoch ${rewardEpochId - 1}`);
+   }
+   if (!passesInputData) {
+      passesInputData = [];
+   }
    const submitAddressToVoter = new Map<string, string>();
+   const voterToSubmitAddress = new Map<string, string>();
    const signingPolicyAddressToVoter = new Map<string, string>();
    const voterToVoterIndex = new Map<string, number>();
    const voterToFtsoScalingConditionSummary = new Map<string, FtsoScalingConditionSummary>();
@@ -94,8 +44,16 @@ export function calculateMinimalConditions(
    const nodeIdToVoter = new Map<string, string>();
    const nodeIdToNodeStakingCondition = new Map<string, NodeStakingConditions>();
    const submitAddressToFeedToHits = new Map<string, Map<string, FeedHits>>();
+   const voterToPassesInputData = new Map<string, DataProviderPasses>();
 
    const totalSigningWeight = rewardEpochInfo.signingPolicy.weights.reduce((acc, weight) => acc + weight, 0);
+
+   const numberOfVotingRounds = (rewardEpochInfo.endVotingRoundId - rewardEpochInfo.signingPolicy.startVotingRoundId + 1);
+
+   for (let dataProviderPasses of passesInputData) {
+      let voter = dataProviderPasses.voterAddress.toLowerCase();
+      voterToPassesInputData.set(voter, dataProviderPasses);
+   }
 
    for (let i = 0; i < rewardEpochInfo.voterRegistrationInfo.length; i++) {
       const voter = rewardEpochInfo.voterRegistrationInfo[i].voterRegistered.voter.toLowerCase();
@@ -103,21 +61,24 @@ export function calculateMinimalConditions(
       const submissionAddress = rewardEpochInfo.voterRegistrationInfo[i].voterRegistered.submitAddress.toLowerCase();
       const signingPolicyAddress = rewardEpochInfo.voterRegistrationInfo[i].voterRegistered.signingPolicyAddress.toLowerCase();
       submitAddressToVoter.set(submissionAddress, voter);
+      voterToSubmitAddress.set(voter, submissionAddress);
       signingPolicyAddressToVoter.set(signingPolicyAddress, voter);
       voterToVoterIndex.set(voter, i);
       const ftsoScalingConditionSummary: FtsoScalingConditionSummary = {
+         allPossibleHits: numberOfVotingRounds * rewardEpochInfo.canonicalFeedOrder.length,
          conditionMet: false,
          totalHits: 0,
          feedHits: [],
       }
       voterToFtsoScalingConditionSummary.set(voter, ftsoScalingConditionSummary);
-      const expectedUpdatesPPM = (BigInt(signingWeight) * TOTAL_PPM) / BigInt(totalSigningWeight),
+      const proportionUpdatesPPM = (BigInt(signingWeight) * TOTAL_PPM) / BigInt(totalSigningWeight);
+      const expectedUpdatesPPM = (BigInt(signingWeight) * FU_THRESHOLD_PPM) / BigInt(totalSigningWeight);
       const fuConditionSummary: FUConditionSummary = {
          conditionMet: false,
          totalUpdatesByAll: 0,
          updates: 0,
          expectedUpdatesPPM,
-         tooLowWeight: expectedUpdatesPPM < FU_CONSIDERATION_THRESHOLD_PPM,
+         tooLowWeight: proportionUpdatesPPM < FU_CONSIDERATION_THRESHOLD_PPM,
       }
       voterToFUConditionSummary.set(voter, fuConditionSummary);
       const stakingConditionSummary: StakingConditionSummary = {
@@ -148,7 +109,8 @@ export function calculateMinimalConditions(
       for (let feedInfo of rewardEpochInfo.canonicalFeedOrder) {
          const feedHits: FeedHits = {
             feedId: feedInfo.id,
-            hits: 0,
+            feedHits: 0,
+            totalHits: numberOfVotingRounds
          }
          voterFeedHits.set(feedInfo.id, feedHits);
       }
@@ -172,7 +134,7 @@ export function calculateMinimalConditions(
    }
 
    // Checking staking conditions
-   for (const [voter, stakingConditionSummary] of voterToStakingConditionSummary.entries()) {
+   for (const [_, stakingConditionSummary] of voterToStakingConditionSummary.entries()) {
       for (const nodeCondition of stakingConditionSummary.nodeConditions) {
          if (nodeCondition.uptimeOk) {
             stakingConditionSummary.stakeWithUptime += nodeCondition.totalStakeAmount;
@@ -181,13 +143,19 @@ export function calculateMinimalConditions(
          stakingConditionSummary.stake += nodeCondition.totalStakeAmount;
       }
       // STAKING_UPTIME_THRESHOLD_PPM (80%) of total weight must have sufficient uptime
-      stakingConditionSummary.conditionMet =
+      const uptimeOk =
          TOTAL_PPM * stakingConditionSummary.stakeWithUptime >= STAKING_UPTIME_THRESHOLD_PPM * stakingConditionSummary.stake;
+
+      stakingConditionSummary.conditionMet = uptimeOk && stakingConditionSummary.totalSelfBond >= STAKING_MIN_SELF_BOND_GWEI;
+      stakingConditionSummary.obstructsPass =
+         stakingConditionSummary.totalSelfBond < STAKING_MIN_DESIRED_SELF_BOND_GWEI || stakingConditionSummary.stake < STAKING_MIN_DESIRED_STAKE_GWEI;
    }
 
    // Processing by voting rounds
    let totalFUUpdates = 0;
+   let nonEmptyFeedValues = 0;
    for (let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId; votingRoundId <= rewardEpochInfo.endVotingRoundId; votingRoundId++) {
+      if (votingRoundId % 100 === 0) console.log(votingRoundId);
       const rewardCalculationData = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
 
       // Fast updates checks
@@ -204,6 +172,7 @@ export function calculateMinimalConditions(
          const fuConditionSummary = voterToFUConditionSummary.get(voter);
          fuConditionSummary.updates++;
       }
+
       // FTSO Scaling checks
       for (let feedRecord of rewardCalculationData.medianCalculationResults) {
          const feedId = feedRecord.feed.id;
@@ -211,6 +180,7 @@ export function calculateMinimalConditions(
             continue;
          }
          const median = feedRecord.data.finalMedian.value;
+         nonEmptyFeedValues++;
          const delta = BigInt(median) * FTSO_SCALING_CLOSENESS_THRESHOLD_PPM / TOTAL_PPM;
          const low = median - Number(delta);
          const high = median + Number(delta);
@@ -220,19 +190,107 @@ export function calculateMinimalConditions(
             throw new Error(`Feed values and voters submit addresses length mismatch for feed ${feedId}`);
          }
          for (let i = 0; i < feedRecord.feedValues.length; i++) {
-            // TODO: write logic
+            const submitAddress = feedRecord.votersSubmitAddresses[i];
+            const feedValue = feedRecord.feedValues[i];
+            const feedHits = submitAddressToFeedToHits.get(submitAddress)?.get(feedId);
+            if (!feedHits) {
+               // sanity check
+               throw new Error(`Feed hits not found for submit address ${submitAddress} and feed ${feedId}`);
+            }
+            if (feedRecord.data.finalMedian.decimals !== feedValue.decimals) {
+               // sanity check
+               throw new Error(`Decimals mismatch for feed ${feedId}`);
+            }
+            // boundaries included
+            if (feedValue.value >= low && feedValue.value <= high) {
+               feedHits.feedHits++;
+            }
          }
       }
    }
 
-   // TODO: go over all data providers and check minimal conditions for fast updates
+   // go over all data providers and check minimal conditions for fast updates
    for (const [voter, fuConditionSummary] of voterToFUConditionSummary.entries()) {
       fuConditionSummary.totalUpdatesByAll = totalFUUpdates;
-      fuConditionSummary.conditionMet = TOTAL_PPM * BigInt(fuConditionSummary.updates) >= FU_THRESHOLD_PPM * BigInt(totalFUUpdates);
+      fuConditionSummary.conditionMet = fuConditionSummary.tooLowWeight ||
+         TOTAL_PPM * BigInt(fuConditionSummary.updates) >= fuConditionSummary.expectedUpdatesPPM * BigInt(totalFUUpdates)
    }
 
-   // TODO: go over all data providers and check minimal conditions for ftso scaling
+   for (const [voter, ftsoScalingConditionSummary] of voterToFtsoScalingConditionSummary.entries()) {
+      for (let feed of rewardEpochInfo.canonicalFeedOrder) {
+         const feedId = feed.id;
+         const feedHits = submitAddressToFeedToHits.get(voterToSubmitAddress.get(voter))?.get(feedId);
+         if (!feedHits) {
+            // sanity check
+            throw new Error(`Feed hits not found for voter ${voter} and feed ${feedId}`);
+         }
+         ftsoScalingConditionSummary.feedHits.push(feedHits);
+         ftsoScalingConditionSummary.totalHits += feedHits.feedHits;
+      }
+      ftsoScalingConditionSummary.conditionMet =
+         TOTAL_PPM * BigInt(ftsoScalingConditionSummary.totalHits) >= FTSO_SCALING_AVAILABILITY_THRESHOLD_PPM * BigInt(ftsoScalingConditionSummary.allPossibleHits);
+   }
 
-   // TODO: assemble all DataProviderConditions for each data provider
+   const dataProviderConditions: DataProviderConditions[] = [];
+   for (const regInfo of rewardEpochInfo.voterRegistrationInfo) {
+      const voter = regInfo.voterRegistered.voter.toLowerCase();
+      const ftsoScaling = voterToFtsoScalingConditionSummary.get(voter);
+      const fastUpdates = voterToFUConditionSummary.get(voter);
+      const staking = voterToStakingConditionSummary.get(voter);
+      const voterIndex = voterToVoterIndex.get(voter);
+
+      if (ftsoScaling === undefined) {
+         throw new Error(`FTSO scaling condition summary not found for voter ${voter}`);
+      }
+      if (fastUpdates === undefined) {
+         throw new Error(`Fast updates condition summary not found for voter ${voter}`);
+      }
+      if (staking === undefined) {
+         throw new Error(`Staking condition summary not found for voter ${voter}`);
+      }
+      if (voterIndex === undefined) {
+         throw new Error(`Voter index not found for voter ${voter}`);
+      }
+      const passes = voterToPassesInputData.get(voter);
+      const passesHeld = passes?.passes ?? 0;
+      // assemble all DataProviderConditions for each data provider
+      let passEarned = false;
+      if (ftsoScaling.conditionMet && fastUpdates.conditionMet && staking.conditionMet && !staking.obstructsPass) {
+         passEarned = true;
+      }
+      let strikes = 0;
+      if (!ftsoScaling.conditionMet) {
+         strikes++;
+      }
+      if (!fastUpdates.conditionMet) {
+         strikes++;
+      }
+      if (!staking.conditionMet) {
+         strikes++;
+      }
+
+      const eligibleForReward = passesHeld - strikes >= 0;
+      // Cannot go below zero
+      let newNumberOfPasses = Math.max(passesHeld - strikes, 0);
+      if (passEarned) {
+         newNumberOfPasses++;
+      }
+      newNumberOfPasses = Math.min(newNumberOfPasses, MAX_NUMBER_OF_PASSES);
+      const dataProviderCondition: DataProviderConditions = {
+         voterAddress: voter,
+         voterIndex: voterToVoterIndex.get(voter),
+         passesHeld,
+         passEarned,
+         strikes,
+         eligibleForReward,
+         newNumberOfPasses,
+         ftsoScaling,
+         fastUpdates,
+         staking
+      }
+      dataProviderConditions.push(dataProviderCondition);
+   }
+
+   return dataProviderConditions;
 }
 

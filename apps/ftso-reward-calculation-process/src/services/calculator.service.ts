@@ -46,6 +46,8 @@ import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculatio
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
 import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
 import { calculateAttestationTypeAppearances } from "../libs/attestation-type-appearances";
+import { calculateMinimalConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions";
+import { writeDataProviderConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/input-interfaces";
 
 if (process.env.FORCE_NOW) {
   const newNow = parseInt(process.env.FORCE_NOW) * 1000;
@@ -293,6 +295,14 @@ export class CalculatorService {
       await this.fullRoundAggregateClaims(options);
     }
   }
+
+  processMinimalConditions(options: OptionalCommandOptions): void {
+    if (options.rewardEpochId === undefined) {
+      throw new Error("Reward epoch id is required for minimal conditions calculation");
+    }
+    const result = calculateMinimalConditions(options.rewardEpochId, false);
+    writeDataProviderConditions(options.rewardEpochId, result);
+  }
   /**
    * Returns a list of all (merged) reward claims for the given reward epoch.
    * Calculation can be quite intensive.
@@ -300,6 +310,10 @@ export class CalculatorService {
   async run(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     logger.log(options);
+    if (options.minimalConditions) {
+      this.processMinimalConditions(options);
+      return;
+    }
     if (options.rewardEpochId !== undefined) {
       await this.processOneRewardEpoch(options);
       return;

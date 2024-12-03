@@ -173,4 +173,13 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   parseIncrementalCalculation(val: string): boolean {
     return JSON.parse(val);
   }
+
+  @Option({
+    flags: "-f, --minimalConditions [number]",
+    description: "process minimal conditions",
+  })
+  parseMinimalConditions(val: string): boolean {
+    return JSON.parse(val);
+  }
+
 }

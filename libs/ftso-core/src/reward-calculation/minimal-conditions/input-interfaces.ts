@@ -1,7 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { base58 } from '@scure/base';
 import path from "path/posix";
-import { PASSES_DATA_FOLDER, STAKING_DATA_FOLDER } from "../../configs/networks";
+import { CALCULATIONS_FOLDER, PASSES_DATA_FOLDER, STAKING_DATA_FOLDER } from "../../configs/networks";
+import { DataProviderConditions } from "./minimal-conditions-interfaces";
+import { bigIntReplacer } from "../../utils/big-number-serialization";
 
 export interface Delegator {
    // pChain address, like flare123l344hlugpg0r2ntdl6fn45qyp0f5m2xakc0r
@@ -114,7 +116,7 @@ export function readStakingInfo(
    for(let validatorInfo of result) {
       // "NodeID-2a7BPY7UeJv2njMuyUHfBSTeQCYZj6bwV"
       // Checksum is not validated
-      validatorInfo.nodeId20Byte = Buffer.from(base58.decode(validatorInfo.nodeId.slice(7)).subarray(0, -4)).toString("hex");
+      validatorInfo.nodeId20Byte = "0x" + Buffer.from(base58.decode(validatorInfo.nodeId.slice(7)).subarray(0, -4)).toString("hex");
    }
    return result;
 }
@@ -126,8 +128,11 @@ export function readStakingInfo(
 export function readPassesInfo(
    rewardEpochId: number,
    passesDataFolder = PASSES_DATA_FOLDER()
-): DataProviderPasses[] {
+): DataProviderPasses[] | undefined {
    const fname = path.join(passesDataFolder, `${rewardEpochId}-passes-data.json`);
+   if(!existsSync(fname)) {
+      return undefined;
+   }
    const data = readFileSync(fname, 'utf8');
    return JSON.parse(data);
 }
@@ -145,4 +150,19 @@ export function writePassesInfo(
    }
    const fname = path.join(passesDataFolder, `${rewardEpochId}-passes-data.json`);
    writeFileSync(fname, JSON.stringify(data));
+}
+
+/**
+ * Writes the staking info for a given reward epoch id.
+ */
+export function writeDataProviderConditions(
+   rewardEpochId: number,
+   data: DataProviderConditions[],
+   calculationFolder = CALCULATIONS_FOLDER()
+): void {
+   if (!existsSync(calculationFolder)) {
+      mkdirSync(calculationFolder, { recursive: true });
+   }
+   const fname = path.join(calculationFolder, `${rewardEpochId}`, `minimal-conditions.json`);
+   writeFileSync(fname, JSON.stringify(data, bigIntReplacer));
 }

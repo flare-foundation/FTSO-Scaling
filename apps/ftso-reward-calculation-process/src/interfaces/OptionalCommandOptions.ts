@@ -23,4 +23,5 @@ export interface OptionalCommandOptions {
   useFDCData?: boolean;
   tempRewardEpochFolder?: boolean;
   incrementalCalculation?: boolean;
+  minimalConditions?: boolean;
 }
