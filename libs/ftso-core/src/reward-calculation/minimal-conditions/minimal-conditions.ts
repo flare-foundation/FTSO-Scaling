@@ -1,4 +1,3 @@
-import { DataProviderPasses, readPassesInfo, readStakingInfo } from "./input-interfaces";
 import { deserializeDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
 import { deserializeRewardEpochInfo } from "../../utils/stat-info/reward-epoch-info";
 import {
@@ -12,8 +11,10 @@ import {
    STAKING_UPTIME_THRESHOLD_PPM,
    TOTAL_PPM
 } from "./minimal-conditions-constants";
+import { readPassesInfo, readStakingInfo } from "./minimal-conditions-data";
 import {
    DataProviderConditions,
+   DataProviderPasses,
    FUConditionSummary,
    FeedHits,
    FtsoScalingConditionSummary,

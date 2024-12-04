@@ -47,7 +47,7 @@ import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calcula
 import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
 import { calculateAttestationTypeAppearances } from "../libs/attestation-type-appearances";
 import { calculateMinimalConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions";
-import { writeDataProviderConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/input-interfaces";
+import { writeDataProviderConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions-data";
 
 if (process.env.FORCE_NOW) {
   const newNow = parseInt(process.env.FORCE_NOW) * 1000;
