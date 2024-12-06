@@ -69,7 +69,7 @@ const SONGBIRD_CONFIG: NetworkContractAddresses = {
     name: "FastUpdateIncentiveManager",
     address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006",
   },
-  FdcHub: { name: "FdcHub", address: "" },
+  FdcHub: { name: "FdcHub", address: "0xCfD4669a505A70c2cE85db8A1c1d14BcDE5a1a06" },
 };
 
 const FLARE_CONFIG: NetworkContractAddresses = {
