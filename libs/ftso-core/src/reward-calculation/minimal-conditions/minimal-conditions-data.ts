@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { base58 } from '@scure/base';
 import path from "path/posix";
 import { CALCULATIONS_FOLDER, PASSES_DATA_FOLDER, STAKING_DATA_FOLDER } from "../../configs/networks";
-import { DataProviderConditions, DataProviderPasses, ValidatorInfo } from "./minimal-conditions-interfaces";
+import { DataProviderConditions, DataProviderPasses, ListedProviderList, ValidatorInfo } from "./minimal-conditions-interfaces";
 import { bigIntReplacer } from "../../utils/big-number-serialization";
 
 /**
@@ -67,5 +67,11 @@ export function writeDataProviderConditions(
       mkdirSync(calculationFolder, { recursive: true });
    }
    const fname = path.join(calculationFolder, `${rewardEpochId}`, `minimal-conditions.json`);
-   writeFileSync(fname, JSON.stringify(data, bigIntReplacer));
+   writeFileSync(fname, JSON.stringify(data, bigIntReplacer, 2));
+}
+
+export function readListedDataProviders(): ListedProviderList {
+   const fname = path.join(`listed-data-providers`, `bifrost-wallet.providerlist.json`);
+   const data = readFileSync(fname, 'utf8');
+   return JSON.parse(data);
 }

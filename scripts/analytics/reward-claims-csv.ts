@@ -146,6 +146,9 @@ function writeAllClaimsForRewardEpochRange(startRewardEpochId: number, endReward
 }
 
 function decodeFeed(feedIdHex: string): string {
+  if(!feedIdHex) {
+    return "------";
+  }
   const name = Buffer.from(feedIdHex.slice(4), "hex").toString("utf8").replaceAll("\0", "");
   return name;
 }

@@ -3,6 +3,21 @@ import { deserializeGranulatedPartialOfferMap, deserializeGranulatedPartialOffer
 import { deserializeRewardEpochInfo } from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
 import { deserializeDataForRewardCalculation } from "../../../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
 
+
+function extractName(hexInput: string) {
+  const hex = hexInput.startsWith("0x") ? hexInput.slice(2) : hexInput;
+  let result = "";
+  for (let i = 0; i < hex.length; i += 2) {
+    const charHexCode = hex.slice(i, i + 2);
+    if (charHexCode === "00") {
+      continue;
+    }
+    result += String.fromCharCode(parseInt(charHexCode, 16));
+  }
+  return result;
+}
+
+
 async function main() {
   if (!process.argv[2]) {
     throw new Error("no rewardEpochId");
@@ -36,6 +51,8 @@ async function main() {
   let fastUpdatesOfferAmount = 0n;
   let fdcOfferAmount = 0n;
   let fdcOfferBurn = 0n;
+  let attestationRequestCount = 0;
+  let acceptedAttestationRequestCount = 0;
   for (let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId; votingRoundId <= rewardEpochInfo.endVotingRoundId; votingRoundId++) {
     const ftsoOfferClaims = deserializeGranulatedPartialOfferMap(rewardEpochId, votingRoundId, calculationFolder);
     for (let [_, offers] of ftsoOfferClaims.entries()) {
@@ -65,9 +82,30 @@ async function main() {
     );
 
     if (!noFDC) {
+      attestationRequestCount += data.fdcData.attestationRequests.length;
+      let reqString = "";
+      let i = 0;
       for (let attestationRequest of data.fdcData.attestationRequests) {
         fdcFunds += attestationRequest.fee;
+        if (attestationRequest.confirmed) {
+          acceptedAttestationRequestCount++;
+        }
+        const attType = extractName(attestationRequest.data.slice(2, 66)).slice(0, 3);
+        const attSource = extractName(attestationRequest.data.slice(66, 130));
+        const duplicate = attestationRequest.duplicate ? "D" : "";
+        const confirmed = attestationRequest.confirmed ? "C" : "";
+        reqString += `${i} ${attType}/${attSource} ${confirmed}${duplicate},`;
+        i++;
       }
+      if(data.fdcData.attestationRequests.length > 0) {
+        const finalized = data.fdcData.firstSuccessfulFinalization ? "F" : "";
+        const consensusBitvote = data.fdcData.consensusBitVoteIndices;
+        const firstVotingRoundTs = 1658429955;
+        const time = firstVotingRoundTs + votingRoundId * 90;
+        const date = `${new Date(time * 1000)}`.replace(" GMT+0100 (Central European Standard Time)", "");
+        console.log(`${votingRoundId}: ${data.fdcData.attestationRequests.length} ${finalized} ${consensusBitvote.length}/${data.fdcData.attestationRequests.length} | ${consensusBitvote} | ${date} || ${reqString}`);
+      }
+      
     }
   }
 
@@ -75,6 +113,7 @@ async function main() {
   console.log(`Fast Updates Funds: ${fastUpdatesOfferAmount} ${fastUpdatesFunds - fastUpdatesOfferAmount}`);
   console.log(`FDC Funds: ${fdcFunds - fdcOfferAmount}`);
   console.log(`FDC Offer Burn: ${fdcOfferBurn}`);
+  console.log(`Total attestation requests: ${attestationRequestCount}, accepted ${acceptedAttestationRequestCount}`);
 }
 
 main()

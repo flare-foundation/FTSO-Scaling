@@ -117,8 +117,8 @@ export interface ConditionSummary {
 }
 
 export interface FeedHits {
-   // feed id
-   feedId: string;
+   // feed name
+   feedName: string;
    // hits out of totalHits
    feedHits: number;
    // all feed hits
@@ -143,6 +143,8 @@ export interface FUConditionSummary extends ConditionSummary {
    tooLowWeight: boolean;
    // expected PPM share based on the share of the weight
    expectedUpdatesPPM: bigint;
+   // expected number of updates
+   expectedUpdates: bigint;
 }
 
 export interface NodeStakingConditions {
@@ -171,6 +173,12 @@ export interface StakingConditionSummary extends ConditionSummary {
 
 // Reflects a record about minimal condition calculation for a data provider.
 export interface DataProviderConditions {
+   // reward epoch id
+   network: string;
+   // network name
+   rewardEpochId: number;
+   // data provider name
+   dataProviderName?: string;
    // voter identity address
    voterAddress: string;
    // voter index
@@ -191,4 +199,31 @@ export interface DataProviderConditions {
    fastUpdates: FUConditionSummary;
    // staking conditions
    staking: StakingConditionSummary;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// Listed providers for Bifrost wallet types
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+export interface ListedProviderListVersion {
+   major: number;
+   minor: number;
+   patch: number;
+}
+
+export interface ListedProvider {
+   chainId: number;
+   name: string;
+   description: string;
+   url: string;
+   address: string;
+   logoURI: string;
+   listed: boolean;
+}
+
+export interface ListedProviderList {
+   name: string;
+   timestamp: string;
+   version: ListedProviderListVersion;
+   providers: ListedProvider[];
 }

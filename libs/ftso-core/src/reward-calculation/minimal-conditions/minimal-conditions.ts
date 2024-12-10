@@ -11,7 +11,7 @@ import {
    STAKING_UPTIME_THRESHOLD_PPM,
    TOTAL_PPM
 } from "./minimal-conditions-constants";
-import { readPassesInfo, readStakingInfo } from "./minimal-conditions-data";
+import { readListedDataProviders, readPassesInfo, readStakingInfo } from "./minimal-conditions-data";
 import {
    DataProviderConditions,
    DataProviderPasses,
@@ -19,9 +19,32 @@ import {
    FeedHits,
    FtsoScalingConditionSummary,
    NodeStakingConditions,
-   StakingConditionSummary
+   StakingConditionSummary,
+   ValidatorInfo
 } from "./minimal-conditions-interfaces";
 
+function networkId() {
+   if(process.env.NETWORK === "flare") {
+      return 14;
+   }
+   if(process.env.NETWORK === "songbird") {
+      return 19;
+   }
+   throw new Error(`Network ${process.env.NETWORK} not supported`);
+}
+
+function toFeedName(hex: string) {
+   let result = "";
+   for (let i = 4; i < hex.length; i += 2) {
+     const charHexCode = hex.slice(i, i + 2);
+     if (charHexCode === "00") {
+       continue;
+     }
+     result += String.fromCharCode(parseInt(charHexCode, 16));
+   }
+   return result;
+ }
+ 
 export function calculateMinimalConditions(
    rewardEpochId: number,
    requirePassesFile: boolean
@@ -43,14 +66,18 @@ export function calculateMinimalConditions(
    const voterToFUConditionSummary = new Map<string, FUConditionSummary>();
    const voterToStakingConditionSummary = new Map<string, StakingConditionSummary>();
    const nodeIdToVoter = new Map<string, string>();
+   const delegationAddressToVoter = new Map<string, string>();
    const nodeIdToNodeStakingCondition = new Map<string, NodeStakingConditions>();
    const submitAddressToFeedToHits = new Map<string, Map<string, FeedHits>>();
    const voterToPassesInputData = new Map<string, DataProviderPasses>();
+   const voterToName = new Map<string, string>();
+
+   const stakingIncluded = process.env.NETWORK === "flare";
 
    const totalSigningWeight = rewardEpochInfo.signingPolicy.weights.reduce((acc, weight) => acc + weight, 0);
 
    const numberOfVotingRounds = (rewardEpochInfo.endVotingRoundId - rewardEpochInfo.signingPolicy.startVotingRoundId + 1);
-
+   
    for (let dataProviderPasses of passesInputData) {
       let voter = dataProviderPasses.voterAddress.toLowerCase();
       voterToPassesInputData.set(voter, dataProviderPasses);
@@ -61,9 +88,11 @@ export function calculateMinimalConditions(
       const signingWeight = rewardEpochInfo.signingPolicy.weights[i];
       const submissionAddress = rewardEpochInfo.voterRegistrationInfo[i].voterRegistered.submitAddress.toLowerCase();
       const signingPolicyAddress = rewardEpochInfo.voterRegistrationInfo[i].voterRegistered.signingPolicyAddress.toLowerCase();
+      const delegationAddress = rewardEpochInfo.voterRegistrationInfo[i].voterRegistrationInfo.delegationAddress.toLowerCase();
       submitAddressToVoter.set(submissionAddress, voter);
       voterToSubmitAddress.set(voter, submissionAddress);
       signingPolicyAddressToVoter.set(signingPolicyAddress, voter);
+      delegationAddressToVoter.set(delegationAddress, voter);
       voterToVoterIndex.set(voter, i);
       const ftsoScalingConditionSummary: FtsoScalingConditionSummary = {
          allPossibleHits: numberOfVotingRounds * rewardEpochInfo.canonicalFeedOrder.length,
@@ -79,6 +108,7 @@ export function calculateMinimalConditions(
          totalUpdatesByAll: 0,
          updates: 0,
          expectedUpdatesPPM,
+         expectedUpdates: 0n,
          tooLowWeight: proportionUpdatesPPM < FU_CONSIDERATION_THRESHOLD_PPM,
       }
       voterToFUConditionSummary.set(voter, fuConditionSummary);
@@ -109,7 +139,7 @@ export function calculateMinimalConditions(
       const voterFeedHits = new Map<string, FeedHits>();
       for (let feedInfo of rewardEpochInfo.canonicalFeedOrder) {
          const feedHits: FeedHits = {
-            feedId: feedInfo.id,
+            feedName: toFeedName(feedInfo.id),
             feedHits: 0,
             totalHits: numberOfVotingRounds
          }
@@ -118,14 +148,29 @@ export function calculateMinimalConditions(
       submitAddressToFeedToHits.set(submissionAddress, voterFeedHits);
    }
 
+   const dataProviderData = readListedDataProviders();   
+   for(let provider of dataProviderData.providers) {
+      if(provider.chainId !== networkId()) {
+         continue;
+      }
+      const delegationAddress = provider.address.toLowerCase();
+      const voter = delegationAddressToVoter.get(delegationAddress);
+      if(voter !== undefined) {
+         voterToName.set(voter, provider.name);
+      }
+   }
+
    // Reading staking info data for reward epoch and updating node conditions
-   const validatorInfoList = readStakingInfo(rewardEpochId);
+   let validatorInfoList: ValidatorInfo[] = stakingIncluded ? readStakingInfo(rewardEpochId) : [];
+   if(!stakingIncluded) {
+      console.log(`Staking data not relevant for the network ${process.env.NETWORK}`);
+   }
    for (const validatorInfo of validatorInfoList) {
       const nodeId = validatorInfo.nodeId20Byte;
       const condition = nodeIdToNodeStakingCondition.get(nodeId);
       if (condition === undefined) {
          // TODO: log properly
-         console.log(`Node ${nodeId} not found in the voter registration info`);
+         console.log(`Node ${nodeId} / ${validatorInfo.nodeId} by ${validatorInfo.ftsoName} not found in the voter registration info`);
          continue;
       }
       condition.selfBond = BigInt(validatorInfo.selfBond);
@@ -136,6 +181,10 @@ export function calculateMinimalConditions(
 
    // Checking staking conditions
    for (const [_, stakingConditionSummary] of voterToStakingConditionSummary.entries()) {
+      if(!stakingIncluded) {
+         stakingConditionSummary.conditionMet = true;
+         continue;
+      }
       for (const nodeCondition of stakingConditionSummary.nodeConditions) {
          if (nodeCondition.uptimeOk) {
             stakingConditionSummary.stakeWithUptime += nodeCondition.totalStakeAmount;
@@ -213,6 +262,7 @@ export function calculateMinimalConditions(
    // go over all data providers and check minimal conditions for fast updates
    for (const [voter, fuConditionSummary] of voterToFUConditionSummary.entries()) {
       fuConditionSummary.totalUpdatesByAll = totalFUUpdates;
+      fuConditionSummary.expectedUpdates = fuConditionSummary.expectedUpdatesPPM * BigInt(totalFUUpdates) / TOTAL_PPM;
       fuConditionSummary.conditionMet = fuConditionSummary.tooLowWeight ||
          TOTAL_PPM * BigInt(fuConditionSummary.updates) >= fuConditionSummary.expectedUpdatesPPM * BigInt(totalFUUpdates)
    }
@@ -278,6 +328,9 @@ export function calculateMinimalConditions(
       }
       newNumberOfPasses = Math.min(newNumberOfPasses, MAX_NUMBER_OF_PASSES);
       const dataProviderCondition: DataProviderConditions = {
+         rewardEpochId,
+         network: process.env.NETWORK,
+         dataProviderName: voterToName.get(voter),
          voterAddress: voter,
          voterIndex: voterToVoterIndex.get(voter),
          passesHeld,
