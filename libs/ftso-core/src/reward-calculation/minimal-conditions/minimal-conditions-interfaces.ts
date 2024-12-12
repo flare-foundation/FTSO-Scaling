@@ -108,6 +108,36 @@ export interface DataProviderPasses {
 // Minimal condition calculation result types
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
+// Reflects a record about minimal condition calculation for a data provider.
+export interface DataProviderConditions {
+   // reward epoch id
+   network: string;
+   // network name
+   rewardEpochId: number;
+   // data provider name
+   dataProviderName?: string;
+   // voter identity address
+   voterAddress: string;
+   // voter index
+   voterIndex: number;
+   // passes held before the reward epoch calculation
+   passesHeld: number;
+   // strikes
+   strikes: number;
+   // whether a pass has been earned
+   passEarned: boolean;
+   // eligible for reward
+   eligibleForReward: boolean;
+   // new number of passes after the reward epoch calculation
+   newNumberOfPasses: number;
+   // ftso scaling conditions summary
+   ftsoScaling: FtsoScalingConditionSummary;
+   // fast update conditions summary
+   fastUpdates: FUConditionSummary;
+   // staking conditions summary
+   staking: StakingConditionSummary;
+}
+
 export interface ConditionSummary {
    // whether a minimal condition is met
    conditionMet: boolean;
@@ -116,6 +146,7 @@ export interface ConditionSummary {
    obstructsPass?: boolean;
 }
 
+// Summary how many times a FTSO scaling feed was in 0.5% band around the consensus median value
 export interface FeedHits {
    // feed name
    feedName: string;
@@ -125,28 +156,32 @@ export interface FeedHits {
    totalHits: number;
 }
 
+// Summary of FTSO scaling conditions
 export interface FtsoScalingConditionSummary extends ConditionSummary {
    // total number of feed values, equals number of voting rounds in the reward epoch times number of feeds
    allPossibleHits: number;
-   // stat telling how many feed values were not empty
+   // stat telling how many feed values were not empty. Percentage of this related to allPossibilities is used to 
+   // calculate meeting the criteria
    totalHits: number;
    // feed hit stats for each feed in the canonical feed order
    feedHits: FeedHits[];
 }
 
+// Summary of fast update conditions
 export interface FUConditionSummary extends ConditionSummary {
    // total updates by all providers in the reward epoch
    totalUpdatesByAll: number;
    // updates by the provider in the reward epoch
    updates: number;
-   //exempt due to low weight
+   // exempt due to low weight, less than 0.2%
    tooLowWeight: boolean;
-   // expected PPM share based on the share of the weight
+   // expected PPM (parts per million) share based on the share of the weight
    expectedUpdatesPPM: bigint;
    // expected number of updates
    expectedUpdates: bigint;
 }
 
+// Summary of staking conditions
 export interface NodeStakingConditions {
    // node id as 20 byte hex string
    nodeId: string;
@@ -169,36 +204,6 @@ export interface StakingConditionSummary extends ConditionSummary {
    stakeWithUptime: bigint;
    // node conditions
    nodeConditions: NodeStakingConditions[];
-}
-
-// Reflects a record about minimal condition calculation for a data provider.
-export interface DataProviderConditions {
-   // reward epoch id
-   network: string;
-   // network name
-   rewardEpochId: number;
-   // data provider name
-   dataProviderName?: string;
-   // voter identity address
-   voterAddress: string;
-   // voter index
-   voterIndex: number;
-   // passes held
-   passesHeld: number;
-   // strikes
-   strikes: number;
-   // pass earned
-   passEarned: boolean;
-   // eligible for reward
-   eligibleForReward: boolean;
-   // new number of passes after the reward epoch calculation
-   newNumberOfPasses: number;
-   // ftso scaling conditions
-   ftsoScaling: FtsoScalingConditionSummary;
-   // fast update conditions
-   fastUpdates: FUConditionSummary;
-   // staking conditions
-   staking: StakingConditionSummary;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
