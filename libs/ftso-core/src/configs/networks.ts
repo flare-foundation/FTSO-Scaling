@@ -15,6 +15,7 @@ const TEST_CONFIG: NetworkContractAddresses = {
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "" },
   FastUpdateIncentiveManager: { name: "FastUpdateIncentiveManager", address: "" },
+  FdcHub: { name: "FdcHub", address: "" },
 };
 
 const COSTON_CONFIG: NetworkContractAddresses = {
@@ -32,6 +33,7 @@ const COSTON_CONFIG: NetworkContractAddresses = {
     name: "FastUpdateIncentiveManager",
     address: "0x8c45666369B174806E1AB78D989ddd79a3267F3b",
   },
+  FdcHub: { name: "FdcHub", address: "0x1c78A073E3BD2aCa4cc327d55FB0cD4f0549B55b" },
 };
 
 const COSTON2_CONFIG: NetworkContractAddresses = {
@@ -49,6 +51,7 @@ const COSTON2_CONFIG: NetworkContractAddresses = {
     name: "FastUpdateIncentiveManager",
     address: "0xC71C1C6E6FB31eF6D948B2C074fA0d38a07D4f68",
   },
+  FdcHub: { name: "FdcHub", address: "" },
 };
 
 const SONGBIRD_CONFIG: NetworkContractAddresses = {
@@ -66,6 +69,7 @@ const SONGBIRD_CONFIG: NetworkContractAddresses = {
     name: "FastUpdateIncentiveManager",
     address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006",
   },
+  FdcHub: { name: "FdcHub", address: "0xCfD4669a505A70c2cE85db8A1c1d14BcDE5a1a06" },
 };
 
 const FLARE_CONFIG: NetworkContractAddresses = {
@@ -83,6 +87,7 @@ const FLARE_CONFIG: NetworkContractAddresses = {
     name: "FastUpdateIncentiveManager",
     address: "0xd648e8ACA486Ce876D641A0F53ED1F2E9eF4885D",
   },
+  FdcHub: { name: "FdcHub", address: "" },
 };
 
 export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird" | "flare";
@@ -132,6 +137,22 @@ const contracts = () => {
         !isValidContractAddress(process.env.FTSO_CA_VOTER_REGISTRY_ADDRESS)
       )
         throw new Error("FTSO_CA_VOTER_REGISTRY_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_FAST_UPDATER_ADDRESS ||
+        !isValidContractAddress(process.env.FTSO_CA_FAST_UPDATER_ADDRESS)
+      )
+        throw new Error("FTSO_CA_FAST_UPDATER_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS ||
+        !isValidContractAddress(process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS)
+      )
+        throw new Error("FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS value is not valid contract address");
+      if (
+        !process.env.FTSO_CA_FDC_HUB_ADDRESS ||
+        !isValidContractAddress(process.env.FTSO_CA_FDC_HUB_ADDRESS)
+      )
+        throw new Error("FTSO_CA_FDC_HUB_ADDRESS value is not valid contract address");
+
       const CONTRACT_CONFIG: NetworkContractAddresses = {
         FlareSystemsManager: { name: "FlareSystemsManager", address: process.env.FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS },
         FtsoRewardOffersManager: {
@@ -153,6 +174,7 @@ const contracts = () => {
           name: "FastUpdateIncentiveManager",
           address: process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS,
         },
+        FdcHub: { name: "FdcHub", address: process.env.FTSO_CA_FDC_HUB_ADDRESS },
       };
       return CONTRACT_CONFIG;
     }
@@ -211,6 +233,28 @@ const ftso2FastUpdatesProtocolId = () => {
 
 // Protocol id for FTSO2 fast updates
 export const FTSO2_FAST_UPDATES_PROTOCOL_ID = ftso2FastUpdatesProtocolId();
+
+
+const FDCProtocolId = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "coston":
+    case "from-env":
+    case "local-test":
+    case "coston2":
+    case "songbird":
+    case "flare":
+      return 200;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => { })(network);
+  }
+};
+
+// Protocol id for FDC
+export const FDC_PROTOCOL_ID = FDCProtocolId();
+
 
 const epochSettings = () => {
   const network = process.env.NETWORK as networks;
@@ -672,4 +716,54 @@ export const COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 779191;
 // set to start voting round id of epoch 234
 // on Songbird there was no missing event for the voting round
 // Only used to filter out the old events
-export const SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 786240; 
+export const SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID = 786240;
+
+export const WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH = "WRONG_SIGNATURE";
+
+export const STAKING_DATA_BASE_FOLDER = "staking-data";
+
+export const STAKING_DATA_FOLDER = () => {
+  const network = process.env.NETWORK as networks;
+  const STAKING_DATA_BASE_FOLDER = "staking-data";
+  switch (network) {
+    case "from-env":
+      return `${STAKING_DATA_BASE_FOLDER}/from-env`;
+    case "coston":
+      return `${STAKING_DATA_BASE_FOLDER}/coston`;
+    case "coston2":
+      return `${STAKING_DATA_BASE_FOLDER}/coston2`;
+    case "songbird":
+      return `${STAKING_DATA_BASE_FOLDER}/songbird`;
+    case "flare":
+      return `${STAKING_DATA_BASE_FOLDER}/flare`;
+    case "local-test":
+      return `${STAKING_DATA_BASE_FOLDER}/local-test`;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => { })(network);
+  }
+};
+
+export const PASSES_DATA_FOLDER = () => {
+  const network = process.env.NETWORK as networks;
+  const PASSES_DATA_BASE_FOLDER = "passes-data";
+  switch (network) {
+    case "from-env":
+      return `${PASSES_DATA_BASE_FOLDER}/from-env`;
+    case "coston":
+      return `${PASSES_DATA_BASE_FOLDER}/coston`;
+    case "coston2":
+      return `${PASSES_DATA_BASE_FOLDER}/coston2`;
+    case "songbird":
+      return `${PASSES_DATA_BASE_FOLDER}/songbird`;
+    case "flare":
+      return `${PASSES_DATA_BASE_FOLDER}/flare`;
+    case "local-test":
+      return `${PASSES_DATA_BASE_FOLDER}/local-test`;
+    default:
+      // Ensure exhaustive checking
+      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+      ((_: never): void => { })(network);
+  }
+};

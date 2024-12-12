@@ -159,10 +159,27 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   }
 
   @Option({
+    flags: "-z, --useFDCData [boolean]",
+    description: "Extracts data for FDC rewarding",
+  })
+  parseUseFDCDataMode(val: string): boolean {
+    return JSON.parse(val);
+  }
+
+  @Option({
     flags: "-l, --incrementalCalculation [boolean]",
     description: "Start incremental calculation for current reward epoch",
   })
   parseIncrementalCalculation(val: string): boolean {
     return JSON.parse(val);
   }
+
+  @Option({
+    flags: "-f, --minimalConditions [number]",
+    description: "process minimal conditions",
+  })
+  parseMinimalConditions(val: string): boolean {
+    return JSON.parse(val);
+  }
+
 }

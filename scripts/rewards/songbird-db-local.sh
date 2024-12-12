@@ -8,10 +8,10 @@ export DB_REQUIRED_INDEXER_HISTORY_TIME_SEC=86400
 export VOTING_ROUND_HISTORY_SIZE=10000
 export INDEXER_TOP_TIMEOUT=1000
 export DB_HOST=127.0.0.1
-export DB_PORT=3337
-export DB_USERNAME=root
-export DB_PASSWORD=root
-export DB_NAME=flare_ftso_indexer
+export DB_PORT=3306
+export DB_USERNAME=ftso-indxr-sgb-rdr
+export DB_PASSWORD=$(gcloud secrets versions access latest --project flare-network-production --secret="ftso_v2_c_chain_indexer_sgb_db_reader_password")
+export DB_NAME=flare_ftso_indexer_songbird
 
 export REMOVE_ANNOYING_MESSAGES=true
 
@@ -28,7 +28,7 @@ yarn nest build ftso-reward-calculation-process
 # In the current (ongoing) reward epoch the calculation is switched to incremental, as data becomes available. 
 # If the data for a specific reward epoch id is already available, the calculation is skipped.
 export FROM_REWARD_EPOCH_ID=196
-node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 100 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
+node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -b 100 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
 
 # Incremental calculation
 # node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -l -b 80 -w 5 -m 10000

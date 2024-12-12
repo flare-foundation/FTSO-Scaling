@@ -9,6 +9,7 @@ import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
 import { REWARD_EPOCH_INFO_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 import { FUInflationRewardsOffered } from "../../events/FUInflationRewardsOffered";
 import { IncentiveOffered } from "../../events/IncentiveOffered";
+import { FDCInflationRewardsOffered } from "../../events/FDCInflationRewardsOffered";
 
 export interface RewardEpochInfo {
   rewardEpochId: number;
@@ -23,13 +24,15 @@ export interface RewardEpochInfo {
   endVotingRoundId?: number;
   fuInflationRewardsOffered?: FUInflationRewardsOffered;
   fuIncentivesOffered?: IncentiveOffered[];
+  fdcInflationRewardsOffered?: FDCInflationRewardsOffered;
 }
 
 export function getRewardEpochInfo(
   rewardEpoch: RewardEpoch,
   endVotingRoundId?: number,
   fuInflationRewardsOffered?: FUInflationRewardsOffered,
-  fuIncentivesOffered?: IncentiveOffered[]
+  fuIncentivesOffered?: IncentiveOffered[],
+  fdcInflationRewardsOffered?: FDCInflationRewardsOffered
 ): RewardEpochInfo {
   const voterRegistrationInfo: FullVoterRegistrationInfo[] = [];
   for (const signingAddress of rewardEpoch.signingPolicy.voters) {
@@ -54,6 +57,7 @@ export function getRewardEpochInfo(
     endVotingRoundId,
     fuInflationRewardsOffered,
     fuIncentivesOffered,
+    fdcInflationRewardsOffered,
   };
   return result;
 }

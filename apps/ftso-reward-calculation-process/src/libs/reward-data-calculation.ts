@@ -20,6 +20,7 @@ import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/s
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { calculationOfRewardCalculationDataForRange } from "./calculator-utils";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
+import { FDCInflationRewardsOffered } from "../../../../libs/ftso-core/src/events/FDCInflationRewardsOffered";
 
 export async function runCalculateRewardCalculationTopJob(
   indexerClient: IndexerClientForRewarding,
@@ -42,6 +43,7 @@ export async function runCalculateRewardCalculationTopJob(
 
   let fuInflationRewardsOffered: FUInflationRewardsOffered | undefined;
   let fuIncentivesOfferedData: IncentiveOffered[] | undefined;
+  let fdcInflationRewardsOffered: FDCInflationRewardsOffered | undefined;
 
   if (options.useFastUpdatesData) {
     const fuInflationRewardsOfferedResponse = await indexerClient.getFUInflationRewardsOfferedEvents(
@@ -64,11 +66,25 @@ export async function runCalculateRewardCalculationTopJob(
     }
     fuIncentivesOfferedData = fuIncentivesOfferedResponse.data;
   }
+  if(options.useFDCData) {
+    const fdcInflationRewardsOfferedResponse = await indexerClient.getFDCInflationRewardsOfferedEvents(
+      rewardEpoch.previousRewardEpochStartedEvent.startVotingRoundId,
+      rewardEpoch.signingPolicy.startVotingRoundId - 1
+    );
+    if (fdcInflationRewardsOfferedResponse.status !== BlockAssuranceResult.OK) {
+      throw new Error(`Error while fetching FDCInflationRewardsOffered events for reward epoch ${rewardEpochId}`);
+    }
+    fdcInflationRewardsOffered = fdcInflationRewardsOfferedResponse.data.find(x => x.rewardEpochId === rewardEpochId);
+    if (fdcInflationRewardsOffered === undefined) {
+      throw new Error(`No FDCInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
+    }
+  }
   const rewardEpochInfo = getRewardEpochInfo(
     rewardEpoch,
     rewardEpochDuration.endVotingRoundId,
     fuInflationRewardsOffered,
-    fuIncentivesOfferedData
+    fuIncentivesOfferedData,
+    fdcInflationRewardsOffered
   );
   serializeRewardEpochInfo(rewardEpochId, rewardEpochInfo, options.tempRewardEpochFolder);
   setRewardCalculationStatus(
@@ -121,6 +137,7 @@ export async function runCalculateRewardCalculationTopJob(
       endVotingRoundId: endBatch,
       isWorker: true,
       useFastUpdatesData: options.useFastUpdatesData,
+      useFDCData: options.useFDCData,
       tempRewardEpochFolder: options.tempRewardEpochFolder,
     };
     // logger.log(batchOptions);
@@ -148,6 +165,7 @@ export async function runCalculateRewardCalculationDataWorker(
     options.retryDelayMs,
     logger,
     options.useFastUpdatesData,
+    options.useFDCData,
     options.tempRewardEpochFolder
   );
   logger.log(

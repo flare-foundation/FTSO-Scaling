@@ -1,5 +1,5 @@
 import { VoterWeights } from "../RewardEpoch";
-import { CAPPED_STAKING_FEE_BIPS, FTSO2_PROTOCOL_ID, TOTAL_BIPS } from "../configs/networks";
+import { CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS } from "../configs/networks";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
@@ -25,7 +25,8 @@ export function generateSigningWeightBasedClaimsForVoter(
   amount: bigint,
   offer: IPartialRewardOfferForRound,
   voterWeights: VoterWeights,
-  rewardType: RewardTypePrefix
+  rewardType: RewardTypePrefix,
+  protocolId: number
 ): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];
   let stakedWeight = 0n;
@@ -43,7 +44,7 @@ export function generateSigningWeightBasedClaimsForVoter(
         claimType: ClaimType.DIRECT,
         offerIndex: offer.offerIndex,
         feedId: offer.feedId,
-        protocolTag: "" + FTSO2_PROTOCOL_ID,
+        protocolTag: "" + protocolId,
         rewardTypeTag: rewardType,
         rewardDetailTag: SigningWeightRewardClaimType.NO_VOTER_WEIGHT,
       } as IPartialRewardClaim,
@@ -66,7 +67,7 @@ export function generateSigningWeightBasedClaimsForVoter(
       claimType: ClaimType.FEE,
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
-      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      protocolTag: "" + protocolId,
       rewardTypeTag: rewardType,
       rewardDetailTag: SigningWeightRewardClaimType.FEE_FOR_DELEGATION_AND_STAKING,
     } as IPartialRewardClaim);
@@ -80,7 +81,7 @@ export function generateSigningWeightBasedClaimsForVoter(
     claimType: ClaimType.WNAT,
     offerIndex: offer.offerIndex,
     feedId: offer.feedId,
-    protocolTag: "" + FTSO2_PROTOCOL_ID,
+    protocolTag: "" + protocolId,
     rewardTypeTag: rewardType,
     rewardDetailTag: SigningWeightRewardClaimType.DELEGATION_COMMUNITY_REWARD,
   } as IPartialRewardClaim);
@@ -111,7 +112,7 @@ export function generateSigningWeightBasedClaimsForVoter(
       claimType: ClaimType.MIRROR,
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
-      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      protocolTag: "" + protocolId,
       rewardTypeTag: rewardType,
       rewardDetailTag: SigningWeightRewardClaimType.NODE_COMMUNITY_REWARD,
     } as IPartialRewardClaim);

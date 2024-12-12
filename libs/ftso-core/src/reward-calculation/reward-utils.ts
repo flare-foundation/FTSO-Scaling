@@ -6,6 +6,7 @@ import {
   GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
   GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC,
 } from "../configs/networks";
+import { FDCEligibleSigner } from "../data-calculation-interfaces";
 import { Address } from "../voting-types";
 
 /**
@@ -20,7 +21,7 @@ export function medianRewardDistributionWeight(voterWeights: VoterWeights): bigi
  */
 export function isSignatureInGracePeriod(
   votingRoundId: number,
-  signatureSubmission: GenericSubmissionData<ISignaturePayload>
+  signatureSubmission: GenericSubmissionData<ISignaturePayload> | FDCEligibleSigner
 ) {
   return (
     signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
@@ -35,7 +36,7 @@ export function isSignatureInGracePeriod(
  */
 export function isSignatureBeforeTimestamp(
   votingRoundId: number,
-  signatureSubmission: GenericSubmissionData<ISignaturePayload>,
+  signatureSubmission: GenericSubmissionData<ISignaturePayload> | FDCEligibleSigner,
   timestamp: number
 ) {
   return (

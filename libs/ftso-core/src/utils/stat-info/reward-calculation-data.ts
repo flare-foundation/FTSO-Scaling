@@ -5,7 +5,7 @@ import { ISignaturePayload } from "../../../../fsp-utils/src/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../IndexerClient";
 import { VoterWeights } from "../../RewardEpoch";
 import { CALCULATIONS_FOLDER } from "../../configs/networks";
-import { DataForRewardCalculation, FastUpdatesDataForVotingRound } from "../../data-calculation-interfaces";
+import { DataForRewardCalculation, FastUpdatesDataForVotingRound, SFDCDataForVotingRound } from "../../data-calculation-interfaces";
 import { Address, Feed, MedianCalculationResult, MessageHash, RandomCalculationResult } from "../../voting-types";
 import { IRevealData } from "../RevealData";
 import { bigIntReplacer, bigIntReviver } from "../big-number-serialization";
@@ -26,6 +26,7 @@ export interface SDataForCalculation {
   rewardEpochId: number;
   votingRoundId: number;
   orderedVotersSubmitAddresses: string[];
+  orderedVotersSubmitSignatureAddresses: string[];
   validEligibleReveals: RevealRecords[];
   revealOffenders: string[];
   voterMedianVotingWeights: VoterWeightData[];
@@ -48,6 +49,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
   for (const [submitAddress, revealData] of data.dataForCalculations.validEligibleReveals.entries()) {
     validEligibleReveals.push({ submitAddress, data: revealData });
   }
+
   const voterMedianVotingWeights: VoterWeightData[] = [];
   for (const [submitAddress, weight] of data.dataForCalculations.voterMedianVotingWeights.entries()) {
     voterMedianVotingWeights.push({ submitAddress, weight });
@@ -56,12 +58,13 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     rewardEpochId,
     votingRoundId: data.dataForCalculations.votingRoundId,
     orderedVotersSubmitAddresses: data.dataForCalculations.orderedVotersSubmitAddresses,
+    orderedVotersSubmitSignatureAddresses: data.dataForCalculations.orderedVotersSubmitSignatureAddresses,
     validEligibleReveals,
     revealOffenders: [...data.dataForCalculations.revealOffenders],
     voterMedianVotingWeights,
     randomGenerationBenchingWindow: data.dataForCalculations.randomGenerationBenchingWindow,
     benchingWindowRevealOffenders: [...data.dataForCalculations.benchingWindowRevealOffenders],
-    feedOrder: data.dataForCalculations.feedOrder,
+    feedOrder: data.dataForCalculations.feedOrder
   };
   return result;
 }
@@ -87,6 +90,7 @@ export interface SDataForRewardCalculation {
   medianCalculationResults: MedianCalculationResult[];
   randomResult: SimplifiedRandomCalculationResult;
   fastUpdatesData?: FastUpdatesDataForVotingRound;
+  fdcData?: SFDCDataForVotingRound;
   // usually added after results of the next voting round are known
   nextVotingRoundRandomResult?: string;
   eligibleFinalizers: string[];
@@ -133,12 +137,40 @@ export function serializeDataForRewardCalculation(
     };
     hashSignatures.push(hashRecord);
   }
+
+
+  let fdcData: SFDCDataForVotingRound | undefined;
+
+  if (rewardCalculationData.fdcData) {
+    const fdcHashSignatures: HashSignatures[] = [];
+    for (const [hash, signatures] of rewardCalculationData.fdcData.signaturesMap.entries()) {
+      const hashRecord: HashSignatures = {
+        hash,
+        signatures,
+      };
+      fdcHashSignatures.push(hashRecord);
+    }
+    fdcData = {
+      votingRoundId: rewardCalculationData.fdcData.votingRoundId,
+      attestationRequests: rewardCalculationData.fdcData.attestationRequests,
+      bitVotes: rewardCalculationData.fdcData.bitVotes,
+      signatures: fdcHashSignatures,
+      firstSuccessfulFinalization: rewardCalculationData.fdcData.firstSuccessfulFinalization,
+      finalizations: rewardCalculationData.fdcData.finalizations,
+      eligibleSigners: rewardCalculationData.fdcData.eligibleSigners,
+      consensusBitVote: rewardCalculationData.fdcData.consensusBitVote,
+      consensusBitVoteIndices: rewardCalculationData.fdcData.consensusBitVoteIndices,
+      fdcOffenders: rewardCalculationData.fdcData.fdcOffenders,
+    }
+  }
+
   for (const finalization of rewardCalculationData.finalizations) {
     RelayMessage.augment(finalization.messages);
   }
   if (rewardCalculationData.firstSuccessfulFinalization?.messages) {
     RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages);
   }
+
   const data: SDataForRewardCalculation = {
     dataForCalculations: prepareDataForCalculations(rewardEpochId, rewardCalculationData),
     signatures: hashSignatures,
@@ -148,6 +180,7 @@ export function serializeDataForRewardCalculation(
     randomResult: simplifyRandomCalculationResult(randomResult),
     eligibleFinalizers: eligibleFinalizationRewardVotersInGracePeriod,
     fastUpdatesData: rewardCalculationData.fastUpdatesData,
+    fdcData
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }
@@ -182,6 +215,7 @@ function augmentDataForCalculation(data: SDataForCalculation, rewardEpochInfo: R
   for (const reveal of data.validEligibleReveals) {
     validEligibleRevealsMap.set(reveal.submitAddress.toLowerCase(), reveal.data);
   }
+
   const revealOffendersSet = new Set<string>(data.revealOffenders);
   const voterMedianVotingWeightsSet = new Map<string, bigint>();
   for (const voter of data.voterMedianVotingWeights) {
@@ -248,7 +282,24 @@ export function augmentDataForRewardCalculation(
     signaturesMap.set(hashSignature.hash, hashSignature.signatures);
   }
   data.signaturesMap = signaturesMap;
+  if (data.fdcData) {
+    augmentFdcDataForRewardCalculation(data.fdcData);
+  }
 }
+
+/**
+ * After deserialization, the data is augmented with additional maps and sets for easier access.
+ */
+export function augmentFdcDataForRewardCalculation(
+  data: SFDCDataForVotingRound,
+): void {
+  const signaturesMap = new Map<string, GenericSubmissionData<ISignaturePayload>[]>();
+  for (const hashSignature of data.signatures) {
+    signaturesMap.set(hashSignature.hash, hashSignature.signatures);
+  }
+  data.signaturesMap = signaturesMap;
+}
+
 
 export function deserializeDataForRewardCalculation(
   rewardEpochId: number,

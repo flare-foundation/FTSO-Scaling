@@ -72,7 +72,7 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
 
     const partialRewardOffer = PartialRewardOffer.fromRewardOffered(rewardOffered);
 
-    const splitRewardOffers = splitRewardOfferByTypes(partialRewardOffer);
+    const splitRewardOffers = splitRewardOfferByTypes(PartialRewardOffer.remapToPartialOfferForRound(partialRewardOffer, 1));
 
     const finalization = splitRewardOffers.finalizationRewardOffer;
     const signing = splitRewardOffers.signingRewardOffer;
@@ -87,7 +87,7 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
 
     const partialRewardOffers = distributeInflationRewardOfferToFeeds(rewardOffered);
 
-    const splitRewardOffers = splitRewardOfferByTypes(partialRewardOffers[0]);
+    const splitRewardOffers = splitRewardOfferByTypes(PartialRewardOffer.remapToPartialOfferForRound(partialRewardOffers[0], 1));
 
     const finalization = splitRewardOffers.finalizationRewardOffer;
     const signing = splitRewardOffers.signingRewardOffer;

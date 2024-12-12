@@ -1,4 +1,5 @@
 import { VoterWeights } from "../RewardEpoch";
+import { FTSO2_PROTOCOL_ID } from "../configs/networks";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address } from "../voting-types";
@@ -42,7 +43,7 @@ export function calculatePenalties(
       }
       penalty = (-voterWeight * offer.amount * penaltyFactor) / totalWeight;
     }
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType));
+    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FTSO2_PROTOCOL_ID));
   }
   return penaltyClaims;
 }

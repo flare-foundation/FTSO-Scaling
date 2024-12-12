@@ -17,6 +17,8 @@ import { FastUpdateFeedsSubmitted } from "../events/FastUpdateFeedsSubmitted";
 import { FastUpdateFeeds } from "../events/FastUpdateFeeds";
 import { FUInflationRewardsOffered } from "../events/FUInflationRewardsOffered";
 import { IncentiveOffered } from "../events/IncentiveOffered";
+import { AttestationRequest } from "../events/AttestationRequest";
+import { FDCInflationRewardsOffered } from "../events/FDCInflationRewardsOffered";
 
 type AbiItem = AbiFunctionFragment | AbiEventFragment;
 
@@ -62,6 +64,8 @@ export class ABICache {
       ["FastUpdater", undefined, FastUpdateFeeds.eventName],
       ["FastUpdateIncentiveManager", undefined, FUInflationRewardsOffered.eventName],
       ["FastUpdateIncentiveManager", undefined, IncentiveOffered.eventName],
+      ["FdcHub", undefined, AttestationRequest.eventName],
+      ["FdcHub", undefined, FDCInflationRewardsOffered.eventName],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {

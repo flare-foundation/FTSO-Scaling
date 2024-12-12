@@ -1,4 +1,4 @@
-import { FTSO2_PROTOCOL_ID } from "../configs/networks";
+import { ParsedFinalizationData } from "../IndexerClient";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { SDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
@@ -28,11 +28,15 @@ const BURN_NON_ELIGIBLE_REWARDS = true;
  */
 export function calculateFinalizationRewardClaims(
   offer: IPartialRewardOfferForRound,
+  protocolId: number,
+  firstSuccessfulFinalization: ParsedFinalizationData | undefined,
+  finalizations: ParsedFinalizationData[],
   data: SDataForRewardCalculation,
   eligibleFinalizationRewardVotersInGracePeriod: Set<Address>, // signing addresses of the voters that are eligible for finalization reward
-  eligibleVoters: Set<Address> // signing addresses of the voters that are eligible for finalization reward
+  eligibleVoters: Set<Address>, // signing addresses of the voters that are eligible for finalization reward
+  rewardType: RewardTypePrefix
 ): IPartialRewardClaim[] {
-  if (!data.firstSuccessfulFinalization) {
+  if (!firstSuccessfulFinalization) {
     const backClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
       beneficiary: offer.claimBackAddress.toLowerCase(),
@@ -40,29 +44,29 @@ export function calculateFinalizationRewardClaims(
       claimType: ClaimType.DIRECT,
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
-      protocolTag: "" + FTSO2_PROTOCOL_ID,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      protocolTag: "" + protocolId,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.NO_FINALIZATION,
     };
     return [backClaim];
   }
   const votingRoundId = data.dataForCalculations.votingRoundId;
   // No voter provided finalization in grace period. Whoever finalizes gets the full reward.
-  if (isFinalizationOutsideOfGracePeriod(votingRoundId, data.firstSuccessfulFinalization!)) {
+  if (isFinalizationOutsideOfGracePeriod(votingRoundId, firstSuccessfulFinalization!)) {
     const otherFinalizerClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
-      beneficiary: data.firstSuccessfulFinalization!.submitAddress.toLowerCase(),
+      beneficiary: firstSuccessfulFinalization!.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
-      protocolTag: "" + FTSO2_PROTOCOL_ID,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      protocolTag: "" + protocolId,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.OUTSIDE_OF_GRACE_PERIOD,
     };
     return [otherFinalizerClaim];
   }
-  const gracePeriodFinalizations = data.finalizations.filter(finalization =>
+  const gracePeriodFinalizations = finalizations.filter(finalization =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
   // Rewarding of first successful finalizations outside of the grace period are already handled above
@@ -76,8 +80,8 @@ export function calculateFinalizationRewardClaims(
       claimType: ClaimType.DIRECT,
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
-      protocolTag: "" + FTSO2_PROTOCOL_ID,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      protocolTag: "" + protocolId,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.FINALIZED_BUT_NO_ELIGIBLE_VOTERS,
     };
     return [burnClaim];
@@ -124,7 +128,7 @@ export function calculateFinalizationRewardClaims(
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= 1n;
     resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, RewardTypePrefix.FINALIZATION)
+      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId)
     );
   }
 
@@ -144,8 +148,8 @@ export function calculateFinalizationRewardClaims(
       claimType: ClaimType.DIRECT,
       offerIndex: offer.offerIndex,
       feedId: offer.feedId,
-      protocolTag: "" + FTSO2_PROTOCOL_ID,
-      rewardTypeTag: RewardTypePrefix.FINALIZATION,
+      protocolTag: "" + protocolId,
+      rewardTypeTag: rewardType,
       rewardDetailTag: FinalizationRewardClaimType.CLAIM_BACK_FOR_UNDISTRIBUTED_REWARDS,
     });
   }

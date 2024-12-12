@@ -45,6 +45,9 @@ import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
 import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
+import { calculateAttestationTypeAppearances } from "../libs/attestation-type-appearances";
+import { calculateMinimalConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions";
+import { writeDataProviderConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions-data";
 
 if (process.env.FORCE_NOW) {
   const newNow = parseInt(process.env.FORCE_NOW) * 1000;
@@ -162,7 +165,8 @@ export class CalculatorService {
         state.votingRoundId,
         options.retryDelayMs,
         logger,
-        options.useFastUpdatesData
+        options.useFastUpdatesData,
+        options.useFDCData
       );
       // The call above may create additional folder
       state.maxVotingRoundIdFolder = Math.max(state.maxVotingRoundIdFolder, state.votingRoundId);
@@ -172,12 +176,12 @@ export class CalculatorService {
 
       const feedSelections = getIncrementalCalculationsFeedSelections(rewardEpochDuration.rewardEpochId, state.nextVotingRoundIdWithNoSecureRandom - 1);
       serializeIncrementalCalculationsFeedSelections(feedSelections);
-      
+
       await calculateAndAggregateRemainingClaims(this.dataManager, state, options, logger);
 
       const tempClaimData = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, state.nextVotingRoundForClaimCalculation - 1);
       serializeIncrementalCalculationsTempRewards(tempClaimData);
-  
+
       recordProgress(rewardEpochId);
 
       state.votingRoundId++;
@@ -205,6 +209,7 @@ export class CalculatorService {
       batchSize: options.batchSize,
       numberOfWorkers: options.numberOfWorkers,
       useFastUpdatesData: options.useFastUpdatesData,
+      useFDCData: options.useFDCData,
     } as OptionalCommandOptions;
     const rewardEpochDuration = await runCalculateRewardCalculationTopJob(
       this.indexerClient,
@@ -217,6 +222,7 @@ export class CalculatorService {
     newOptions.tempRewardEpochFolder = true;
     newOptions.useExpectedEndIfNoSigningPolicyAfter = true;
     newOptions.useFastUpdatesData = false;
+    newOptions.useFDCData = false;
     const rewardEpochDuration2 = await runCalculateRewardCalculationTopJob(
       this.indexerClient,
       this.rewardEpochManager,
@@ -225,6 +231,7 @@ export class CalculatorService {
     logger.log(rewardEpochDuration2);
     await runRandomNumberFixing(options.rewardEpochId, FUTURE_VOTING_ROUNDS());
     destroyStorage(options.rewardEpochId + 1, true);
+    calculateAttestationTypeAppearances(options.rewardEpochId);
   }
 
   async fullRoundClaimCalculation(options: OptionalCommandOptions): Promise<void> {
@@ -234,6 +241,7 @@ export class CalculatorService {
       batchSize: options.batchSize,
       numberOfWorkers: options.numberOfWorkers,
       useFastUpdatesData: options.useFastUpdatesData,
+      useFDCData: options.useFDCData,
     } as OptionalCommandOptions;
     await runCalculateRewardClaimsTopJob(adaptedOptions);
   }
@@ -287,6 +295,14 @@ export class CalculatorService {
       await this.fullRoundAggregateClaims(options);
     }
   }
+
+  processMinimalConditions(options: OptionalCommandOptions): void {
+    if (options.rewardEpochId === undefined) {
+      throw new Error("Reward epoch id is required for minimal conditions calculation");
+    }
+    const result = calculateMinimalConditions(options.rewardEpochId, false);
+    writeDataProviderConditions(options.rewardEpochId, result);
+  }
   /**
    * Returns a list of all (merged) reward claims for the given reward epoch.
    * Calculation can be quite intensive.
@@ -294,6 +310,10 @@ export class CalculatorService {
   async run(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     logger.log(options);
+    if (options.minimalConditions) {
+      this.processMinimalConditions(options);
+      return;
+    }
     if (options.rewardEpochId !== undefined) {
       await this.processOneRewardEpoch(options);
       return;

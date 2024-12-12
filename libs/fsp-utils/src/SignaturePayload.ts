@@ -54,18 +54,37 @@ export namespace SignaturePayload {
     if (!/^[0-9a-f]*$/.test(encodedSignaturePayloadInternal)) {
       throw Error(`Invalid format - not hex string: ${encodedSignaturePayload}`);
     }
-    if (encodedSignaturePayloadInternal.length < 2 + 38 * 2 + 65 * 2) {
+    if (encodedSignaturePayloadInternal.length < 2 + 65 * 2) {
       throw Error(`Invalid format - too short: ${encodedSignaturePayload}`);
     }
     const type = "0x" + encodedSignaturePayloadInternal.slice(0, 2);
-    const message = "0x" + encodedSignaturePayloadInternal.slice(2, 2 + 38 * 2);
-    const signature = "0x" + encodedSignaturePayloadInternal.slice(2 + 38 * 2, 2 + 38 * 2 + 65 * 2);
-    const unsignedMessage = encodedSignaturePayloadInternal.slice(2 + 38 * 2 + 65 * 2);
+    if (type === "0x00" && encodedSignaturePayloadInternal.length < 2 + 38 * 2 + 65 * 2) {
+      throw Error(`Invalid format - too short type 0 signature: ${encodedSignaturePayload}`);
+    }
+    if (type === "0x01" && encodedSignaturePayloadInternal.length < 2 + 65 * 2) {
+      throw Error(`Invalid format - too short type 1 signature: ${encodedSignaturePayload}`);
+    }
+    if (type !== "0x00" && type !== "0x01") {
+      throw Error(`Invalid format - unknown type: ${type}`);
+    }
+    let message: string | undefined;
+    let signature: string;
+    let unsignedMessage: string;
+    if (type === "0x00") {
+      message = "0x" + encodedSignaturePayloadInternal.slice(2, 2 + 38 * 2);
+      signature = "0x" + encodedSignaturePayloadInternal.slice(2 + 38 * 2, 2 + 38 * 2 + 65 * 2);
+      unsignedMessage = encodedSignaturePayloadInternal.slice(2 + 38 * 2 + 65 * 2);
+    }
+    if (type === "0x01") {
+      signature = "0x" + encodedSignaturePayloadInternal.slice(2, 2 + 65 * 2);
+      unsignedMessage = encodedSignaturePayloadInternal.slice(2 + 65 * 2);
+    }
     const result: ISignaturePayload = {
       type,
-      message: ProtocolMessageMerkleRoot.decode(message),
+      message: message ? ProtocolMessageMerkleRoot.decode(message) : undefined,
       signature: ECDSASignature.decode(signature),
     };
+
     if (unsignedMessage.length > 0) {
       result.unsignedMessage = "0x" + unsignedMessage;
     }

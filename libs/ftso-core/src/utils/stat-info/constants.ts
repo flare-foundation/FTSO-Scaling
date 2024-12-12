@@ -1,5 +1,7 @@
 export const OFFERS_FILE = "offers.json";
 export const FU_OFFERS_FILE = "fast-updates-offers.json";
+export const FDC_OFFERS_FILE = "fdc-offers.json";
+export const FDC_ATTESTATION_APPEARANCES_FILE = "fdc-attestation-appearances.json";
 export const CLAIMS_FILE = "claims.json";
 export const AGGREGATED_CLAIMS_FILE = "aggregated-claims.json";
 export const FEED_VALUES_FILE = "feed-values.json";

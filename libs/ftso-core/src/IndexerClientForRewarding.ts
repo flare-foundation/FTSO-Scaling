@@ -6,6 +6,9 @@ import { FastUpdateFeeds } from "./events/FastUpdateFeeds";
 import { FastUpdateFeedsSubmitted } from "./events/FastUpdateFeedsSubmitted";
 import { IncentiveOffered } from "./events/IncentiveOffered";
 import { FUInflationRewardsOffered } from "./events/FUInflationRewardsOffered";
+import { FDCInflationRewardsOffered } from "./events/FDCInflationRewardsOffered";
+import { AttestationRequest } from "./events/AttestationRequest";
+
 import { TLPEvents } from "./orm/entities";
 export class IndexerClientForRewarding extends IndexerClient {
   constructor(
@@ -177,11 +180,11 @@ export class IndexerClientForRewarding extends IndexerClient {
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = IncentiveOffered.eventName;
     const status = await this.ensureEventRange(startTime, endTime);
-    const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
 
+    const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
     const data = result.map(event => IncentiveOffered.fromRawEvent(event));
     return {
       status,
@@ -211,4 +214,64 @@ export class IndexerClientForRewarding extends IndexerClient {
       data,
     };
   }
+
+  /**
+   * Extract AttestationRequest events from the indexer that match the range of voting rounds.
+   */
+  public async getAttestationRequestEvents(
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<AttestationRequest[][]>> {
+    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
+    // strictly containing in the range
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    const eventName = AttestationRequest.eventName;
+    const status = await this.ensureEventRange(startTime, endTime);
+    if (status !== BlockAssuranceResult.OK) {
+      return { status };
+    }
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
+
+    const allAttestationRequests = result.map(event => AttestationRequest.fromRawEvent(event));
+    const data: AttestationRequest[][] = [];
+    let i = 0;
+    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      const attestationRequestsInVotingRound: AttestationRequest[] = [];
+      const votingEpochEndTime = EPOCH_SETTINGS().votingEpochStartSec(votingRoundId + 1) - 1;
+      while (i < allAttestationRequests.length && allAttestationRequests[i].timestamp <= votingEpochEndTime) {
+        attestationRequestsInVotingRound.push(allAttestationRequests[i]);
+        i++;
+      }
+      data.push(attestationRequestsInVotingRound);
+    }
+    return {
+      status,
+      data,
+    };
+  }
+
+
+  /**
+   * Extract FDCInflationRewardsOffered events from the indexer that match the range of voting rounds.
+   */
+  public async getFDCInflationRewardsOfferedEvents(
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<FDCInflationRewardsOffered[]>> {
+    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
+    // strictly containing in the range
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    const eventName = FDCInflationRewardsOffered.eventName;
+    const status = await this.ensureEventRange(startTime, endTime);    
+    if (status !== BlockAssuranceResult.OK) {
+      return { status };
+    }
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);    
+    const data = result.map(event => FDCInflationRewardsOffered.fromRawEvent(event));
+    return {
+      status,
+      data,
+    };
+  }
+
 }

@@ -45,6 +45,11 @@ interface FastUpdateIncentiveManagerDefinition {
   address: ContractAddress;
 }
 
+interface FdcHubDefinition {
+  name: "FdcHub";
+  address: ContractAddress;
+}
+
 export type ContractDefinitions =
   | FlareSystemsManagerDefinition
   | FtsoRewardOffersManagerDefinition
@@ -56,7 +61,8 @@ export type ContractDefinitions =
   | ProtocolMerkleStructsDefinition
   | FtsoMerkleStructsDefinition
   | FastUpdaterDefinition
-  | FastUpdateIncentiveManagerDefinition;
+  | FastUpdateIncentiveManagerDefinition
+  | FdcHubDefinition;
 
 export type ContractDefinitionsNames =
   | FlareSystemsManagerDefinition["name"]
@@ -69,7 +75,8 @@ export type ContractDefinitionsNames =
   | ProtocolMerkleStructsDefinition["name"]
   | FtsoMerkleStructsDefinition["name"]
   | FastUpdaterDefinition["name"]
-  | FastUpdateIncentiveManagerDefinition["name"];
+  | FastUpdateIncentiveManagerDefinition["name"]
+  | FdcHubDefinition["name"];
 
 export enum ContractMethodNames {
   submit1 = "submit1",
@@ -103,4 +110,5 @@ export interface NetworkContractAddresses {
   ProtocolMerkleStructs: ProtocolMerkleStructsDefinition;
   FastUpdater: FastUpdaterDefinition;
   FastUpdateIncentiveManager: FastUpdateIncentiveManagerDefinition;
+  FdcHub: FdcHubDefinition;
 }

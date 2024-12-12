@@ -24,6 +24,10 @@ export enum SigningRewardClaimType {
   NO_WEIGHT_OF_ELIGIBLE_SIGNERS = "NO_WEIGHT_OF_ELIGIBLE_SIGNERS",
   CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER = "CLAIM_BACK_DUE_TO_NON_ELIGIBLE_SIGNER",
   CLAIM_BACK_NO_CLAIMS = "CLAIM_BACK_NO_CLAIMS",
+  NO_TIMELY_FINALIZATION = "NO_TIMELY_FINALIZATION",
+  CLAIM_BACK_OF_NON_SIGNERS_SHARE = "CLAIM_BACK_OF_NON_SIGNERS_SHARE",
+  NON_DOMINATING_BITVOTE = "NON_DOMINATING_BITVOTE", 
+  EMPTY_BITVOTE = "EMPTY_BITVOTE",
 }
 /**
  * Given an offer and data for reward calculation it calculates signing rewards for the offer.
@@ -169,7 +173,7 @@ export function calculateSigningRewards(
       resultClaims.push(backClaim);
     } else {
       resultClaims.push(
-        ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeights, RewardTypePrefix.SIGNING)
+        ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeights, RewardTypePrefix.SIGNING, FTSO2_PROTOCOL_ID)
       );
     }
   }

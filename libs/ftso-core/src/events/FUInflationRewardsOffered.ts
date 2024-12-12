@@ -11,6 +11,9 @@ export interface FastUpdateFeedConfiguration {
   inflationShare: number;
 }
 
+/**
+ * Represents an event emitted on offering inflation rewards on FastUpdateIncentiveManager smart contract.
+ */
 export class FUInflationRewardsOffered extends RawEventConstructible {
   static eventName = "InflationRewardsOffered";
   constructor(data: any) {
@@ -42,6 +45,6 @@ export class FUInflationRewardsOffered extends RawEventConstructible {
   // Feed values in the order of feedIds
   feedConfigurations: FastUpdateFeedConfiguration[];
 
-  // feed decimals
+  // amount
   amount: bigint;
 }

@@ -45,6 +45,7 @@ export async function calculateClaimsAndAggregate(
   retryDelayMs: number,
   logger: Logger,
   useFastUpdatesData: boolean,
+  useFDCData: boolean,
   keepRetrying = false
 ) {
   let done = false;
@@ -62,6 +63,7 @@ export async function calculateClaimsAndAggregate(
         false, // don't merge
         true, //serializeResults
         useFastUpdatesData,
+        useFDCData,
         logger
       );
       if (aggregateClaims) {
@@ -139,7 +141,8 @@ export async function calculateAndAggregateRemainingClaims(
       true, // aggregate
       options.retryDelayMs,
       logger,
-      false //options.useFastUpdatesData
+      false, //options.useFastUpdatesData
+      false, //options.useFDCData
     );
 
     logger.log(`Claims calculated for voting round ${tmpVotingRoundId}.`);
