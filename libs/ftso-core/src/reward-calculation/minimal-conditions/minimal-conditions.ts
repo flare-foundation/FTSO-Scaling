@@ -1,4 +1,7 @@
+import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID, FTSO2_PROTOCOL_ID, STAKING_PROTOCOL_ID } from "../../configs/networks";
+import { ClaimType, IRewardClaim } from "../../utils/RewardClaim";
 import { deserializeDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
+import { deserializeRewardDistributionData, serializeRewardDistributionData } from "../../utils/stat-info/reward-distribution-data";
 import { deserializeRewardEpochInfo } from "../../utils/stat-info/reward-epoch-info";
 import {
    FTSO_SCALING_AVAILABILITY_THRESHOLD_PPM,
@@ -18,16 +21,18 @@ import {
    FUConditionSummary,
    FeedHits,
    FtsoScalingConditionSummary,
+   MinimalConditionFailure,
+   MinimalConditionFailureType,
    NodeStakingConditions,
    StakingConditionSummary,
    ValidatorInfo
 } from "./minimal-conditions-interfaces";
 
 function networkId() {
-   if(process.env.NETWORK === "flare") {
+   if (process.env.NETWORK === "flare") {
       return 14;
    }
-   if(process.env.NETWORK === "songbird") {
+   if (process.env.NETWORK === "songbird") {
       return 19;
    }
    throw new Error(`Network ${process.env.NETWORK} not supported`);
@@ -36,28 +41,22 @@ function networkId() {
 function toFeedName(hex: string) {
    let result = "";
    for (let i = 4; i < hex.length; i += 2) {
-     const charHexCode = hex.slice(i, i + 2);
-     if (charHexCode === "00") {
-       continue;
-     }
-     result += String.fromCharCode(parseInt(charHexCode, 16));
+      const charHexCode = hex.slice(i, i + 2);
+      if (charHexCode === "00") {
+         continue;
+      }
+      result += String.fromCharCode(parseInt(charHexCode, 16));
    }
    return result;
- }
- 
+}
+
 export function calculateMinimalConditions(
    rewardEpochId: number,
-   requirePassesFile: boolean
 ): DataProviderConditions[] {
    const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
    // returns undefined if the file is not found
    let passesInputData = readPassesInfo(rewardEpochId - 1);
-   if (requirePassesFile && passesInputData === undefined) {
-      throw new Error(`Passes file not found for reward epoch ${rewardEpochId - 1}`);
-   }
-   if (!passesInputData) {
-      passesInputData = [];
-   }
+   console.log(`Read ${passesInputData.length} passes entires for reward epoch ${rewardEpochId - 1}`);
    const submitAddressToVoter = new Map<string, string>();
    const voterToSubmitAddress = new Map<string, string>();
    const signingPolicyAddressToVoter = new Map<string, string>();
@@ -67,6 +66,8 @@ export function calculateMinimalConditions(
    const voterToStakingConditionSummary = new Map<string, StakingConditionSummary>();
    const nodeIdToVoter = new Map<string, string>();
    const delegationAddressToVoter = new Map<string, string>();
+   const voterToDelegateAddress = new Map<string, string>();
+   const voterToNodeIds = new Map<string, string[]>();
    const nodeIdToNodeStakingCondition = new Map<string, NodeStakingConditions>();
    const submitAddressToFeedToHits = new Map<string, Map<string, FeedHits>>();
    const voterToPassesInputData = new Map<string, DataProviderPasses>();
@@ -77,7 +78,7 @@ export function calculateMinimalConditions(
    const totalSigningWeight = rewardEpochInfo.signingPolicy.weights.reduce((acc, weight) => acc + weight, 0);
 
    const numberOfVotingRounds = (rewardEpochInfo.endVotingRoundId - rewardEpochInfo.signingPolicy.startVotingRoundId + 1);
-   
+
    for (let dataProviderPasses of passesInputData) {
       let voter = dataProviderPasses.voterAddress.toLowerCase();
       voterToPassesInputData.set(voter, dataProviderPasses);
@@ -93,6 +94,8 @@ export function calculateMinimalConditions(
       voterToSubmitAddress.set(voter, submissionAddress);
       signingPolicyAddressToVoter.set(signingPolicyAddress, voter);
       delegationAddressToVoter.set(delegationAddress, voter);
+      voterToDelegateAddress.set(voter, delegationAddress);
+      voterToNodeIds.set(voter, rewardEpochInfo.voterRegistrationInfo[i].voterRegistrationInfo.nodeIds);
       voterToVoterIndex.set(voter, i);
       const ftsoScalingConditionSummary: FtsoScalingConditionSummary = {
          allPossibleHits: numberOfVotingRounds * rewardEpochInfo.canonicalFeedOrder.length,
@@ -148,21 +151,21 @@ export function calculateMinimalConditions(
       submitAddressToFeedToHits.set(submissionAddress, voterFeedHits);
    }
 
-   const dataProviderData = readListedDataProviders();   
-   for(let provider of dataProviderData.providers) {
-      if(provider.chainId !== networkId()) {
+   const dataProviderData = readListedDataProviders();
+   for (let provider of dataProviderData.providers) {
+      if (provider.chainId !== networkId()) {
          continue;
       }
       const delegationAddress = provider.address.toLowerCase();
       const voter = delegationAddressToVoter.get(delegationAddress);
-      if(voter !== undefined) {
+      if (voter !== undefined) {
          voterToName.set(voter, provider.name);
       }
    }
 
    // Reading staking info data for reward epoch and updating node conditions
    let validatorInfoList: ValidatorInfo[] = stakingIncluded ? readStakingInfo(rewardEpochId) : [];
-   if(!stakingIncluded) {
+   if (!stakingIncluded) {
       console.log(`Staking data not relevant for the network ${process.env.NETWORK}`);
    }
    for (const validatorInfo of validatorInfoList) {
@@ -176,12 +179,12 @@ export function calculateMinimalConditions(
       condition.selfBond = BigInt(validatorInfo.selfBond);
       condition.totalStakeAmount = BigInt(validatorInfo.totalStakeAmount);
       // TODO: check if this will stay so
-      condition.uptimeOk = validatorInfo.eligible;
+      condition.uptimeOk = validatorInfo.uptimeEligible;
    }
 
    // Checking staking conditions
    for (const [_, stakingConditionSummary] of voterToStakingConditionSummary.entries()) {
-      if(!stakingIncluded) {
+      if (!stakingIncluded) {
          stakingConditionSummary.conditionMet = true;
          continue;
       }
@@ -332,6 +335,8 @@ export function calculateMinimalConditions(
          network: process.env.NETWORK,
          dataProviderName: voterToName.get(voter),
          voterAddress: voter,
+         delegationAddress: voterToDelegateAddress.get(voter),
+         nodeIds: voterToNodeIds.get(voter),
          voterIndex: voterToVoterIndex.get(voter),
          passesHeld,
          passEarned,
@@ -346,5 +351,93 @@ export function calculateMinimalConditions(
    }
 
    return dataProviderConditions;
+}
+
+export function extractNewPasses(dataProviderConditions: DataProviderConditions[]): DataProviderPasses[] {
+   const result: DataProviderPasses[] = [];
+   for (let dataProviderCondition of dataProviderConditions) {
+      let allPasses = dataProviderCondition.passesHeld;
+      if (dataProviderCondition.passEarned) {
+         allPasses++;
+      } else {
+         allPasses = Math.max(allPasses - dataProviderCondition.strikes, 0);
+      }
+      // For now we will include 0 pass entries in new passes file
+      // though they are not necessary
+      // if (allPasses == 0) {
+      //    continue;
+      // }
+      const failures: MinimalConditionFailure[] = [];
+      if (!dataProviderCondition.ftsoScaling.conditionMet) {
+         failures.push({
+            protocolId: FTSO2_PROTOCOL_ID,
+            failureId: MinimalConditionFailureType.FTSO_SCALING_FAILURE
+         });
+      }
+      if (!dataProviderCondition.fastUpdates.conditionMet) {
+         failures.push({
+            protocolId: FTSO2_FAST_UPDATES_PROTOCOL_ID,
+            failureId: MinimalConditionFailureType.FAST_UPDATES_FAILURE
+         });
+      }
+      if (!dataProviderCondition.staking.conditionMet) {
+         failures.push({
+            protocolId: STAKING_PROTOCOL_ID,
+            failureId: MinimalConditionFailureType.STAKING_FAILURE
+         });
+      }
+      const dataProviderPasses: DataProviderPasses = {
+         rewardEpochId: dataProviderCondition.rewardEpochId,
+         dataProviderName: dataProviderCondition.dataProviderName,
+         eligibleForReward: dataProviderCondition.eligibleForReward,
+         voterAddress: dataProviderCondition.voterAddress,
+         passes: allPasses,
+         failures,
+      }
+      result.push(dataProviderPasses);
+   }
+   return result;
+}
+
+export function updateClaimsForMinimalConditions(rewardEpochId: number, dataProviderConditions: DataProviderConditions[]): void {
+   // handle case with len = 0
+   const beneficiariesToBurn = new Set<string>();
+   for (let dataProviderCondition of dataProviderConditions) {
+      if (dataProviderCondition.eligibleForReward) {
+         continue;
+      }
+      beneficiariesToBurn.add(dataProviderCondition.voterAddress.toLowerCase());
+      beneficiariesToBurn.add(dataProviderCondition.delegationAddress.toLowerCase());
+      for (let nodeId of dataProviderCondition.nodeIds) {
+         beneficiariesToBurn.add(nodeId.toLowerCase());
+      }
+   }
+   beneficiariesToBurn.add(BURN_ADDRESS.toLowerCase());
+
+   const rewardDistributionData = deserializeRewardDistributionData(rewardEpochId);
+   const claims = rewardDistributionData.rewardClaims.map(item => item.body);
+   const fullClaims = claims.filter(claim => !beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
+   const claimsToBurn = claims.filter(claim => beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
+   const burnClaim: IRewardClaim = {
+      beneficiary: BURN_ADDRESS.toLowerCase(),
+      amount: claimsToBurn.reduce((acc, claim) => acc + claim.amount, 0n),
+      claimType: ClaimType.DIRECT,
+      rewardEpochId,
+   }
+   const newClaims = [burnClaim, ...fullClaims];
+   newClaims.sort((a, b) => a.beneficiary.localeCompare(b.beneficiary));
+   // sanity check - no double beneficiaries
+   const seenBeneficiaries = new Set<string>();
+   for(const claim of newClaims) {
+      if(claim.beneficiary.toLowerCase() !== claim.beneficiary) {
+         throw new Error(`Beneficiary address not in lowercase: ${claim.beneficiary}`);
+      }
+      if(seenBeneficiaries.has(claim.beneficiary)) {
+         throw new Error(`Duplicate beneficiary: ${claim.beneficiary}`);
+      }
+      seenBeneficiaries.add(claim.beneficiary);
+   }
+   // true indicates applied min conditions
+   serializeRewardDistributionData(rewardEpochId, newClaims, true);
 }
 

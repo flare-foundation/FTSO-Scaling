@@ -13,14 +13,13 @@ export DB_USERNAME=root
 export DB_PASSWORD=root
 export DB_NAME=flare_ftso_indexer
 
+# Disabling specific logs in reward calculation
 export REMOVE_ANNOYING_MESSAGES=true
+# Used in some special testing cases for some old reward epochs. Not relevant anymore.
 export ALLOW_IDENTITY_ADDRESS_SIGNING=true
-# Start reward epoch id on Coston
-export START_REWARD_EPOCH_ID=2344
 
 # check here: https://coston-explorer.flare.network/address/0x6e5A85aB09c2056A9Af46c3Ca5a5A1E6752C8D79/read-contract#address-tabs
-# 9.  getCurrentRewardEpochId, and use one epoch less for test (required indexer history is 4 epochs/ 1 day)
-# export REWARD_EPOCH_ID=2349
+# 9.  getCurrentRewardEpochId to get current reward epoch (required indexer history is 4 epochs/ 1 day)
 
 # COMPILATION
 yarn nest build ftso-reward-calculation-process
@@ -35,9 +34,5 @@ node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-proc
 # ---------------------------------------------------------------------------------------------------------------------------
 # single reward epoch calculation
 # export REWARD_EPOCH_ID=2773
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -b 40 -w 10 -r $REWARD_EPOCH_ID -m 10000
-
-# ---------------------------------------------------------------------------------------------------------------------------
-# Incremental calculation for the current reward epoch
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -l -b 40 -w 10 -m 10000
+# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 40 -w 10 -r $REWARD_EPOCH_ID -m 10000
 

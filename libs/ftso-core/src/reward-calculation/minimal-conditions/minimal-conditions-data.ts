@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { base58 } from '@scure/base';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { CALCULATIONS_FOLDER, PASSES_DATA_FOLDER, STAKING_DATA_FOLDER } from "../../configs/networks";
+import { bigIntReplacer, bigIntReviver } from "../../utils/big-number-serialization";
 import { DataProviderConditions, DataProviderPasses, ListedProviderList, ValidatorInfo } from "./minimal-conditions-interfaces";
-import { bigIntReplacer } from "../../utils/big-number-serialization";
+import { MINIMAL_CONDITIONS_FILE, PASSES_FILE } from '../../utils/stat-info/constants';
 
 /**
  * Reads the staking info for a given reward epoch id. 
@@ -15,7 +16,7 @@ export function readStakingInfo(
 ): ValidatorInfo[] {
    const fname = path.join(stakingDataFolder, `${rewardEpochId}-nodes-data.json`);
    const data = readFileSync(fname, 'utf8');
-   const result: ValidatorInfo[] = JSON.parse(data);
+   const result: ValidatorInfo[] = JSON.parse(data, bigIntReviver);
    for(let validatorInfo of result) {
       // "NodeID-2a7BPY7UeJv2njMuyUHfBSTeQCYZj6bwV"
       // Checksum is not validated
@@ -30,14 +31,14 @@ export function readStakingInfo(
  */
 export function readPassesInfo(
    rewardEpochId: number,
-   passesDataFolder = PASSES_DATA_FOLDER()
-): DataProviderPasses[] | undefined {
-   const fname = path.join(passesDataFolder, `${rewardEpochId}-passes-data.json`);
+   calculationFolder = CALCULATIONS_FOLDER()
+): DataProviderPasses[] {
+   const fname = path.join(calculationFolder, `${rewardEpochId}`, PASSES_FILE);
    if(!existsSync(fname)) {
-      return undefined;
+      throw new Error(`Passes file not found: ${fname}`);
    }
    const data = readFileSync(fname, 'utf8');
-   return JSON.parse(data);
+   return JSON.parse(data) as DataProviderPasses[];
 }
 
 /**
@@ -45,14 +46,14 @@ export function readPassesInfo(
  */
 export function writePassesInfo(
    rewardEpochId: number,
-   data: DataProviderPasses,
-   passesDataFolder = PASSES_DATA_FOLDER()
-): void {
-   if (!existsSync(passesDataFolder)) {
-      mkdirSync(passesDataFolder, { recursive: true });
+   data: DataProviderPasses[],
+   calculationFolder = CALCULATIONS_FOLDER()
+): void {   
+   if (!existsSync(calculationFolder)) {
+      mkdirSync(calculationFolder, { recursive: true });
    }
-   const fname = path.join(passesDataFolder, `${rewardEpochId}-passes-data.json`);
-   writeFileSync(fname, JSON.stringify(data));
+   const fname = path.join(calculationFolder, `${rewardEpochId}`, PASSES_FILE);
+   writeFileSync(fname, JSON.stringify(data, null, 2));
 }
 
 /**
@@ -66,7 +67,7 @@ export function writeDataProviderConditions(
    if (!existsSync(calculationFolder)) {
       mkdirSync(calculationFolder, { recursive: true });
    }
-   const fname = path.join(calculationFolder, `${rewardEpochId}`, `minimal-conditions.json`);
+   const fname = path.join(calculationFolder, `${rewardEpochId}`, MINIMAL_CONDITIONS_FILE);
    writeFileSync(fname, JSON.stringify(data, bigIntReplacer, 2));
 }
 

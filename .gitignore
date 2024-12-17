@@ -11,3 +11,5 @@ test-db
 exports-csv
 staking-data
 listed-data-providers
+passes-data
+rewards-data
