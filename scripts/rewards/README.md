@@ -248,20 +248,34 @@ When finalizing the following [reward detail tags](../../libs/ftso-core/src/rewa
 
 ## Reward calculation and data
 
-Reward calculation can be done with the following scripts
+Reward calculation can be done with the following scripts:
 - [`scripts/rewards/coston-db.sh`](./scripts/rewards/coston-db.sh)
 - [`scripts/rewards/songbird-db.sh`](./scripts/rewards/songbird-db.sh)
 - [`scripts/rewards/flare-db.sh`](./scripts/rewards/flare-db.sh)
+
 The scripts require configuration for access to the C-chain indexer data base with sufficient history, depending on which reward epoch
 the calculations are performed for. The data is calculated into the folder `calculations`. For each reward epoch `rewardEpochId` the data are stored into the folder
 `calculations/<rewardEpochId>` and within that folder the specific data for each voting round (`votingRoundId`) are stored in the folders 
 `calculations/<rewardEpochId>/<votingRoundId>`.
 
-The results for reward distribution based on reward calculation are stored into `calculations/<network>/<rewardEpochId>/reward-distribution-data.json`. 
+The results for reward distribution based on reward calculation are stored into `calculations/<network>/<rewardEpochId>/reward-distribution-data.json`. These data do not reflect application of minimal conditions for running Flare protocols. The file contains the reward Merkle root and relevant Merkle proofs for all the claims. Note that this Merkle root is used only for the period until minimal conditions start to be applied. Later this file will not be used anymore.
 
 ### Applying minimal conditions 
 
-Minimal conditions ([Songbird](https://proposals.flare.network/SIP/SIP_4.html), [Flare](https://proposals.flare.network/FIP/FIP_10.html)) are applied on the reward distribution file. This produces the new file with applied minimal conditions `calculations/<network>/<rewardEpochId>/reward-distribution-data-min-conditions.json`.
+Minimal conditions ([Songbird](https://proposals.flare.network/SIP/SIP_4.html), [Flare](https://proposals.flare.network/FIP/FIP_10.html)) are applied on the reward distribution file. The following conditions must be met in order to run the script for applying minimal conditions for reward epoch `rewardEpochId`:
+- `passes.json` for `rewardEpochId - 1` must be present at `calculations/<network>/<rewardEpochId - 1>/passes.json`. For the very first calculation the JSON file should contain empty array. Otherwise, the file is produced as a result of applying minimal condition on reward claims of the previous reward epoch.
+- For Flare network that provides staking rewards the file `staking-data/<network>/<rewardEpochId>-nodes-data.json` must be present. This file can be obtained by running the script
+
+```bash
+./scripts/flare-get-staking-data.sh <rewardEpochId>
+``` 
+
+Minimal conditions are applied by running the script
+```bash
+./scripts/rewards/min-conditions/flare-min-conditions.sh <rewardEpochId>
+``` 
+
+This produces a new file with applied minimal conditions `calculations/<network>/<rewardEpochId>/reward-distribution-data-min-conditions.json`.
 
 ### Public reward data
 
@@ -271,14 +285,14 @@ Public reward data are extracted using from outputs of reward calculation and mi
 yarn ts-node scripts/analytics/run/extract-reward-data.ts <network> <rewardEpochId>
 ```
 
-The results are multiple files in folder `rewards-data/<network>/<rewardEpochId>`. This produces the files described below.
+The results are multiple files in folder `rewards-data/<network>/<rewardEpochId>` as described below.
 These files are then published on [https://github.com/flare-foundation/fsp-rewards](https://github.com/flare-foundation/fsp-rewards).
 Public reward data includes the following files:
-- `reward-epoch-info.json` - extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
-- `reward-distribution-data.json` - all aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib).
-- `reward-distribution-data-tuples.json` - Same as `reward-distribution-data.json`, only that reward claims with proofs are encoded as tuples instead of JSON-like structs. This is useful for claiming using the blockchain explorer interface.
-- `minimal-conditions.json` - file describes result of a minimal conditions check and results who gets rewards and passes.
-- `passes-data.json` - file describing how many passes have been earned after the reward epoch calculation.
+- `reward-epoch-info.json` - Extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
+- `reward-distribution-data.json` - All aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib). 
+- `reward-distribution-data-tuples.json` - Same as `reward-distribution-data.json`, only that reward claims with proofs are encoded as tuples instead of JSON-like structs. This format is useful for claiming through some older versions of user interfaces of blockchain explorers.
+- `minimal-conditions.json` - The result of the minimal conditions check and results who gets rewards and passes.
+- `passes.json` - The file describes how many passes have been cumulatively earned up to the end of reward epoch reward calculation.
 
 ### Detailed reward calculation data
 
