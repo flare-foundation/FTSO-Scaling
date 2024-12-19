@@ -276,7 +276,7 @@ In folder `calculations/<rewardEpochId>`:
 In folders `calculations/<rewardEpochId>/<votingRoundId>`:
 - `reward-calculation-data.json` - Majority of data that is needed as the input into reward claim calculation. Data are extracted through C-chain indexer and data processing.
 - `offers.json` - Partial reward offers (usually just one) holding total reward funds for the voting round in FTSO scaling protocol.
-- `fast-updates-offers.json` - Partial reward offers for FTSO fast updates protocol
+- `fast-updates-offers.json` - Partial reward offers for FTSO fast updates protocol.
 - `feed-values.json` - Merkle tree data with proofs for price feeds and random.
 - `claims.json` - Detailed reward claims for the voting round. Include the claims from both protocols.
 - `aggregated-claims.json` - Aggregated partial claims from previous voting rounds and `claims.json`.
@@ -294,11 +294,15 @@ Minimal conditions ([Songbird](https://proposals.flare.network/SIP/SIP_4.html), 
 ./scripts/flare-get-staking-data.sh <rewardEpochId>
 ``` 
 
-Minimal conditions criteria are applied by running the script
+Minimal conditions criteria for Flare network are applied by running the script
 ```bash
 ./scripts/rewards/min-conditions/flare-min-conditions.sh <rewardEpochId>
 ``` 
-The script needs the connection to the C-chain indexer database.
+while for Songbird network the script is
+```bash
+./scripts/rewards/min-conditions/songbird-min-conditions.sh <rewardEpochId>
+``` 
+The scripts needs a connection to the C-chain indexer database, containing sufficient history.
 
 The script produces the following files in the folder `calculations/<network>/<rewardEpochId>`.
 - `minimal-conditions.json` - A detailed summary of checks for each registered data provider in the reward epoch of meeting minimal conditions in the reward epoch.
@@ -312,6 +316,7 @@ Public reward data are extracted using from outputs of reward calculation and mi
 ```bash
 yarn ts-node scripts/analytics/run/extract-reward-data.ts <network> <rewardEpochId>
 ```
+Network can be `flare`, `songbird` or `coston`.
 
 The results are multiple files in folder `rewards-data/<network>/<rewardEpochId>` as described below.
 These files are then published on [https://github.com/flare-foundation/fsp-rewards](https://github.com/flare-foundation/fsp-rewards).
@@ -322,7 +327,7 @@ Public reward data includes the following files:
 - `minimal-conditions.json` - Copied from minimal conditions application results.
 - `passes.json` - Copied from minimal conditions application results.
 
-Note that in all those files, big integers are represented as strings (without `"n"` at the end, as it is the case with reward calculation files).
+Note that in all those files, big integers (like reward amounts in wei) are represented as strings (without `"n"` at the end, as it is the case with reward calculation files).
 
 ## Claiming rewards
 
