@@ -364,7 +364,7 @@ export class IndexerClient {
 
   /**
    * Extracts VotePowerBlockSelected event for a specific @param rewardEpochId from the indexer database,
-   * if the event is already indexed. Otherwise returns undefined.
+   * if the event is already indexed. Otherwise, returns undefined.
    * This event is a low boundary event for the start of voter registration for rewardEpochId.
    */
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
@@ -576,138 +576,6 @@ export class IndexerClient {
       data: submits,
     };
   }
-
-  /**
-   * Queries indexer database for all finalization transactions on the Relay contract in a given timestamp range.
-   * It returns the result if the indexer database ensures the data availability in the given timestamp range.
-   * The data may not be in order as it appears on blockchain. 
-   */
-  public async getFinalizationDataInRange(
-    startTime: number,
-    endTime: number
-  ): Promise<IndexerResponse<FinalizationData[]>> {
-    const ensureRange = await this.ensureEventRange(startTime, endTime);
-    if (ensureRange !== BlockAssuranceResult.OK) {
-      return {
-        status: ensureRange,
-        data: [],
-      };
-    }
-    // TEMP CHANGE
-    let oldTransactionsResults: TLPTransaction[] = [];
-    let secondOldTransactionsResults: TLPTransaction[] = [];
-    let oldRelay: ContractDefinitions | undefined;
-    let secondOldRelay: ContractDefinitions | undefined;
-    const network = process.env.NETWORK as networks;
-
-    // Do this for every network with change
-    const oldCostonRelayAddress = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
-    if (network === "coston" && CONTRACTS.Relay.address != oldCostonRelayAddress) {
-      oldRelay = {
-        ...CONTRACTS.Relay,
-        address: oldCostonRelayAddress,
-      };
-    }
-
-    const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    if (network === "coston" && CONTRACTS.Relay.address != secondOldCostonRelayAddress) {
-      secondOldRelay = {
-        ...CONTRACTS.Relay,
-        address: secondOldCostonRelayAddress,
-      };
-    }
-
-
-    const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
-    if (network === "songbird" && CONTRACTS.Relay.address != oldSongbirdRelayAddress) {
-      oldRelay = {
-        ...CONTRACTS.Relay,
-        address: oldSongbirdRelayAddress,
-      };
-    }
-    
-    const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    if (network === "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelayAddress) {
-      secondOldRelay = {
-        ...CONTRACTS.Relay,
-        address: secondOldSongbirdRelayAddress,
-      };
-    }
-
-    if (oldRelay !== undefined) {
-      oldTransactionsResults = await this.queryTransactions(
-        oldRelay,
-        ContractMethodNames.relay,
-        startTime,
-        endTime
-      );
-    }
-
-    if (secondOldRelay !== undefined) {
-      secondOldTransactionsResults = await this.queryTransactions(
-        secondOldRelay,
-        ContractMethodNames.relay,
-        startTime,
-        endTime
-      );
-    }
-
-    // END TEMP CHANGE
-    let newTransactionsResults = await this.queryTransactions(
-      CONTRACTS.Relay,
-      ContractMethodNames.relay,
-      startTime,
-      endTime
-    );
-
-    interface Pair {
-      address: string | undefined;
-      transactionsResults: TLPTransaction[];
-    }
-    const jointTransactionResults: Pair[] = [
-      {
-        address: oldRelay?.address,
-        transactionsResults: oldTransactionsResults
-      },
-      {
-        address: secondOldRelay?.address,
-        transactionsResults: secondOldTransactionsResults
-      },
-      {
-        address: CONTRACTS.Relay.address,
-        transactionsResults: newTransactionsResults
-      }
-    ];
-
-    let finalizations: FinalizationData[] = [];
-    for (let txListPair of jointTransactionResults) {
-      const { address, transactionsResults } = txListPair;
-      const isOldRelay = (oldRelay !== undefined && address === oldRelay.address)
-        || (secondOldRelay !== undefined && address === secondOldRelay.address);
-      const tmpFinalizations: FinalizationData[] = transactionsResults.map(tx => {
-        const timestamp = tx.timestamp;
-        const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
-        return {
-          submitAddress: "0x" + tx.from_address,
-          relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
-          votingEpochIdFromTimestamp: votingEpochId,
-          transactionIndex: tx.transaction_index,
-          timestamp,
-          blockNumber: tx.block_number,
-          messages: tx.input,
-          successfulOnChain: tx.status > 0,
-          isOldRelay
-        } as FinalizationData;
-      });
-      finalizations.push(...tmpFinalizations);
-    }
-
-    return {
-      status: ensureRange,
-      data: finalizations,
-    };
-  }
-
 
   public static sortEvents(events: TLPEvents[]): TLPEvents[] {
     return events.sort((a, b) => {
