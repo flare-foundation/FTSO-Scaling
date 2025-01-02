@@ -20,10 +20,10 @@ cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Fl
 # "
 
 # copy_libs_add_header() {
-#    cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/$1.ts libs/fsp-utils/src/$1.ts.tmp
-#    echo "$COPY_HEADER" > libs/fsp-utils/src/$1.ts
-#    cat libs/fsp-utils/src/$1.ts.tmp >> libs/fsp-utils/src/$1.ts
-#    rm libs/fsp-utils/src/$1.ts.tmp
+#    cp -r ../flare-smart-contracts-v2/scripts/libs/protocol/$1.ts libs/ftso-core/fsp-utils/$1.ts.tmp
+#    echo "$COPY_HEADER" > libs/ftso-core/fsp-utils/$1.ts
+#    cat libs/ftso-core/fsp-utils/$1.ts.tmp >> libs/ftso-core/fsp-utils/$1.ts
+#    rm libs/ftso-core/fsp-utils/$1.ts.tmp
 # }
 
 # copy_libs_add_header "PayloadMessage"
