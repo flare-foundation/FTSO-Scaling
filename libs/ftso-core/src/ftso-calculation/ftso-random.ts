@@ -1,4 +1,4 @@
-import { DataForCalculations } from "../data/data-calculation-interfaces";
+import { DataForCalculations } from "../data/DataForCalculations";
 import { RandomCalculationResult } from "../voting-types";
 import { MAX_2_256, NON_BENCHED_RANDOM_VOTERS_MIN_COUNT } from "./ftso-constants";
 

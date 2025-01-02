@@ -48,7 +48,6 @@ import {
 
 import { DataManagerForRewarding } from "../../../libs/fsp-rewards/src/DataManagerForRewarding";
 import { IndexerClientForRewarding } from "../../../libs/fsp-rewards/src/IndexerClientForRewarding";
-import { RewardOffers } from "../../../libs/contracts/src/events";
 import {
   IPartialRewardOfferForEpoch,
   IPartialRewardOfferForRound,
@@ -74,6 +73,9 @@ import {
 import { destroyStorage } from "../../../libs/fsp-rewards/src/utils/stat-info/storage";
 import { toFeedId } from "../../utils/generators";
 import {BURN_ADDRESS, CALCULATIONS_FOLDER} from "../../../libs/fsp-rewards/src/constants";
+
+
+import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
 // Ensure that the networks are not loaded
 

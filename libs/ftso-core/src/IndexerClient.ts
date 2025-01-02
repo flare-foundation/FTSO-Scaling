@@ -13,11 +13,9 @@ import {
 
 } from "./constants";
 import {
-  FullVoterRegistrationInfo,
   InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
-  RewardOffers,
   RewardsOffered,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
@@ -27,6 +25,8 @@ import {
 import { ILogger } from "./utils/ILogger";
 import {AbiCache} from "../../contracts/src/abi/AbiCache";
 import {CONTRACTS, networks} from "../../contracts/src/constants";
+import { RewardOffers } from "./data/RewardOffers";
+import { FullVoterRegistrationInfo } from "./data/FullVoterRegistrationInfo";
 
 /**
  * Generic object for submission data and finalization data.

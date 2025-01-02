@@ -3,7 +3,6 @@ import path from "path/posix";
 import { ISigningPolicy } from "../../../../ftso-core/src/fsp-utils/SigningPolicy";
 import { RewardEpoch } from "../../../../ftso-core/src/RewardEpoch";
 import { EPOCH_SETTINGS } from "../../../../ftso-core/src/constants";
-import { FullVoterRegistrationInfo, RewardOffers } from "../../../../contracts/src/events";
 import { Feed } from "../../../../ftso-core/src/voting-types";
 import { bigIntReplacer, bigIntReviver } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { REWARD_EPOCH_INFO_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
@@ -11,6 +10,8 @@ import { FUInflationRewardsOffered } from "../../../../contracts/src/events/FUIn
 import { IncentiveOffered } from "../../../../contracts/src/events/IncentiveOffered";
 import { FDCInflationRewardsOffered } from "../../../../contracts/src/events/FDCInflationRewardsOffered";
 import {CALCULATIONS_FOLDER} from "../../constants";
+import { RewardOffers } from "../../../../ftso-core/src/data/RewardOffers";
+import { FullVoterRegistrationInfo } from "../../../../ftso-core/src/data/FullVoterRegistrationInfo";
 
 export interface RewardEpochInfo {
   rewardEpochId: number;

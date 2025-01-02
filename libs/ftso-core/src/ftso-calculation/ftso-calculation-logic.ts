@@ -1,4 +1,4 @@
-import { DataForCalculations } from "../data/data-calculation-interfaces";
+import { DataForCalculations } from "../data/DataForCalculations";
 import { MerkleTree } from "../utils/MerkleTree";
 import { MerkleTreeStructs } from "../data/MerkleTreeStructs";
 import { EpochResult, MedianCalculationResult, RandomCalculationResult } from "../voting-types";

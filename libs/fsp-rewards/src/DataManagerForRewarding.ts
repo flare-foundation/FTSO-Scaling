@@ -11,7 +11,7 @@ import { ContractMethodNames } from "../../contracts/src/definitions";
 import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FDC_PROTOCOL_ID, FTSO2_PROTOCOL_ID } from "../../ftso-core/src/constants";
 import {
   DataForCalculations
-} from "../../ftso-core/src/data/data-calculation-interfaces";
+} from "../../ftso-core/src/data/DataForCalculations";
 import { bitVoteIndicesNum, extractFDCRewardData, uniqueRequestsIndices } from "./reward-calculation/fdc/fdc-utils";
 import { ILogger } from "../../ftso-core/src/utils/ILogger";
 import { errorString } from "../../ftso-core/src/utils/error";

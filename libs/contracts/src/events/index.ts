@@ -14,15 +14,3 @@ export { VotePowerBlockSelected } from "./VotePowerBlockSelected";
 export { VoterRegistered } from "./VoterRegistered";
 export { VoterRegistrationInfo } from "./VoterRegistrationInfo";
 export { SigningPolicySigned } from "./SigningPolicySigned";
-
-// Helpers
-
-export interface RewardOffers {
-  inflationOffers: InflationRewardsOffered[];
-  rewardOffers: RewardsOffered[];
-}
-
-export interface FullVoterRegistrationInfo {
-  voterRegistrationInfo: VoterRegistrationInfo;
-  voterRegistered: VoterRegistered;
-}

@@ -21,7 +21,7 @@ import {
   DataForCalculations,
   DataForCalculationsPartial,
 
-} from "./data/data-calculation-interfaces";
+} from "./data/DataForCalculations";
 import { CommitData, ICommitData } from "./data/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./data/RevealData";

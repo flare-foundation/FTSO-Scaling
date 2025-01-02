@@ -1,7 +1,7 @@
-import {SubmissionData} from "../IndexerClient";
-import {RewardEpoch} from "../RewardEpoch";
-import {IRevealData} from "./RevealData";
-import {Address, Feed} from "../voting-types";
+import { SubmissionData } from "../IndexerClient";
+import { RewardEpoch } from "../RewardEpoch";
+import { IRevealData } from "./RevealData";
+import { Address, Feed } from "../voting-types";
 
 export interface DataForCalculationsPartial {
   // voting round id

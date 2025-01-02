@@ -3,7 +3,7 @@ import {GenericSubmissionData, ParsedFinalizationData, SubmissionData} from "../
 import {ISignaturePayload} from "../../ftso-core/src/fsp-utils/SignaturePayload";
 import {AttestationRequest} from "../../contracts/src/events/AttestationRequest";
 import {HashSignatures} from "./utils/stat-info/reward-calculation-data";
-import {DataForCalculations} from "../../ftso-core/src/data/data-calculation-interfaces";
+import {DataForCalculations} from "../../ftso-core/src/data/DataForCalculations";
 
 export interface DataForRewardCalculation {
     // FTSO Scaling

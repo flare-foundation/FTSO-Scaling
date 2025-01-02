@@ -5,7 +5,6 @@ import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
   RewardEpochStarted,
-  RewardOffers,
   RewardsOffered,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
@@ -22,6 +21,9 @@ import { TestVoter, generateEvent } from "./basic-generators";
 import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
 import {AbiCache} from "../../libs/contracts/src/abi/AbiCache";
 import {CONTRACTS} from "../../libs/contracts/src/constants";
+
+
+import { RewardOffers } from "../../libs/ftso-core/src/data/RewardOffers";
 
 export const encodingUtils = AbiCache.instance;
 const burnAddress = generateRandomAddress();

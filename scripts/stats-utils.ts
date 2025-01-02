@@ -1,5 +1,4 @@
 import { globSync } from "glob";
-import { FullVoterRegistrationInfo } from "../libs/contracts/src/events";
 import { verifyWithMerkleProof } from "../libs/ftso-core/src/utils/MerkleTree";
 import { ClaimType, RewardClaim } from "../libs/fsp-rewards/src/utils/RewardClaim";
 import {
@@ -12,6 +11,9 @@ import { TestVoter } from "../test/utils/basic-generators";
 import { claimSummary } from "../test/utils/reward-claim-summaries";
 
 import {CALCULATIONS_FOLDER} from "../libs/fsp-rewards/src/constants";
+
+
+import { FullVoterRegistrationInfo } from "../libs/ftso-core/src/data/FullVoterRegistrationInfo";
 
 export interface RewardEpochCalculationData {
   rewardEpochInfo: RewardEpochInfo;

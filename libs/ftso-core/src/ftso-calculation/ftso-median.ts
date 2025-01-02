@@ -1,4 +1,4 @@
-import { DataForCalculations } from "../data/data-calculation-interfaces";
+import { DataForCalculations } from "../data/DataForCalculations";
 import { FeedValueEncoder, ValueWithDecimals } from "../data/FeedValueEncoder";
 import { Address, Feed, MedianCalculationResult, MedianCalculationSummary } from "../voting-types";
 

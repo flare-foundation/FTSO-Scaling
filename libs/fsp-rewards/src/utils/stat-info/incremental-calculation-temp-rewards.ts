@@ -1,12 +1,14 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path/posix";
-import { FullVoterRegistrationInfo } from "../../../../contracts/src/events";
 import { IRewardClaim } from "../RewardClaim";
 import { bigIntReplacer } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { deserializeAggregatedClaimsForVotingRoundId } from "./aggregated-claims";
 import { TEMPORARY_INCREMENTAL_REWARDS_FILE } from "./constants";
 import { deserializeRewardEpochInfo } from "./reward-epoch-info";
 import {CALCULATIONS_FOLDER} from "../../constants";
+
+
+import { FullVoterRegistrationInfo } from "../../../../ftso-core/src/data/FullVoterRegistrationInfo";
 
 export interface VoterRewards {
   voter: FullVoterRegistrationInfo;

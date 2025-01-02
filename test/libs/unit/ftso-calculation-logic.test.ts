@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { RewardOffers } from "../../../libs/contracts/src/events";
 import {
   FeedWithTypeAndValue,
   rewardEpochFeedSequence,
@@ -9,6 +8,9 @@ import { calculateMedian } from "../../../libs/ftso-core/src/ftso-calculation/ft
 import { ValueWithDecimals } from "../../../libs/ftso-core/src/data/FeedValueEncoder";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { getTestFile } from "../../utils/getTestFile";
+
+
+import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
 describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
   describe("calculateMedian", () => {
