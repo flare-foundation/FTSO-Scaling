@@ -10,7 +10,6 @@ import {
   EPOCH_SETTINGS,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
-
 } from "./constants";
 import {
   InflationRewardsOffered,

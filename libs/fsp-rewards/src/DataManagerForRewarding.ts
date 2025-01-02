@@ -2,28 +2,43 @@ import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 import { RelayMessage } from "../../ftso-core/src/fsp-utils/RelayMessage";
 import { ISignaturePayload, SignaturePayload } from "../../ftso-core/src/fsp-utils/SignaturePayload";
-import { DataAvailabilityStatus, DataManager, DataMangerResponse, SignAndFinalizeSubmissionData } from "../../ftso-core/src/DataManager";
-import { BlockAssuranceResult, GenericSubmissionData, SubmissionData } from "../../ftso-core/src/IndexerClient";
+import { DataAvailabilityStatus, DataManager, DataMangerResponse } from "../../ftso-core/src/DataManager";
+import {
+  BlockAssuranceResult,
+  FinalizationData,
+  GenericSubmissionData,
+  ParsedFinalizationData,
+  SubmissionData,
+} from "../../ftso-core/src/IndexerClient";
 import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
 import { ContractMethodNames } from "../../contracts/src/definitions";
-import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, EPOCH_SETTINGS, FDC_PROTOCOL_ID, FTSO2_PROTOCOL_ID } from "../../ftso-core/src/constants";
 import {
-  DataForCalculations
-} from "../../ftso-core/src/data/DataForCalculations";
+  ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
+  EPOCH_SETTINGS,
+  FDC_PROTOCOL_ID,
+  FTSO2_PROTOCOL_ID,
+} from "../../ftso-core/src/constants";
+import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 import { bitVoteIndicesNum, extractFDCRewardData, uniqueRequestsIndices } from "./reward-calculation/fdc/fdc-utils";
 import { ILogger } from "../../ftso-core/src/utils/ILogger";
 import { errorString } from "../../ftso-core/src/utils/error";
 import { Address, MessageHash } from "../../ftso-core/src/voting-types";
-import {WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH} from "./constants";
+import { WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH } from "./constants";
 import {
   DataForRewardCalculation,
   FastUpdatesDataForVotingRound,
   FDCDataForVotingRound,
   FDCRewardData,
-  PartialFDCDataForVotingRound
+  PartialFDCDataForVotingRound,
 } from "./data-calculation-interfaces";
+import { SigningPolicy } from "../../ftso-core/src/fsp-utils/SigningPolicy";
+
+export interface SignAndFinalizeSubmissionData {
+  signatures: SubmissionData[];
+  finalizations: FinalizationData[];
+}
 
 /**
  * Helps in extracting data in a consistent way for FTSO scaling feed median calculations, random number calculation and rewarding.
@@ -200,6 +215,9 @@ export class DataManagerForRewarding extends DataManager {
       data: result as DataForCalculations[],
     };
   }
+
+
+
   /**
      * Extract signature payloads for the given voting round id from the given submissions.
      * Each signature is filtered out for the correct voting round id, protocol id and eligible signer.
@@ -514,6 +532,131 @@ export class DataManagerForRewarding extends DataManager {
       status: DataAvailabilityStatus.OK,
       data: result,
     };
+  }
+
+
+  /**
+   * Extract signatures and finalizations for the given voting round id from indexer database.
+   * This function is used for reward calculation, which is executed at the time when all the data
+   * is surely on the blockchain. Nevertheless the data availability is checked. Timeout queries are
+   * not relevant here. The transactions are taken from the rewarded window for each
+   * voting round. The rewarded window starts at the reveal deadline which is in votingEpochId = votingRoundId + 1.
+   * The end of the rewarded window is the end of voting epoch with
+   * votingEpochId = votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS.
+   * Rewarding will consider submissions are finalizations only in the rewarding window and this function
+   * queries exactly those.
+   * @param votingRoundId
+   * @returns
+   */
+  private async getSignAndFinalizeSubmissionDataForVotingRound(
+    votingRoundId: number
+  ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
+    const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
+      ContractMethodNames.submitSignatures,
+      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
+      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
+    );
+    if (submitSignaturesSubmissionResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const signatures = submitSignaturesSubmissionResponse.data;
+    DataManager.sortSubmissionDataArray(signatures);
+    // Finalization data only on the rewarded range
+    const submitFinalizeSubmissionResponse = await this.indexerClient.getFinalizationDataInRange(
+      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
+      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
+    );
+    if (submitFinalizeSubmissionResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const finalizations = submitFinalizeSubmissionResponse.data;
+    DataManager.sortSubmissionDataArray(finalizations);
+    return {
+      status: DataAvailabilityStatus.OK,
+      data: {
+        signatures,
+        finalizations,
+      },
+    };
+  }
+
+  /**
+   * Given submissions of finalizations eligible for voting round @param votingRoundId and matching reward epoch @param rewardEpoch to the
+   * voting round id, extract finalizations which match voting round id, given protocol id and are parsable and finalizeable (would cause finalisation)
+   * @param votingRoundId
+   * @param rewardEpoch
+   * @param submissions
+   * @param protocolId
+   * @returns
+   */
+  private extractFinalizations(
+    votingRoundId: number,
+    rewardEpoch: RewardEpoch,
+    submissions: FinalizationData[],
+    protocolId = FTSO2_PROTOCOL_ID
+  ): ParsedFinalizationData[] {
+    const finalizations: ParsedFinalizationData[] = [];
+    for (const submission of submissions) {
+      try {
+        let calldata = submission.messages;
+        if (calldata.startsWith("0x")) {
+          calldata = calldata.slice(2);
+        }
+
+        if (calldata.length < 10) {
+          continue;
+        }
+        try {
+          const relayMessage = RelayMessage.decode(calldata.slice(8));
+          // ignore irrelevant messages
+          if (
+            !relayMessage.protocolMessageMerkleRoot ||
+            relayMessage.protocolMessageMerkleRoot.protocolId !== protocolId ||
+            relayMessage.protocolMessageMerkleRoot.votingRoundId !== votingRoundId ||
+            relayMessage.signingPolicy.rewardEpochId !== rewardEpoch.rewardEpochId
+          ) {
+            continue;
+          }
+          // TODO: Check if the signing policy is correct
+          const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
+          const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
+          if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
+            throw new Error(
+              `Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`
+            );
+          }
+          const finalization: ParsedFinalizationData = {
+            ...submission,
+            messages: relayMessage,
+          };
+          // Verify the relay message by trying to encode it with verification.
+          // If it excepts it is non-finalisable
+          RelayMessage.encode(relayMessage, true);
+          // The message is eligible for consideration.
+          finalizations.push(finalization);
+        } catch (e) {
+          this.logger.log(`Unparsable relay message. Ignored: ${e.message}`);
+        }
+      } catch (e) {
+        // ignore unparsable message
+        this.logger.warn(`Unparsable or non-finalisable finalization message: ${e.message}`);
+      }
+    }
+    // consider only the first sent successful finalization
+    // note that finalizations are already sorted according to the blockchain order
+    const filteredFinalizations: ParsedFinalizationData[] = [];
+    const encounteredSenderAddresses = new Set<Address>();
+    for (const finalization of finalizations) {
+      if (!encounteredSenderAddresses.has(finalization.submitAddress.toLowerCase())) {
+        filteredFinalizations.push(finalization);
+        encounteredSenderAddresses.add(finalization.submitAddress.toLowerCase());
+      }
+    }
+    return filteredFinalizations;
   }
 
   /**
