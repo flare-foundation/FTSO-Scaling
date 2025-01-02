@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { RewardOffers } from "../../../libs/ftso-core/src/events";
+import { RewardOffers } from "../../../libs/contracts/src/events";
 import {
   FeedWithTypeAndValue,
   rewardEpochFeedSequence,
   sortFeedWithValuesToCanonicalOrder,
 } from "../../../libs/ftso-core/src/ftso-calculation/feed-ordering";
 import { calculateMedian } from "../../../libs/ftso-core/src/ftso-calculation/ftso-median";
-import { ValueWithDecimals } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { ValueWithDecimals } from "../../../libs/ftso-core/src/data/FeedValueEncoder";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { getTestFile } from "../../utils/getTestFile";
 

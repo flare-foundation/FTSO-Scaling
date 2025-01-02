@@ -5,7 +5,7 @@ import {
   RewardOffers,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
-} from "./events";
+} from "../../contracts/src/events";
 import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 

@@ -1,8 +1,9 @@
 import {
   EPOCH_SETTINGS,
-  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
-} from "../../../libs/ftso-core/src/configs/networks";
+
+} from "../../../libs/ftso-core/src/constants";
 import { finalizationSummary, printFinalizationSummary } from "../finalization-stats";
+import {GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC} from "../../../libs/fsp-rewards/src/constants";
 
 async function main() {
   if (!process.argv[2]) {

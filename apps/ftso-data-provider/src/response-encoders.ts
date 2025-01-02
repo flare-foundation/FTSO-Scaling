@@ -1,6 +1,6 @@
-import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
-import { IPayloadMessage, PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
-import { IRevealData, RevealData } from "../../../libs/ftso-core/src/utils/RevealData";
+import { CommitData, ICommitData } from "../../../libs/ftso-core/src/data/CommitData";
+import { IPayloadMessage, PayloadMessage } from "../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
+import { IRevealData, RevealData } from "../../../libs/ftso-core/src/data/RevealData";
 
 /**
  * Encodes commit data payload message to bytes in 0x-prefixed hex string format

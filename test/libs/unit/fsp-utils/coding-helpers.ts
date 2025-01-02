@@ -1,8 +1,8 @@
 import {
   ECDSASignatureWithIndex,
   IECDSASignatureWithIndex,
-} from "../../../../libs/fsp-utils/src/ECDSASignatureWithIndex";
-import { ISigningPolicy, SigningPolicy } from "../../../../libs/fsp-utils/src/SigningPolicy";
+} from "../../../../libs/ftso-core/src/fsp-utils/ECDSASignatureWithIndex";
+import { ISigningPolicy, SigningPolicy } from "../../../../libs/ftso-core/src/fsp-utils/SigningPolicy";
 
 export function defaultTestSigningPolicy(accounts: string[], N: number, singleWeight: number): ISigningPolicy {
   const signingPolicyData = {

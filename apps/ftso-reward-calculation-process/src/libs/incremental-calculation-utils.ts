@@ -1,17 +1,18 @@
 import { Logger } from "@nestjs/common";
 import * as workerPool from "workerpool";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
-import { EPOCH_SETTINGS, FUTURE_VOTING_ROUNDS } from "../../../../libs/ftso-core/src/configs/networks";
-import { fixOffersForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+import { EPOCH_SETTINGS } from "../../../../libs/ftso-core/src/constants";
+import { fixOffersForRandomFeedSelection } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-offers";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import {
   cleanupVotingRoundFolder,
   createVotingRoundFolder,
-} from "../../../../libs/ftso-core/src/utils/stat-info/storage";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/storage";
 import { IncrementalCalculationState } from "../interfaces/IncrementalCalculationState";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { initializeTemplateOffers } from "./offer-utils";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
+import {FUTURE_VOTING_ROUNDS} from "../../../../libs/fsp-rewards/src/constants";
 
 // incremental
 

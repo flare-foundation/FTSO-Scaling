@@ -1,7 +1,7 @@
 // PDP (Protocol Data Provider) Response
 
-import { AbiDataInput } from "../../../../libs/ftso-core/src/utils/ABICache";
-import { FeedResultWithProof, TreeResult } from "../../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { AbiDataInput } from "../../../../libs/contracts/src/abi/AbiCache";
+import { FeedResultWithProof, TreeResult } from "../../../../libs/ftso-core/src/data/MerkleTreeStructs";
 import { MedianCalculationResult } from "../../../../libs/ftso-core/src/voting-types";
 
 export enum PDPResponseStatusEnum {

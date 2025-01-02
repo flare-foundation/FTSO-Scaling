@@ -1,4 +1,4 @@
-import { RewardEpochInfo } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { RewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 
 export interface IncrementalCalculationState {
   rewardEpochId: number;

@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { PENALTY_FACTOR } from "../../../libs/ftso-core/src/configs/networks";
-import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
-import { calculatePenalties } from "../../../libs/ftso-core/src/reward-calculation/reward-penalties";
-import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { RewardTypePrefix } from "../../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
+import { calculatePenalties } from "../../../libs/fsp-rewards/src/reward-calculation/reward-penalties";
+import { PartialRewardOffer } from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { generateAddress, generateRewardsOffer, generateVotersWeights } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { splitToVotingRoundsEqually } from "./generator-rewards.test";
+import {PENALTY_FACTOR} from "../../../libs/fsp-rewards/src/constants";
 
 describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
   const votersWeights = generateVotersWeights(10);

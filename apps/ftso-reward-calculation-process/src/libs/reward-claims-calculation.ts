@@ -1,11 +1,11 @@
 import { Logger } from "@nestjs/common";
 import * as workerPool from "workerpool";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
-import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
-import { deserializeRewardEpochInfo } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { recordProgress } from "../../../../libs/fsp-rewards/src/utils/stat-info/progress";
+import { deserializeRewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { calculateClaimsAndAggregate } from "./claim-utils";
-import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
+import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
 
 export async function runCalculateRewardClaimsTopJob(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
   const logger = new Logger();

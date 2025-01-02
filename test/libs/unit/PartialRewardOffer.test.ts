@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { getTestFile } from "../../utils/getTestFile";
 import Web3 from "web3";
-import { InflationRewardsOffered, RewardsOffered } from "../../../libs/ftso-core/src/events";
-import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { InflationRewardsOffered, RewardsOffered } from "../../../libs/contracts/src/events";
+import { PartialRewardOffer } from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { toFeedId } from "../../utils/generators";
 import { splitToVotingRoundsEqually } from "./generator-rewards.test";
 

@@ -4,8 +4,8 @@ import { soliditySha3 } from "web3-utils";
 import {
   deserializeDataForRewardCalculation,
   writeDataForRewardCalculation,
-} from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
-import { deserializeRewardEpochInfo } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-data";
+import { deserializeRewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 
 export function extractRandomNumbers(
   rewardEpochId: number,

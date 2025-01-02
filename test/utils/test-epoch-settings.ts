@@ -1,4 +1,4 @@
-// IMPORTANT: This file should never import networks.ts.
+// IMPORTANT: This file should never import constants.ts.
 // The functions in this file are intended to be used in tests only and should be executed
 // before network.ts is imported. This is to ensure that the environment variables are set properly.
 export interface EpochSettingsConfig {

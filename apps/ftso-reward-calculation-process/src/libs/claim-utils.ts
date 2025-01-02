@@ -1,18 +1,18 @@
 import { Logger } from "@nestjs/common";
-import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
-import { RANDOM_GENERATION_BENCHING_WINDOW } from "../../../../libs/ftso-core/src/configs/networks";
+import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
+import { RANDOM_GENERATION_BENCHING_WINDOW } from "../../../../libs/ftso-core/src/constants";
 import {
   aggregateRewardClaimsInStorage,
   partialRewardClaimsForVotingRound,
-} from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
-import { fixOffersForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+} from "../../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
+import { fixOffersForRandomFeedSelection } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-offers";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
 import {
   getIncrementalCalculationsTempRewards,
   serializeIncrementalCalculationsTempRewards,
-} from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-rewards";
-import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-rewards";
+import { recordProgress } from "../../../../libs/fsp-rewards/src/utils/stat-info/progress";
 import { IncrementalCalculationState } from "../interfaces/IncrementalCalculationState";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { extractRandomNumbers, processRandomNumberFixingRange } from "./random-number-fixing-utils";

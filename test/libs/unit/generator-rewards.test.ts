@@ -4,23 +4,21 @@ import { DataSource, EntityManager } from "typeorm";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import {
-  BURN_ADDRESS,
-  CALCULATIONS_FOLDER,
   EPOCH_SETTINGS,
   RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../libs/ftso-core/src/configs/networks";
-import { RewardTypePrefix } from "../../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
+} from "../../../libs/ftso-core/src/constants";
+import { RewardTypePrefix } from "../../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
 import {
   aggregateRewardClaimsInStorage,
   partialRewardClaimsForVotingRound,
-} from "../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+} from "../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
 import { emptyLogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import {
   ClaimType,
   IPartialRewardClaim,
   IRewardClaim,
   RewardClaim,
-} from "../../../libs/ftso-core/src/utils/RewardClaim";
+} from "../../../libs/fsp-rewards/src/utils/RewardClaim";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateVoters } from "../../utils/basic-generators";
 import { getDataSource } from "../../utils/db";
@@ -48,33 +46,34 @@ import {
   setupEpochSettings,
 } from "../../utils/test-epoch-settings";
 
-import { DataManagerForRewarding } from "../../../libs/ftso-core/src/DataManagerForRewarding";
-import { IndexerClientForRewarding } from "../../../libs/ftso-core/src/IndexerClientForRewarding";
-import { RewardOffers } from "../../../libs/ftso-core/src/events";
+import { DataManagerForRewarding } from "../../../libs/fsp-rewards/src/DataManagerForRewarding";
+import { IndexerClientForRewarding } from "../../../libs/fsp-rewards/src/IndexerClientForRewarding";
+import { RewardOffers } from "../../../libs/contracts/src/events";
 import {
   IPartialRewardOfferForEpoch,
   IPartialRewardOfferForRound,
   PartialRewardOffer,
-} from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+} from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { RewardEpochDuration } from "../../../libs/ftso-core/src/utils/RewardEpochDuration";
-import { deserializeAggregatedClaimsForVotingRoundId } from "../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
-import { OFFERS_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
-import { serializeGranulatedPartialOfferMap } from "../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
+import { deserializeAggregatedClaimsForVotingRoundId } from "../../../libs/fsp-rewards/src/utils/stat-info/aggregated-claims";
+import { OFFERS_FILE } from "../../../libs/fsp-rewards/src/utils/stat-info/constants";
+import { serializeGranulatedPartialOfferMap } from "../../../libs/fsp-rewards/src/utils/stat-info/granulated-partial-offers-map";
 import {
   ProgressType,
   printProgress,
   rewardCalculationProgress,
-} from "../../../libs/ftso-core/src/utils/stat-info/progress";
+} from "../../../libs/fsp-rewards/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
   setRewardCalculationStatus,
-} from "../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
+} from "../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-status";
 import {
   getRewardEpochInfo,
   serializeRewardEpochInfo,
-} from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
-import { destroyStorage } from "../../../libs/ftso-core/src/utils/stat-info/storage";
+} from "../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
+import { destroyStorage } from "../../../libs/fsp-rewards/src/utils/stat-info/storage";
 import { toFeedId } from "../../utils/generators";
+import {BURN_ADDRESS, CALCULATIONS_FOLDER} from "../../../libs/fsp-rewards/src/constants";
 
 // Ensure that the networks are not loaded
 

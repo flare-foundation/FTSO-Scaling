@@ -1,5 +1,6 @@
-import { EPOCH_SETTINGS, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC } from "../../../libs/ftso-core/src/configs/networks";
+import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/constants";
 import { printSignatureSummary, signatureSummary } from "../signature-stats";
+import {GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC} from "../../../libs/fsp-rewards/src/constants";
 
 async function main() {
   if (!process.argv[2]) {

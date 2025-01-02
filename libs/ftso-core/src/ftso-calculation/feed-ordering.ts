@@ -1,4 +1,4 @@
-import { RewardOffers } from "../events";
+import { RewardOffers } from "../../../contracts/src/events";
 import { Feed } from "../voting-types";
 
 /**

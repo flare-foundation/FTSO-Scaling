@@ -1,18 +1,17 @@
 import { EntityManager } from "typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "./orm/entities";
-import { EncodingUtils, decodePayloadMessageCalldata } from "./utils/EncodingUtils";
+import { decodePayloadMessageCalldata } from "./utils/encoding";
 import { Address, VotingEpochId } from "./voting-types";
 
-import { IPayloadMessage } from "../../fsp-utils/src/PayloadMessage";
-import { IRelayMessage } from "../../fsp-utils/src/RelayMessage";
-import { ContractDefinitions, ContractMethodNames } from "./configs/contracts";
+import { IPayloadMessage } from "./fsp-utils/PayloadMessage";
+import { IRelayMessage } from "./fsp-utils/RelayMessage";
+import { ContractDefinitions, ContractMethodNames } from "../../contracts/src/definitions";
 import {
-  CONTRACTS,
   EPOCH_SETTINGS,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
-  networks,
-} from "./configs/networks";
+
+} from "./constants";
 import {
   FullVoterRegistrationInfo,
   InflationRewardsOffered,
@@ -24,8 +23,10 @@ import {
   VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo,
-} from "./events";
+} from "../../contracts/src/events";
 import { ILogger } from "./utils/ILogger";
+import {AbiCache} from "../../contracts/src/abi/AbiCache";
+import {CONTRACTS, networks} from "../../contracts/src/constants";
 
 /**
  * Generic object for submission data and finalization data.
@@ -141,7 +142,7 @@ export class IndexerClient {
     protected readonly logger: ILogger
   ) { }
 
-  protected readonly encoding = EncodingUtils.instance;
+  protected readonly encoding = AbiCache.instance;
 
   /**
    * Queries indexer database for events on a smart contract in a given timestamp range.

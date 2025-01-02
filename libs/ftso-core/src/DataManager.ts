@@ -1,5 +1,5 @@
-import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
-import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
+import { RelayMessage } from "./fsp-utils/RelayMessage";
+import { SigningPolicy } from "./fsp-utils/SigningPolicy";
 import {
   BlockAssuranceResult,
   FinalizationData,
@@ -10,21 +10,21 @@ import {
 } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
-import { ContractMethodNames } from "./configs/contracts";
+import { ContractMethodNames } from "../../contracts/src/definitions";
 import {
   ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
   EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
   GENESIS_REWARD_EPOCH_START_EVENT
-} from "./configs/networks";
+} from "./constants";
 import {
   DataForCalculations,
   DataForCalculationsPartial,
-  DataForRewardCalculation,
-} from "./data-calculation-interfaces";
-import { CommitData, ICommitData } from "./utils/CommitData";
+
+} from "./data/data-calculation-interfaces";
+import { CommitData, ICommitData } from "./data/CommitData";
 import { ILogger } from "./utils/ILogger";
-import { IRevealData, RevealData } from "./utils/RevealData";
+import { IRevealData, RevealData } from "./data/RevealData";
 import { errorString } from "./utils/error";
 import { Address, Feed } from "./voting-types";
 

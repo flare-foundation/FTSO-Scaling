@@ -1,7 +1,7 @@
 import { BlockAssuranceResult, IndexerClient } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
-import { EPOCH_SETTINGS, GENESIS_REWARD_EPOCH_START_EVENT, INITIAL_REWARD_EPOCH_ID } from "./configs/networks";
-import { RewardEpochStarted, SigningPolicyInitialized } from "./events";
+import { EPOCH_SETTINGS, GENESIS_REWARD_EPOCH_START_EVENT, INITIAL_REWARD_EPOCH_ID } from "./constants";
+import { RewardEpochStarted, SigningPolicyInitialized } from "../../contracts/src/events";
 import { RewardEpochDuration } from "./utils/RewardEpochDuration";
 import { RewardEpochId, VotingEpochId } from "./voting-types";
 

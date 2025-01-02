@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import { RewardEpoch, VoterWeights } from "../../libs/ftso-core/src/RewardEpoch";
-import { CONTRACTS, ZERO_BYTES32 } from "../../libs/ftso-core/src/configs/networks";
+import { ZERO_BYTES32 } from "../../libs/ftso-core/src/constants";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -11,18 +11,19 @@ import {
   VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo,
-} from "../../libs/ftso-core/src/events";
+} from "../../libs/contracts/src/events";
 import { calculateMedian } from "../../libs/ftso-core/src/ftso-calculation/ftso-median";
 import { TLPEvents } from "../../libs/ftso-core/src/orm/entities";
-import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { EpochSettings } from "../../libs/ftso-core/src/utils/EpochSettings";
-import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { ValueWithDecimals } from "../../libs/ftso-core/src/data/FeedValueEncoder";
 import { Bytes32 } from "../../libs/ftso-core/src/utils/sol-types";
 import { Feed, MedianCalculationResult } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent } from "./basic-generators";
 import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
+import {AbiCache} from "../../libs/contracts/src/abi/AbiCache";
+import {CONTRACTS} from "../../libs/contracts/src/constants";
 
-export const encodingUtils = EncodingUtils.instance;
+export const encodingUtils = AbiCache.instance;
 const burnAddress = generateRandomAddress();
 export const web3 = new Web3("https://dummy");
 const FEED_TYPE_CRYPTO = "0x01";

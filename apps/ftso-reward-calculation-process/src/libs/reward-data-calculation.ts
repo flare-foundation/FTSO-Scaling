@@ -1,26 +1,26 @@
 import { Logger } from "@nestjs/common";
 import * as workerPool from "workerpool";
-import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
+import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
 import { BlockAssuranceResult } from "../../../../libs/ftso-core/src/IndexerClient";
-import { IndexerClientForRewarding } from "../../../../libs/ftso-core/src/IndexerClientForRewarding";
-import { FUInflationRewardsOffered } from "../../../../libs/ftso-core/src/events/FUInflationRewardsOffered";
-import { IncentiveOffered } from "../../../../libs/ftso-core/src/events/IncentiveOffered";
-import { initializeRewardEpochStorage } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
+import { IndexerClientForRewarding } from "../../../../libs/fsp-rewards/src/IndexerClientForRewarding";
+import { FUInflationRewardsOffered } from "../../../../libs/contracts/src/events/FUInflationRewardsOffered";
+import { IncentiveOffered } from "../../../../libs/contracts/src/events/IncentiveOffered";
+import { initializeRewardEpochStorage } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
-import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
+import { recordProgress } from "../../../../libs/fsp-rewards/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
   setRewardCalculationStatus,
-} from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-status";
 import {
   getRewardEpochInfo,
   serializeRewardEpochInfo,
-} from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
-import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/storage";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
+import { destroyStorage } from "../../../../libs/fsp-rewards/src/utils/stat-info/storage";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { calculationOfRewardCalculationDataForRange } from "./calculator-utils";
 import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
-import { FDCInflationRewardsOffered } from "../../../../libs/ftso-core/src/events/FDCInflationRewardsOffered";
+import { FDCInflationRewardsOffered } from "../../../../libs/contracts/src/events/FDCInflationRewardsOffered";
 
 export async function runCalculateRewardCalculationTopJob(
   indexerClient: IndexerClientForRewarding,

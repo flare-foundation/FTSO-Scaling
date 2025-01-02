@@ -1,24 +1,25 @@
 import { EntityManager } from "typeorm";
-import { IECDSASignatureWithIndex } from "../../../libs/fsp-utils/src/ECDSASignatureWithIndex";
-import { IRelayMessage, RelayMessage } from "../../../libs/fsp-utils/src/RelayMessage";
-import { ISignaturePayload, SignaturePayload } from "../../../libs/fsp-utils/src/SignaturePayload";
-import { ISigningPolicy } from "../../../libs/fsp-utils/src/SigningPolicy";
+import { IECDSASignatureWithIndex } from "../../../libs/ftso-core/src/fsp-utils/ECDSASignatureWithIndex";
+import { IRelayMessage, RelayMessage } from "../../../libs/ftso-core/src/fsp-utils/RelayMessage";
+import { ISignaturePayload, SignaturePayload } from "../../../libs/ftso-core/src/fsp-utils/SignaturePayload";
+import { ISigningPolicy } from "../../../libs/ftso-core/src/fsp-utils/SigningPolicy";
 import { DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { CONTRACTS, EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/configs/networks";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../libs/ftso-core/src/constants";
 
-import { DataManagerForRewarding } from "../../../libs/ftso-core/src/DataManagerForRewarding";
-import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
+import { DataManagerForRewarding } from "../../../libs/fsp-rewards/src/DataManagerForRewarding";
+import { ContractMethodNames } from "../../../libs/contracts/src/definitions";
 import { TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
-import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
-import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
+import { RandomVoterSelector } from "../../../libs/fsp-rewards/src/reward-calculation/RandomVoterSelector";
 import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import { TestVoter, generateTx } from "../basic-generators";
 import { Queue } from "./Queue";
+import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
+import {CONTRACTS} from "../../../libs/contracts/src/constants";
 
-const encodingUtils = EncodingUtils.instance;
+const encodingUtils = AbiCache.instance;
 
 export interface QueueEntry {
   votingRoundId: number;

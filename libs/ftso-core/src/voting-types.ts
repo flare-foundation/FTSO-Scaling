@@ -1,4 +1,4 @@
-import { ValueWithDecimals } from "./utils/FeedValueEncoder";
+import { ValueWithDecimals } from "./data/FeedValueEncoder";
 import { MerkleTree } from "./utils/MerkleTree";
 
 export type Address = string;

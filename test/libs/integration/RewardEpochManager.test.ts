@@ -2,7 +2,7 @@ import {
   EPOCH_SETTINGS,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
-} from "../../../libs/ftso-core/src/configs/networks";
+} from "../../../libs/ftso-core/src/constants";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 

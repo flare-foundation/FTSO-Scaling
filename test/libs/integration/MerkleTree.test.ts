@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { MerkleTree } from "../../../libs/ftso-core/src/utils/MerkleTree";
-import { MerkleTreeStructs, TreeResult } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
+import { MerkleTreeStructs, TreeResult } from "../../../libs/ftso-core/src/data/MerkleTreeStructs";
 import { MedianCalculationResult, RandomCalculationResult } from "../../../libs/ftso-core/src/voting-types";
 import Prando from "prando";
 import { toFeedId } from "../../utils/generators";

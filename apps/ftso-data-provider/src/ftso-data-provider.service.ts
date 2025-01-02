@@ -2,26 +2,24 @@ import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common
 import { ConfigService } from "@nestjs/config";
 import { LRUCache } from "lru-cache";
 import { EntityManager } from "typeorm";
-import { IPayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
+import { IPayloadMessage } from "../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 import {
   IProtocolMessageMerkleData,
   IProtocolMessageMerkleRoot,
-} from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+} from "../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
+import { ContractMethodNames } from "../../../libs/contracts/src/definitions";
 import {
-  CONTRACTS,
   FTSO2_PROTOCOL_ID,
   RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../libs/ftso-core/src/configs/networks";
+} from "../../../libs/ftso-core/src/constants";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
-import { CommitData, ICommitData } from "../../../libs/ftso-core/src/utils/CommitData";
-import { EncodingUtils } from "../../../libs/ftso-core/src/utils/EncodingUtils";
-import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
-import { FeedResultWithProof, MerkleTreeStructs } from "../../../libs/ftso-core/src/utils/MerkleTreeStructs";
-import { IRevealData } from "../../../libs/ftso-core/src/utils/RevealData";
+import { CommitData, ICommitData } from "../../../libs/ftso-core/src/data/CommitData";
+import { FeedValueEncoder } from "../../../libs/ftso-core/src/data/FeedValueEncoder";
+import { FeedResultWithProof, MerkleTreeStructs } from "../../../libs/ftso-core/src/data/MerkleTreeStructs";
+import { IRevealData } from "../../../libs/ftso-core/src/data/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { retry } from "../../../libs/ftso-core/src/utils/retry";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
@@ -30,6 +28,8 @@ import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api, FeedId } from "./feed-value-provider-api/generated/provider-api";
 
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
+import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
+import {CONTRACTS} from "../../../libs/contracts/src/constants";
 
 type RoundAndAddress = string;
 
@@ -44,7 +44,7 @@ export class FtsoDataProviderService {
 
   private readonly rewardEpochManager: RewardEpochManager;
   private readonly dataManager: DataManager;
-  private readonly encodingUtils = EncodingUtils.instance;
+  private readonly encodingUtils = AbiCache.instance;
 
   // Indexer top timeout margin
   private readonly indexer_top_timeout: number;
