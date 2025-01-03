@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { getTestFile } from "../../utils/getTestFile";
-import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/ftso-core/src/utils/RewardClaim";
+import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/fsp-rewards/src/utils/RewardClaim";
 import Web3 from "web3";
 import { generateAddress } from "../../utils/generators";
 

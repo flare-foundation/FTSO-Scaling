@@ -1,14 +1,14 @@
 import { expect } from "chai";
 import { readFileSync } from "fs";
 import Web3 from "web3";
-import { ECDSASignature } from "../../../../libs/fsp-utils/src/ECDSASignature";
-import { IPayloadMessage, PayloadMessage } from "../../../../libs/fsp-utils/src/PayloadMessage";
+import { ECDSASignature } from "../../../../libs/ftso-core/src/fsp-utils/ECDSASignature";
+import { IPayloadMessage, PayloadMessage } from "../../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
-} from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { ISignaturePayload, SignaturePayload } from "../../../../libs/fsp-utils/src/SignaturePayload";
-import { ISigningPolicy } from "../../../../libs/fsp-utils/src/SigningPolicy";
+} from "../../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
+import { ISignaturePayload, SignaturePayload } from "../../../../libs/ftso-core/src/fsp-utils/SignaturePayload";
+import { ISigningPolicy } from "../../../../libs/ftso-core/src/fsp-utils/SigningPolicy";
 import { defaultTestSigningPolicy } from "./coding-helpers";
 
 const web3 = new Web3("http://dummy");

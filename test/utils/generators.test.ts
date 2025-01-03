@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { CONTRACTS } from "../../libs/ftso-core/src/configs/networks";
-import { decodeEvent } from "../../libs/ftso-core/src/utils/EncodingUtils";
 import { generateEvent } from "./basic-generators";
+import {decodeEvent} from "../../libs/contracts/src/abi/AbiCache";
+import {CONTRACTS} from "../../libs/contracts/src/constants";
 
 describe("generators", () => {
   // Event ABI example

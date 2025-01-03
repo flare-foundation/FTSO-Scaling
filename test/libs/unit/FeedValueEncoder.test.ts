@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { FeedValueEncoder } from "../../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { FeedValueEncoder } from "../../../libs/ftso-core/src/data/FeedValueEncoder";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 
 describe("FeedValueEncoder", () => {

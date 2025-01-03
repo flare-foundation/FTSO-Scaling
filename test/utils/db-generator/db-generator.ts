@@ -1,5 +1,5 @@
 import { DataSource } from "typeorm";
-import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/constants";
 import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { generateVoters } from "../basic-generators";

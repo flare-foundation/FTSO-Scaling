@@ -1,7 +1,7 @@
 import path from "path/posix";
-import { deserializeGranulatedPartialOfferMap, deserializeGranulatedPartialOfferMapForFastUpdates, deserializeOffersForFDC } from "../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
-import { deserializeRewardEpochInfo } from "../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
-import { deserializeDataForRewardCalculation } from "../../../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
+import { deserializeGranulatedPartialOfferMap, deserializeGranulatedPartialOfferMapForFastUpdates, deserializeOffersForFDC } from "../../../libs/fsp-rewards/src/utils/stat-info/granulated-partial-offers-map";
+import { deserializeRewardEpochInfo } from "../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
+import { deserializeDataForRewardCalculation } from "../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-data";
 
 
 function extractName(hexInput: string) {

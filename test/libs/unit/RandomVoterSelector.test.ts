@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
-import { RandomVoterSelector } from "../../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
+import { RandomVoterSelector } from "../../../libs/fsp-rewards/src/reward-calculation/RandomVoterSelector";
 import Web3 from "web3";
 
 const coder = ethers.AbiCoder.defaultAbiCoder();

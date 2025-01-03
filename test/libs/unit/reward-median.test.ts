@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { calculateMedianRewardClaims } from "../../../libs/ftso-core/src/reward-calculation/reward-median";
-import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { calculateMedianRewardClaims } from "../../../libs/fsp-rewards/src/reward-calculation/reward-median";
+import { PartialRewardOffer } from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import {
   generateAddress,
   generateInflationRewardOffer,

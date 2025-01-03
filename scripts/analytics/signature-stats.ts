@@ -1,7 +1,7 @@
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
-} from "../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+} from "../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 import { rewardEpochCalculationData } from "../stats-utils";
 
 export interface SignerInfo {

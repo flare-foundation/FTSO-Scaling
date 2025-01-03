@@ -1,6 +1,6 @@
-import { ValueWithDecimals } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
-import { deserializeDataForRewardCalculation } from "../../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
-import { deserializeRewardEpochInfo } from "../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { ValueWithDecimals } from "../../libs/ftso-core/src/data/FeedValueEncoder";
+import { deserializeDataForRewardCalculation } from "../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-data";
+import { deserializeRewardEpochInfo } from "../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { Feed, MedianCalculationSummary } from "../../libs/ftso-core/src/voting-types";
 import { flrFormat } from "../../test/utils/reward-claim-summaries";
 

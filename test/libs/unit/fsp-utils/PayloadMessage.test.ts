@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import Web3 from "web3";
-import { IPayloadMessage, PayloadMessage } from "../../../../libs/fsp-utils/src/PayloadMessage";
+import { IPayloadMessage, PayloadMessage } from "../../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 
 describe(`PayloadMessage`, async () => {
   it("Should encode and decode payload message", async () => {

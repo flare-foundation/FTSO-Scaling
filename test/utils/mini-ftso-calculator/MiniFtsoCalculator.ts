@@ -1,12 +1,12 @@
 import { EntityManager } from "typeorm";
 import Web3 from "web3";
-import { ECDSASignature } from "../../../libs/fsp-utils/src/ECDSASignature";
-import { PayloadMessage } from "../../../libs/fsp-utils/src/PayloadMessage";
+import { ECDSASignature } from "../../../libs/ftso-core/src/fsp-utils/ECDSASignature";
+import { PayloadMessage } from "../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
-} from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { ISignaturePayload, SignaturePayload } from "../../../libs/fsp-utils/src/SignaturePayload";
+} from "../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
+import { ISignaturePayload, SignaturePayload } from "../../../libs/ftso-core/src/fsp-utils/SignaturePayload";
 import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src/DataManager";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
@@ -14,7 +14,7 @@ import {
   EPOCH_SETTINGS,
   FTSO2_PROTOCOL_ID,
   RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../libs/ftso-core/src/configs/networks";
+} from "../../../libs/ftso-core/src/constants";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
 import { EpochResult } from "../../../libs/ftso-core/src/voting-types";

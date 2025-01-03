@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
-import { CALCULATIONS_FOLDER } from "../../../../libs/ftso-core/src/configs/networks";
-import { FDC_ATTESTATION_APPEARANCES_FILE } from "../../../../libs/ftso-core/src/utils/stat-info/constants";
-import { deserializeDataForRewardCalculation } from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
-import { deserializeRewardEpochInfo } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
-import { AttestationRequest } from "../../../../libs/ftso-core/src/events/AttestationRequest";
+import { FDC_ATTESTATION_APPEARANCES_FILE } from "../../../../libs/fsp-rewards/src/utils/stat-info/constants";
+import { deserializeDataForRewardCalculation } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-data";
+import { deserializeRewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
+import { AttestationRequest } from "../../../../libs/contracts/src/events/AttestationRequest";
+import {CALCULATIONS_FOLDER} from "../../../../libs/fsp-rewards/src/constants";
 
 export interface FDCAttestationRequestAppearances {
    attestationRequestId: string;

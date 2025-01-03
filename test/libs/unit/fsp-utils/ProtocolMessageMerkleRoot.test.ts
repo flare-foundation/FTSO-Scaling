@@ -2,7 +2,7 @@ import { expect } from "chai";
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
-} from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
+} from "../../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 
 describe(`ProtocolMessageMerkleRoot`, async () => {
   it("Should encode and decode protocol message merkle root", async () => {

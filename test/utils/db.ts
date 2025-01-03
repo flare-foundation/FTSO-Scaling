@@ -1,6 +1,6 @@
 import { DataSource, EntityManager } from "typeorm";
 import { TLPTransaction, TLPEvents, TLPState } from "../../libs/ftso-core/src/orm/entities";
-import { FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/configs/networks";
+import { FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "../../libs/ftso-core/src/constants";
 import { currentTimeSec } from "./generators";
 import { generateState } from "./basic-generators";
 

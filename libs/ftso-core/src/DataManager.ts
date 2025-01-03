@@ -1,30 +1,12 @@
-import { RelayMessage } from "../../fsp-utils/src/RelayMessage";
-import { SigningPolicy } from "../../fsp-utils/src/SigningPolicy";
-import {
-  BlockAssuranceResult,
-  FinalizationData,
-  GenericSubmissionData,
-  IndexerClient,
-  ParsedFinalizationData,
-  SubmissionData,
-} from "./IndexerClient";
+import { BlockAssuranceResult, GenericSubmissionData, IndexerClient, SubmissionData } from "./IndexerClient";
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
-import { ContractMethodNames } from "./configs/contracts";
-import {
-  ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
-  EPOCH_SETTINGS,
-  FTSO2_PROTOCOL_ID,
-  GENESIS_REWARD_EPOCH_START_EVENT
-} from "./configs/networks";
-import {
-  DataForCalculations,
-  DataForCalculationsPartial,
-  DataForRewardCalculation,
-} from "./data-calculation-interfaces";
-import { CommitData, ICommitData } from "./utils/CommitData";
+import { ContractMethodNames } from "../../contracts/src/definitions";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, GENESIS_REWARD_EPOCH_START_EVENT } from "./constants";
+import { DataForCalculations, DataForCalculationsPartial } from "./data/DataForCalculations";
+import { CommitData, ICommitData } from "./data/CommitData";
 import { ILogger } from "./utils/ILogger";
-import { IRevealData, RevealData } from "./utils/RevealData";
+import { IRevealData, RevealData } from "./data/RevealData";
 import { errorString } from "./utils/error";
 import { Address, Feed } from "./voting-types";
 
@@ -64,11 +46,6 @@ export interface CommitsAndReveals {
 export interface CommitAndRevealSubmissionsMappingsForRange {
   votingRoundIdToCommits: Map<number, SubmissionData[]>;
   votingRoundIdToReveals: Map<number, SubmissionData[]>;
-}
-
-export interface SignAndFinalizeSubmissionData {
-  signatures: SubmissionData[];
-  finalizations: FinalizationData[];
 }
 
 /**
@@ -220,130 +197,6 @@ export class DataManager {
         votingRoundIdToReveals,
       },
     };
-  }
-
-  /**
-   * Extract signatures and finalizations for the given voting round id from indexer database.
-   * This function is used for reward calculation, which is executed at the time when all the data
-   * is surely on the blockchain. Nevertheless the data availability is checked. Timeout queries are
-   * not relevant here. The transactions are taken from the rewarded window for each
-   * voting round. The rewarded window starts at the reveal deadline which is in votingEpochId = votingRoundId + 1.
-   * The end of the rewarded window is the end of voting epoch with
-   * votingEpochId = votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS.
-   * Rewarding will consider submissions are finalizations only in the rewarding window and this function
-   * queries exactly those.
-   * @param votingRoundId
-   * @returns
-   */
-  protected async getSignAndFinalizeSubmissionDataForVotingRound(
-    votingRoundId: number
-  ): Promise<DataMangerResponse<SignAndFinalizeSubmissionData>> {
-    const submitSignaturesSubmissionResponse = await this.indexerClient.getSubmissionDataInRange(
-      ContractMethodNames.submitSignatures,
-      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
-      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
-    );
-    if (submitSignaturesSubmissionResponse.status !== BlockAssuranceResult.OK) {
-      return {
-        status: DataAvailabilityStatus.NOT_OK,
-      };
-    }
-    const signatures = submitSignaturesSubmissionResponse.data;
-    DataManager.sortSubmissionDataArray(signatures);
-    // Finalization data only on the rewarded range
-    const submitFinalizeSubmissionResponse = await this.indexerClient.getFinalizationDataInRange(
-      EPOCH_SETTINGS().revealDeadlineSec(votingRoundId + 1) + 1,
-      EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS)
-    );
-    if (submitFinalizeSubmissionResponse.status !== BlockAssuranceResult.OK) {
-      return {
-        status: DataAvailabilityStatus.NOT_OK,
-      };
-    }
-    const finalizations = submitFinalizeSubmissionResponse.data;
-    DataManager.sortSubmissionDataArray(finalizations);
-    return {
-      status: DataAvailabilityStatus.OK,
-      data: {
-        signatures,
-        finalizations,
-      },
-    };
-  }
-
-  /**
-   * Given submissions of finalizations eligible for voting round @param votingRoundId and matching reward epoch @param rewardEpoch to the
-   * voting round id, extract finalizations which match voting round id, given protocol id and are parsable and finalizeable (would cause finalisation)
-   * @param votingRoundId
-   * @param rewardEpoch
-   * @param submissions
-   * @param protocolId
-   * @returns
-   */
-  protected extractFinalizations(
-    votingRoundId: number,
-    rewardEpoch: RewardEpoch,
-    submissions: FinalizationData[],
-    protocolId = FTSO2_PROTOCOL_ID
-  ): ParsedFinalizationData[] {
-    const finalizations: ParsedFinalizationData[] = [];
-    for (const submission of submissions) {
-      try {
-        let calldata = submission.messages;
-        if (calldata.startsWith("0x")) {
-          calldata = calldata.slice(2);
-        }
-
-        if (calldata.length < 10) {
-          continue;
-        }
-        try {
-          const relayMessage = RelayMessage.decode(calldata.slice(8));
-          // ignore irrelevant messages
-          if (
-            !relayMessage.protocolMessageMerkleRoot ||
-            relayMessage.protocolMessageMerkleRoot.protocolId !== protocolId ||
-            relayMessage.protocolMessageMerkleRoot.votingRoundId !== votingRoundId ||
-            relayMessage.signingPolicy.rewardEpochId !== rewardEpoch.rewardEpochId
-          ) {
-            continue;
-          }
-          // TODO: Check if the signing policy is correct
-          const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
-          const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
-          if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
-            throw new Error(
-              `Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`
-            );
-          }
-          const finalization: ParsedFinalizationData = {
-            ...submission,
-            messages: relayMessage,
-          };
-          // Verify the relay message by trying to encode it with verification.
-          // If it excepts it is non-finalisable
-          RelayMessage.encode(relayMessage, true);
-          // The message is eligible for consideration.
-          finalizations.push(finalization);
-        } catch (e) {
-          this.logger.log(`Unparsable relay message. Ignored: ${e.message}`);
-        }
-      } catch (e) {
-        // ignore unparsable message
-        this.logger.warn(`Unparsable or non-finalisable finalization message: ${e.message}`);
-      }
-    }
-    // consider only the first sent successful finalization
-    // note that finalizations are already sorted according to the blockchain order
-    const filteredFinalizations: ParsedFinalizationData[] = [];
-    const encounteredSenderAddresses = new Set<Address>();
-    for (const finalization of finalizations) {
-      if (!encounteredSenderAddresses.has(finalization.submitAddress.toLowerCase())) {
-        filteredFinalizations.push(finalization);
-        encounteredSenderAddresses.add(finalization.submitAddress.toLowerCase());
-      }
-    }
-    return filteredFinalizations;
   }
 
   /**

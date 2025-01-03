@@ -1,4 +1,4 @@
-// IMPORTANT: This file should never import networks.ts
+// IMPORTANT: This file should never import constants.ts
 import { utils } from "web3";
 import { encodeParameter, encodeParameters } from "web3-eth-abi";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";

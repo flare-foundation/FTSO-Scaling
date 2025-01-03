@@ -1,10 +1,16 @@
-import { existsSync, mkdirSync, readFileSync, write, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
-import { MINIMAL_CONDITIONS_FILE, PASSES_FILE, REWARD_DISTRIBUTION_DATA_FILE, REWARD_DISTRIBUTION_DATA_TUPLES_FILE, REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE, REWARD_EPOCH_INFO_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
-import { CALCULATIONS_FOLDER } from "../../../libs/ftso-core/src/configs/networks";
+import { CALCULATIONS_FOLDER } from "../../../libs/fsp-rewards/src/constants";
+import { IRewardClaimWithProof } from "../../../libs/fsp-rewards/src/utils/RewardClaim";
+import {
+  MINIMAL_CONDITIONS_FILE,
+  PASSES_FILE,
+  REWARD_DISTRIBUTION_DATA_FILE,
+  REWARD_DISTRIBUTION_DATA_TUPLES_FILE,
+  REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE,
+  REWARD_EPOCH_INFO_FILE
+} from "../../../libs/fsp-rewards/src/utils/stat-info/constants";
 import { bigIntReviver } from "../../../libs/ftso-core/src/utils/big-number-serialization";
-import { IRewardClaimWithProof } from "../../../libs/ftso-core/src/utils/RewardClaim";
-import { use } from "chai";
 
 const REWARDS_FOLDER = "rewards-data";
 

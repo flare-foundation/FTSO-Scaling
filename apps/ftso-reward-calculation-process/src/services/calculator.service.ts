@@ -2,32 +2,36 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import FakeTimers from "@sinonjs/fake-timers";
 import { EntityManager } from "typeorm";
-import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
-import { IndexerClientForRewarding } from "../../../../libs/ftso-core/src/IndexerClientForRewarding";
-import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
-import { BURN_ADDRESS, FUTURE_VOTING_ROUNDS } from "../../../../libs/ftso-core/src/configs/networks";
-import { initializeRewardEpochStorage } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
-import { RewardClaim } from "../../../../libs/ftso-core/src/utils/RewardClaim";
-import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
-import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/ftso-core/src/utils/stat-info/aggregated-claims";
-import { serializeFinalRewardClaims } from "../../../../libs/ftso-core/src/utils/stat-info/final-reward-claims";
-import { getIncrementalCalculationsTempRewards, serializeIncrementalCalculationsTempRewards } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-rewards";
-import { recordProgress } from "../../../../libs/ftso-core/src/utils/stat-info/progress";
+import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
+import { IndexerClientForRewarding } from "../../../../libs/fsp-rewards/src/IndexerClientForRewarding";
+import { BURN_ADDRESS, FUTURE_VOTING_ROUNDS } from "../../../../libs/fsp-rewards/src/constants";
+import { calculateMinimalConditions, extractNewPasses, updateClaimsForMinimalConditions } from "../../../../libs/fsp-rewards/src/reward-calculation/minimal-conditions/minimal-conditions";
+import { writeDataProviderConditions, writePassesInfo } from "../../../../libs/fsp-rewards/src/reward-calculation/minimal-conditions/minimal-conditions-data";
+import { initializeRewardEpochStorage } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
+import { RewardClaim } from "../../../../libs/fsp-rewards/src/utils/RewardClaim";
+import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/fsp-rewards/src/utils/stat-info/aggregated-claims";
+import { serializeFinalRewardClaims } from "../../../../libs/fsp-rewards/src/utils/stat-info/final-reward-claims";
+import { getIncrementalCalculationsTempRewards, serializeIncrementalCalculationsTempRewards } from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-rewards";
+import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
+import { recordProgress } from "../../../../libs/fsp-rewards/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
   deserializeRewardEpochCalculationStatus,
   rewardEpochCalculationStatusExists,
   setRewardCalculationStatus,
-} from "../../../../libs/ftso-core/src/utils/stat-info/reward-calculation-status";
-import { serializeRewardDistributionData } from "../../../../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-status";
+import { serializeRewardDistributionData } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-distribution-data";
 import {
   deserializeRewardEpochInfo,
   getRewardEpochInfo,
   serializeRewardEpochInfo,
-} from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
-import { destroyStorage } from "../../../../libs/ftso-core/src/utils/stat-info/storage";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
+import { destroyStorage } from "../../../../libs/fsp-rewards/src/utils/stat-info/storage";
+import { RewardEpochManager } from "../../../../libs/ftso-core/src/RewardEpochManager";
+import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
 import { IncrementalCalculationState } from "../interfaces/IncrementalCalculationState";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
+import { calculateAttestationTypeAppearances } from "../libs/attestation-type-appearances";
 import {
   calculationOfRewardCalculationDataForRange,
   latestRewardEpochStart,
@@ -44,10 +48,6 @@ import { fullRoundOfferCalculation, initializeTemplateOffers } from "../libs/off
 import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
-import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
-import { calculateAttestationTypeAppearances } from "../libs/attestation-type-appearances";
-import { calculateMinimalConditions, extractNewPasses, updateClaimsForMinimalConditions } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions";
-import { writeDataProviderConditions, writePassesInfo } from "../../../../libs/ftso-core/src/reward-calculation/minimal-conditions/minimal-conditions-data";
 
 if (process.env.FORCE_NOW) {
   const newNow = parseInt(process.env.FORCE_NOW) * 1000;

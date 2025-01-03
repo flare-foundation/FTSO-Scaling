@@ -1,21 +1,20 @@
 import { Logger } from "@nestjs/common";
-import { DataManagerForRewarding } from "../../../../libs/ftso-core/src/DataManagerForRewarding";
-import { IndexerClientForRewarding } from "../../../../libs/ftso-core/src/IndexerClientForRewarding";
+import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
+import { IndexerClientForRewarding } from "../../../../libs/fsp-rewards/src/IndexerClientForRewarding";
 import {
-  CALCULATIONS_FOLDER,
-  CONTRACTS,
   EPOCH_SETTINGS,
-  FUTURE_VOTING_ROUNDS,
   RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../../libs/ftso-core/src/configs/networks";
-import { RewardEpochStarted } from "../../../../libs/ftso-core/src/events";
-import { prepareDataForRewardCalculationsForRange } from "../../../../libs/ftso-core/src/reward-calculation/reward-calculation";
-import { fixOffersForRandomFeedSelection } from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+} from "../../../../libs/ftso-core/src/constants";
+import { RewardEpochStarted } from "../../../../libs/contracts/src/events";
+import { prepareDataForRewardCalculationsForRange } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
+import { fixOffersForRandomFeedSelection } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-offers";
 import { sleepFor } from "../../../../libs/ftso-core/src/utils/retry";
-import { serializeRewardEpochInfo } from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { serializeRewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { IncrementalCalculationState } from "../interfaces/IncrementalCalculationState";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
 import { initializeTemplateOffers } from "./offer-utils";
+import {CALCULATIONS_FOLDER, FUTURE_VOTING_ROUNDS} from "../../../../libs/fsp-rewards/src/constants";
+import {CONTRACTS} from "../../../../libs/contracts/src/constants";
 
 /**
  * Checks into the indexer for the latest reward epoch start event and returns the reward epoch id.

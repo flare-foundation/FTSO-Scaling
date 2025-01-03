@@ -9,8 +9,8 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiSecurity, ApiTags } from "@nestjs/swagger";
-import { ProtocolMessageMerkleRoot } from "../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { ProtocolMessageMerkleRoot } from "../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
+import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/constants";
 import { ApiKeyAuthGuard } from "./auth/apikey.guard";
 import {
   AbiDefinitionsResponse,
