@@ -391,7 +391,7 @@ export function extractNewPasses(dataProviderConditions: DataProviderConditions[
          dataProviderName: dataProviderCondition.dataProviderName,
          eligibleForReward: dataProviderCondition.eligibleForReward,
          voterAddress: dataProviderCondition.voterAddress,
-         passes: allPasses,
+         passes: Math.min(allPasses, MAX_NUMBER_OF_PASSES),
          failures,
       }
       result.push(dataProviderPasses);

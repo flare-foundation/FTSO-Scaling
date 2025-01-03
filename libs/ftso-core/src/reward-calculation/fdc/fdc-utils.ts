@@ -16,7 +16,7 @@ export function uniqueRequestsIndices(attestationRequests: AttestationRequest[])
    for (let i = 0; i < attestationRequests.length; i++) {
       const request = attestationRequests[i];
       if (!encountered.get(request.data)) {
-         encountered.set(request.data, i);
+         encountered.set(request.data, result.length);
          result.push([i]);
       } else {
          result[encountered.get(request.data)].push(i);

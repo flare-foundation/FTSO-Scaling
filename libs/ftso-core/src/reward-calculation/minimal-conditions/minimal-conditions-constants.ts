@@ -12,7 +12,7 @@
 export const TOTAL_PPM = 1000000n;
 export const FTSO_SCALING_AVAILABILITY_THRESHOLD_PPM = 800000n;      // 80%
 export const FTSO_SCALING_CLOSENESS_THRESHOLD_PPM = 5000n;           // 0.5%
-export const FU_THRESHOLD_PPM = 800000n;                             // 60%
+export const FU_THRESHOLD_PPM = 800000n;                             // 80%
 export const FU_CONSIDERATION_THRESHOLD_PPM = 2000n;                 // 0.2% of the weight
 export const STAKING_UPTIME_THRESHOLD_PPM = 800000n;                 // 80%
 export const STAKING_MIN_SELF_BOND_GWEI = 1000000000000000n;         // 1M FLR
