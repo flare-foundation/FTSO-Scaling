@@ -1,5 +1,7 @@
-import { RewardOffers } from "../events";
 import { Feed } from "../voting-types";
+
+
+import { RewardOffers } from "../data/RewardOffers";
 
 /**
  * Data for single feed with reward information (for inflation or community reward).

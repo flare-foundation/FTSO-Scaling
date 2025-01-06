@@ -4,24 +4,19 @@ import {
   encodeCommitPayloadMessage,
   encodeRevealPayloadMessage,
 } from "../../apps/ftso-data-provider/src/response-encoders";
-import { IPayloadMessage } from "../../libs/fsp-utils/src/PayloadMessage";
-import { ISigningPolicy, SigningPolicy } from "../../libs/fsp-utils/src/SigningPolicy";
+import { IPayloadMessage } from "../../libs/ftso-core/src/fsp-utils/PayloadMessage";
+import { ISigningPolicy, SigningPolicy } from "../../libs/ftso-core/src/fsp-utils/SigningPolicy";
 import {
-  BURN_ADDRESS,
-  CONTRACTS,
   EPOCH_SETTINGS,
-  FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
   FIRST_DATABASE_INDEX_STATE,
   FTSO2_PROTOCOL_ID,
-  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
-  GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC,
   LAST_CHAIN_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
   ZERO_BYTES32,
-} from "../../libs/ftso-core/src/configs/networks";
+} from "../../libs/ftso-core/src/constants";
 
 import FakeTimers from "@sinonjs/fake-timers";
-import { ContractMethodNames } from "../../libs/ftso-core/src/configs/contracts";
+import { ContractMethodNames } from "../../libs/contracts/src/definitions";
 import {
   RandomAcquisitionStarted,
   RewardEpochStarted,
@@ -29,21 +24,27 @@ import {
   VotePowerBlockSelected,
   VoterRegistered,
   VoterRegistrationInfo,
-} from "../../libs/ftso-core/src/events";
+} from "../../libs/contracts/src/events";
 import { TLPEvents, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
-import { RandomVoterSelector } from "../../libs/ftso-core/src/reward-calculation/RandomVoterSelector";
-import { CommitData, ICommitData } from "../../libs/ftso-core/src/utils/CommitData";
-import { EncodingUtils } from "../../libs/ftso-core/src/utils/EncodingUtils";
-import { FeedValueEncoder } from "../../libs/ftso-core/src/utils/FeedValueEncoder";
+import { RandomVoterSelector } from "../../libs/fsp-rewards/src/reward-calculation/RandomVoterSelector";
+import { CommitData, ICommitData } from "../../libs/ftso-core/src/data/CommitData";
+import { FeedValueEncoder } from "../../libs/ftso-core/src/data/FeedValueEncoder";
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
-import { IRevealData } from "../../libs/ftso-core/src/utils/RevealData";
+import { IRevealData } from "../../libs/ftso-core/src/data/RevealData";
 import { EpochResult, Feed } from "../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent, generateState, generateTx } from "./basic-generators";
 import { MiniFinalizer } from "./mini-finalizer/MiniFinalizer";
 import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
 import { FSPSettings } from "./test-epoch-settings";
+import {AbiCache} from "../../libs/contracts/src/abi/AbiCache";
+import {
+  BURN_ADDRESS,
+  FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
+  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC
+} from "../../libs/fsp-rewards/src/constants";
+import {CONTRACTS} from "../../libs/contracts/src/constants";
 
-export const encodingUtils = EncodingUtils.instance;
+export const encodingUtils = AbiCache.instance;
 export const sigCommit = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
 export const sigReveal = encodingUtils.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);
 export const sigSignature = encodingUtils.getFunctionSignature(

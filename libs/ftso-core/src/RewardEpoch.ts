@@ -1,13 +1,13 @@
 import {
-  FullVoterRegistrationInfo,
   RandomAcquisitionStarted,
   RewardEpochStarted,
-  RewardOffers,
   SigningPolicyInitialized,
   VotePowerBlockSelected,
-} from "./events";
+} from "../../contracts/src/events";
 import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
+import { RewardOffers } from "./data/RewardOffers";
+import { FullVoterRegistrationInfo } from "./data/FullVoterRegistrationInfo";
 
 export interface VoterWeights {
   readonly identityAddress: Address; //voter

@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { SigningPolicyInitialized } from "../../../libs/ftso-core/src/events";
+import { SigningPolicyInitialized } from "../../../libs/contracts/src/events";
 import { getTestFile } from "../../utils/getTestFile";
-import { EncodingUtils, decodeEvent } from "../../../libs/ftso-core/src/utils/EncodingUtils";
-import { CONTRACTS } from "../../../libs/ftso-core/src/configs/networks";
+import {decodeEvent, AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
+import {CONTRACTS} from "../../../libs/contracts/src/constants";
 
 describe(`SigningPolicyInitialized (${getTestFile(__filename)})`, () => {
   const rawEvent = {
@@ -19,7 +19,7 @@ describe(`SigningPolicyInitialized (${getTestFile(__filename)})`, () => {
   };
 
   it("Should get relay abi definition", function () {
-    const abiData = EncodingUtils.instance.getEventAbiData(CONTRACTS.Relay.name, SigningPolicyInitialized.eventName);
+    const abiData = AbiCache.instance.getEventAbiData(CONTRACTS.Relay.name, SigningPolicyInitialized.eventName);
     expect(abiData).to.not.undefined;
   });
 

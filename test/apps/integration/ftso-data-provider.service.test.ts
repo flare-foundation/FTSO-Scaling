@@ -1,4 +1,4 @@
-import { CONTRACTS, EPOCH_SETTINGS } from "../../../libs/ftso-core/src/configs/networks";
+import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/constants";
 
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -12,15 +12,17 @@ import {
   encodeCommitPayloadMessage,
   encodeRevealPayloadMessage,
 } from "../../../apps/ftso-data-provider/src/response-encoders";
-import { ContractMethodNames } from "../../../libs/ftso-core/src/configs/contracts";
-import { CommitData } from "../../../libs/ftso-core/src/utils/CommitData";
-import { EncodingUtils, unPrefix0x } from "../../../libs/ftso-core/src/utils/EncodingUtils";
+import { ContractMethodNames } from "../../../libs/contracts/src/definitions";
+import { CommitData } from "../../../libs/ftso-core/src/data/CommitData";
+import { unPrefix0x } from "../../../libs/ftso-core/src/utils/encoding";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateTx, generateVoters } from "../../utils/basic-generators";
 import { MockIndexerDB } from "../../utils/db";
 import { currentTimeSec, generateRewardEpochEvents, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
+import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
+import {CONTRACTS} from "../../../libs/contracts/src/constants";
 
 export const testFeeds: Feed[] = [
   { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26
@@ -33,7 +35,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
   const offerCount = 2;
   const indexerHistorySec = 1000;
-  const enc = EncodingUtils.instance;
+  const enc = AbiCache.instance;
 
   const sigCommit = enc.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit1);
   const sigReveal = enc.getFunctionSignature(CONTRACTS.Submission.name, ContractMethodNames.submit2);

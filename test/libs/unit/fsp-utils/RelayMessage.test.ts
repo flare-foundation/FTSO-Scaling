@@ -5,9 +5,9 @@ import Web3 from "web3";
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
-} from "../../../../libs/fsp-utils/src/ProtocolMessageMerkleRoot";
-import { IRelayMessage, RelayMessage } from "../../../../libs/fsp-utils/src/RelayMessage";
-import { ISigningPolicy } from "../../../../libs/fsp-utils/src/SigningPolicy";
+} from "../../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
+import { IRelayMessage, RelayMessage } from "../../../../libs/ftso-core/src/fsp-utils/RelayMessage";
+import { ISigningPolicy } from "../../../../libs/ftso-core/src/fsp-utils/SigningPolicy";
 import { defaultTestSigningPolicy, generateSignatures } from "./coding-helpers";
 import e from "express";
 

@@ -41,14 +41,14 @@ Private keys must be in hex string, 0x-prefixed.
 Also, option `winit` needs one private key, which is taken as the first private key in the PRIVATE_KEYS env variable.
 */
 import Web3 from "web3";
-import { ECDSASignature } from "../libs/fsp-utils/src/ECDSASignature";
-import { CONTRACTS, ZERO_BYTES32 } from "../libs/ftso-core/src/configs/networks";
-import { ABICache } from "../libs/ftso-core/src/utils/ABICache";
-import { ClaimType, IRewardClaimWithProof } from "../libs/ftso-core/src/utils/RewardClaim";
-import { deserializeRewardDistributionData } from "../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
+import { ECDSASignature } from "../libs/ftso-core/src/fsp-utils/ECDSASignature";
+import { ZERO_BYTES32 } from "../libs/ftso-core/src/constants";
+import { ClaimType, IRewardClaimWithProof } from "../libs/fsp-rewards/src/utils/RewardClaim";
+import { deserializeRewardDistributionData } from "../libs/fsp-rewards/src/utils/stat-info/reward-distribution-data";
 import { readFileSync } from "fs";
 import { printClaimSummary, verifyMerkleProofs } from "./stats-utils";
 import * as dotenv from "dotenv";
+import {CONTRACTS} from "../libs/contracts/src/constants";
 
 dotenv.config();
 

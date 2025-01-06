@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { readFileSync } from "fs";
-import { ECDSASignatureWithIndex } from "../../../../libs/fsp-utils/src/ECDSASignatureWithIndex";
+import { ECDSASignatureWithIndex } from "../../../../libs/ftso-core/src/fsp-utils/ECDSASignatureWithIndex";
 
 describe(`ECDSASignatureWithIndex`, async () => {
   const accountPrivateKeys = JSON.parse(

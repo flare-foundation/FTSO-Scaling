@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
 import path from "path/posix";
-import { CALCULATIONS_FOLDER } from "../../../libs/ftso-core/src/configs/networks";
 import { bigIntReviver } from "../../../libs/ftso-core/src/utils/big-number-serialization";
-import { TEMPORARY_INCREMENTAL_FEED_SELECTION_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
-import { deserializeGranulatedPartialOfferMap } from "../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
-import { IncrementalCalculationsFeedSelections } from "../../../libs/ftso-core/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
+import { TEMPORARY_INCREMENTAL_FEED_SELECTION_FILE } from "../../../libs/fsp-rewards/src/utils/stat-info/constants";
+import { deserializeGranulatedPartialOfferMap } from "../../../libs/fsp-rewards/src/utils/stat-info/granulated-partial-offers-map";
+import { IncrementalCalculationsFeedSelections } from "../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
+import {CALCULATIONS_FOLDER} from "../../../libs/fsp-rewards/src/constants";
 
 async function main() {
   if (!process.argv[2]) {

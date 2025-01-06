@@ -1,16 +1,19 @@
 import { globSync } from "glob";
-import { FullVoterRegistrationInfo } from "../libs/ftso-core/src/events";
 import { verifyWithMerkleProof } from "../libs/ftso-core/src/utils/MerkleTree";
-import { ClaimType, RewardClaim } from "../libs/ftso-core/src/utils/RewardClaim";
+import { ClaimType, RewardClaim } from "../libs/fsp-rewards/src/utils/RewardClaim";
 import {
   SDataForRewardCalculation,
   deserializeDataForRewardCalculation,
-} from "../libs/ftso-core/src/utils/stat-info/reward-calculation-data";
-import { deserializeRewardDistributionData } from "../libs/ftso-core/src/utils/stat-info/reward-distribution-data";
-import { RewardEpochInfo, deserializeRewardEpochInfo } from "../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+} from "../libs/fsp-rewards/src/utils/stat-info/reward-calculation-data";
+import { deserializeRewardDistributionData } from "../libs/fsp-rewards/src/utils/stat-info/reward-distribution-data";
+import { RewardEpochInfo, deserializeRewardEpochInfo } from "../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { TestVoter } from "../test/utils/basic-generators";
 import { claimSummary } from "../test/utils/reward-claim-summaries";
-import { CALCULATIONS_FOLDER } from "../libs/ftso-core/src/configs/networks";
+
+import {CALCULATIONS_FOLDER} from "../libs/fsp-rewards/src/constants";
+
+
+import { FullVoterRegistrationInfo } from "../libs/ftso-core/src/data/FullVoterRegistrationInfo";
 
 export interface RewardEpochCalculationData {
   rewardEpochInfo: RewardEpochInfo;

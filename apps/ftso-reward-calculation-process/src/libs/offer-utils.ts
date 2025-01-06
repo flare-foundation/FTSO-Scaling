@@ -2,18 +2,18 @@ import {
   granulatedPartialOfferMapForFDC,
   granulatedPartialOfferMapForFastUpdates,
   granulatedPartialOfferMapForRandomFeedSelection,
-} from "../../../../libs/ftso-core/src/reward-calculation/reward-offers";
+} from "../../../../libs/fsp-rewards/src/reward-calculation/reward-offers";
 import {
   IFUPartialRewardOfferForRound,
   IPartialRewardOfferForRound
-} from "../../../../libs/ftso-core/src/utils/PartialRewardOffer";
+} from "../../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { RewardEpochDuration } from "../../../../libs/ftso-core/src/utils/RewardEpochDuration";
-import { FDC_OFFERS_FILE, FU_OFFERS_FILE, OFFERS_FILE } from "../../../../libs/ftso-core/src/utils/stat-info/constants";
-import { serializeGranulatedPartialOfferMap, serializeGranulatedPartialOfferMapForFDC } from "../../../../libs/ftso-core/src/utils/stat-info/granulated-partial-offers-map";
+import { FDC_OFFERS_FILE, FU_OFFERS_FILE, OFFERS_FILE } from "../../../../libs/fsp-rewards/src/utils/stat-info/constants";
+import { serializeGranulatedPartialOfferMap, serializeGranulatedPartialOfferMapForFDC } from "../../../../libs/fsp-rewards/src/utils/stat-info/granulated-partial-offers-map";
 import {
   RewardEpochInfo,
   deserializeRewardEpochInfo,
-} from "../../../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
 

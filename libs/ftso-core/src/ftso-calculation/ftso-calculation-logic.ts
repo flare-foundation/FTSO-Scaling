@@ -1,6 +1,6 @@
-import { DataForCalculations } from "../data-calculation-interfaces";
+import { DataForCalculations } from "../data/DataForCalculations";
 import { MerkleTree } from "../utils/MerkleTree";
-import { MerkleTreeStructs } from "../utils/MerkleTreeStructs";
+import { MerkleTreeStructs } from "../data/MerkleTreeStructs";
 import { EpochResult, MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 import { calculateMedianResults } from "./ftso-median";
 import { calculateRandom } from "./ftso-random";

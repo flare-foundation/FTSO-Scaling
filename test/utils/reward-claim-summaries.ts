@@ -1,9 +1,11 @@
-import { BURN_ADDRESS } from "../../libs/ftso-core/src/configs/networks";
-import { RewardOffers } from "../../libs/ftso-core/src/events";
-import { RewardTypePrefix } from "../../libs/ftso-core/src/reward-calculation/RewardTypePrefix";
+import { RewardTypePrefix } from "../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
-import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
+import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../libs/fsp-rewards/src/utils/RewardClaim";
 import { TestVoter } from "./basic-generators";
+import {BURN_ADDRESS} from "../../libs/fsp-rewards/src/constants";
+
+
+import { RewardOffers } from "../../libs/ftso-core/src/data/RewardOffers";
 
 function claimListSummary(
   beneficiary: string,

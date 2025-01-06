@@ -1,4 +1,4 @@
-import { deserializeRewardEpochInfo } from "../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { deserializeRewardEpochInfo } from "../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 
 export interface ShortRewardEpochInfo {
   rewardEpochId: number;

@@ -1,9 +1,9 @@
 import { appendFileSync, writeFileSync } from "fs";
-import { BURN_ADDRESS } from "../../libs/ftso-core/src/configs/networks";
-import { ClaimType, IPartialRewardClaim } from "../../libs/ftso-core/src/utils/RewardClaim";
-import { deserializePartialClaimsForVotingRoundId } from "../../libs/ftso-core/src/utils/stat-info/partial-claims";
-import { deserializeRewardEpochInfo } from "../../libs/ftso-core/src/utils/stat-info/reward-epoch-info";
+import { ClaimType, IPartialRewardClaim } from "../../libs/fsp-rewards/src/utils/RewardClaim";
+import { deserializePartialClaimsForVotingRoundId } from "../../libs/fsp-rewards/src/utils/stat-info/partial-claims";
+import { deserializeRewardEpochInfo } from "../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { flrFormat } from "../../test/utils/reward-claim-summaries";
+import {BURN_ADDRESS} from "../../libs/fsp-rewards/src/constants";
 
 export interface CSVRewardClaim extends IPartialRewardClaim {
   rewardEpochId: number;

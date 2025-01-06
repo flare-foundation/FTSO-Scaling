@@ -1,15 +1,17 @@
 import { assert, expect } from "chai";
-import { RewardOffers } from "../../../libs/ftso-core/src/events";
-import { InflationRewardsOffered } from "../../../libs/ftso-core/src/events/InflationRewardsOffered";
-import { RewardsOffered } from "../../../libs/ftso-core/src/events/RewardsOffered";
+import { InflationRewardsOffered } from "../../../libs/contracts/src/events/InflationRewardsOffered";
+import { RewardsOffered } from "../../../libs/contracts/src/events/RewardsOffered";
 import {
   distributeInflationRewardOfferToFeeds,
   splitRewardOfferByTypes,
-} from "../../../libs/ftso-core/src/reward-calculation/reward-offers";
+} from "../../../libs/fsp-rewards/src/reward-calculation/reward-offers";
 import { generateAddress, generateInflationRewardOffer, generateRewardsOffer, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
-import { PartialRewardOffer } from "../../../libs/ftso-core/src/utils/PartialRewardOffer";
+import { PartialRewardOffer } from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { granulatedPartialOfferMap } from "./generator-rewards.test";
+
+
+import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
 describe(`Reward offers, ${getTestFile(__filename)}`, function () {
   const rewardEpochId = 1000;

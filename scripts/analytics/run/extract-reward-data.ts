@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, write, writeFileSync } from "fs";
 import path from "path/posix";
-import { REWARD_DISTRIBUTION_DATA_FILE, REWARD_DISTRIBUTION_DATA_TUPLES_FILE, REWARD_EPOCH_INFO_FILE } from "../../../libs/ftso-core/src/utils/stat-info/constants";
-import { CALCULATIONS_FOLDER } from "../../../libs/ftso-core/src/configs/networks";
+import { REWARD_DISTRIBUTION_DATA_FILE, REWARD_DISTRIBUTION_DATA_TUPLES_FILE, REWARD_EPOCH_INFO_FILE } from "../../../libs/fsp-rewards/src/utils/stat-info/constants";
 import { bigIntReviver } from "../../../libs/ftso-core/src/utils/big-number-serialization";
-import { IRewardClaimWithProof } from "../../../libs/ftso-core/src/utils/RewardClaim";
+import { IRewardClaimWithProof } from "../../../libs/fsp-rewards/src/utils/RewardClaim";
+import {CALCULATIONS_FOLDER} from "../../../libs/fsp-rewards/src/constants";
 
 const REWARDS_FOLDER = "rewards-data"; 
 
