@@ -1,10 +1,9 @@
-import { ISignaturePayload } from "../../../../ftso-core/src/fsp-utils/SignaturePayload";
+import { AttestationRequest } from "../../../../contracts/src/events/AttestationRequest";
 import { GenericSubmissionData, SubmissionData } from "../../../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../../../ftso-core/src/RewardEpoch";
-import { FDC_PROTOCOL_ID } from "../../../../ftso-core/src/constants";
-import { AttestationRequest } from "../../../../contracts/src/events/AttestationRequest";
+import { ISignaturePayload } from "../../../../ftso-core/src/fsp-utils/SignaturePayload";
 import { Address, MessageHash } from "../../../../ftso-core/src/voting-types";
-import {WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH} from "../../constants";
+import { FDC_PROTOCOL_ID, WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH } from "../../constants";
 import {
    FDCEligibleSigner,
    FDCOffender,

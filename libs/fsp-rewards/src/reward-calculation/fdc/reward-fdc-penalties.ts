@@ -1,5 +1,4 @@
 import { VoterWeights } from "../../../../ftso-core/src/RewardEpoch";
-import { FDC_PROTOCOL_ID } from "../../../../ftso-core/src/constants";
 import { IPartialRewardOfferForRound } from "../../utils/PartialRewardOffer";
 import { IPartialRewardClaim } from "../../utils/RewardClaim";
 import { SDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
@@ -7,6 +6,7 @@ import { RewardEpochInfo } from "../../utils/stat-info/reward-epoch-info";
 import { Address } from "../../../../ftso-core/src/voting-types";
 import { RewardTypePrefix } from "../RewardTypePrefix";
 import { generateSigningWeightBasedClaimsForVoter } from "../reward-signing-split";
+import { FDC_PROTOCOL_ID } from "../../constants";
 
 /**
  *  * Given a @param offer, @param penaltyFactor and @param votersWeights penalty claims for offenders.

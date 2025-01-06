@@ -1,15 +1,15 @@
-import { EPOCH_SETTINGS, FDC_PROTOCOL_ID } from "../../../../ftso-core/src/constants";
+import { EPOCH_SETTINGS } from "../../../../ftso-core/src/constants";
+import { Address } from "../../../../ftso-core/src/voting-types";
+import { FDC_PROTOCOL_ID, FINALIZATION_BIPS, TOTAL_BIPS } from "../../constants";
+import { FDCEligibleSigner } from "../../data-calculation-interfaces";
 import { IPartialRewardOfferForRound } from "../../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../../utils/RewardClaim";
 import { SDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
 import { RewardEpochInfo } from "../../utils/stat-info/reward-epoch-info";
-import { Address } from "../../../../ftso-core/src/voting-types";
 import { RewardTypePrefix } from "../RewardTypePrefix";
 import { SigningRewardClaimType } from "../reward-signing";
 import { generateSigningWeightBasedClaimsForVoter } from "../reward-signing-split";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "../reward-utils";
-import {FINALIZATION_BIPS, TOTAL_BIPS} from "../../constants";
-import {FDCEligibleSigner} from "../../data-calculation-interfaces";
 
 /**
  * A split of partial reward offer into three parts:

@@ -1,5 +1,5 @@
-import { FTSO2_FAST_UPDATES_PROTOCOL_ID, FTSO2_PROTOCOL_ID, STAKING_PROTOCOL_ID } from "../../../../ftso-core/src/constants";
-import { BURN_ADDRESS } from "../../constants";
+import { FTSO2_PROTOCOL_ID } from "../../../../ftso-core/src/constants";
+import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID, STAKING_PROTOCOL_ID } from "../../constants";
 import { ClaimType, IRewardClaim } from "../../utils/RewardClaim";
 import { deserializeDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
 import { deserializeRewardDistributionData, serializeRewardDistributionData } from "../../utils/stat-info/reward-distribution-data";

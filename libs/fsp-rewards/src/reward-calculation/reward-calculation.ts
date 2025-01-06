@@ -1,15 +1,12 @@
-import { DataAvailabilityStatus, DataManager } from "../../../ftso-core/src/DataManager";
+import { DataAvailabilityStatus } from "../../../ftso-core/src/DataManager";
 import { RewardEpochManager } from "../../../ftso-core/src/RewardEpochManager";
 import {
-  FDC_PROTOCOL_ID,
-  FTSO2_FAST_UPDATES_PROTOCOL_ID,
-  FTSO2_PROTOCOL_ID,
-
+  FTSO2_PROTOCOL_ID
 } from "../../../ftso-core/src/constants";
 import { calculateMedianResults } from "../../../ftso-core/src/ftso-calculation/ftso-median";
-import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RewardEpochDuration } from "../../../ftso-core/src/utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../../../ftso-core/src/voting-types";
+import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RandomVoterSelector } from "./RandomVoterSelector";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
@@ -18,12 +15,22 @@ import { calculateMedianRewardClaims } from "./reward-median";
 import { splitRewardOfferByTypes } from "./reward-offers";
 
 import { existsSync, readFileSync } from "fs";
-import { DataManagerForRewarding } from "../DataManagerForRewarding";
-import { RewardEpoch } from "../../../ftso-core/src/RewardEpoch";
 import { FastUpdateFeedConfiguration } from "../../../contracts/src/events/FUInflationRewardsOffered";
+import { RewardEpoch } from "../../../ftso-core/src/RewardEpoch";
+import { MerkleTreeStructs } from "../../../ftso-core/src/data/MerkleTreeStructs";
 import { calculateRandom } from "../../../ftso-core/src/ftso-calculation/ftso-random";
 import { ILogger } from "../../../ftso-core/src/utils/ILogger";
-import { MerkleTreeStructs } from "../../../ftso-core/src/data/MerkleTreeStructs";
+import { DataManagerForRewarding } from "../DataManagerForRewarding";
+import {
+  BURN_ADDRESS,
+  CALCULATIONS_FOLDER,
+  FDC_PROTOCOL_ID,
+  FEEDS_RENAMING_FILE,
+  FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
+  FTSO2_FAST_UPDATES_PROTOCOL_ID,
+  PENALTY_FACTOR
+} from "../constants";
+import { FUFeedValue } from "../data-calculation-interfaces";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import {
   aggregatedClaimsForVotingRoundIdExist,
@@ -47,18 +54,11 @@ import {
   serializeDataForRewardCalculation,
 } from "../utils/stat-info/reward-calculation-data";
 import { deserializeRewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
+import { calculateFdcPenalties } from "./fdc/reward-fdc-penalties";
+import { calculateSigningRewardsForFDC, splitFDCRewardOfferByTypes } from "./fdc/reward-fdc-signing";
 import { FastUpdatesRewardClaimType, calculateFastUpdatesClaims } from "./reward-fast-updates";
 import { calculatePenalties } from "./reward-penalties";
 import { calculateSigningRewards } from "./reward-signing";
-import { calculateSigningRewardsForFDC, splitFDCRewardOfferByTypes } from "./fdc/reward-fdc-signing";
-import { calculateFdcPenalties } from "./fdc/reward-fdc-penalties";
-import {
-  BURN_ADDRESS,
-  CALCULATIONS_FOLDER,
-  FEEDS_RENAMING_FILE,
-  FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS, PENALTY_FACTOR
-} from "../constants";
-import {FUFeedValue} from "../data-calculation-interfaces";
 
 /**
  * Initializes reward epoch storage for the given reward epoch.

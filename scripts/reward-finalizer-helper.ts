@@ -40,15 +40,15 @@ e.g. `export PRIVATE_KEYS=0x...1,0x...2,0x...3`
 Private keys must be in hex string, 0x-prefixed.
 Also, option `winit` needs one private key, which is taken as the first private key in the PRIVATE_KEYS env variable.
 */
+import * as dotenv from "dotenv";
+import { readFileSync } from "fs";
 import Web3 from "web3";
-import { ECDSASignature } from "../libs/ftso-core/src/fsp-utils/ECDSASignature";
-import { ZERO_BYTES32 } from "../libs/ftso-core/src/constants";
+import { CONTRACTS } from "../libs/contracts/src/constants";
+import { ZERO_BYTES32 } from "../libs/fsp-rewards/src/constants";
 import { ClaimType, IRewardClaimWithProof } from "../libs/fsp-rewards/src/utils/RewardClaim";
 import { deserializeRewardDistributionData } from "../libs/fsp-rewards/src/utils/stat-info/reward-distribution-data";
-import { readFileSync } from "fs";
+import { ECDSASignature } from "../libs/ftso-core/src/fsp-utils/ECDSASignature";
 import { printClaimSummary, verifyMerkleProofs } from "./stats-utils";
-import * as dotenv from "dotenv";
-import {CONTRACTS} from "../libs/contracts/src/constants";
 
 dotenv.config();
 
