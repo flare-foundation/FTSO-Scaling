@@ -430,6 +430,24 @@ export class IndexerClient {
       );
     }
 
+    // TEMP CHANGE for upgrading Relay contract on Coston2, can be removed in February 2025
+    const oldCoston2Relay = "0x4087D4B5E009Af9FF41db910205439F82C3dc63c";
+    if (network == "coston2" && CONTRACTS.Relay.address != oldCoston2Relay) {
+      this.logger.log(`Querying old Relay address for Coston2: ${oldCoston2Relay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCoston2Relay }, eventName, fromStartTime))
+      );
+    }
+
+    // TEMP CHANGE for upgrading Relay contract on Flare, can be removed in March 2025
+    const oldFlareRelay = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
+    if (network == "flare" && CONTRACTS.Relay.address != oldFlareRelay) {
+      this.logger.log(`Querying old Relay address for Flare: ${oldFlareRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime))
+      );
+    }
+
     // END TEMP CHANGE
 
     result.push(...(await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime)));
