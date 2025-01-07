@@ -439,6 +439,15 @@ export class IndexerClient {
       );
     }
 
+    // TEMP CHANGE for upgrading Relay contract on Flare, can be removed in March 2025
+    const oldFlareRelay = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
+    if (network == "flare" && CONTRACTS.Relay.address != oldFlareRelay) {
+      this.logger.log(`Querying old Relay address for Flare: ${oldFlareRelay}`);
+      result.push(
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime))
+      );
+    }
+
     // END TEMP CHANGE
 
     result.push(...(await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime)));

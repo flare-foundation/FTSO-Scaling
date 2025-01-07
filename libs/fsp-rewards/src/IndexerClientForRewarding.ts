@@ -94,6 +94,14 @@ export class IndexerClientForRewarding extends IndexerClient {
       };
     }
 
+    const oldFlareRelayAddress = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
+    if (network === "flare" && CONTRACTS.Relay.address != oldFlareRelayAddress) {
+      oldRelay = {
+        ...CONTRACTS.Relay,
+        address: oldFlareRelayAddress,
+      };
+    }
+
     if (oldRelay !== undefined) {
       oldTransactionsResults = await this.queryTransactions(
         oldRelay,
