@@ -1,5 +1,9 @@
-.git
-.github
-.vscode
-node_modules
-dist
+/**
+!/abi
+!/apps
+!/libs
+!nest-cli.json
+!package.json
+!tsconfig.build.json
+!tsconfig.json
+!yarn.lock
