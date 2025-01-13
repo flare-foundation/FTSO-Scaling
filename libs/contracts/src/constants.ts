@@ -59,7 +59,7 @@ export const FLARE_CONTRACTS: NetworkContractAddresses = {
     FtsoRewardOffersManager: {name: "FtsoRewardOffersManager", address: "0x244EA7f173895968128D5847Df2C75B1460ac685"},
     RewardManager: {name: "RewardManager", address: "0xC8f55c5aA2C752eE285Bd872855C749f4ee6239B"},
     Submission: {name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f"},
-    Relay: {name: "Relay", address: "0xea077600E3065F4FAd7161a6D0977741f2618eec"},
+    Relay: {name: "Relay", address: "0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45"},
     FlareSystemsCalculator: {name: "FlareSystemsCalculator", address: "0x67c4B11c710D35a279A41cff5eb089Fe72748CF8"},
     VoterRegistry: {name: "VoterRegistry", address: "0x2580101692366e2f331e891180d9ffdF861Fce83"},
     FtsoMerkleStructs: {name: "FtsoMerkleStructs", address: ""},
