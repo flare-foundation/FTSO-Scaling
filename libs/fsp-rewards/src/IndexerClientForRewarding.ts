@@ -70,6 +70,13 @@ export class IndexerClientForRewarding extends IndexerClient {
       };
     }
 
+    const oldCoston2RelayAddress = "0x4087D4B5E009Af9FF41db910205439F82C3dc63c";
+    if (network === "coston2" && CONTRACTS.Relay.address != oldCoston2RelayAddress) {
+      oldRelay = {
+        ...CONTRACTS.Relay,
+        address: oldCoston2RelayAddress,
+      };
+    }
 
     const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
     if (network === "songbird" && CONTRACTS.Relay.address != oldSongbirdRelayAddress) {
@@ -84,6 +91,14 @@ export class IndexerClientForRewarding extends IndexerClient {
       secondOldRelay = {
         ...CONTRACTS.Relay,
         address: secondOldSongbirdRelayAddress,
+      };
+    }
+
+    const oldFlareRelayAddress = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
+    if (network === "flare" && CONTRACTS.Relay.address != oldFlareRelayAddress) {
+      oldRelay = {
+        ...CONTRACTS.Relay,
+        address: oldFlareRelayAddress,
       };
     }
 

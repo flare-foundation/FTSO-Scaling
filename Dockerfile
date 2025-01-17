@@ -1,11 +1,11 @@
-FROM node:18-slim as nodemodules
+FROM node:18-slim AS nodemodules
 
 WORKDIR /app
 
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --network-timeout 100000
 
-FROM node:18-slim as build
+FROM node:18-slim AS build
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY . ./
 RUN yarn build
 RUN yarn build ftso-reward-calculation-process
 
-FROM node:18-slim as runtime
+FROM node:18-slim AS runtime
 
 WORKDIR /app
 
