@@ -69,7 +69,7 @@ export const FLARE_CONTRACTS: NetworkContractAddresses = {
         name: "FastUpdateIncentiveManager",
         address: "0xd648e8ACA486Ce876D641A0F53ED1F2E9eF4885D",
     },
-    FdcHub: {name: "FdcHub", address: ""},
+    FdcHub: {name: "FdcHub", address: "0xc25c749DC27Efb1864Cb3DADa8845B7687eB2d44"},
 };
 
 export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird" | "flare";

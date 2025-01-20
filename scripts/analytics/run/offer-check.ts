@@ -109,7 +109,7 @@ async function main() {
     }
   }
 
-  console.log(`FTSO Scaling Funds: ${ftsoScalingOfferAmount}$ {ftsoScalingFunds - ftsoScalingOfferAmount}`);
+  console.log(`FTSO Scaling Funds: ${ftsoScalingOfferAmount} ${ftsoScalingFunds - ftsoScalingOfferAmount}`);
   console.log(`Fast Updates Funds: ${fastUpdatesOfferAmount} ${fastUpdatesFunds - fastUpdatesOfferAmount}`);
   console.log(`FDC Funds: ${fdcFunds - fdcOfferAmount}`);
   console.log(`FDC Offer Burn: ${fdcOfferBurn}`);
