@@ -13,12 +13,11 @@ export DB_USERNAME=root
 export DB_PASSWORD=root
 export DB_NAME=flare_ftso_indexer
 
+# Disabling specific logs in reward calculation
 export REMOVE_ANNOYING_MESSAGES=true
 
-
 # check here: https://songbird-explorer.flare.network/address/0x421c69E22f48e14Fc2d2Ee3812c59bfb81c38516/read-contract#address-tabs
-# 9.  getCurrentRewardEpochId, and use one epoch less for test (required indexer history is 4 epochs/ 14 days)
-# export REWARD_EPOCH_ID=2349
+# 9.  getCurrentRewardEpochId to get current reward epoch (required indexer history is 4 epochs/ 14 days)
 
 # COMPILATION
 yarn nest build ftso-reward-calculation-process
@@ -30,13 +29,7 @@ yarn nest build ftso-reward-calculation-process
 export FROM_REWARD_EPOCH_ID=196
 node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 100 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
 
-# Incremental calculation
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -l -b 80 -w 5 -m 10000
-
-# ---------------------------------------------------------------------------------------------------------------------------
-# Recoverable sequential calculation
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -i -a -c -o -d $FROM_REWARD_EPOCH_ID -m 10000
 # ---------------------------------------------------------------------------------------------------------------------------
 # Calculating for specific reward epoch id
 # export SPECIFIC_REWARD_EPOCH_ID=2380
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -i -a -c -b 10 -w 24 -r $SPECIFIC_REWARD_EPOCH_ID -m 10000
+# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 10 -w 24 -r $SPECIFIC_REWARD_EPOCH_ID -m 10000

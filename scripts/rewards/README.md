@@ -246,44 +246,88 @@ When finalizing the following [reward detail tags](../../libs/fsp-rewards/src/re
 - `PARTICIPATION` - community reward for delegators earned by a data provider.
 - `CONTRACT_CHANGE` - special case, happening only when changing FastUpdater smart contract if a version of it is not available, so system is temporarily unusable, hence the rewards for specific voting round(s) get burned. 
 
-## Calculation data
+## Reward calculation and data
 
-**Public reward data** are stored in folders `rewards-data/<network>/<rewardEpochId>`. 
+Reward calculation can be done with the following scripts for a respective network:
+- [`scripts/rewards/flare-db.sh`](./scripts/rewards/flare-db.sh)
+- [`scripts/rewards/songbird-db.sh`](./scripts/rewards/songbird-db.sh)
+- [`scripts/rewards/coston-db.sh`](./scripts/rewards/coston-db.sh)
 
-**Detailed reward calculation data** can be obtained using reward calculation scripts.
-- [`coston-db.sh`](./coston-db.sh)
-- [`songbird-db.sh`](./songbird-db.sh)
-- [`flare-db.sh`](./flare-db.sh)
-The data is calculated into the folder `calculations`. For each reward epoch `rewardEpochId` the data are stored into the folder
+The scripts require configuration for access to the C-chain indexer data base with sufficient history, depending on which reward epoch
+the calculations are performed for. The data is calculated into the folder `calculations` (GIT ignored). For each reward epoch `rewardEpochId` the data are stored into the folder
 `calculations/<rewardEpochId>` and within that folder the specific data for each voting round (`votingRoundId`) are stored in the folders 
 `calculations/<rewardEpochId>/<votingRoundId>`.
 
-### Public reward data
+The results of reward calculation for reward distribution are stored into the file `calculations/<network>/<rewardEpochId>/reward-distribution-data.json`. These data do not reflect application of minimal conditions criteria for running Flare protocols which may cause certain rewards to get burned, if the corresponding data providers did not meet the criteria. The file contains the reward Merkle root and relevant Merkle proofs for all reward claims. 
 
-Data calculated by Flare Newtworks are published on [https://github.com/flare-foundation/fsp-rewards](https://github.com/flare-foundation/fsp-rewards).
-Public reward data includes the following files:
-- `reward-epoch-info.json` - extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
-- `reward-distribution-data.json` - all aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib).
-- `reward-distribution-data-tuples.json` - Same as `reward-distribution-data.json`, only that reward claims with proofs are encoded as tuples instead of JSON-like structs. This is useful for claiming using the blockchain explorer interface.
+Note that the Merkle root and claims in this file are used only for the period until minimal conditions start to be applied. Later this file will not be used anymore (the Merkle root and the claims will not be relevant).
 
 ### Detailed reward calculation data
 
-The detailed data includes the following files.
+The result of the reward calculation is detailed reward calculation data, which includes the following files.
 
 In folder `calculations/<rewardEpochId>`:
-- `reward-epoch-info.json` - see above (the only difference is that big numbers are serialized as `"123n"` instead `"123"`)
-- `reward-distribution-data.json`- see above (the only difference is that big numbers are serialized as `"123n"` instead `"123"`)
-- `final-reward-claims.json` - final list of claims.
-- `calculation-status.json` - status file about on-going reward calculation.  
-- several `*-progress.json` files for intermediate (during calculation) progress monitoring
+- `reward-epoch-info.json` - Data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
+- `final-reward-claims.json` - The final list of aggregated claims (may contain negative claims).
+- `reward-distribution-data.json`- Aggregated reward claims in the order as they are put into the Merkle tree, together with Merkle proofs and all pieces of data that are necessary to reconstruct the Merkle tree (one can use [MerkleTree.ts](../../libs/ftso-core/src/utils/MerkleTree.ts) lib). The file can be essentially extracted from the file `final-reward-claims.json`, negative claims are removed and burn claims for undistributed amounts are added, ensuring that the sum of all claims, including the burn claim, matches to full amount of the sum of all reward funds for all the Flare protocols included in the reward calculation.
+- `calculation-status.json` - The status file about on-going reward calculation.  
+- Several `*-progress.json` files for intermediate (during calculation) progress monitoring.
 
 In folders `calculations/<rewardEpochId>/<votingRoundId>`:
-- `reward-calculation-data.json` - majority of data that is needed as the input into reward claim calculation.
-- `offers.json` - partial offers (usually just one) holding total reward funds for the voting round in FTSO scaling protocol.
-- `fast-updates-offers.json` - partial offers for FTSO fast updates protocol
+- `reward-calculation-data.json` - Majority of data that is needed as the input into reward claim calculation. Data are extracted through C-chain indexer and data processing.
+- `offers.json` - Partial reward offers (usually just one) holding total reward funds for the voting round in FTSO scaling protocol.
+- `fast-updates-offers.json` - Partial reward offers for FTSO fast updates protocol.
 - `feed-values.json` - Merkle tree data with proofs for price feeds and random.
-- `claims.json` - detailed reward claims for the voting round. Include the claims from both protocols.
-- `aggregated-claims.json` - aggregated partial claims from previous voting rounds and `claims.json`.
+- `claims.json` - Detailed reward claims for the voting round. Include the claims from both protocols.
+- `aggregated-claims.json` - Aggregated partial claims from previous voting rounds and `claims.json`.
+
+(Partial) reward offers represent records of initial distributions of the reward funds for each Flare protocol and for each voting round. The records usually contain additional conditions data, specific for each protocol.
+In all those files big integers are encoded as strings ending with `n` at the end (for example `"123n"`, see [this](../../libs/ftso-core/src/utils/big-number-serialization.ts)).
+
+### Applying minimal conditions criteria
+
+Minimal conditions ([Songbird](https://proposals.flare.network/SIP/SIP_4.html), [Flare](https://proposals.flare.network/FIP/FIP_10.html)) are applied on the reward distribution file `reward-distribution-data.json`. The following conditions must be met in order to run the script for applying minimal conditions for reward epoch `rewardEpochId`:
+- `passes.json` for `rewardEpochId - 1` must be present at `calculations/<network>/<rewardEpochId - 1>/passes.json`. For the very first calculation the JSON file should contain empty array. Otherwise, the file is produced as a result of applying minimal conditions criteria on reward claims of the previous reward epoch.
+- For Flare network that provides staking rewards, the file `staking-data/<network>/<rewardEpochId>-nodes-data.json` must be present. If available on the [relevant repository](https://github.com/flare-foundation/reward-scripts/tree/main/generated-files), this file can be obtained by running the script
+
+```bash
+./scripts/flare-get-staking-data.sh <rewardEpochId>
+``` 
+
+Minimal conditions criteria for Flare network are applied by running the script
+```bash
+./scripts/rewards/min-conditions/flare-min-conditions.sh <rewardEpochId>
+``` 
+while for Songbird network the script is
+```bash
+./scripts/rewards/min-conditions/songbird-min-conditions.sh <rewardEpochId>
+``` 
+The scripts needs a connection to the C-chain indexer database, containing sufficient history.
+
+The script produces the following files in the folder `calculations/<network>/<rewardEpochId>`.
+- `minimal-conditions.json` - A detailed summary of checks for each registered data provider in the reward epoch of meeting minimal conditions in the reward epoch.
+- `passes.json` -  A file with current number of passes after the reward calculation and application of minimal conditions. It is used as an input when applying minimal conditions to reward calculation results of the next reward epoch.
+- `reward-distribution-data-min-conditions.json` - Taking the file `reward-calculation-data.json` as an input, the claims that correspond to data providers that committed more offenses than the number of passes they posses, convert to aggregated burn claim. The file has a similar structure like `reward-distribution-data.json`, containing (new) reward Merkle root and corresponding claims with Merkle proofs, after applying minimal conditions punishments.
+
+### Public reward data
+
+Public reward data are extracted using from outputs of reward calculation and minimal condition scripts by the following script.
+
+```bash
+yarn ts-node scripts/analytics/run/extract-reward-data.ts <network> <rewardEpochId>
+```
+Network can be `flare`, `songbird` or `coston`.
+
+The results are multiple files in folder `rewards-data/<network>/<rewardEpochId>` as described below.
+These files are then published on [https://github.com/flare-foundation/fsp-rewards](https://github.com/flare-foundation/fsp-rewards).
+Public reward data includes the following files:
+- `reward-epoch-info.json` - Copied from calculation results. Extracted data about reward epoch (offers, signing policy, feeds, boundaries, etc.).
+- `reward-distribution-data.json` - This file is either copied from calculation results, if minimal conditions are not applied, or `reward-distribution-data-min-conditions.json` obtained after applying minimal conditions (being renamed in the process).
+- `reward-distribution-data-tuples.json` - Same as `reward-distribution-data.json`, only that reward claims with proofs are encoded as tuples instead of JSON-like structs. This format is useful for claiming through some older versions of user interfaces of blockchain explorers.
+- `minimal-conditions.json` - Copied from minimal conditions application results.
+- `passes.json` - Copied from minimal conditions application results.
+
+Note that in all those files, big integers (like reward amounts in wei) are represented as strings (without `"n"` at the end, as it is the case with reward calculation files).
 
 ## Claiming rewards
 
@@ -327,4 +371,4 @@ The following parameters should be provided:
 - `_wrap` - option to directly wrap the reward to `WFLR` (`WSGB`) on the beneficiary account.
 - `_proofs` - an array of proofs encoded as tuples (see above). For example, if using one proof as above, one has to wrap it in additional brackets indicating an array (like `[...]` where the tuple encoded proof should be used instead of `...`). 
 
-Note that each direct or fee claim is independent. Hence, for example, one can freely first claim the rewards from later reward epoch and then for earlier. Once a specific claim is paid out, it cannot be used anymore to receive a reward.
+Note that each `DIRECT` or `FEE` claim is independent. Hence, for example, one can freely first claim the rewards from a later reward epoch and then for earlier. Once a specific claim is paid out, it cannot be used anymore to receive a reward.

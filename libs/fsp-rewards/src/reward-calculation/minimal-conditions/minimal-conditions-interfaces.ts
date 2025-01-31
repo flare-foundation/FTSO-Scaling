@@ -31,8 +31,8 @@ export interface ValidatorInfo {
    fee: number;
    // group number
    group: number;
-   // is the validator eligible for staking rewards
-   eligible: boolean;
+   // is the validator for uptime
+   uptimeEligible: boolean;
    // data provider name
    ftsoName: string;
    // Boosting eligibility bond in GWei
@@ -95,9 +95,13 @@ export interface MinimalConditionFailure {
 
 export interface DataProviderPasses {
    // epoch id in string
-   rewardEpochId: string;
+   rewardEpochId: number;
    // voter identity address in lowercase
    voterAddress: string;
+   // data provider name
+   dataProviderName?: string;
+   // if the voter was eligible for reward in the reward epoch
+   eligibleForReward: boolean;
    // number of passes. A number between 0 and 3
    passes: number;
    // failures
@@ -118,6 +122,10 @@ export interface DataProviderConditions {
    dataProviderName?: string;
    // voter identity address
    voterAddress: string;
+   // voter delegation address
+   delegationAddress: string;
+   // list of node ids assigned to voter
+   nodeIds: string[];
    // voter index
    voterIndex: number;
    // passes held before the reward epoch calculation

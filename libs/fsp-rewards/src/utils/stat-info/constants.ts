@@ -11,9 +11,11 @@ export const TEMPORARY_INCREMENTAL_REWARDS_FILE = "temporary-incremental-rewards
 export const TEMPORARY_INCREMENTAL_FEED_SELECTION_FILE = "temporary-incremental-feed-selection.json";
 export const REWARD_CALCULATION_DATA_FILE = "reward-calculation-data.json";
 export const FINAL_REWARD_CLAIMS_FILE = "final-reward-claims.json";
+export const REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE = "reward-distribution-data-min-conditions.json";
 export const REWARD_DISTRIBUTION_DATA_FILE = "reward-distribution-data.json";
 export const REWARD_DISTRIBUTION_DATA_TUPLES_FILE = "reward-distribution-data-tuples.json";
-
+export const MINIMAL_CONDITIONS_FILE =  "minimal-conditions.json"
+export const PASSES_FILE = "passes.json";
 export const OFFER_DISTRIBUTION_PROGRESS_FILE = "offer-distribution-progress.json";
 export const FEED_CALCULATION_PROGRESS_FILE = "feed-calculation-progress.json";
 export const CLAIM_CALCULATION_PROGRESS_FILE = "claim-calculation-progress.json";

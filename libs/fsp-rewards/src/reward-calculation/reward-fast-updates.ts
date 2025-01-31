@@ -1,12 +1,11 @@
-import { FTSO2_FAST_UPDATES_PROTOCOL_ID } from "../../../ftso-core/src/constants";
 import { FastUpdateFeedConfiguration } from "../../../contracts/src/events/FUInflationRewardsOffered";
 import { ILogger } from "../../../ftso-core/src/utils/ILogger";
+import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
+import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID, TOTAL_BIPS } from "../constants";
+import { FUFeedValue } from "../data-calculation-interfaces";
 import { IFUPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
-import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
-import {BURN_ADDRESS, TOTAL_BIPS} from "../constants";
-import {FUFeedValue} from "../data-calculation-interfaces";
 
 const TOTAL_PPM = 1000000n;
 

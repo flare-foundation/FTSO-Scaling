@@ -1,7 +1,4 @@
-import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
-import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
-import { RelayMessage } from "../../ftso-core/src/fsp-utils/RelayMessage";
-import { ISignaturePayload, SignaturePayload } from "../../ftso-core/src/fsp-utils/SignaturePayload";
+import { ContractMethodNames } from "../../contracts/src/definitions";
 import { DataAvailabilityStatus, DataManager, DataMangerResponse } from "../../ftso-core/src/DataManager";
 import {
   BlockAssuranceResult,
@@ -10,30 +7,31 @@ import {
   ParsedFinalizationData,
   SubmissionData,
 } from "../../ftso-core/src/IndexerClient";
-import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
-import { ContractMethodNames } from "../../contracts/src/definitions";
 import {
-  ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
   EPOCH_SETTINGS,
-  FDC_PROTOCOL_ID,
   FTSO2_PROTOCOL_ID,
 } from "../../ftso-core/src/constants";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
-import { bitVoteIndicesNum, extractFDCRewardData, uniqueRequestsIndices } from "./reward-calculation/fdc/fdc-utils";
+import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
+import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
+import { RelayMessage } from "../../ftso-core/src/fsp-utils/RelayMessage";
+import { ISignaturePayload, SignaturePayload } from "../../ftso-core/src/fsp-utils/SignaturePayload";
+import { SigningPolicy } from "../../ftso-core/src/fsp-utils/SigningPolicy";
 import { ILogger } from "../../ftso-core/src/utils/ILogger";
 import { errorString } from "../../ftso-core/src/utils/error";
 import { Address, MessageHash } from "../../ftso-core/src/voting-types";
-import { WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH } from "./constants";
+import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
+import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, FDC_PROTOCOL_ID, WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH } from "./constants";
 import {
   DataForRewardCalculation,
-  FastUpdatesDataForVotingRound,
   FDCDataForVotingRound,
   FDCRewardData,
+  FastUpdatesDataForVotingRound,
   PartialFDCDataForVotingRound,
 } from "./data-calculation-interfaces";
-import { SigningPolicy } from "../../ftso-core/src/fsp-utils/SigningPolicy";
+import { bitVoteIndicesNum, extractFDCRewardData, uniqueRequestsIndices } from "./reward-calculation/fdc/fdc-utils";
 
 export interface SignAndFinalizeSubmissionData {
   signatures: SubmissionData[];

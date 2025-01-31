@@ -1,4 +1,74 @@
-import {networks} from "../../contracts/src/constants";
+import { networks } from "../../contracts/src/constants";
+
+export const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+// Protocol ids
+const ftso2FastUpdatesProtocolId = () => {
+    const network = process.env.NETWORK as networks;
+    switch (network) {
+        case "coston":
+        case "from-env":
+        case "local-test":
+        case "coston2":
+        case "songbird":
+        case "flare":
+            return 255;
+        default:
+            // Ensure exhaustive checking
+            // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+            ((_: never): void => { })(network);
+    }
+};
+
+// Protocol id for FTSO2 fast updates
+export const FTSO2_FAST_UPDATES_PROTOCOL_ID = ftso2FastUpdatesProtocolId();
+
+
+const FDCProtocolId = () => {
+    const network = process.env.NETWORK as networks;
+    switch (network) {
+        case "coston":
+        case "from-env":
+        case "local-test":
+        case "coston2":
+        case "songbird":
+        case "flare":
+            return 200;
+        default:
+            // Ensure exhaustive checking
+            // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+            ((_: never): void => { })(network);
+    }
+};
+
+// Protocol id for FDC
+export const FDC_PROTOCOL_ID = FDCProtocolId();
+
+export const STAKING_PROTOCOL_ID = 0;
+
+/**
+ * The number of additional voting rounds for performing queries for signature and finalization data.
+ * If value is 0, then for votingRoundId the original window is from the end of reveals to the end
+ * of the voting epoch votingRoundId. If value is bigger, it extends to ends of the next epochs accordingly.
+ */
+const additionalRewardFinalizationWindows = () => {
+    const network = process.env.NETWORK as networks;
+    switch (network) {
+        case "from-env":
+        case "coston":
+        case "coston2":
+        case "songbird":
+        case "flare":
+        case "local-test":
+            return 0;
+        default:
+            // Ensure exhaustive checking
+            // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+            ((_: never): void => { })(network);
+    }
+};
+
+export const ADDITIONAL_REWARDED_FINALIZATION_WINDOWS = additionalRewardFinalizationWindows();
 
 const burnAddress = () => {
     const network = process.env.NETWORK as networks;
