@@ -300,12 +300,12 @@ export class DataManagerForRewarding extends DataManager {
                 `Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`
               );
             }
-            const signatures = signatureMap.get(messageHash) || [];
+            const signatures = signatureMap.get(signaturePayload.messageHash) || [];
             const submissionData: GenericSubmissionData<ISignaturePayload> = {
               ...submission,
               messages: signaturePayload,
             };
-            signatureMap.set(messageHash, signatures);
+            signatureMap.set(signaturePayload.messageHash, signatures);
             signatures.push(submissionData);
           }
         } catch (e) {
