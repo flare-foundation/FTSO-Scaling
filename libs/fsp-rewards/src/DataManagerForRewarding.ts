@@ -238,7 +238,7 @@ export class DataManagerForRewarding extends DataManager {
     providedMessageHash: MessageHash | undefined = undefined,
     logger: ILogger
   ): Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> {
-    const signatureMap = new Map<MessageHash, Map<Address, GenericSubmissionData<ISignaturePayload>>>();
+    const signatureMap = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
     for (const submission of submissions) {
       for (const message of submission.messages) {
         try {
@@ -300,14 +300,13 @@ export class DataManagerForRewarding extends DataManager {
                 `Critical error: signerToSigningWeight or signerToDelegationAddress is not defined for signer ${signer}`
               );
             }
-            const signatures =
-              signatureMap.get(messageHash) || new Map<Address, GenericSubmissionData<ISignaturePayload>>();
+            const signatures = signatureMap.get(messageHash) || [];
             const submissionData: GenericSubmissionData<ISignaturePayload> = {
               ...submission,
               messages: signaturePayload,
             };
             signatureMap.set(messageHash, signatures);
-            signatures.set(signer, submissionData);
+            signatures.push(submissionData);
           }
         } catch (e) {
           console.log(e)

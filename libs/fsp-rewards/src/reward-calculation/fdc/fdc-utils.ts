@@ -20,7 +20,7 @@ export function uniqueRequestsIndices(attestationRequests: AttestationRequest[])
    const result: number[][] = [];
    for (let i = 0; i < attestationRequests.length; i++) {
       const request = attestationRequests[i];
-      if (!encountered.get(request.data)) {
+      if (encountered.get(request.data) == undefined) {
          encountered.set(request.data, result.length);
          result.push([i]);
       } else {
