@@ -22,7 +22,7 @@ export function calculateAttestationTypeAppearances(rewardEpochId: number): void
    const attestationTypeCount = new Map<string, number>();
    for (
       let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
-      votingRoundId < rewardEpochInfo.endVotingRoundId;
+      votingRoundId <= rewardEpochInfo.endVotingRoundId;
       votingRoundId++
    ) {
       const currentCalculationData = deserializeDataForRewardCalculation(
