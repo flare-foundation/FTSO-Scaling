@@ -100,7 +100,7 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
     } else {
       const adaptedCommunityOffer = PartialRewardOffer.fromRewardOffered(rewardOffer);
       adaptCommunityRewardOffer(adaptedCommunityOffer);
-      currencyRewardOffers.set(rewardOffer.feedId, PartialRewardOffer.fromRewardOffered(rewardOffer));
+      currencyRewardOffers.set(rewardOffer.feedId, adaptedCommunityOffer);
     }
   }
   // Create a map of votingRoundId -> feedId -> rewardOffer
