@@ -184,6 +184,11 @@ export function extractFDCRewardData(
 
    for (const submission of bitVoteSubmissions) {
       const submitSignatureAddress = rewardEpoch.getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress).toLowerCase();
+      // we consider last bitvote for each submission only
+      const bitVote = submitSignatureAddressToBitVote.get(submitSignatureAddress);
+      if(consensusBitVote === undefined || !isConsensusVoteDominated(consensusBitVote, bitVote)) {
+         continue;
+      }     
       const submissionAddress = rewardEpoch.getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress).toLowerCase();
       if (!submitSignatureSenders.has(submitSignatureAddress)) {
          const offender: FDCOffender = {
