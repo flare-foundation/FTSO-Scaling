@@ -4,7 +4,7 @@ import {
   IFUPartialRewardOfferForRound,
   IPartialRewardOfferForEpoch,
   IPartialRewardOfferForRound,
-  PartialRewardOffer
+  PartialRewardOffer,
 } from "../utils/PartialRewardOffer";
 import { RewardEpochDuration } from "../../../ftso-core/src/utils/RewardEpochDuration";
 import { OFFERS_FILE } from "../utils/stat-info/constants";
@@ -14,7 +14,7 @@ import {
 } from "../utils/stat-info/granulated-partial-offers-map";
 import { deserializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 import { RewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
-import {BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS} from "../constants";
+import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../constants";
 
 /**
  * A split of partial reward offer into three parts:
@@ -40,7 +40,7 @@ export function distributeInflationRewardOfferToFeeds(
 
 /**
  * Adapts community reward offer to default data.
- * Community reward offers can have specific data about primary and seconary bands, which are ignored and 
+ * Community reward offers can have specific data about primary and seconary bands, which are ignored and
  * overridden by default values.
  */
 export function adaptCommunityRewardOffer(rewardOffer: IPartialRewardOfferForEpoch): void {
@@ -68,7 +68,8 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
 ): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
   if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
     throw new Error(
-      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${endVotingRoundId - startVotingRoundId + 1
+      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${
+        endVotingRoundId - startVotingRoundId + 1
       }`
     );
   }
@@ -165,7 +166,7 @@ export function granulatedPartialOfferMapForRandomFeedSelection(
 
 /**
  * Prepares FTSO Scaling offers according to random number choice.
- * Among all the offers for all available feeds one feed is selected using the 
+ * Among all the offers for all available feeds one feed is selected using the
  * provided random number.
  * This is done for the range of voting rounds.
  * If the random number is undefined, the offer is marked for burning.
@@ -179,7 +180,8 @@ export function fixOffersForRandomFeedSelection(
 ) {
   if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
     throw new Error(
-      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${endVotingRoundId - startVotingRoundId + 1
+      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${
+        endVotingRoundId - startVotingRoundId + 1
       }`
     );
   }
@@ -248,7 +250,7 @@ export function splitRewardOfferByTypes(offer: IPartialRewardOfferForRound): Spl
  */
 export function granulatedPartialOfferMapForFastUpdates(
   rewardEpochInfo: RewardEpochInfo,
-  randomNumbers: (bigint | undefined)[],
+  randomNumbers: (bigint | undefined)[]
 ): Map<number, Map<string, IFUPartialRewardOfferForRound[]>> {
   const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
   const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
@@ -257,7 +259,8 @@ export function granulatedPartialOfferMapForFastUpdates(
   }
   if (randomNumbers.length !== endVotingRoundId - startVotingRoundId + 1) {
     throw new Error(
-      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${endVotingRoundId - startVotingRoundId + 1
+      `Random numbers length ${randomNumbers.length} does not match voting rounds length ${
+        endVotingRoundId - startVotingRoundId + 1
       }`
     );
   }
@@ -282,11 +285,13 @@ export function granulatedPartialOfferMapForFastUpdates(
     const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
 
     const selectedFeedIndex =
-      randomNumber === undefined ? 0 : Number(randomNumber % BigInt(rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length));
+      randomNumber === undefined
+        ? 0
+        : Number(randomNumber % BigInt(rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length));
 
     const selectedFeedConfig = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations[selectedFeedIndex];
     const selectedFeedId = selectedFeedConfig.feedId;
-    let amount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
+    const amount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
 
     // Create adapted offer with selected feed
     const feedOfferForVoting: IFUPartialRewardOfferForRound = {
@@ -314,7 +319,7 @@ export function granulatedPartialOfferMapForFastUpdates(
  * Creates a map of partial reward offers for each voting round in the reward epoch for FDC.
  */
 export function granulatedPartialOfferMapForFDC(
-  rewardEpochInfo: RewardEpochInfo,
+  rewardEpochInfo: RewardEpochInfo
 ): Map<number, IPartialRewardOfferForRound[]> {
   const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
   const endVotingRoundId = rewardEpochInfo.endVotingRoundId;
@@ -339,7 +344,8 @@ export function granulatedPartialOfferMapForFDC(
   }
 
   // Calculate total amount of rewards for the reward epoch
-  const totalBurnAmount = (BigInt(burnWeight) * rewardEpochInfo.fdcInflationRewardsOffered.amount) / BigInt(totalWeight);
+  const totalBurnAmount =
+    (BigInt(burnWeight) * rewardEpochInfo.fdcInflationRewardsOffered.amount) / BigInt(totalWeight);
   let totalAmount = rewardEpochInfo.fdcInflationRewardsOffered.amount - totalBurnAmount;
 
   if (process.env.TEST_FDC_INFLATION_REWARD_AMOUNT) {
@@ -383,12 +389,9 @@ export function granulatedPartialOfferMapForFDC(
       votingRoundId,
       amount: burnAmount + feeBurnAmount,
       shouldBeBurned: true,
-    }
+    };
 
-    rewardOfferMap.set(votingRoundId, [
-      offerForVotingRound,
-      burnOfferForVotingRound
-    ]);
+    rewardOfferMap.set(votingRoundId, [offerForVotingRound, burnOfferForVotingRound]);
   }
   return rewardOfferMap;
 }

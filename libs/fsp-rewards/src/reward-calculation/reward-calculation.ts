@@ -1,8 +1,6 @@
 import { DataAvailabilityStatus } from "../../../ftso-core/src/DataManager";
 import { RewardEpochManager } from "../../../ftso-core/src/RewardEpochManager";
-import {
-  FTSO2_PROTOCOL_ID
-} from "../../../ftso-core/src/constants";
+import { FTSO2_PROTOCOL_ID } from "../../../ftso-core/src/constants";
 import { calculateMedianResults } from "../../../ftso-core/src/ftso-calculation/ftso-median";
 import { RewardEpochDuration } from "../../../ftso-core/src/utils/RewardEpochDuration";
 import { MedianCalculationResult } from "../../../ftso-core/src/voting-types";
@@ -28,7 +26,7 @@ import {
   FEEDS_RENAMING_FILE,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
   FTSO2_FAST_UPDATES_PROTOCOL_ID,
-  PENALTY_FACTOR
+  PENALTY_FACTOR,
 } from "../constants";
 import { FUFeedValue } from "../data-calculation-interfaces";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
@@ -285,9 +283,7 @@ export async function partialRewardClaimsForVotingRound(
       }
     }
     const fuFeedValueMap = new Map<string, FUFeedValue>();
-    if (
-      rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length > data.fastUpdatesData.feedValues.length
-    ) {
+    if (rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length > data.fastUpdatesData.feedValues.length) {
       throw new Error("Critical error: Feed configurations contain more feeds then feed values");
     }
     // if new feeds are introduced during the voting round, they are ignored
@@ -395,7 +391,7 @@ export async function partialRewardClaimsForVotingRound(
         PENALTY_FACTOR(),
         data.dataForCalculations.votersWeightsMap!,
         RewardTypePrefix.FDC_OFFENDERS
-      )
+      );
 
       allRewardClaims.push(...fdCFinalizationRewardClaims);
       allRewardClaims.push(...fdcSigningRewardClaims);
