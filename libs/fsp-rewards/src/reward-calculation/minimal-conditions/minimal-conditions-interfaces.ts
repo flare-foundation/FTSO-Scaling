@@ -220,7 +220,7 @@ export interface StakingConditionSummary extends ConditionSummary {
 
 export interface FdcConditionSummary extends ConditionSummary {
   // total number of voting rounds in the reward epoch
-  totalVotingRounds: number;
+  totalRewardedVotingRounds: number;
   // rewarded voting rounds
   rewardedVotingRounds: number;
 }

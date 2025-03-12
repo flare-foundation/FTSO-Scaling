@@ -162,7 +162,7 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
 
     const fdcConditionSummary: FdcConditionSummary = {
       conditionMet: false,
-      totalVotingRounds: numberOfVotingRounds,
+      totalRewardedVotingRounds: 0,
       rewardedVotingRounds: 0,
     };
     voterToFdcConditionSummary.set(voter, fdcConditionSummary);
@@ -229,6 +229,7 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
   // Processing by voting rounds
   let totalFUUpdates = 0;
   let nonEmptyFeedValues = 0;
+  let totalRewardedVotingRounds = 0;
   for (
     let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
     votingRoundId <= rewardEpochInfo.endVotingRoundId;
@@ -306,6 +307,9 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
         }
       }
     }
+    if (hasFdcSigningFee.size > 0 || hasFdcFinalizationFee.size > 0) {
+      totalRewardedVotingRounds++;
+    }
     for (const [voter, fdcConditionSummary] of voterToFdcConditionSummary.entries()) {
       if ((hasFdcSigningFee.has(voter) || hasFdcFinalizationFee.has(voter)) && !hasFdcOffense.has(voter)) {
         fdcConditionSummary.rewardedVotingRounds++;
@@ -314,7 +318,7 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
   }
 
   // go over all data providers and check minimal conditions for fast updates
-  for (const [voter, fuConditionSummary] of voterToFUConditionSummary.entries()) {
+  for (const [_, fuConditionSummary] of voterToFUConditionSummary.entries()) {
     fuConditionSummary.totalUpdatesByAll = totalFUUpdates;
     fuConditionSummary.expectedUpdates = (fuConditionSummary.expectedUpdatesPPM * BigInt(totalFUUpdates)) / TOTAL_PPM;
     fuConditionSummary.conditionMet =
@@ -339,9 +343,10 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
   }
 
   for (const [_, fdcConditionSummary] of voterToFdcConditionSummary.entries()) {
+    fdcConditionSummary.totalRewardedVotingRounds = totalRewardedVotingRounds;
     fdcConditionSummary.conditionMet =
       TOTAL_PPM * BigInt(fdcConditionSummary.rewardedVotingRounds) >=
-      FDC_REWARDED_SHARE_PPM * BigInt(fdcConditionSummary.totalVotingRounds);
+      FDC_REWARDED_SHARE_PPM * BigInt(fdcConditionSummary.totalRewardedVotingRounds);
   }
 
   const dataProviderConditions: DataProviderConditions[] = [];
