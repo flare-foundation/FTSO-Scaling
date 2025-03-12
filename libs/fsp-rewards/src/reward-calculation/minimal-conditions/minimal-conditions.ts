@@ -1,5 +1,5 @@
 import { FTSO2_PROTOCOL_ID } from "../../../../ftso-core/src/constants";
-import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID, STAKING_PROTOCOL_ID } from "../../constants";
+import { BURN_ADDRESS, FDC_PROTOCOL_ID, FTSO2_FAST_UPDATES_PROTOCOL_ID, STAKING_PROTOCOL_ID } from "../../constants";
 import { ClaimType, IRewardClaim } from "../../utils/RewardClaim";
 import { deserializePartialClaimsForVotingRoundId } from "../../utils/stat-info/partial-claims";
 import { deserializeDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
@@ -367,6 +367,9 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
     if (staking === undefined) {
       throw new Error(`Staking condition summary not found for voter ${voter}`);
     }
+    if (fdc === undefined) {
+      throw new Error(`FDC condition summary not found for voter ${voter}`);
+    }
     if (voterIndex === undefined) {
       throw new Error(`Voter index not found for voter ${voter}`);
     }
@@ -461,6 +464,13 @@ export function extractNewPasses(dataProviderConditions: DataProviderConditions[
         failureId: MinimalConditionFailureType.STAKING_FAILURE,
       });
     }
+    if (!dataProviderCondition.fdc.conditionMet) {
+      failures.push({
+        protocolId: FDC_PROTOCOL_ID,
+        failureId: MinimalConditionFailureType.FDC_FAILURE,
+      });
+    }
+
     const dataProviderPasses: DataProviderPasses = {
       rewardEpochId: dataProviderCondition.rewardEpochId,
       dataProviderName: dataProviderCondition.dataProviderName,
