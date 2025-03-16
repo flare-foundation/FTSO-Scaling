@@ -4,16 +4,22 @@ import { RelayMessage } from "../../../../ftso-core/src/fsp-utils/RelayMessage";
 import { ISignaturePayload } from "../../../../ftso-core/src/fsp-utils/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../../../ftso-core/src/IndexerClient";
 import { VoterWeights } from "../../../../ftso-core/src/RewardEpoch";
-import { Address, Feed, MedianCalculationResult, MessageHash, RandomCalculationResult } from "../../../../ftso-core/src/voting-types";
+import {
+  Address,
+  Feed,
+  MedianCalculationResult,
+  MessageHash,
+  RandomCalculationResult,
+} from "../../../../ftso-core/src/voting-types";
 import { IRevealData } from "../../../../ftso-core/src/data/RevealData";
 import { bigIntReplacer, bigIntReviver } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { REWARD_CALCULATION_DATA_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 import { RewardEpochInfo } from "./reward-epoch-info";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 import {
   DataForRewardCalculation,
   FastUpdatesDataForVotingRound,
-  SFDCDataForVotingRound
+  SFDCDataForVotingRound,
 } from "../../data-calculation-interfaces";
 
 export interface RevealRecords {
@@ -68,7 +74,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     voterMedianVotingWeights,
     randomGenerationBenchingWindow: data.dataForCalculations.randomGenerationBenchingWindow,
     benchingWindowRevealOffenders: [...data.dataForCalculations.benchingWindowRevealOffenders],
-    feedOrder: data.dataForCalculations.feedOrder
+    feedOrder: data.dataForCalculations.feedOrder,
   };
   return result;
 }
@@ -97,7 +103,10 @@ export interface SDataForRewardCalculation {
   fdcData?: SFDCDataForVotingRound;
   // usually added after results of the next voting round are known
   nextVotingRoundRandomResult?: string;
+  // eligible finalizers for FTSO Scaling
   eligibleFinalizers: string[];
+  // eligible finalizers for FDC
+  eligibleFinalizersFdc: string[];
   // not serialized, reconstructed on augmentation
   signaturesMap?: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
 }
@@ -120,6 +129,7 @@ export function serializeDataForRewardCalculation(
   medianResults: MedianCalculationResult[],
   randomResult: RandomCalculationResult,
   eligibleFinalizationRewardVotersInGracePeriod: string[],
+  eligibleFinalizationRewardVotersInGracePeriodFdc: string[],
   tempRewardEpochFolder = false,
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
@@ -141,7 +151,6 @@ export function serializeDataForRewardCalculation(
     };
     hashSignatures.push(hashRecord);
   }
-
 
   let fdcData: SFDCDataForVotingRound | undefined;
 
@@ -165,7 +174,7 @@ export function serializeDataForRewardCalculation(
       consensusBitVote: rewardCalculationData.fdcData.consensusBitVote,
       consensusBitVoteIndices: rewardCalculationData.fdcData.consensusBitVoteIndices,
       fdcOffenders: rewardCalculationData.fdcData.fdcOffenders,
-    }
+    };
   }
 
   for (const finalization of rewardCalculationData.finalizations) {
@@ -183,8 +192,9 @@ export function serializeDataForRewardCalculation(
     medianCalculationResults: medianResults,
     randomResult: simplifyRandomCalculationResult(randomResult),
     eligibleFinalizers: eligibleFinalizationRewardVotersInGracePeriod,
+    eligibleFinalizersFdc: eligibleFinalizationRewardVotersInGracePeriodFdc,
     fastUpdatesData: rewardCalculationData.fastUpdatesData,
-    fdcData
+    fdcData,
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }
@@ -294,16 +304,13 @@ export function augmentDataForRewardCalculation(
 /**
  * After deserialization, the data is augmented with additional maps and sets for easier access.
  */
-export function augmentFdcDataForRewardCalculation(
-  data: SFDCDataForVotingRound,
-): void {
+export function augmentFdcDataForRewardCalculation(data: SFDCDataForVotingRound): void {
   const signaturesMap = new Map<string, GenericSubmissionData<ISignaturePayload>[]>();
   for (const hashSignature of data.signatures) {
     signaturesMap.set(hashSignature.hash, hashSignature.signatures);
   }
   data.signaturesMap = signaturesMap;
 }
-
 
 export function deserializeDataForRewardCalculation(
   rewardEpochId: number,

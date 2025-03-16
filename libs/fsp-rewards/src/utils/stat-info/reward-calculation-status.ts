@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { RewardEpoch } from "../../../../ftso-core/src/RewardEpoch";
 import { STATUS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 export enum RewardCalculationStatus {
   PENDING = "PENDING",
