@@ -373,8 +373,8 @@ export async function partialRewardClaimsForVotingRound(
         data.fdcData.firstSuccessfulFinalization,
         data.fdcData.finalizations,
         data,
-        new Set(data.eligibleFinalizers),
-        new Set(data.eligibleFinalizers),
+        new Set(data.eligibleFinalizersFdc),
+        new Set(data.eligibleFinalizersFdc),
         RewardTypePrefix.FDC_FINALIZATION
       );
 
@@ -389,6 +389,7 @@ export async function partialRewardClaimsForVotingRound(
         rewardEpochInfo,
         data,
         PENALTY_FACTOR(),
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         data.dataForCalculations.votersWeightsMap!,
         RewardTypePrefix.FDC_OFFENDERS
       );
@@ -446,6 +447,14 @@ export async function prepareDataForRewardCalculations(
   const eligibleFinalizationRewardVotersInGracePeriod = new Set(
     randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
   );
+  const initialHashFdc = RandomVoterSelector.initialHashSeed(
+    rewardEpoch.signingPolicy.seed,
+    FDC_PROTOCOL_ID,
+    votingRoundId
+  );
+  const eligibleFinalizationRewardVotersInGracePeriodFdc = new Set(
+    randomVoterSelector.randomSelectThresholdWeightVoters(initialHashFdc)
+  );
 
   const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
   const calculationResults = [
@@ -459,6 +468,7 @@ export async function prepareDataForRewardCalculations(
     medianResults,
     randomData,
     [...eligibleFinalizationRewardVotersInGracePeriod],
+    [...eligibleFinalizationRewardVotersInGracePeriodFdc],
     false,
     calculationFolder
   );
@@ -511,6 +521,15 @@ export async function prepareDataForRewardCalculationsForRange(
       randomVoterSelector.randomSelectThresholdWeightVoters(initialHash)
     );
 
+    const initialHashFdc = RandomVoterSelector.initialHashSeed(
+      rewardEpoch.signingPolicy.seed,
+      FDC_PROTOCOL_ID,
+      votingRoundId
+    );
+    const eligibleFinalizationRewardVotersInGracePeriodFdc = new Set(
+      randomVoterSelector.randomSelectThresholdWeightVoters(initialHashFdc)
+    );
+
     const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
     const calculationResults = [
       MerkleTreeStructs.fromRandomCalculationResult(randomData),
@@ -529,6 +548,7 @@ export async function prepareDataForRewardCalculationsForRange(
       medianResults,
       randomData,
       [...eligibleFinalizationRewardVotersInGracePeriod],
+      [...eligibleFinalizationRewardVotersInGracePeriodFdc],
       tempRewardEpochFolder,
       calculationFolder
     );
