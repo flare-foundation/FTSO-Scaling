@@ -78,7 +78,9 @@ async function main() {
   const distributionData = deserializeRewardDistributionData(rewardEpochId, false);
   const distributionDataMinConditions = deserializeRewardDistributionData(rewardEpochId, true);
   const merkleTree = buildRewardClaimMerkleTree(distributionData.rewardClaims.map(c => c.body));
-  const merkleTreeMinConditions = buildRewardClaimMerkleTree(distributionDataMinConditions.rewardClaims.map(c => c.body));
+  const merkleTreeMinConditions = buildRewardClaimMerkleTree(
+    distributionDataMinConditions.rewardClaims.map(c => c.body)
+  );
 
   const rewardClaimsMap = assembleMap(distributionData.rewardClaims);
   const rewardClaimsMinConditionsMap = assembleMap(distributionDataMinConditions.rewardClaims);
@@ -89,13 +91,26 @@ async function main() {
   console.log("---------------Original ---------------------");
   console.log("Reward distribution data:");
   console.log("Merkle root: ", distributionData.merkleRoot, distributionData.merkleRoot === merkleTree.root);
-  console.log("No. of weight based claims: ", distributionData.noOfWeightBasedClaims, distributionData.noOfWeightBasedClaims === numberOfWeightBasedClaims(distributionData.rewardClaims));
+  console.log(
+    "No. of weight based claims: ",
+    distributionData.noOfWeightBasedClaims,
+    distributionData.noOfWeightBasedClaims === numberOfWeightBasedClaims(distributionData.rewardClaims)
+  );
   console.log("Claims:", distributionData.rewardClaims.length);
 
   console.log("---------------Min Conditions ---------------------");
   console.log("Reward distribution data:");
-  console.log("Merkle root: ", distributionDataMinConditions.merkleRoot, distributionDataMinConditions.merkleRoot === merkleTreeMinConditions.root);
-  console.log("No. of weight based claims: ", distributionDataMinConditions.noOfWeightBasedClaims, distributionDataMinConditions.noOfWeightBasedClaims === numberOfWeightBasedClaims(distributionDataMinConditions.rewardClaims));
+  console.log(
+    "Merkle root: ",
+    distributionDataMinConditions.merkleRoot,
+    distributionDataMinConditions.merkleRoot === merkleTreeMinConditions.root
+  );
+  console.log(
+    "No. of weight based claims: ",
+    distributionDataMinConditions.noOfWeightBasedClaims,
+    distributionDataMinConditions.noOfWeightBasedClaims ===
+      numberOfWeightBasedClaims(distributionDataMinConditions.rewardClaims)
+  );
   console.log("Claims:", distributionDataMinConditions.rewardClaims.length);
   console.log("Missing claims:");
   const missingClaimsAmount = missingClaims(rewardClaimsMap, rewardClaimsMinConditionsMap);

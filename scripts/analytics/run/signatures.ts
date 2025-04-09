@@ -1,6 +1,6 @@
 import { EPOCH_SETTINGS } from "../../../libs/ftso-core/src/constants";
 import { printSignatureSummary, signatureSummary } from "../signature-stats";
-import {GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC} from "../../../libs/fsp-rewards/src/constants";
+import { GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC } from "../../../libs/fsp-rewards/src/constants";
 
 async function main() {
   if (!process.argv[2]) {
@@ -9,7 +9,7 @@ async function main() {
   const rewardEpochId = parseInt(process.argv[2]);
   let signatureGracePeriodEndOffset;
   if (!process.argv[3]) {
-    if (process.env.NETWORK === "coston" || process.env.NETWORK === "songbird") {
+    if (process.env.NETWORK === "coston" || process.env.NETWORK === "songbird" || process.env.NETWORK === "flare") {
       signatureGracePeriodEndOffset =
         EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC();
     } else {

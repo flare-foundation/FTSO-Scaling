@@ -5,14 +5,27 @@ import { EntityManager } from "typeorm";
 import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
 import { IndexerClientForRewarding } from "../../../../libs/fsp-rewards/src/IndexerClientForRewarding";
 import { BURN_ADDRESS, FUTURE_VOTING_ROUNDS } from "../../../../libs/fsp-rewards/src/constants";
-import { calculateMinimalConditions, extractNewPasses, updateClaimsForMinimalConditions } from "../../../../libs/fsp-rewards/src/reward-calculation/minimal-conditions/minimal-conditions";
-import { writeDataProviderConditions, writePassesInfo } from "../../../../libs/fsp-rewards/src/reward-calculation/minimal-conditions/minimal-conditions-data";
+import {
+  calculateMinimalConditions,
+  extractNewPasses,
+  updateClaimsForMinimalConditions,
+} from "../../../../libs/fsp-rewards/src/reward-calculation/minimal-conditions/minimal-conditions";
+import {
+  writeDataProviderConditions,
+  writePassesInfo,
+} from "../../../../libs/fsp-rewards/src/reward-calculation/minimal-conditions/minimal-conditions-data";
 import { initializeRewardEpochStorage } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
 import { RewardClaim } from "../../../../libs/fsp-rewards/src/utils/RewardClaim";
 import { deserializeAggregatedClaimsForVotingRoundId } from "../../../../libs/fsp-rewards/src/utils/stat-info/aggregated-claims";
 import { serializeFinalRewardClaims } from "../../../../libs/fsp-rewards/src/utils/stat-info/final-reward-claims";
-import { getIncrementalCalculationsTempRewards, serializeIncrementalCalculationsTempRewards } from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-rewards";
-import { getIncrementalCalculationsFeedSelections, serializeIncrementalCalculationsFeedSelections } from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
+import {
+  getIncrementalCalculationsTempRewards,
+  serializeIncrementalCalculationsTempRewards,
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-rewards";
+import {
+  getIncrementalCalculationsFeedSelections,
+  serializeIncrementalCalculationsFeedSelections,
+} from "../../../../libs/fsp-rewards/src/utils/stat-info/incremental-calculation-temp-selected-feeds";
 import { recordProgress } from "../../../../libs/fsp-rewards/src/utils/stat-info/progress";
 import {
   RewardCalculationStatus,
@@ -137,7 +150,10 @@ export class CalculatorService {
     };
     fixRandomNumbersAndOffers(state, logger);
 
-    const feedSelections = getIncrementalCalculationsFeedSelections(rewardEpochDuration.rewardEpochId, state.nextVotingRoundIdWithNoSecureRandom - 1);
+    const feedSelections = getIncrementalCalculationsFeedSelections(
+      rewardEpochDuration.rewardEpochId,
+      state.nextVotingRoundIdWithNoSecureRandom - 1
+    );
     serializeIncrementalCalculationsFeedSelections(feedSelections);
 
     await incrementalBatchClaimCatchup(rewardEpochDuration, state, options, logger);
@@ -149,7 +165,10 @@ export class CalculatorService {
       claimAggregation(rewardEpochDuration, votingRoundId, logger, true);
     }
 
-    const tempClaimData = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, state.nextVotingRoundForClaimCalculation - 1);
+    const tempClaimData = getIncrementalCalculationsTempRewards(
+      rewardEpochDuration.rewardEpochId,
+      state.nextVotingRoundForClaimCalculation - 1
+    );
     serializeIncrementalCalculationsTempRewards(tempClaimData);
 
     state.votingRoundId = end + 1;
@@ -174,12 +193,18 @@ export class CalculatorService {
       // await fixRandomNumbersOffersAndCalculateClaims(this.dataManager, state, options, logger);
       fixRandomNumbersAndOffers(state, logger);
 
-      const feedSelections = getIncrementalCalculationsFeedSelections(rewardEpochDuration.rewardEpochId, state.nextVotingRoundIdWithNoSecureRandom - 1);
+      const feedSelections = getIncrementalCalculationsFeedSelections(
+        rewardEpochDuration.rewardEpochId,
+        state.nextVotingRoundIdWithNoSecureRandom - 1
+      );
       serializeIncrementalCalculationsFeedSelections(feedSelections);
 
       await calculateAndAggregateRemainingClaims(this.dataManager, state, options, logger);
 
-      const tempClaimData = getIncrementalCalculationsTempRewards(rewardEpochDuration.rewardEpochId, state.nextVotingRoundForClaimCalculation - 1);
+      const tempClaimData = getIncrementalCalculationsTempRewards(
+        rewardEpochDuration.rewardEpochId,
+        state.nextVotingRoundForClaimCalculation - 1
+      );
       serializeIncrementalCalculationsTempRewards(tempClaimData);
 
       recordProgress(rewardEpochId);
@@ -346,6 +371,7 @@ export class CalculatorService {
       return;
     }
     if (options.incrementalCalculation) {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         // Ends when the rewards for reward epoch are fully processed.
         await this.runRewardCalculationIncremental(options);

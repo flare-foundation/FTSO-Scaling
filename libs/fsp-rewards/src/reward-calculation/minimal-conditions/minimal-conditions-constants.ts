@@ -8,6 +8,8 @@
 // However, in order to earn passes, the provider must have at least 3M FLR in active self-bond and 15M in active stake. 
 // Providers with 80% total uptime and at least 1M FLR in active self-bond but not meeting both the 3M FLR active self-bond 
 // and 15M active stake requirements neither earn nor lose passes, and still receive eligible rewards.
+//
+// FDC: Successful participation in 60% of all voting rounds in that reward epoch.
 
 export const TOTAL_PPM = 1000000n;
 export const FTSO_SCALING_AVAILABILITY_THRESHOLD_PPM = 800000n;      // 80%
@@ -19,3 +21,4 @@ export const STAKING_MIN_SELF_BOND_GWEI = 1000000000000000n;         // 1M FLR
 export const STAKING_MIN_DESIRED_SELF_BOND_GWEI = 3000000000000000n; // 3M FLR
 export const STAKING_MIN_DESIRED_STAKE_GWEI = 15000000000000000n;    // 15M FLR
 export const MAX_NUMBER_OF_PASSES = 3;                               // 3 passes
+export const FDC_REWARDED_SHARE_PPM = 600000n;                       // 60%
