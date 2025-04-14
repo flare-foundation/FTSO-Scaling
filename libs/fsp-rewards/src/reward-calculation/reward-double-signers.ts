@@ -28,9 +28,9 @@ export function calculateDoubleSigners(
       if (signature.votingEpochIdFromTimestamp !== votingRoundId + 1) {
         continue;
       }
-      if (signature.messages.message.protocolId !== protocolId) {
-        throw new Error("Critical error: Illegal protocol id");
-      }
+      // if (signature.messages.message.protocolId !== protocolId) {
+      //   throw new Error("Critical error: Illegal protocol id");
+      // }
       if (signature.timestamp < startTime || signature.timestamp > endTime) {
         // non-punishable
         continue;
