@@ -9,10 +9,7 @@ import {
 } from "../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
-import {
-  EPOCH_SETTINGS,
-  FTSO2_PROTOCOL_ID,
-} from "../../ftso-core/src/constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../ftso-core/src/constants";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
@@ -23,7 +20,11 @@ import { ILogger } from "../../ftso-core/src/utils/ILogger";
 import { errorString } from "../../ftso-core/src/utils/error";
 import { Address, MessageHash } from "../../ftso-core/src/voting-types";
 import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
-import { ADDITIONAL_REWARDED_FINALIZATION_WINDOWS, FDC_PROTOCOL_ID, WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH } from "./constants";
+import {
+  ADDITIONAL_REWARDED_FINALIZATION_WINDOWS,
+  FDC_PROTOCOL_ID,
+  WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH,
+} from "./constants";
 import {
   DataForRewardCalculation,
   FDCDataForVotingRound,
@@ -112,7 +113,6 @@ export class DataManagerForRewarding extends DataManager {
     };
   }
 
-
   /**
    * Prepare data for median calculation and rewarding given the voting round id and the random generation benching window.
    *  - queries relevant commits and reveals from chain indexer database
@@ -198,13 +198,16 @@ export class DataManagerForRewarding extends DataManager {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
       }
       //////// FDC ////////
-      const validEligibleBitVotes: SubmissionData[] = this.extractSubmissionsWithValidEligibleBitVotes(reveals, rewardEpoch);
+      const validEligibleBitVotes: SubmissionData[] = this.extractSubmissionsWithValidEligibleBitVotes(
+        reveals,
+        rewardEpoch
+      );
       const dataForRound = {
         ...partialData,
         randomGenerationBenchingWindow,
         benchingWindowRevealOffenders,
         rewardEpoch,
-        validEligibleBitVoteSubmissions: validEligibleBitVotes
+        validEligibleBitVoteSubmissions: validEligibleBitVotes,
       } as DataForCalculations;
       result.push(dataForRound);
     }
@@ -214,22 +217,20 @@ export class DataManagerForRewarding extends DataManager {
     };
   }
 
-
-
   /**
-     * Extract signature payloads for the given voting round id from the given submissions.
-     * Each signature is filtered out for the correct voting round id, protocol id and eligible signer.
-     * Signatures are returned in the form of a map
-     * from message hash to a list of signatures to submission data containing parsed signature payload.
-     * The last signed message for a specific message hash is considered.
-     * ASSUMPTION: all signature submissions for voting round id, hence contained ,
-     * between reveal deadline for votingRoundId (hence in voting epoch votingRoundId + 1) and
-     * the end of the voting epoch votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS
-     * @param votingRoundId
-     * @param rewardEpoch
-     * @param submissions
-     * @returns
-     */
+   * Extract signature payloads for the given voting round id from the given submissions.
+   * Each signature is filtered out for the correct voting round id, protocol id and eligible signer.
+   * Signatures are returned in the form of a map
+   * from message hash to a list of signatures to submission data containing parsed signature payload.
+   * The last signed message for a specific message hash is considered.
+   * ASSUMPTION: all signature submissions for voting round id, hence contained ,
+   * between reveal deadline for votingRoundId (hence in voting epoch votingRoundId + 1) and
+   * the end of the voting epoch votingRoundId + 1 + ADDITIONAL_REWARDED_FINALIZATION_WINDOWS
+   * @param votingRoundId
+   * @param rewardEpoch
+   * @param submissions
+   * @returns
+   */
   public static extractSignatures(
     votingRoundId: number,
     rewardEpoch: RewardEpoch,
@@ -244,23 +245,26 @@ export class DataManagerForRewarding extends DataManager {
         try {
           const signaturePayload = SignaturePayload.decode(message.payload);
           if (signaturePayload.message && signaturePayload.message.protocolId !== message.protocolId) {
-            throw new Error(`Protocol id mismatch in signed message. Expected ${message.protocolId}, got ${signaturePayload.message.protocolId}`);
+            throw new Error(
+              `Protocol id mismatch in signed message. Expected ${message.protocolId}, got ${signaturePayload.message.protocolId}`
+            );
           }
           if (signaturePayload.message && signaturePayload.message.votingRoundId !== message.votingRoundId) {
-            throw new Error(`Voting round id mismatch in signed message. Expected ${message.votingRoundId}, got ${signaturePayload.message.votingRoundId}`);
+            throw new Error(
+              `Voting round id mismatch in signed message. Expected ${message.votingRoundId}, got ${signaturePayload.message.votingRoundId}`
+            );
           }
-          if (
-            message.votingRoundId === votingRoundId &&
-            message.protocolId === protocolId
-          ) {
+          if (message.votingRoundId === votingRoundId && message.protocolId === protocolId) {
             // - Override the messageHash if provided
-            // - Require 
+            // - Require
 
             let messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
 
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
             // submit signature address should match the signingPolicyAddress
-            const expectedSigner = rewardEpoch.getSigningAddressFromSubmitSignatureAddress(submission.submitAddress.toLowerCase());
+            const expectedSigner = rewardEpoch.getSigningAddressFromSubmitSignatureAddress(
+              submission.submitAddress.toLowerCase()
+            );
             // if the expected signer is not found, the signature is not valid for rewarding
             if (!expectedSigner) {
               continue;
@@ -280,7 +284,7 @@ export class DataManagerForRewarding extends DataManager {
                 if (!rewardEpoch.isEligibleSignerAddress(expectedSigner)) {
                   continue;
                 }
-                // wrong signature by eligible signer                
+                // wrong signature by eligible signer
                 signaturePayload.messageHash = WRONG_SIGNATURE_INDICATOR_MESSAGE_HASH;
               } else {
                 signaturePayload.messageHash = providedMessageHash;
@@ -309,7 +313,7 @@ export class DataManagerForRewarding extends DataManager {
             signatures.push(submissionData);
           }
         } catch (e) {
-          console.log(e)
+          console.log(e);
           logger.warn(`Issues with parsing submission message: ${e.message}`);
         }
       }
@@ -388,10 +392,7 @@ export class DataManagerForRewarding extends DataManager {
       fastUpdatesData = fastUpdatesDataResponse.data;
     }
     if (useFDCData) {
-      const partialFdcDataResponse = await this.getFDCDataForVotingRoundRange(
-        firstVotingRoundId,
-        lastVotingRoundId
-      );
+      const partialFdcDataResponse = await this.getFDCDataForVotingRoundRange(firstVotingRoundId, lastVotingRoundId);
       if (partialFdcDataResponse.status !== DataAvailabilityStatus.OK) {
         return {
           status: partialFdcDataResponse.status,
@@ -440,14 +441,6 @@ export class DataManagerForRewarding extends DataManager {
         startIndexFinalizations,
         endIndexFinalizations
       );
-      const signatures = DataManagerForRewarding.extractSignatures(
-        votingRoundId,
-        rewardEpoch,
-        votingRoundSignatures,
-        FTSO2_PROTOCOL_ID,
-        undefined,
-        this.logger
-      );
       const finalizations = this.extractFinalizations(
         votingRoundId,
         rewardEpoch,
@@ -455,6 +448,17 @@ export class DataManagerForRewarding extends DataManager {
         FTSO2_PROTOCOL_ID
       );
       const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
+      RelayMessage.augment(firstSuccessfulFinalization.messages);
+      const consensusMessageHashFTSO = firstSuccessfulFinalization.messages.protocolMessageHash;
+
+      const signatures = DataManagerForRewarding.extractSignatures(
+        votingRoundId,
+        rewardEpoch,
+        votingRoundSignatures,
+        FTSO2_PROTOCOL_ID,
+        consensusMessageHashFTSO,
+        this.logger
+      );
 
       let fdcData: FDCDataForVotingRound | undefined;
       let fdcRewardData: FDCRewardData | undefined;
@@ -468,10 +472,12 @@ export class DataManagerForRewarding extends DataManager {
           FDC_PROTOCOL_ID
         );
         const fdcFirstSuccessfulFinalization = fdcFinalizations.find(finalization => finalization.successfulOnChain);
-        let fdcSignatures = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
+        let fdcSignatures = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
         if (fdcFirstSuccessfulFinalization) {
           if (!fdcFirstSuccessfulFinalization.messages.protocolMessageMerkleRoot) {
-            throw new Error(`Protocol message merkle root is missing for FDC finalization ${fdcFirstSuccessfulFinalization.messages.protocolMessageHash}`);
+            throw new Error(
+              `Protocol message merkle root is missing for FDC finalization ${fdcFirstSuccessfulFinalization.messages.protocolMessageHash}`
+            );
           }
           RelayMessage.augment(fdcFirstSuccessfulFinalization.messages);
           const consensusMessageHash = fdcFirstSuccessfulFinalization.messages.protocolMessageHash;
@@ -488,15 +494,23 @@ export class DataManagerForRewarding extends DataManager {
             dataForCalculations.validEligibleBitVoteSubmissions,
             fdcSignatures,
             rewardEpoch
-          )
+          );
         }
 
         const partialData = partialFdcData[votingRoundId - firstVotingRoundId];
         if (partialData.votingRoundId !== votingRoundId) {
           throw new Error(`Voting round id mismatch: ${partialData.votingRoundId} !== ${votingRoundId}`);
         }
-        if (partialData && partialData.nonDuplicationIndices && fdcRewardData && fdcRewardData.consensusBitVote !== undefined) {
-          consensusBitVoteIndices = bitVoteIndicesNum(fdcRewardData.consensusBitVote, partialData.nonDuplicationIndices.length);
+        if (
+          partialData &&
+          partialData.nonDuplicationIndices &&
+          fdcRewardData &&
+          fdcRewardData.consensusBitVote !== undefined
+        ) {
+          consensusBitVoteIndices = bitVoteIndicesNum(
+            fdcRewardData.consensusBitVote,
+            partialData.nonDuplicationIndices.length
+          );
           for (const bitVoteIndex of consensusBitVoteIndices) {
             for (const [i, originalIndex] of partialData.nonDuplicationIndices[bitVoteIndex].entries()) {
               partialData.attestationRequests[originalIndex].confirmed = true;
@@ -512,7 +526,7 @@ export class DataManagerForRewarding extends DataManager {
           firstSuccessfulFinalization: fdcFirstSuccessfulFinalization,
           ...fdcRewardData,
           consensusBitVoteIndices,
-        }
+        };
       }
 
       const dataForRound: DataForRewardCalculation = {
@@ -521,7 +535,7 @@ export class DataManagerForRewarding extends DataManager {
         finalizations,
         firstSuccessfulFinalization,
         fastUpdatesData: fastUpdatesData[votingRoundId - firstVotingRoundId],
-        fdcData
+        fdcData,
       };
       result.push(dataForRound);
     }
@@ -530,7 +544,6 @@ export class DataManagerForRewarding extends DataManager {
       data: result,
     };
   }
-
 
   /**
    * Extract signatures and finalizations for the given voting round id from indexer database.
@@ -734,7 +747,7 @@ export class DataManagerForRewarding extends DataManager {
         throw new Error(`FastUpdateFeeds is undefined for voting round ${votingRoundId}`);
       }
 
-      if (fastUpdateFeeds as any === "CONTRACT_CHANGE") {
+      if ((fastUpdateFeeds as any) === "CONTRACT_CHANGE") {
         result.push(undefined);
         this.logger.error(`WARN: FastUpdateFeeds contract change for voting round ${votingRoundId}`);
         continue;
@@ -757,8 +770,10 @@ export class DataManagerForRewarding extends DataManager {
     firstVotingRoundId: number,
     lastVotingRoundId: number
   ): Promise<DataMangerResponse<PartialFDCDataForVotingRound[]>> {
-
-    const attestationRequestsResponse = await this.indexerClient.getAttestationRequestEvents(firstVotingRoundId, lastVotingRoundId);
+    const attestationRequestsResponse = await this.indexerClient.getAttestationRequestEvents(
+      firstVotingRoundId,
+      lastVotingRoundId
+    );
     if (attestationRequestsResponse.status !== BlockAssuranceResult.OK) {
       return {
         status: DataAvailabilityStatus.NOT_OK,
@@ -785,7 +800,10 @@ export class DataManagerForRewarding extends DataManager {
    * Note that payloads may contain messages from other protocols!
    * If data provider submits multiple bitvotes, the last submission is considered
    */
-  public extractSubmissionsWithValidEligibleBitVotes(submissionDataArray: SubmissionData[], rewardEpoch: RewardEpoch): SubmissionData[] {
+  public extractSubmissionsWithValidEligibleBitVotes(
+    submissionDataArray: SubmissionData[],
+    rewardEpoch: RewardEpoch
+  ): SubmissionData[] {
     const voterToLastBitVote = new Map<Address, SubmissionData>();
     for (const submission of submissionDataArray) {
       for (const message of submission.messages) {
@@ -810,5 +828,4 @@ export class DataManagerForRewarding extends DataManager {
     }
     return [...voterToLastBitVote.values()];
   }
-
 }
