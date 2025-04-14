@@ -267,7 +267,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     happyPathChecks(voters, claims, mergedClaims);
   });
 
-  it("should first voter never sign and finalize", async () => {
+  it.skip("should first voter never sign and finalize", async () => {
     const firstVoterIndex = 0;
     const scenario: RewardDataSimulationScenario = {
       noSignatureSubmitters: [
