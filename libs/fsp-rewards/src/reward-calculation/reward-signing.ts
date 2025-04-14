@@ -1,11 +1,7 @@
 import { ProtocolMessageMerkleRoot } from "../../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../ftso-core/src/fsp-utils/SignaturePayload";
 import { GenericSubmissionData } from "../../../ftso-core/src/IndexerClient";
-import {
-  EPOCH_SETTINGS,
-  FTSO2_PROTOCOL_ID,
-
-} from "../../../ftso-core/src/constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../ftso-core/src/constants";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { SDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
@@ -14,10 +10,7 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
 import { calculateDoubleSigners } from "./reward-double-signers";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { isSignatureBeforeTimestamp, isSignatureInGracePeriod } from "./reward-utils";
-import {
-    MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS,
-    TOTAL_BIPS
-} from "../constants";
+import { MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS, TOTAL_BIPS } from "../constants";
 
 // Allowing for two options in regard to conditioning rewards on existence of median rewards.
 const BURN_NON_ELIGIBLE_REWARDS = true;
@@ -29,7 +22,7 @@ export enum SigningRewardClaimType {
   CLAIM_BACK_NO_CLAIMS = "CLAIM_BACK_NO_CLAIMS",
   NO_TIMELY_FINALIZATION = "NO_TIMELY_FINALIZATION",
   CLAIM_BACK_OF_NON_SIGNERS_SHARE = "CLAIM_BACK_OF_NON_SIGNERS_SHARE",
-  NON_DOMINATING_BITVOTE = "NON_DOMINATING_BITVOTE", 
+  NON_DOMINATING_BITVOTE = "NON_DOMINATING_BITVOTE",
   EMPTY_BITVOTE = "EMPTY_BITVOTE",
 }
 /**
@@ -54,30 +47,42 @@ export function calculateSigningRewards(
     data.signaturesMap!
   );
   if (!data.firstSuccessfulFinalization) {
-    const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
-    const signatures = mostFrequentHashSignaturesBeforeDeadline(
+    // const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
+    // const signatures = mostFrequentHashSignaturesBeforeDeadline(
+    //   votingRoundId,
+    //   data.signaturesMap!,
+    //   data.dataForCalculations.totalSigningWeight!,
+    //   deadlineTimestamp
+    // );
+    // if (signatures.length === 0) {
+    //   const backClaim: IPartialRewardClaim = {
+    //     votingRoundId,
+    //     beneficiary: offer.claimBackAddress.toLowerCase(),
+    //     amount: offer.amount,
+    //     claimType: ClaimType.DIRECT,
+    //     offerIndex: offer.offerIndex,
+    //     feedId: offer.feedId,
+    //     protocolTag: "" + FTSO2_PROTOCOL_ID,
+    //     rewardTypeTag: RewardTypePrefix.SIGNING,
+    //     rewardDetailTag: SigningRewardClaimType.NO_MOST_FREQUENT_SIGNATURES,
+    //   };
+    //   return [backClaim];
+    // }
+    // rewardEligibleSignatures = signatures.filter(
+    //   signature => !doubleSigners.has(signature.messages.signer!.toLowerCase())
+    // );
+    const backClaim: IPartialRewardClaim = {
       votingRoundId,
-      data.signaturesMap!,
-      data.dataForCalculations.totalSigningWeight!,
-      deadlineTimestamp
-    );
-    if (signatures.length === 0) {
-      const backClaim: IPartialRewardClaim = {
-        votingRoundId,
-        beneficiary: offer.claimBackAddress.toLowerCase(),
-        amount: offer.amount,
-        claimType: ClaimType.DIRECT,
-        offerIndex: offer.offerIndex,
-        feedId: offer.feedId,
-        protocolTag: "" + FTSO2_PROTOCOL_ID,
-        rewardTypeTag: RewardTypePrefix.SIGNING,
-        rewardDetailTag: SigningRewardClaimType.NO_MOST_FREQUENT_SIGNATURES,
-      };
-      return [backClaim];
-    }
-    rewardEligibleSignatures = signatures.filter(
-      signature => !doubleSigners.has(signature.messages.signer!.toLowerCase())
-    );
+      beneficiary: offer.claimBackAddress.toLowerCase(),
+      amount: offer.amount,
+      claimType: ClaimType.DIRECT,
+      offerIndex: offer.offerIndex,
+      feedId: offer.feedId,
+      protocolTag: "" + FTSO2_PROTOCOL_ID,
+      rewardTypeTag: RewardTypePrefix.SIGNING,
+      rewardDetailTag: SigningRewardClaimType.NO_TIMELY_FINALIZATION,
+    };
+    return [backClaim];
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
       data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
@@ -176,7 +181,13 @@ export function calculateSigningRewards(
       resultClaims.push(backClaim);
     } else {
       resultClaims.push(
-        ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeights, RewardTypePrefix.SIGNING, FTSO2_PROTOCOL_ID)
+        ...generateSigningWeightBasedClaimsForVoter(
+          amount,
+          offer,
+          voterWeights,
+          RewardTypePrefix.SIGNING,
+          FTSO2_PROTOCOL_ID
+        )
       );
     }
   }
