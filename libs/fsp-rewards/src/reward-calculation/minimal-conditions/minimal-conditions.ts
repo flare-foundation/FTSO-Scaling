@@ -36,8 +36,6 @@ import {
   StakingConditionSummary,
   ValidatorInfo,
 } from "./minimal-conditions-interfaces";
-// remove this and appearances of this when min conditions for FDC start to get used.
-const FDC_MIN_CONDITIONS_IGNORE = true;
 
 function networkId() {
   if (process.env.NETWORK === "flare") {
@@ -384,7 +382,7 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
       fastUpdates.conditionMet &&
       staking.conditionMet &&
       !staking.obstructsPass &&
-      (fdc.conditionMet || FDC_MIN_CONDITIONS_IGNORE)
+      fdc.conditionMet
     ) {
       passEarned = true;
     }
@@ -398,7 +396,7 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
     if (!staking.conditionMet) {
       strikes++;
     }
-    if (!fdc.conditionMet && !FDC_MIN_CONDITIONS_IGNORE) {
+    if (!fdc.conditionMet) {
       strikes++;
     }
 

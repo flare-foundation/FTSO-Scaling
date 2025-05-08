@@ -448,18 +448,30 @@ export class DataManagerForRewarding extends DataManager {
         FTSO2_PROTOCOL_ID
       );
       const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
-      RelayMessage.augment(firstSuccessfulFinalization.messages);
-      const consensusMessageHashFTSO = firstSuccessfulFinalization.messages.protocolMessageHash;
-
-      const signatures = DataManagerForRewarding.extractSignatures(
-        votingRoundId,
-        rewardEpoch,
-        votingRoundSignatures,
-        FTSO2_PROTOCOL_ID,
-        consensusMessageHashFTSO,
-        this.logger
-      );
-
+      let signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> = new Map<
+        MessageHash,
+        GenericSubmissionData<ISignaturePayload>[]
+      >();
+      if (!firstSuccessfulFinalization) {
+        this.logger.warn(`No successful finalization found for voting round ${votingRoundId}`);
+      }
+      if (firstSuccessfulFinalization) {
+        RelayMessage.augment(firstSuccessfulFinalization.messages);
+        if (!firstSuccessfulFinalization.messages.protocolMessageHash) {
+          throw new Error(
+            `Protocol message merkle root is missing for FTSO finalization ${firstSuccessfulFinalization.messages.protocolMessageHash}`
+          );
+        }
+        const consensusMessageHashFTSO = firstSuccessfulFinalization.messages.protocolMessageHash;
+        signatures = DataManagerForRewarding.extractSignatures(
+          votingRoundId,
+          rewardEpoch,
+          votingRoundSignatures,
+          FTSO2_PROTOCOL_ID,
+          consensusMessageHashFTSO,
+          this.logger
+        );
+      }
       let fdcData: FDCDataForVotingRound | undefined;
       let fdcRewardData: FDCRewardData | undefined;
       let consensusBitVoteIndices: number[] = [];
