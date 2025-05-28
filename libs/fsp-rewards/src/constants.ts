@@ -77,9 +77,11 @@ const burnAddress = () => {
         case "local-test":
         case "coston2":
         case "coston":
-        case "songbird":
-        case "flare":
             return "0x000000000000000000000000000000000000dEaD";
+        case "songbird":
+            return "0xAC3F85d29119836545670b2FCeFe35C829bE35ab"; // SGB burn address
+        case "flare":
+            return "0xD9e5B450773B17593abAfCF73aB96ad99d589751";
         default:
             // Ensure exhaustive checking
             // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
