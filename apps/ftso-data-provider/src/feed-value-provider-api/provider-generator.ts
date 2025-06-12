@@ -10,7 +10,7 @@ console.log(`Generating API from ${input} to ${output}`);
 
 /* NOTE: all fields are optional expect one of `input`, `url`, `spec` */
 generateApi({
-  name: "provider-api.ts",
+  fileName: "provider-api.ts",
   // set to `false` to prevent the tool from writing to disk
   output: output,
   input: input,
@@ -38,12 +38,6 @@ generateApi({
   addReadonly: false,
   sortTypes: false,
   sortRoutes: false,
-  extractingOptions: {
-    requestBodySuffix: ["Payload", "Body", "Input"],
-    requestParamsSuffix: ["Params"],
-    responseBodySuffix: ["Data", "Result", "Output"],
-    responseErrorSuffix: ["Error", "Fail", "Fails", "ErrorData", "HttpError", "BadResponse"],
-  },
 })
   .then(({ files, configuration }) => {
     console.log(`Generated ${files.length} files`);
