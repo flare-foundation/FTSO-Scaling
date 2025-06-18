@@ -21,15 +21,16 @@ import { FeedValueEncoder } from "../../../libs/ftso-core/src/data/FeedValueEnco
 import { FeedResultWithProof, MerkleTreeStructs } from "../../../libs/ftso-core/src/data/MerkleTreeStructs";
 import { IRevealData } from "../../../libs/ftso-core/src/data/RevealData";
 import { errorString } from "../../../libs/ftso-core/src/utils/error";
-import { retry } from "../../../libs/ftso-core/src/utils/retry";
+import { retry, RetryError } from "../../../libs/ftso-core/src/utils/retry";
 import { Bytes32 } from "../../../libs/ftso-core/src/utils/sol-types";
 import { EpochResult, Feed, MedianCalculationResult } from "../../../libs/ftso-core/src/voting-types";
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
-import { Api, FeedId } from "./feed-value-provider-api/generated/provider-api";
+import { Api, FeedId, FeedValuesResponse } from "./feed-value-provider-api/generated/provider-api";
 
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
 import {CONTRACTS} from "../../../libs/contracts/src/constants";
+import { AxiosResponse } from "axios";
 
 type RoundAndAddress = string;
 
@@ -240,18 +241,26 @@ export class FtsoDataProviderService {
   // Internal methods
 
   private async getFeedValuesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
-    const valuesRes = await retry(
-      async () =>
-        await this.feedValueProviderClient.feedValueProviderApi.getFeedValues(votingRoundId, {
-          feeds: supportedFeeds.map(feed => decodeFeed(feed.id)),
-        })
-    );
+    let response: AxiosResponse<FeedValuesResponse, any>;
 
-    if (valuesRes.status < 200 || valuesRes.status >= 300) {
-      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${valuesRes.data}`);
+    try {
+      response = await retry(
+        async () =>
+          await this.feedValueProviderClient.feedValueProviderApi.getFeedValues(votingRoundId, {
+            feeds: supportedFeeds.map(feed => decodeFeed(feed.id)),
+          })
+      );
+    } catch (e) {
+      if (e instanceof RetryError) {
+        throw new Error(`Failed to get feed values for epoch ${votingRoundId}, error connecting to value provider:\n${e.cause}`);
+      }
     }
 
-    const values = valuesRes.data;
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${response.data}`);
+    }
+
+    const values = response.data;
 
     // transfer values to 4 byte hex strings and concatenate them
     // make sure that the order of values is in line with protocol definition
