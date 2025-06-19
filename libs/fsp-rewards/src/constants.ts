@@ -165,15 +165,15 @@ const gracePeriodForSignaturesDurationSec = () => {
         case "from-env":
             return extractIntegerNonNegativeValueFromEnv("GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC");
         case "coston":
-            return 10; // 10 seconds
+            return 15; // 15 seconds
         case "coston2":
-            return 10; // 10 seconds
+            return 15; // 15 seconds
         case "songbird":
-            return 10; // 10 seconds
+            return 15; // 15 seconds
         case "flare":
-            return 10; // 10 seconds
+            return 15; // 15 seconds
         case "local-test":
-            return 10; // 10 seconds
+            return 15; // 15 seconds
         default:
             // Ensure exhaustive checking
             // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
