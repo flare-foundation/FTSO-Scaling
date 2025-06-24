@@ -7,7 +7,7 @@ workflow:
 test-all:
   stage: test
   needs: []
-  image: node:18
+  image: node:22
   cache:
   - key:
       files:
