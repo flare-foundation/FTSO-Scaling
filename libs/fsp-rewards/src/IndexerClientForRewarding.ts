@@ -221,6 +221,15 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     const data: FastUpdateFeeds[] = [];
     let processed = -1;
+    // The batch is fully devoid of FastUpdateFeeds events
+    if (result.length === 0) {
+      this.logger.error(`Missing FastUpdateFeeds events: ${startVotingRoundId} to ${endVotingRoundId}`);
+
+      for (let i = startVotingRoundId; i <= endVotingRoundId; i++) {
+        data.push("MISSING_FAST_UPDATE_FEEDS" as any);
+      }
+      processed = endVotingRoundId;
+    }
     for (let i = 0; i < result.length; i++) {
       const event = FastUpdateFeeds.fromRawEvent(result[i]);
       // queryEvents returns blockchain chronologically ordered events
@@ -229,28 +238,40 @@ export class IndexerClientForRewarding extends IndexerClient {
           data.push(event);
           processed = event.votingRoundId;
         } else {
-          // On Coston one event is missing hence special handling
-          if (network == "coston" && processed + 1 == COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID) {
-            while (processed + 1 < event.votingRoundId) {
-              this.logger.error(`Missing FastUpdateFeeds event for Coston: ${processed + 1}`);
-              data.push("CONTRACT_CHANGE" as any);
-              processed++;
-            }
-            data.push(event);
-            processed++;
-            continue;
+          // Gaps in events
+          let start = -1;
+          // no first voting round event
+          if (processed === -1) {
+            processed = startVotingRoundId - 1;
           }
-          throw new Error(
-            `FastUpdateFeeds events are not continuous from ${startVotingRoundId} to ${endVotingRoundId}: expected ${processed + 1
-            }, got ${event.votingRoundId}`
-          );
+          // remember the start position for logging
+          if (processed + 1 < event.votingRoundId) {
+            start = processed + 1;
+          }
+          // jump over missing events
+          while (processed + 1 < event.votingRoundId) {
+            data.push("MISSING_FAST_UPDATE_FEEDS" as any);
+            processed++;
+          }
+          // one error log for the whole gap
+          if (start !== -1) {
+            this.logger.error(
+              `Missing FastUpdateFeeds events (gap): ${start} to ${event.votingRoundId - 1}`
+            );
+          }
+          data.push(event);
+          processed++;
+          continue;
         }
       }
     }
     if (processed !== endVotingRoundId) {
-      throw new Error(
-        `Cannot get all FastUpdateFeeds events from ${startVotingRoundId} to ${endVotingRoundId}: last processed ${processed}`
-      );
+      // process the gap at the end of the range
+      this.logger.error(`Missing FastUpdateFeeds events (end gap): ${processed + 1} to ${endVotingRoundId}`);
+      while (processed !== endVotingRoundId) {
+        data.push("MISSING_FAST_UPDATE_FEEDS" as any);
+        processed++;
+      }
     }
     return {
       status,
@@ -419,11 +440,11 @@ export class IndexerClientForRewarding extends IndexerClient {
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = FDCInflationRewardsOffered.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);    
+    const status = await this.ensureEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
-    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);    
+    const result = await this.queryEvents(CONTRACTS.FdcHub, eventName, startTime, endTime);
     const data = result.map(event => FDCInflationRewardsOffered.fromRawEvent(event));
     return {
       status,
