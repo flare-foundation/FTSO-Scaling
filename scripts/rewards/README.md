@@ -244,7 +244,7 @@ When finalizing the following [reward detail tags](../../libs/fsp-rewards/src/re
 - `MISSED_BAND` - burn claim for total voting round rewards, when the benchmark fast update price misses the prescribed band around the FTSO scaling price for specific voting round. 
 - `FEE` - fee part of the reward claim of a data provider.
 - `PARTICIPATION` - community reward for delegators earned by a data provider.
-- `CONTRACT_CHANGE` - special case, happening only when changing FastUpdater smart contract if a version of it is not available, so system is temporarily unusable, hence the rewards for specific voting round(s) get burned. 
+- `MISSING_FAST_UPDATE_FEEDS` - special case, when network is down and no FastUpdateFeeds events are available.
 
 ## Reward calculation and data
 

@@ -759,11 +759,12 @@ export class DataManagerForRewarding extends DataManager {
         throw new Error(`FastUpdateFeeds is undefined for voting round ${votingRoundId}`);
       }
 
-      if ((fastUpdateFeeds as any) === "CONTRACT_CHANGE") {
+      if ((fastUpdateFeeds as any) === "MISSING_FAST_UPDATE_FEEDS") {
         result.push(undefined);
-        this.logger.error(`WARN: FastUpdateFeeds contract change for voting round ${votingRoundId}`);
+        this.logger.error(`WARN: FastUpdateFeeds missing for voting round ${votingRoundId}`);
         continue;
       }
+
       const value: FastUpdatesDataForVotingRound = {
         votingRoundId,
         feedValues: fastUpdateFeeds.feeds,

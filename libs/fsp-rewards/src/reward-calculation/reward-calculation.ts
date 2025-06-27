@@ -241,10 +241,10 @@ export async function partialRewardClaimsForVotingRound(
       }
     }
   }
-  const network = process.env.NETWORK;
-  const isContractChange = network == "coston" && votingRoundId == 779191;
+  const isMissingFastUpdateFeeds = data.fastUpdatesData === undefined;
 
-  if (useFastUpdatesData && isContractChange) {
+  if (useFastUpdatesData && isMissingFastUpdateFeeds) {
+    logger.error(`WARN: Missing FastUpdateFeeds event for ${votingRoundId}`);
     const fuFeedOffers = deserializeGranulatedPartialOfferMapForFastUpdates(
       rewardEpochId,
       votingRoundId,
@@ -261,7 +261,7 @@ export async function partialRewardClaimsForVotingRound(
           // feedId: offer.feedId,  // should be undefined
           protocolTag: "" + FTSO2_FAST_UPDATES_PROTOCOL_ID,
           rewardTypeTag: RewardTypePrefix.FULL_OFFER_CLAIM_BACK,
-          rewardDetailTag: FastUpdatesRewardClaimType.CONTRACT_CHANGE,
+          rewardDetailTag: FastUpdatesRewardClaimType.MISSING_FAST_UPDATE_FEEDS,
         });
       }
     }
@@ -269,7 +269,7 @@ export async function partialRewardClaimsForVotingRound(
       allRewardClaims = RewardClaim.merge(allRewardClaims);
     }
   }
-  if (useFastUpdatesData && !isContractChange) {
+  if (useFastUpdatesData && !isMissingFastUpdateFeeds) {
     const fuFeedOffers = deserializeGranulatedPartialOfferMapForFastUpdates(
       rewardEpochId,
       votingRoundId,
