@@ -6,11 +6,7 @@ import { Address, VotingEpochId } from "./voting-types";
 import { IPayloadMessage } from "./fsp-utils/PayloadMessage";
 import { IRelayMessage } from "./fsp-utils/RelayMessage";
 import { ContractDefinitions, ContractMethodNames } from "../../contracts/src/definitions";
-import {
-  EPOCH_SETTINGS,
-  FIRST_DATABASE_INDEX_STATE,
-  LAST_DATABASE_INDEX_STATE,
-} from "./constants";
+import { EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./constants";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -22,8 +18,8 @@ import {
   VoterRegistrationInfo,
 } from "../../contracts/src/events";
 import { ILogger } from "./utils/ILogger";
-import {AbiCache} from "../../contracts/src/abi/AbiCache";
-import {CONTRACTS, networks} from "../../contracts/src/constants";
+import { AbiCache, decodeEvent } from "../../contracts/src/abi/AbiCache";
+import { CONTRACTS, networks } from "../../contracts/src/constants";
 import { RewardOffers } from "./data/RewardOffers";
 import { FullVoterRegistrationInfo } from "./data/FullVoterRegistrationInfo";
 
@@ -150,7 +146,7 @@ export class IndexerClient {
     smartContract: ContractDefinitions,
     eventName: string,
     startTime: number,
-    endTime?: number
+    endTime?: number,
   ): Promise<TLPEvents[]> {
     const eventSignature = this.encoding.getEventSignature(smartContract.name, eventName);
     let query = this.entityManager
@@ -175,7 +171,7 @@ export class IndexerClient {
     smartContract: ContractDefinitions,
     functionName: ContractMethodNames,
     startTime: number,
-    endTime?: number
+    endTime?: number,
   ): Promise<TLPTransaction[]> {
     const functionSignature = this.encoding.getFunctionSignature(smartContract.name, functionName);
     let query = this.entityManager
@@ -263,7 +259,7 @@ export class IndexerClient {
   protected async ensureEventRange(
     startTime: number,
     endTime: number,
-    endTimeout?: number
+    endTimeout?: number,
   ): Promise<BlockAssuranceResult> {
     const [bottomState, topState] = await Promise.all([
       this.ensureLowerBlock(startTime),
@@ -334,7 +330,7 @@ export class IndexerClient {
       CONTRACTS.FtsoRewardOffersManager,
       RewardsOffered.eventName,
       startTime,
-      endTime
+      endTime,
     );
     const rewardOffers = rewardOffersResults.map(event => RewardsOffered.fromRawEvent(event));
     for (let i = 0; i < rewardOffers.length; i++) {
@@ -345,7 +341,7 @@ export class IndexerClient {
       CONTRACTS.FtsoRewardOffersManager,
       InflationRewardsOffered.eventName,
       startTime,
-      endTime
+      endTime,
     );
     const inflationOffers = inflationOffersResults.map(event => InflationRewardsOffered.fromRawEvent(event));
     for (let i = 0; i < inflationOffers.length; i++) {
@@ -388,7 +384,7 @@ export class IndexerClient {
    * The query result is returned even if the indexer database does not contain a block with timestamp strictly lower than fromStartTime.
    */
   public async getLatestSigningPolicyInitializedEvents(
-    fromStartTime: number
+    fromStartTime: number,
   ): Promise<IndexerResponse<SigningPolicyInitialized[]>> {
     const eventName = SigningPolicyInitialized.eventName;
     const status = await this.ensureLowerBlock(fromStartTime);
@@ -402,7 +398,7 @@ export class IndexerClient {
     if (network == "songbird" && CONTRACTS.Relay.address != oldSongbirdRelay) {
       this.logger.log(`Querying old Relay address for Songbird: ${oldSongbirdRelay}`);
       result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime)),
       );
     }
 
@@ -410,7 +406,7 @@ export class IndexerClient {
     if (network == "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelay) {
       this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
       result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime)),
       );
     }
 
@@ -418,7 +414,7 @@ export class IndexerClient {
     if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
       this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
       result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime)),
       );
     }
 
@@ -426,7 +422,7 @@ export class IndexerClient {
     if (network == "coston" && CONTRACTS.Relay.address != secondOldCostonRelay) {
       this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
       result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime)),
       );
     }
 
@@ -435,7 +431,7 @@ export class IndexerClient {
     if (network == "coston2" && CONTRACTS.Relay.address != oldCoston2Relay) {
       this.logger.log(`Querying old Relay address for Coston2: ${oldCoston2Relay}`);
       result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCoston2Relay }, eventName, fromStartTime))
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCoston2Relay }, eventName, fromStartTime)),
       );
     }
 
@@ -444,7 +440,7 @@ export class IndexerClient {
     if (network == "flare" && CONTRACTS.Relay.address != oldFlareRelay) {
       this.logger.log(`Querying old Relay address for Flare: ${oldFlareRelay}`);
       result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime))
+        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime)),
       );
     }
 
@@ -470,7 +466,7 @@ export class IndexerClient {
   public async getFullVoterRegistrationInfoEvents(
     rewardEpochId: number,
     startTime: number,
-    endTime: number
+    endTime: number,
   ): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
     const status = await this.ensureEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
@@ -479,16 +475,23 @@ export class IndexerClient {
 
     // TEMP CHANGE
     const voterRegistryContract = { ...CONTRACTS.VoterRegistry };
+    const flareSystemsCalculatorContract = { ...CONTRACTS.FlareSystemsCalculator };
 
     const network = process.env.NETWORK as networks;
-    if (network === "coston" && rewardEpochId < 2731) {
-      voterRegistryContract.address = "0x051E9Cb16A8676C011faa10efA1ABE95372e7825";
-    }
-    if (network === "coston2" && rewardEpochId < 2735) {
-      voterRegistryContract.address = "0x51e375fda99181f052C2e28299e166D6984A5B89";
-    }
-    if (network === "songbird" && rewardEpochId < 196) {
-      voterRegistryContract.address = "0x16EdaECC2D3713C3A94CCd1FFCd2589cfb7Ee9e0";
+    if (network === "coston") {
+      // Reward epoch during which contracts redeployed
+      const upgradeEpochId = 4506;
+      if (rewardEpochId <= upgradeEpochId) {
+        // Use old contract addresses and abi
+        voterRegistryContract.address = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3";
+        flareSystemsCalculatorContract.address = "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9";
+      } else {
+        // Use new contract addresses and abi
+        // @ts-ignore
+        voterRegistryContract.name = "VoterRegistryNext";
+        // @ts-ignore
+        flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
+      }
     }
     // END TEMP CHANGE
 
@@ -496,21 +499,31 @@ export class IndexerClient {
       voterRegistryContract,
       VoterRegistered.eventName,
       startTime,
-      endTime
+      endTime,
     );
-    const voterRegistered = voterRegisteredResults.map(event => VoterRegistered.fromRawEvent(event));
+    const voterRegistered = voterRegisteredResults.map(event => decodeEvent<VoterRegistered>(
+      voterRegistryContract.name,
+      VoterRegistered.eventName,
+      event,
+      (data: any) => new VoterRegistered(data),
+    ));
 
     const voterRegistrationInfoResults = await this.queryEvents(
-      CONTRACTS.FlareSystemsCalculator,
+      flareSystemsCalculatorContract,
       VoterRegistrationInfo.eventName,
       startTime,
-      endTime
+      endTime,
     );
-    const voterRegistrationInfo = voterRegistrationInfoResults.map(event => VoterRegistrationInfo.fromRawEvent(event));
+    const voterRegistrationInfo = voterRegistrationInfoResults.map(event => decodeEvent<VoterRegistrationInfo>(
+      flareSystemsCalculatorContract.name,
+      VoterRegistrationInfo.eventName,
+      event,
+      (data: any) => new VoterRegistrationInfo(data),
+    ));
 
     if (voterRegistered.length !== voterRegistrationInfo.length) {
       throw new Error(
-        `VoterRegistered and VoterRegistrationInfo events count mismatch: ${voterRegistered.length} !== ${voterRegistrationInfo.length}`
+        `VoterRegistered and VoterRegistrationInfo events count mismatch: ${voterRegistered.length} !== ${voterRegistrationInfo.length}`,
       );
     }
     voterRegistered.sort((a, b) => {
@@ -536,7 +549,7 @@ export class IndexerClient {
     for (let i = 0; i < voterRegistered.length; i++) {
       if (voterRegistered[i].voter !== voterRegistrationInfo[i].voter) {
         throw new Error(
-          `VoterRegistered and VoterRegistrationInfo events mismatch at index ${i}: ${voterRegistered[i].voter} !== ${voterRegistrationInfo[i].voter}`
+          `VoterRegistered and VoterRegistrationInfo events mismatch at index ${i}: ${voterRegistered[i].voter} !== ${voterRegistrationInfo[i].voter}`,
         );
       }
       results.push({
@@ -558,7 +571,7 @@ export class IndexerClient {
     startTime: number,
     endTime: number,
     endTimeout?: number,
-    queryResultsEvenIfRangeCheckFails?: boolean
+    queryResultsEvenIfRangeCheckFails?: boolean,
   ): Promise<IndexerResponse<SubmissionData[]>> {
     const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
     if (!queryResultsEvenIfRangeCheckFails && ensureRange === BlockAssuranceResult.NOT_OK) {
