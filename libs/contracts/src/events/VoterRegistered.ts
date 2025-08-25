@@ -36,6 +36,8 @@ export class VoterRegistered extends RawEventConstructible {
   signingPolicyAddress: Address;
   submitAddress: Address;
   submitSignaturesAddress: Address;
+  // TODO: Update fields once all networks migrate to VoterRegistryNext:
+  //       publicKeyPart1 and publicKeyPart2 are no longer part of the event and will be undefined.
   publicKeyPart1: Bytes32;
   publicKeyPart2: Bytes32;
   registrationWeight: bigint;

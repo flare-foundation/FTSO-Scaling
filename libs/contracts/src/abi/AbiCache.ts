@@ -73,6 +73,10 @@ export class AbiCache {
       // Preload the ABIs. If something wrong, it throws exception
       this.getAbi(contractName, functionName, eventName);
     }
+    // TEMP CHANGE - contract upgrade
+    this.getAbi("VoterRegistryNext", undefined, VoterRegistered.eventName);
+    this.getAbi("FlareSystemsCalculatorNext", undefined, VoterRegistrationInfo.eventName);
+    // END TEMP CHANGE
   }
 
   private static _instance: AbiCache | undefined = undefined;
