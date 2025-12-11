@@ -171,7 +171,7 @@ export async function partialRewardClaimsForVotingRound(
       const medianRewardClaims = calculateMedianRewardClaims(
         splitOffers.medianRewardOffer,
         medianResult,
-        data.dataForCalculations.votersWeightsMap!
+        data.dataForCalculations.votersWeightsMap
       );
 
       // Extract voter signing addresses that are eligible for median reward
@@ -205,14 +205,14 @@ export async function partialRewardClaimsForVotingRound(
       const revealWithdrawalPenalties = calculatePenalties(
         offer,
         PENALTY_FACTOR(),
-        data.dataForCalculations.revealOffendersSet!,
-        data.dataForCalculations.votersWeightsMap!,
+        data.dataForCalculations.revealOffendersSet,
+        data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.REVEAL_OFFENDERS
       );
 
       // Calculate penalties for reveal double signers
       // get signingAddresses of double signers
-      const doubleSigners = calculateDoubleSigners(votingRoundId, FTSO2_PROTOCOL_ID, data.signaturesMap!);
+      const doubleSigners = calculateDoubleSigners(votingRoundId, FTSO2_PROTOCOL_ID, data.signaturesMap);
 
       // convert signingAddresses to submitAddresses
       const doubleSignersSubmit = new Set(
@@ -226,7 +226,7 @@ export async function partialRewardClaimsForVotingRound(
         offer,
         PENALTY_FACTOR(),
         doubleSignersSubmit,
-        data.dataForCalculations.votersWeightsMap!,
+        data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.DOUBLE_SIGNERS
       );
 
@@ -250,7 +250,7 @@ export async function partialRewardClaimsForVotingRound(
       votingRoundId,
       calculationFolder
     );
-    for (const [feedId, offers] of fuFeedOffers.entries()) {
+    for (const [, offers] of fuFeedOffers.entries()) {
       for (const offer of offers) {
         allRewardClaims.push({
           votingRoundId: offer.votingRoundId,
@@ -389,8 +389,8 @@ export async function partialRewardClaimsForVotingRound(
         rewardEpochInfo,
         data,
         PENALTY_FACTOR(),
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        data.dataForCalculations.votersWeightsMap!,
+         
+        data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.FDC_OFFENDERS
       );
 

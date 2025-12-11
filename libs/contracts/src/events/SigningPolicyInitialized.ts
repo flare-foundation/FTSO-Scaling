@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { ISigningPolicy } from "../../../ftso-core/src/fsp-utils/SigningPolicy";
 import { Address } from "../../../ftso-core/src/voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";

@@ -30,6 +30,7 @@ export namespace MerkleTreeStructs {
       ContractMethodNames.feedStruct,
       0
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const abiEncoded = coder.encode([abiInput.abi as any], [feedResult]);
     return ethers.keccak256(abiEncoded);
   }
@@ -40,6 +41,7 @@ export namespace MerkleTreeStructs {
       ContractMethodNames.randomStruct,
       0
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const abiEncoded = coder.encode([abiInput.abi as any], [randomResult]);
     return ethers.keccak256(abiEncoded);
   }

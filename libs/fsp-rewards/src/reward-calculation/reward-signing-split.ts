@@ -59,7 +59,7 @@ export function generateSigningWeightBasedClaimsForVoter(
   const feeBeneficiary = voterWeights.identityAddress.toLowerCase(); //identityAddress
   const delegationBeneficiary = voterWeights.delegationAddress.toLowerCase(); //delegationAddress
 
-  if (delegationFee + stakingFee != 0n) {
+  if (delegationFee + stakingFee !== 0n) {
     rewardClaims.push({
       votingRoundId: offer.votingRoundId,
       beneficiary: feeBeneficiary,

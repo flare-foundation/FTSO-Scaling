@@ -67,6 +67,7 @@ export namespace RewardClaim {
       ContractMethodNames.rewardClaimStruct,
       0
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const abiEncoded = coder.encode([abiInput.abi as any], [rewardClaim]);
     return ethers.keccak256(abiEncoded);
   }
@@ -144,7 +145,7 @@ export namespace RewardClaim {
     if (claims1.length !== claims2.length) {
       return false;
     }
-    const sortFunc = (a, b) => {
+    const sortFunc = (a: IRewardClaim, b: IRewardClaim) => {
       if (a.beneficiary < b.beneficiary) {
         return -1;
       }
@@ -211,7 +212,7 @@ export namespace RewardClaim {
     const negativeClaims = new Map<string, Map<number, IRewardClaim>>();
     // assemble map of negative claims
     for (const claim of claims) {
-      if (claim.rewardEpochId != rewardEpochId) {
+      if (claim.rewardEpochId !== rewardEpochId) {
         throw new Error("Merge with burn claims for mixed epochs");
       }
       if (claim.amount >= 0) {
@@ -261,7 +262,7 @@ export namespace RewardClaim {
         });
         // create partial claim
 
-        if (claim.amount - negativeAmount != 0n) {
+        if (claim.amount - negativeAmount !== 0n) {
           finalClaims.push({
             ...claim,
             amount: claim.amount - negativeAmount,

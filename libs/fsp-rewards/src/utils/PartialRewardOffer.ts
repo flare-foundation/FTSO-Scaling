@@ -69,7 +69,7 @@ export namespace PartialRewardOffer {
       secondaryBandWidthPPM: rewardOffer.secondaryBandWidthPPM,
       claimBackAddress: rewardOffer.claimBackAddress,
       isInflation: false,
-      offerIndex: rewardOffer.offerIndex!,
+      offerIndex: rewardOffer.offerIndex,
     };
   }
 
@@ -95,7 +95,7 @@ export namespace PartialRewardOffer {
         secondaryBandWidthPPM: inflationRewardOffer.secondaryBandWidthPPMs[i],
         claimBackAddress: BURN_ADDRESS,
         isInflation: true,
-        offerIndex: inflationRewardOffer.offerIndex!,
+        offerIndex: inflationRewardOffer.offerIndex,
       });
     }
     return rewardOffers;

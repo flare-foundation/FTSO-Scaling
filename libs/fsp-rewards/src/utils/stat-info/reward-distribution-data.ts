@@ -48,7 +48,7 @@ export function serializeRewardDistributionData(
   ).length;
   const result: IRewardDistributionData = {
     rewardEpochId,
-    network: process.env.NETWORK!,
+    network: process.env.NETWORK,
     appliedMinConditions,
     rewardClaims: rewardClaimsWithProof,
     noOfWeightBasedClaims,

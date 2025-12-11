@@ -49,7 +49,7 @@ describe(`Merkle Tree`, () => {
         for (let j = 0; j < tree.hashCount; j++) {
           const leaf = tree.getHash(j);
           const proof = tree.getProof(tree.getHash(j));
-          const ver = verifyWithMerkleProof(leaf!, proof!, tree.root!);
+          const ver = verifyWithMerkleProof(leaf, proof, tree.root);
           expect(ver).to.be.eq(true);
         }
       }
@@ -59,9 +59,9 @@ describe(`Merkle Tree`, () => {
       for (let i = 95; i < 100; i++) {
         const hashes = makeHashes(i);
         const tree = new MerkleTree(hashes);
-        assert(!verifyWithMerkleProof(tree.getHash(i)!, [], tree.root!));
-        assert(!verifyWithMerkleProof("", tree.getProof(tree.getHash(i))!, tree.root!));
-        assert(!verifyWithMerkleProof(tree.getHash(i)!, tree.getProof(tree.getHash(i))!, ""));
+        assert(!verifyWithMerkleProof(tree.getHash(i), [], tree.root));
+        assert(!verifyWithMerkleProof("", tree.getProof(tree.getHash(i)), tree.root));
+        assert(!verifyWithMerkleProof(tree.getHash(i), tree.getProof(tree.getHash(i)), ""));
       }
     });
 
@@ -72,15 +72,15 @@ describe(`Merkle Tree`, () => {
         const tree1 = new MerkleTree(hashes1);
         const tree2 = new MerkleTree(hashes2);
         for (let j = 0; j < i; j++) {
-          expect(verifyWithMerkleProof(tree1.getHash(j)!, tree1.getProof(tree1.getHash(j))!, tree1.root!)).to.be.true;
-          expect(verifyWithMerkleProof(tree1.getHash(j)!, tree2.getProof(tree2.getHash(j))!, tree1.root!)).to.be.false;
-          assert(!verifyWithMerkleProof(tree1.getHash(j)!, tree1.getProof(tree1.getHash(j))!, tree2.root!));
+          expect(verifyWithMerkleProof(tree1.getHash(j), tree1.getProof(tree1.getHash(j)), tree1.root)).to.be.true;
+          expect(verifyWithMerkleProof(tree1.getHash(j), tree2.getProof(tree2.getHash(j)), tree1.root)).to.be.false;
+          assert(!verifyWithMerkleProof(tree1.getHash(j), tree1.getProof(tree1.getHash(j)), tree2.root));
         }
       }
     });
 
     it("Should prepare commit hash", () => {
-      const merkleRoot = new MerkleTree(makeHashes(55)).root!;
+      const merkleRoot = new MerkleTree(makeHashes(55)).root;
       const address = "0x780023EE3B120dc5bDd21422eAfe691D9f37818D";
       const randomNum = ethers.zeroPadValue(ethers.toBeArray(1289), 32);
       assert(commitHash(merkleRoot, randomNum, address).slice(0, 2) === "0x");

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // Usage:
 // JSON.stringify(object, bigIntReplacer);
 // JSON.parse(string, bigIntReviver);

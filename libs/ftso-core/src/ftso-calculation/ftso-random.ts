@@ -27,6 +27,6 @@ export function calculateRandom(data: DataForCalculations): RandomCalculationRes
   return {
     votingRoundId: data.votingRoundId,
     random: random,
-    isSecure: nonBenchedOffendersSize == 0 && nonBencherCount >= NON_BENCHED_RANDOM_VOTERS_MIN_COUNT,
+    isSecure: nonBenchedOffendersSize === 0 && nonBencherCount >= NON_BENCHED_RANDOM_VOTERS_MIN_COUNT,
   };
 }

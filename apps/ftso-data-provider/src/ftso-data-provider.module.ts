@@ -16,7 +16,7 @@ const IMPORTS_ARRAY = [
   TypeOrmModule.forRootAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
-    useFactory: async (configService: ConfigService<IConfig>) => {
+    useFactory: (configService: ConfigService<IConfig>) => {
       return {
         type: "mysql",
         host: configService.getOrThrow("db_host"),

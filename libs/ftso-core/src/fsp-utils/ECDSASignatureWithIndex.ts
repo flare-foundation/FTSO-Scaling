@@ -94,11 +94,11 @@ export namespace ECDSASignatureWithIndex {
   /**
    * Signs message hash with ECDSA using private key
    */
-  export async function signMessageHash(
+  export function signMessageHash(
     messageHash: string,
     privateKey: string,
     index: number
-  ): Promise<IECDSASignatureWithIndex> {
+  ): IECDSASignatureWithIndex {
     if (!/^0x[0-9a-f]{64}$/i.test(messageHash)) {
       throw Error(`Invalid message hash format: ${messageHash}`);
     }

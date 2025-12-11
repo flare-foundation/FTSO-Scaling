@@ -7,7 +7,7 @@ import { BigIntInterceptor } from "./utils/BigIntInterceptor";
 
 async function bootstrap() {
   let logLevels: LogLevel[] = ["log"];
-  if (process.env.LOG_LEVEL == "debug") {
+  if (process.env.LOG_LEVEL === "debug") {
     logLevels = ["verbose"];
   }
 

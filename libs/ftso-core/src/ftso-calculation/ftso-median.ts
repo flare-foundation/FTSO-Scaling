@@ -17,7 +17,7 @@ export interface VoteData {
  */
 export function calculateMedianResults(data: DataForCalculations): MedianCalculationResult[] {
   const votersSubmitAddresses = data.orderedVotersSubmitAddresses;
-  const weights = votersSubmitAddresses.map((voter) => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
+  const weights = votersSubmitAddresses.map((voter) => data.voterMedianVotingWeights.get(voter.toLowerCase()));
 
   // "mapping": feedIndex => array of submissions by voters (in signing policy order)
   const feedValues = new Map<number, ValueWithDecimals[]>();

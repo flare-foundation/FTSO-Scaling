@@ -54,7 +54,7 @@ export namespace RelayMessage {
       }
     } else {
       encoded += "00"; // protocolId == 0 indicates new signing policy
-      const encodedNewSigningPolicy = SigningPolicy.encode(message.newSigningPolicy!);
+      const encodedNewSigningPolicy = SigningPolicy.encode(message.newSigningPolicy);
       encoded += encodedNewSigningPolicy.slice(2);
       if (verify) {
         hashToSign = SigningPolicy.hashEncoded(encodedNewSigningPolicy);
@@ -70,7 +70,7 @@ export namespace RelayMessage {
         }
         lastObservedIndex = signature.index;
         if (verify) {
-          const actualSigner = ECDSASignatureWithIndex.recoverSigner(hashToSign!, signature);
+          const actualSigner = ECDSASignatureWithIndex.recoverSigner(hashToSign, signature);
           const signingPolicySigner = message.signingPolicy.voters[signature.index];
           if (actualSigner.toLowerCase() !== signingPolicySigner.toLowerCase()) {
             throw Error(
@@ -95,22 +95,22 @@ export namespace RelayMessage {
     const encodedInternal = encoded.startsWith("0x") ? encoded.slice(2) : encoded;
     let newSigningPolicy: ISigningPolicy | undefined;
     let protocolMessageMerkleRoot: IProtocolMessageMerkleRoot | undefined;
-    if (encodedInternal.length <= signingPolicy.encodedLength!) {
+    if (encodedInternal.length <= signingPolicy.encodedLength) {
       throw Error(`Invalid relay message: too short`);
     }
-    const protocolId = encodedInternal.slice(signingPolicy.encodedLength!, signingPolicy.encodedLength! + 2);
+    const protocolId = encodedInternal.slice(signingPolicy.encodedLength, signingPolicy.encodedLength + 2);
     let encodedSignatures = "";
     if (protocolId === "00") {
-      const rest = encodedInternal.slice(signingPolicy.encodedLength! + 2);
+      const rest = encodedInternal.slice(signingPolicy.encodedLength + 2);
       newSigningPolicy = SigningPolicy.decode(rest, false);
-      if (rest.length <= newSigningPolicy.encodedLength!) {
+      if (rest.length <= newSigningPolicy.encodedLength) {
         throw Error(`Invalid relay message: too short - missing signatures`);
       }
-      encodedSignatures = rest.slice(newSigningPolicy.encodedLength!);
+      encodedSignatures = rest.slice(newSigningPolicy.encodedLength);
     } else {
-      const rest = encodedInternal.slice(signingPolicy.encodedLength!);
+      const rest = encodedInternal.slice(signingPolicy.encodedLength);
       protocolMessageMerkleRoot = ProtocolMessageMerkleRoot.decode(rest, false);
-      encodedSignatures = rest.slice(protocolMessageMerkleRoot.encodedLength!);
+      encodedSignatures = rest.slice(protocolMessageMerkleRoot.encodedLength);
     }
     const signatures = ECDSASignatureWithIndex.decodeSignatureList(encodedSignatures);
     return {
@@ -150,20 +150,20 @@ export namespace RelayMessage {
       if (a.protocolMessageMerkleRoot || b.protocolMessageMerkleRoot) {
         return false;
       }
-      return SigningPolicy.equals(a.newSigningPolicy, b.newSigningPolicy!);
+      return SigningPolicy.equals(a.newSigningPolicy, b.newSigningPolicy);
     }
     if (a.protocolMessageMerkleRoot && b.protocolMessageMerkleRoot) {
       if (a.newSigningPolicy || b.newSigningPolicy) {
         return false;
       }
-      return ProtocolMessageMerkleRoot.equals(a.protocolMessageMerkleRoot, b.protocolMessageMerkleRoot!);
+      return ProtocolMessageMerkleRoot.equals(a.protocolMessageMerkleRoot, b.protocolMessageMerkleRoot);
     }
     // One of messages is invalid
     return false;
   }
 
   export function augment(m: IRelayMessage): IRelayMessage {
-    m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot!);
+    m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot);
     return m;
   }
 }

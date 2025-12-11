@@ -66,7 +66,7 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
       };
     default:
       // Ensure exhaustive checking
-      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+       
       ((_: never): void => {})(progressType);
   }
 }

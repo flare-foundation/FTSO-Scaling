@@ -119,7 +119,7 @@ export function calculateSigningRewardsForFDC(
       let voterAmount = (BigInt(voterData.weight) * undistributedAmount) / undistributedWeight;
       undistributedAmount -= voterAmount;
       undistributedWeight -= BigInt(voterData.weight);
-      const voterWeights = data.dataForCalculations.votersWeightsMap!.get(submitAddress);
+      const voterWeights = data.dataForCalculations.votersWeightsMap.get(submitAddress);
       if (!voterData.dominatesConsensusBitVote) {
         // burn 20%
         const burnAmount = (200000n * voterAmount) / 1000000n;

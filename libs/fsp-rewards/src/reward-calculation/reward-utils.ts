@@ -21,7 +21,7 @@ export function isSignatureInGracePeriod(
   signatureSubmission: GenericSubmissionData<ISignaturePayload> | FDCEligibleSigner
 ) {
   return (
-    signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
+    signatureSubmission.votingEpochIdFromTimestamp === votingRoundId + 1 &&
     signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     signatureSubmission.relativeTimestamp <
       EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()
@@ -54,7 +54,7 @@ export function isFinalizationInGracePeriodAndEligible(
 ) {
   return (
     eligibleVoters.has(finalization.submitAddress) &&
-    finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
+    finalization.votingEpochIdFromTimestamp === votingRoundId + 1 &&
     finalization.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     finalization.relativeTimestamp <=
       EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC()

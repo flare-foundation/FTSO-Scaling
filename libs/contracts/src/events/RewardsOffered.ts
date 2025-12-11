@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Address } from "../../../ftso-core/src/voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
 import { decodeEvent } from "../abi/AbiCache";

@@ -163,7 +163,7 @@ export class DataManagerForRewarding extends DataManager {
       };
     }
 
-    async function rewardEpochForVotingRoundId(votingRoundId: number): Promise<RewardEpoch> {
+    function rewardEpochForVotingRoundId(votingRoundId: number): RewardEpoch {
       if (votingRoundId < lastRewardEpoch.startVotingRoundId) {
         return firstRewardEpoch;
       }
@@ -177,7 +177,7 @@ export class DataManagerForRewarding extends DataManager {
       // this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
       // this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
-      const rewardEpoch = await rewardEpochForVotingRoundId(votingRoundId);
+      const rewardEpoch = rewardEpochForVotingRoundId(votingRoundId);
       const votersToCommitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(
         votingRoundId,
         commits,
@@ -185,7 +185,7 @@ export class DataManagerForRewarding extends DataManager {
         rewardEpoch.canonicalFeedOrder
       );
       const partialData = this.getDataForCalculationsPartial(votersToCommitsAndReveals, rewardEpoch);
-      const benchingWindowRevealOffenders = await this.getBenchingWindowRevealOffenders(
+      const benchingWindowRevealOffenders = this.getBenchingWindowRevealOffenders(
         votingRoundId,
         rewardEpoch.rewardEpochId,
         rewardEpoch.startVotingRoundId,
@@ -213,7 +213,7 @@ export class DataManagerForRewarding extends DataManager {
     }
     return {
       status: mappingsResponse.status,
-      data: result as DataForCalculations[],
+      data: result,
     };
   }
 
@@ -258,7 +258,7 @@ export class DataManagerForRewarding extends DataManager {
             // - Override the messageHash if provided
             // - Require
 
-            let messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
+            const messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
 
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
             // submit signature address should match the signingPolicyAddress
@@ -314,7 +314,7 @@ export class DataManagerForRewarding extends DataManager {
           }
         } catch (e) {
           console.log(e);
-          logger.warn(`Issues with parsing submission message: ${e.message}`);
+          logger.warn(`Issues with parsing submission message: ${(e as Error).message}`);
         }
       }
     }
@@ -661,11 +661,11 @@ export class DataManagerForRewarding extends DataManager {
           // The message is eligible for consideration.
           finalizations.push(finalization);
         } catch (e) {
-          this.logger.log(`Unparsable relay message. Ignored: ${e.message}`);
+          this.logger.log(`Unparsable relay message. Ignored: ${(e as Error).message}`);
         }
       } catch (e) {
         // ignore unparsable message
-        this.logger.warn(`Unparsable or non-finalisable finalization message: ${e.message}`);
+        this.logger.warn(`Unparsable or non-finalisable finalization message: ${(e as Error).message}`);
       }
     }
     // consider only the first sent successful finalization
@@ -759,6 +759,7 @@ export class DataManagerForRewarding extends DataManager {
         throw new Error(`FastUpdateFeeds is undefined for voting round ${votingRoundId}`);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((fastUpdateFeeds as any) === "MISSING_FAST_UPDATE_FEEDS") {
         result.push(undefined);
         this.logger.error(`WARN: FastUpdateFeeds missing for voting round ${votingRoundId}`);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Command, CommandRunner, Option } from "nest-commander";
 import { CalculatorService } from "../services/calculator.service";
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";

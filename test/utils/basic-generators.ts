@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 // IMPORTANT: This file should never import constants.ts
 import { utils } from "web3";
 import { encodeParameter, encodeParameters } from "web3-eth-abi";

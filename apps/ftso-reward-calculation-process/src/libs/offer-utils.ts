@@ -24,7 +24,7 @@ import {
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
 
-export async function fullRoundOfferCalculation(options: OptionalCommandOptions): Promise<void> {
+export function fullRoundOfferCalculation(options: OptionalCommandOptions): void {
   const rewardEpochId = options.rewardEpochId;
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const startVotingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;

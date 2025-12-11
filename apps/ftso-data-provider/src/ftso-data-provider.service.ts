@@ -102,10 +102,10 @@ export class FtsoDataProviderService {
     return data;
   }
 
-  async getRevealData(
+  getRevealData(
     votingRoundId: number,
     submissionAddress: string
-  ): Promise<IPayloadMessage<IRevealData> | undefined> {
+  ): IPayloadMessage<IRevealData> | undefined {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
     const revealData = this.votingRoundData.get(combine(votingRoundId, submissionAddress));
@@ -238,7 +238,7 @@ export class FtsoDataProviderService {
   // Internal methods
 
   private async getFeedValuesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
-    let response: AxiosResponse<FeedValuesResponse, any>;
+    let response: AxiosResponse<FeedValuesResponse, unknown>;
 
     try {
       response = await retry(
@@ -250,13 +250,13 @@ export class FtsoDataProviderService {
     } catch (e) {
       if (e instanceof RetryError) {
         throw new Error(
-          `Failed to get feed values for epoch ${votingRoundId}, error connecting to value provider:\n${e.cause}`
+          `Failed to get feed values for epoch ${votingRoundId}, error connecting to value provider:\n${e.cause as Error}`
         );
       }
     }
 
     if (response.status < 200 || response.status >= 300) {
-      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${response.data}`);
+      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${JSON.stringify(response.data)}`);
     }
 
     const values = response.data;

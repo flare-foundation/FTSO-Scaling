@@ -115,7 +115,7 @@ describe("RandomVoterSelector", () => {
     const result = randomVoterSelector.randomSelectThresholdWeightVoters(seed);
     let sum = 0n;
     for (const voter of result) {
-      sum += voterWeightMap.get(voter)!;
+      sum += voterWeightMap.get(voter);
     }
     expect(Number(sum)).to.be.greaterThanOrEqual(Number(thresholdWeight));
     let i = 1;
@@ -129,7 +129,7 @@ describe("RandomVoterSelector", () => {
       if (selectedVotersSet.size === result.length) {
         let sum2 = 0n;
         for (const voter of selectedVotersSet) {
-          sum2 += voterWeightMap.get(voter)!;
+          sum2 += voterWeightMap.get(voter);
         }
         expect(Number(sum2)).to.be.equal(Number(sum));
         break;

@@ -42,19 +42,19 @@ export function getIncrementalCalculationsTempRewards(
   for (const claim of aggregatedClaims) {
     let voterId = addressBeneficiaryToVoterId.get(claim.beneficiary.toLowerCase());
     if (voterId !== undefined) {
-      let claims = voterIdToClaims.get(voterId) || [];
+      const claims = voterIdToClaims.get(voterId) || [];
       voterIdToClaims.set(voterId, claims);
       claims.push(claim);
       continue;
     }
     voterId = nodeIdBeneficiaryToVoterId.get(claim.beneficiary.toLowerCase());
     if (voterId !== undefined) {
-      let claims = voterIdToClaims.get(voterId) || [];
+      const claims = voterIdToClaims.get(voterId) || [];
       voterIdToClaims.set(voterId, claims);
       claims.push(claim);
       continue;
     }
-    let claims = voterIdToClaims.get(-1) || [];
+    const claims = voterIdToClaims.get(-1) || [];
     voterIdToClaims.set(-1, claims);
     claims.push(claim);
   }

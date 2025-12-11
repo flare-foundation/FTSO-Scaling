@@ -30,7 +30,7 @@ export function calculatePenalties(
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of offenders) {
-    const voterWeights = votersWeights.get(submitAddress)!;
+    const voterWeights = votersWeights.get(submitAddress);
     if (!voterWeights) {
       throw new Error("Critical error: Illegal offender");
     }

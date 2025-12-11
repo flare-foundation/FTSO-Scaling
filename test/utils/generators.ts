@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import Web3 from "web3";
 import { AbiCache } from "../../libs/contracts/src/abi/AbiCache";
 import { CONTRACTS } from "../../libs/contracts/src/constants";
@@ -394,7 +395,7 @@ export function generateMedianCalculationResult(
 
   for (let j = 0; j < numberOfVoters; j++) {
     const valueWithDecimal: ValueWithDecimals = {
-      isEmpty: lowTurnout ? j != 3 : !((j + 1) % 13),
+      isEmpty: lowTurnout ? j !== 3 : !((j + 1) % 13),
       value: 1000 + (j % 50),
       decimals: 2,
     };

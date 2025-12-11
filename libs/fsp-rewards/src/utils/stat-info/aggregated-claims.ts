@@ -43,7 +43,7 @@ export function deserializeAggregatedClaimsForVotingRoundId(
       `Aggregated claims for voting round ${votingRoundId} of reward epoch ${rewardEpochId} do not exist.`
     );
   }
-  return JSON.parse(readFileSync(claimsPath, "utf8"), bigIntReviver);
+  return JSON.parse(readFileSync(claimsPath, "utf8"), bigIntReviver) as IRewardClaim[];
 }
 /**
  * Checks if aggregated claims for a given voting round exist on disk.

@@ -7,14 +7,14 @@ export class Bytes32 {
   ) {}
 
   static fromHexString(input: string): Bytes32 {
-    if (input == undefined) throw new Error("Input undefined");
+    if (input === undefined) throw new Error("Input undefined");
     let bytes: Uint8Array;
     try {
       bytes = Web3.utils.hexToBytes(input);
     } catch (e) {
       throw new Error(`Input must be a hex string: ${e}`);
     }
-    if (bytes.length != 32) throw new Error("Input must be 32 bytes long.");
+    if (bytes.length !== 32) throw new Error("Input must be 32 bytes long.");
     return new Bytes32(bytes, input);
   }
 

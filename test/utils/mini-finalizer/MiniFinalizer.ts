@@ -69,23 +69,23 @@ export class MiniFinalizer {
     this.queue.destroy();
     const rewardEpoch = await this.rewardEpochManger.getRewardEpochForVotingEpochId(votingRoundId);
     const matchingSigningPolicy = rewardEpoch.signingPolicy;
-    let voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId!);
+    let voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId);
     if (!voterToIndexMap) {
       voterToIndexMap = new Map<string, number>();
       for (let i = 0; i < matchingSigningPolicy.voters.length; i++) {
         const voter = matchingSigningPolicy.voters[i].toLowerCase();
         voterToIndexMap.set(voter, i);
       }
-      this.voterToIndexMaps.set(matchingSigningPolicy.rewardEpochId!, voterToIndexMap);
+      this.voterToIndexMaps.set(matchingSigningPolicy.rewardEpochId, voterToIndexMap);
     }
-    let voterToWeightMap = this.voterToWeightMaps.get(matchingSigningPolicy.rewardEpochId!);
+    let voterToWeightMap = this.voterToWeightMaps.get(matchingSigningPolicy.rewardEpochId);
     if (!voterToWeightMap) {
       voterToWeightMap = new Map<string, number>();
       for (let i = 0; i < matchingSigningPolicy.voters.length; i++) {
         const voter = matchingSigningPolicy.voters[i].toLowerCase();
         voterToWeightMap.set(voter, matchingSigningPolicy.weights[i]);
       }
-      this.voterToWeightMaps.set(matchingSigningPolicy.rewardEpochId!, voterToWeightMap);
+      this.voterToWeightMaps.set(matchingSigningPolicy.rewardEpochId, voterToWeightMap);
     }
     // process finalizations
     await this.getFinalizationAndProcessFinalizationSubmissions(votingRoundId, rewardEpoch, timestamp);
@@ -188,10 +188,10 @@ export class MiniFinalizer {
     for (const payload of signaturePayloads) {
       const votingRoundId = payload.message.votingRoundId;
       const protocolId = payload.message.protocolId;
-      const voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId!);
-      const augPayload = SignaturePayload.augment(payload, voterToIndexMap!);
+      const voterToIndexMap = this.voterToIndexMaps.get(matchingSigningPolicy.rewardEpochId);
+      const augPayload = SignaturePayload.augment(payload, voterToIndexMap);
       if (augPayload.signer === undefined) {
-        this.logger.log(`Signer not in the signing policy for rewardEpochId: ${matchingSigningPolicy.rewardEpochId!}.`);
+        this.logger.log(`Signer not in the signing policy for rewardEpochId: ${matchingSigningPolicy.rewardEpochId}.`);
         return;
       }
       const messageHash = augPayload.messageHash;
@@ -202,38 +202,38 @@ export class MiniFinalizer {
         this.results.set(votingRoundId, new Map<number, Map<string, ISignaturePayload[]>>());
         this.weights.set(votingRoundId, new Map<number, Map<string, number>>());
       }
-      if (!this.results.get(votingRoundId)!.has(protocolId)) {
-        this.results.get(votingRoundId)!.set(protocolId, new Map<string, ISignaturePayload[]>());
-        this.weights.get(votingRoundId)!.set(protocolId, new Map<string, number>());
+      if (!this.results.get(votingRoundId).has(protocolId)) {
+        this.results.get(votingRoundId).set(protocolId, new Map<string, ISignaturePayload[]>());
+        this.weights.get(votingRoundId).set(protocolId, new Map<string, number>());
       }
-      if (!this.results.get(votingRoundId)!.get(protocolId)!.has(messageHash)) {
-        this.results.get(votingRoundId)!.get(protocolId)!.set(messageHash, []);
-        this.weights.get(votingRoundId)!.get(protocolId)!.set(messageHash, 0);
+      if (!this.results.get(votingRoundId).get(protocolId).has(messageHash)) {
+        this.results.get(votingRoundId).get(protocolId).set(messageHash, []);
+        this.weights.get(votingRoundId).get(protocolId).set(messageHash, 0);
       }
-      const sortedList = this.results.get(votingRoundId)!.get(protocolId)!.get(messageHash)!;
+      const sortedList = this.results.get(votingRoundId).get(protocolId).get(messageHash);
       const inserted = SignaturePayload.insertInSigningPolicySortedList(sortedList, augPayload);
 
       if (inserted) {
         // check if threshold reached
-        const voterToWeightMap = this.voterToWeightMaps.get(matchingSigningPolicy.rewardEpochId!);
+        const voterToWeightMap = this.voterToWeightMaps.get(matchingSigningPolicy.rewardEpochId);
         let totalWeight = 0;
         for (const payload of sortedList) {
-          totalWeight += voterToWeightMap!.get(payload.signer!)!;
+          totalWeight += voterToWeightMap.get(payload.signer);
         }
         // this.logger.info(`Total weight: ${totalWeight} (${votingRoundId}, ${protocolId}, ${messageHash}))`);
-        this.weights.get(votingRoundId)!.get(protocolId)!.set(messageHash, totalWeight);
+        this.weights.get(votingRoundId).get(protocolId).set(messageHash, totalWeight);
         if (totalWeight > matchingSigningPolicy.threshold) {
           if (!this.thresholdReached.has(votingRoundId)) {
             this.thresholdReached.set(votingRoundId, new Map<number, Map<string, number>>());
           }
-          if (!this.thresholdReached.get(votingRoundId)!.has(protocolId)) {
-            this.thresholdReached.get(votingRoundId)!.set(protocolId, new Map<string, number>());
+          if (!this.thresholdReached.get(votingRoundId).has(protocolId)) {
+            this.thresholdReached.get(votingRoundId).set(protocolId, new Map<string, number>());
           }
-          if (this.thresholdReached!.get(votingRoundId)!.get(protocolId)!.has(messageHash)) {
+          if (this.thresholdReached.get(votingRoundId).get(protocolId).has(messageHash)) {
             // no need for entering the queue again
             return;
           }
-          this.thresholdReached.get(votingRoundId)!.get(protocolId)!.set(messageHash, sortedList.length);
+          this.thresholdReached.get(votingRoundId).get(protocolId).set(messageHash, sortedList.length);
           this.queue.push({
             votingRoundId,
             protocolId,

@@ -52,7 +52,7 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     // Do this for every network with change
     const oldCostonRelayAddress = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
-    if (network === "coston" && CONTRACTS.Relay.address != oldCostonRelayAddress) {
+    if (network === "coston" && CONTRACTS.Relay.address !== oldCostonRelayAddress) {
       oldRelay = {
         ...CONTRACTS.Relay,
         address: oldCostonRelayAddress,
@@ -60,7 +60,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    if (network === "coston" && CONTRACTS.Relay.address != secondOldCostonRelayAddress) {
+    if (network === "coston" && CONTRACTS.Relay.address !== secondOldCostonRelayAddress) {
       secondOldRelay = {
         ...CONTRACTS.Relay,
         address: secondOldCostonRelayAddress,
@@ -68,7 +68,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldCoston2RelayAddress = "0x4087D4B5E009Af9FF41db910205439F82C3dc63c";
-    if (network === "coston2" && CONTRACTS.Relay.address != oldCoston2RelayAddress) {
+    if (network === "coston2" && CONTRACTS.Relay.address !== oldCoston2RelayAddress) {
       oldRelay = {
         ...CONTRACTS.Relay,
         address: oldCoston2RelayAddress,
@@ -76,7 +76,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
-    if (network === "songbird" && CONTRACTS.Relay.address != oldSongbirdRelayAddress) {
+    if (network === "songbird" && CONTRACTS.Relay.address !== oldSongbirdRelayAddress) {
       oldRelay = {
         ...CONTRACTS.Relay,
         address: oldSongbirdRelayAddress,
@@ -84,7 +84,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    if (network === "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelayAddress) {
+    if (network === "songbird" && CONTRACTS.Relay.address !== secondOldSongbirdRelayAddress) {
       secondOldRelay = {
         ...CONTRACTS.Relay,
         address: secondOldSongbirdRelayAddress,
@@ -92,7 +92,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const oldFlareRelayAddress = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
-    if (network === "flare" && CONTRACTS.Relay.address != oldFlareRelayAddress) {
+    if (network === "flare" && CONTRACTS.Relay.address !== oldFlareRelayAddress) {
       oldRelay = {
         ...CONTRACTS.Relay,
         address: oldFlareRelayAddress,
@@ -113,7 +113,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     // END TEMP CHANGE
-    let newTransactionsResults = await this.queryTransactions(
+    const newTransactionsResults = await this.queryTransactions(
       CONTRACTS.Relay,
       ContractMethodNames.relay,
       startTime,
@@ -139,8 +139,8 @@ export class IndexerClientForRewarding extends IndexerClient {
       },
     ];
 
-    let finalizations: FinalizationData[] = [];
-    for (let txListPair of jointTransactionResults) {
+    const finalizations: FinalizationData[] = [];
+    for (const txListPair of jointTransactionResults) {
       const { address, transactionsResults } = txListPair;
       const isOldRelay =
         (oldRelay !== undefined && address === oldRelay.address) ||
@@ -192,8 +192,8 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
     if (
-      network == "songbird" &&
-      CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater &&
+      network === "songbird" &&
+      CONTRACTS.FastUpdater.address !== oldSongbirdFastUpdater &&
       startVotingRoundId <= SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID
     ) {
       this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
@@ -209,7 +209,7 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
     if (
-      network == "coston" &&
+      network === "coston" &&
       CONTRACTS.FastUpdater.address !== oldCostonFastUpdater &&
       startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID
     ) {
@@ -236,6 +236,7 @@ export class IndexerClientForRewarding extends IndexerClient {
       this.logger.error(`Missing FastUpdateFeeds events: ${startVotingRoundId} to ${endVotingRoundId}`);
 
       for (let i = startVotingRoundId; i <= endVotingRoundId; i++) {
+        // eslint-disable-next-line
         data.push("MISSING_FAST_UPDATE_FEEDS" as any);
       }
       processed = endVotingRoundId;
@@ -260,6 +261,7 @@ export class IndexerClientForRewarding extends IndexerClient {
           }
           // jump over missing events
           while (processed + 1 < event.votingRoundId) {
+            // eslint-disable-next-line
             data.push("MISSING_FAST_UPDATE_FEEDS" as any);
             processed++;
           }
@@ -277,6 +279,7 @@ export class IndexerClientForRewarding extends IndexerClient {
       // process the gap at the end of the range
       this.logger.error(`Missing FastUpdateFeeds events (end gap): ${processed + 1} to ${endVotingRoundId}`);
       while (processed !== endVotingRoundId) {
+        // eslint-disable-next-line
         data.push("MISSING_FAST_UPDATE_FEEDS" as any);
         processed++;
       }
@@ -311,8 +314,8 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     const oldSongbirdFastUpdater = "0x70e8870ef234EcD665F96Da4c669dc12c1e1c116";
     if (
-      network == "songbird" &&
-      CONTRACTS.FastUpdater.address != oldSongbirdFastUpdater &&
+      network === "songbird" &&
+      CONTRACTS.FastUpdater.address !== oldSongbirdFastUpdater &&
       startVotingRoundId <= SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID
     ) {
       this.logger.log(`Querying old FastUpdater address for Songbird: ${oldSongbirdFastUpdater}`);
@@ -328,7 +331,7 @@ export class IndexerClientForRewarding extends IndexerClient {
 
     const oldCostonFastUpdater = "0x9B931f5d3e24fc8C9064DB35bDc8FB4bE0E862f9";
     if (
-      network == "coston" &&
+      network === "coston" &&
       CONTRACTS.FastUpdater.address !== oldCostonFastUpdater &&
       startVotingRoundId <= COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID
     ) {

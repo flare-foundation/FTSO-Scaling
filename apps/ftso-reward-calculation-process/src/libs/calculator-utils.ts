@@ -53,12 +53,12 @@ export async function tryFindNextRewardEpoch(
   if (!signingPolicyInitializedEvents.data) {
     return false;
   }
-  let i = signingPolicyInitializedEvents.data!.length - 1;
-  while (i >= 0 && signingPolicyInitializedEvents.data![i].rewardEpochId > state.rewardEpochId + 1) {
+  let i = signingPolicyInitializedEvents.data.length - 1;
+  while (i >= 0 && signingPolicyInitializedEvents.data[i].rewardEpochId > state.rewardEpochId + 1) {
     i--;
   }
-  if (i >= 0 && signingPolicyInitializedEvents.data![i].rewardEpochId === state.rewardEpochId + 1) {
-    const realEndVotingRoundId = signingPolicyInitializedEvents.data![i].startVotingRoundId - 1;
+  if (i >= 0 && signingPolicyInitializedEvents.data[i].rewardEpochId === state.rewardEpochId + 1) {
+    const realEndVotingRoundId = signingPolicyInitializedEvents.data[i].startVotingRoundId - 1;
 
     state.rewardEpochInfo.endVotingRoundId = realEndVotingRoundId;
     serializeRewardEpochInfo(state.rewardEpochId, state.rewardEpochInfo);

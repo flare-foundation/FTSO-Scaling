@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Bytes32 } from "../../../ftso-core/src/utils/sol-types";
 import { Address } from "../../../ftso-core/src/voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";

@@ -228,7 +228,6 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
 
   // Processing by voting rounds
   let totalFUUpdates = 0;
-  let nonEmptyFeedValues = 0;
   let totalRewardedVotingRounds = 0;
   for (
     let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
@@ -260,7 +259,6 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
         continue;
       }
       const median = feedRecord.data.finalMedian.value;
-      nonEmptyFeedValues++;
       const delta = (BigInt(median) * FTSO_SCALING_CLOSENESS_THRESHOLD_PPM) / TOTAL_PPM;
       const low = median - Number(delta);
       const high = median + Number(delta);

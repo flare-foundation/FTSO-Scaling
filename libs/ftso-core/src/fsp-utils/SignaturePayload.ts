@@ -239,7 +239,7 @@ export namespace SignaturePayload {
       if (signaturePayloads[middle].index === entry.index) {
         return false;
       }
-      if (signaturePayloads[middle].index! < entry.index) {
+      if (signaturePayloads[middle].index < entry.index) {
         left = middle + 1;
       } else {
         right = middle - 1;

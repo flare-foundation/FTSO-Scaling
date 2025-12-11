@@ -395,7 +395,7 @@ export class IndexerClient {
     const network = process.env.NETWORK as networks;
 
     const oldSongbirdRelay = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
-    if (network == "songbird" && CONTRACTS.Relay.address != oldSongbirdRelay) {
+    if (network === "songbird" && CONTRACTS.Relay.address !== oldSongbirdRelay) {
       this.logger.log(`Querying old Relay address for Songbird: ${oldSongbirdRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
@@ -403,7 +403,7 @@ export class IndexerClient {
     }
 
     const secondOldSongbirdRelay = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    if (network == "songbird" && CONTRACTS.Relay.address != secondOldSongbirdRelay) {
+    if (network === "songbird" && CONTRACTS.Relay.address !== secondOldSongbirdRelay) {
       this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
@@ -411,7 +411,7 @@ export class IndexerClient {
     }
 
     const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
-    if (network == "coston" && CONTRACTS.Relay.address != oldCostonRelay) {
+    if (network === "coston" && CONTRACTS.Relay.address !== oldCostonRelay) {
       this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
@@ -419,7 +419,7 @@ export class IndexerClient {
     }
 
     const secondOldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    if (network == "coston" && CONTRACTS.Relay.address != secondOldCostonRelay) {
+    if (network === "coston" && CONTRACTS.Relay.address !== secondOldCostonRelay) {
       this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
@@ -428,7 +428,7 @@ export class IndexerClient {
 
     // TEMP CHANGE for upgrading Relay contract on Coston2, can be removed in February 2025
     const oldCoston2Relay = "0x4087D4B5E009Af9FF41db910205439F82C3dc63c";
-    if (network == "coston2" && CONTRACTS.Relay.address != oldCoston2Relay) {
+    if (network === "coston2" && CONTRACTS.Relay.address !== oldCoston2Relay) {
       this.logger.log(`Querying old Relay address for Coston2: ${oldCoston2Relay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCoston2Relay }, eventName, fromStartTime))
@@ -437,7 +437,7 @@ export class IndexerClient {
 
     // TEMP CHANGE for upgrading Relay contract on Flare, can be removed in March 2025
     const oldFlareRelay = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
-    if (network == "flare" && CONTRACTS.Relay.address != oldFlareRelay) {
+    if (network === "flare" && CONTRACTS.Relay.address !== oldFlareRelay) {
       this.logger.log(`Querying old Relay address for Flare: ${oldFlareRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime))
@@ -487,9 +487,9 @@ export class IndexerClient {
         flareSystemsCalculatorContract.address = "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9";
       } else {
         // Use new contract addresses and abi
-        // @ts-ignore
+        // @ts-expect-error workaround
         voterRegistryContract.name = "VoterRegistryNext";
-        // @ts-ignore
+        // @ts-expect-error workaround
         flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
       }
     }
@@ -506,7 +506,7 @@ export class IndexerClient {
         voterRegistryContract.name,
         VoterRegistered.eventName,
         event,
-        (data: any) => new VoterRegistered(data)
+        (data: unknown) => new VoterRegistered(data)
       )
     );
 
@@ -521,7 +521,7 @@ export class IndexerClient {
         flareSystemsCalculatorContract.name,
         VoterRegistrationInfo.eventName,
         event,
-        (data: any) => new VoterRegistrationInfo(data)
+        (data: unknown) => new VoterRegistrationInfo(data)
       )
     );
 
@@ -601,7 +601,7 @@ export class IndexerClient {
           messages,
         });
       } catch (e) {
-        this.logger.warn(`Error processing submission transaction ${tx.hash}, will ignore: ${e.message}`);
+        this.logger.warn(`Error processing submission transaction ${tx.hash}, will ignore: ${(e as Error).message}`);
       }
     }
 

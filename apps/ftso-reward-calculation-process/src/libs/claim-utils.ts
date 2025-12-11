@@ -50,7 +50,7 @@ export async function calculateClaimsAndAggregate(
 ) {
   let done = false;
   while (!done) {
-    // eslint-disable-next-line no-useless-catch
+     
     try {
       logger.log(`Calculating claims for voting round: ${votingRoundId}`);
       await partialRewardClaimsForVotingRound(

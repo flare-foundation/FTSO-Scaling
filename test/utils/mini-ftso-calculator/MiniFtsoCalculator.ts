@@ -99,7 +99,7 @@ export class MiniFtsoCalculator {
     const signaturePayload = {
       type: "0x00",
       message,
-      signature: await ECDSASignature.signMessageHash(messageHash, this.privateKey),
+      signature: ECDSASignature.signMessageHash(messageHash, this.privateKey),
       unsignedMessage,
     } as ISignaturePayload;
     return PayloadMessage.encode({

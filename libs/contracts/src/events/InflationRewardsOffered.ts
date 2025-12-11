@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { unPrefix0x } from "../../../ftso-core/src/utils/encoding";
 import { RawEventConstructible } from "./RawEventConstructible";
 import { decodeEvent } from "../abi/AbiCache";

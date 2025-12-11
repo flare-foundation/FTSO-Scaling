@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Events exports
 
 import { InflationRewardsOffered } from "./InflationRewardsOffered";

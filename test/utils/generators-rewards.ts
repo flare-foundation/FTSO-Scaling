@@ -61,7 +61,7 @@ export interface IndexerPosition<T> {
 }
 
 export function voterFeedValue(votingRoundId: number, voterIndex: number, feedSequence: Feed[]): number[] {
-  const feedValues = [];
+  const feedValues: number[] = [];
   for (let i = 0; i < feedSequence.length; i++) {
     const value = Math.sin(votingRoundId / 90) * 1000 + Math.cos(voterIndex + votingRoundId / 90);
     feedValues.push(value);
@@ -849,5 +849,5 @@ export async function generateRewardEpochDataForRewardCalculation(
   }
   // Move beyond the last relevant voting epoch
   moveToVotingEpochOffset(lastVotingEpochId + 2, 1);
-  mineFakeTransaction();
+  await mineFakeTransaction();
 }

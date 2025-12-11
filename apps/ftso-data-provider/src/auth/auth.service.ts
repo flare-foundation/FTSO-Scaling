@@ -8,7 +8,7 @@ export class AuthService {
 
   constructor(private readonly configService: ConfigService) {
     const API_KEYS = configService.get<string[]>("api_keys");
-    this.logger.log("API_KEYS: " + API_KEYS);
+    this.logger.log("API_KEYS: " + API_KEYS.join(", "));
     if (!API_KEYS) {
       throw new Error("Env variables are missing (API_KEYS)");
     }

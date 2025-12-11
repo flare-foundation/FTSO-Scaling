@@ -3,7 +3,6 @@ import { Address } from "../../../ftso-core/src/voting-types";
 import Web3 from "web3";
 import { encodeParameters } from "web3-eth-abi";
 
-const web3 = new Web3("https://dummy");
 /**
  * Random voter selector for finalization reward eligibility calculation.
  */
@@ -104,7 +103,7 @@ export class RandomVoterSelector {
   }
 
   public randomNumberSequence(initialSeed: string, length: number): string[] {
-    const sequence = [];
+    const sequence: string[] = [];
     let currentSeed = initialSeed;
     for (let i = 0; i < length; i++) {
       sequence.push(currentSeed);
@@ -121,7 +120,7 @@ export class RandomVoterSelector {
   public static initialHashSeed(rewardEpochSeed: string, protocolId: number, votingRoundId: number): string {
     return Web3.utils.soliditySha3(
       encodeParameters(["bytes32", "uint256", "uint256"], [rewardEpochSeed, protocolId, votingRoundId])
-    )!;
+    );
   }
 
   /**

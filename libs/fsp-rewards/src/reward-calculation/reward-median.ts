@@ -43,7 +43,7 @@ export function calculateMedianRewardClaims(
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
       BigInt(
-        soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
+        soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))
       ) %
         2n ===
       1n
@@ -99,16 +99,16 @@ export function calculateMedianRewardClaims(
   const highPCT = median + secondaryBandDiff;
 
   // assemble voter records
-  for (let i = 0; i < calculationResult.votersSubmitAddresses!.length; i++) {
-    const submitAddress = calculationResult.votersSubmitAddresses![i];
-    const feedValue = calculationResult.feedValues![i];
+  for (let i = 0; i < calculationResult.votersSubmitAddresses.length; i++) {
+    const submitAddress = calculationResult.votersSubmitAddresses[i];
+    const feedValue = calculationResult.feedValues[i];
     if (feedValue.isEmpty) {
       continue;
     }
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
       submitAddress: submitAddress,
-      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)!),
+      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)),
       iqr:
         (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedId, votingRoundId, submitAddress)),
@@ -192,7 +192,7 @@ export function calculateMedianRewardClaims(
     const rewardClaim = generateMedianRewardClaimsForVoter(
       reward,
       offer,
-      votersWeights.get(voterRecord.submitAddress)!
+      votersWeights.get(voterRecord.submitAddress)
     );
     rewardClaims.push(...rewardClaim);
   }

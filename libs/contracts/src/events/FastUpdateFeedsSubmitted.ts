@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { TLPEvents } from "../../../ftso-core/src/orm/entities";
 import { Address } from "../../../ftso-core/src/voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";

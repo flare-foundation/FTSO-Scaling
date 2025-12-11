@@ -240,7 +240,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 100;
 
         for (let index = 0; index < numVoters; index++) {
-          if (index % 2 == 0) continue;
+          if (index % 2 === 0) continue;
           const voter = "voter" + index;
           const weight = 10n;
 
@@ -275,7 +275,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 100;
 
         for (let index = 0; index < numVoters; index++) {
-          if (index % 2 == 1) continue;
+          if (index % 2 === 1) continue;
           const voter = "voter" + index;
           const weight = 10n;
 

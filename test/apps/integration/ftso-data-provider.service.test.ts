@@ -99,7 +99,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     const commit = (await service.getCommitData(votingRound, submissionAddress)).payload;
 
-    const reveal = (await service.getRevealData(votingRound, submissionAddress)).payload;
+    const reveal = service.getRevealData(votingRound, submissionAddress).payload;
 
     const expectedCommit = CommitData.hashForCommit(
       submissionAddress,
@@ -146,7 +146,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     for (let i = 0; i < voters.length; i++) {
       const encodedReveal = encodeRevealPayloadMessage(
-        await services[i].getRevealData(votingRound, voters[i].submitAddress)
+        services[i].getRevealData(votingRound, voters[i].submitAddress)
       );
       const revealPayload = sigReveal + unPrefix0x(encodedReveal);
       const revealTx = generateTx(
@@ -246,7 +246,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
         if (i < missedRevealers) continue;
 
         const encodedReveal = encodeRevealPayloadMessage(
-          await services[i].getRevealData(votingRound, voters[i].submitAddress)
+          services[i].getRevealData(votingRound, voters[i].submitAddress)
         );
         const revealPayload = sigReveal + unPrefix0x(encodedReveal);
         const revealTx = generateTx(
@@ -274,7 +274,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
       for (let i = 0; i < voters.length; i++) {
         const encodedReveal = encodeRevealPayloadMessage(
-          await services[i].getRevealData(votingRound + 1, voters[i].submitAddress)
+          services[i].getRevealData(votingRound + 1, voters[i].submitAddress)
         );
         const revealPayload = sigReveal + unPrefix0x(encodedReveal);
         const revealTx = generateTx(
@@ -300,7 +300,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
-    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
+    const epochEvents = generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
 
     await db.addEvent(epochEvents);
 

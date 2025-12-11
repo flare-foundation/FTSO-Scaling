@@ -32,7 +32,7 @@ const web3 = new Web3("https://dummy");
  * @returns padded hex value
  */
 function toHex(x: string | number | bigint, padToBytes: number) {
-  return Web3.utils.leftPad(Web3.utils.toHex(x), padToBytes! * 2);
+  return Web3.utils.leftPad(Web3.utils.toHex(x), padToBytes * 2);
 }
 
 /**
@@ -55,7 +55,7 @@ export function singleHash(val: string) {
 export function commitHash(merkleRoot: string, randomNumber: string, address: string): string {
   return web3.utils.soliditySha3(
     web3.eth.abi.encodeParameters(["bytes32", "bytes32", "address"], [merkleRoot, randomNumber, address])
-  )!;
+  );
 }
 
 /**
@@ -136,9 +136,9 @@ export class MerkleTree {
     const sorted = values.map((x) => toHex(x, 32));
     sorted.sort();
 
-    let hashes = [];
+    let hashes: string[] = [];
     for (let i = 0; i < sorted.length; i++) {
-      if (i == 0 || sorted[i] !== sorted[i - 1]) {
+      if (i === 0 || sorted[i] !== sorted[i - 1]) {
         hashes.push(sorted[i]);
       }
     }
@@ -146,7 +146,8 @@ export class MerkleTree {
       hashes = hashes.map((x) => singleHash(x));
     }
     const n = hashes.length;
-    this._tree = [...new Array(Math.max(n - 1, 0)).fill(0), ...hashes];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    this._tree = [...new Array(Math.max(n - 1, 0)).fill("0"), ...hashes];
     for (let i = n - 2; i >= 0; i--) {
       this._tree[i] = sortedHashPair(this._tree[2 * i + 1], this._tree[2 * i + 2])!;
     }
@@ -171,15 +172,19 @@ export class MerkleTree {
   binarySearch(hash: string): number | null {
     let [low, high] = [0, this.hashCount];
     let count = high;
-    if (count == 0) return null;
+    if (count === 0) return null;
     while (count > 1) {
       // Invariants: low < high, 2 <= count == high - low == [low .. high].length
       const mid = low + Math.floor(count / 2); // low < mid < high _strictly_
-      hash < this.sortedHashes[mid] ? (high = mid) : (low = mid); // low < high still
+      if (hash < this.sortedHashes[mid]) {
+        high = mid;
+      } else {
+        low = mid;
+      }
       count = high - low; // preserves invariant
     }
     const i = low; // Only element left: count == 1, since 0 != count <= 1
-    if (hash != this.sortedHashes[i]) return null;
+    if (hash !== this.sortedHashes[i]) return null;
     return i;
   }
 
@@ -218,5 +223,5 @@ export function verifyWithMerkleProof(leaf: string, proof: string[], root: strin
   for (const pair of proof) {
     hash = sortedHashPair(pair, hash)!;
   }
-  return hash == root;
+  return hash === root;
 }

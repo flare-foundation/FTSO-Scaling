@@ -15,7 +15,7 @@ export function uniqueRequestsIndices(attestationRequests: AttestationRequest[])
   const result: number[][] = [];
   for (let i = 0; i < attestationRequests.length; i++) {
     const request = attestationRequests[i];
-    if (encountered.get(request.data) == undefined) {
+    if (encountered.get(request.data) === undefined) {
       encountered.set(request.data, result.length);
       result.push([i]);
     } else {
@@ -37,7 +37,6 @@ export function bitVoteIndices(bitVote: string, len: number): number[] | undefin
     throw new Error(`Bitvote length mismatch: ${length} !== ${len}`);
   }
 
-  const result: number[] = [];
   const bitVoteNum = BigInt("0x" + bitVote.slice(4));
   return bitVoteIndicesNum(bitVoteNum, len);
 }
