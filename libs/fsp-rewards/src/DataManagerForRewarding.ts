@@ -101,7 +101,7 @@ export class DataManagerForRewarding extends DataManager {
       signaturesResponse.data.finalizations,
       FTSO2_PROTOCOL_ID
     );
-    const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
+    const firstSuccessfulFinalization = finalizations.find((finalization) => finalization.successfulOnChain);
     return {
       status: DataAvailabilityStatus.OK,
       data: {
@@ -447,7 +447,7 @@ export class DataManagerForRewarding extends DataManager {
         votingRoundFinalizations,
         FTSO2_PROTOCOL_ID
       );
-      const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
+      const firstSuccessfulFinalization = finalizations.find((finalization) => finalization.successfulOnChain);
       let signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> = new Map<
         MessageHash,
         GenericSubmissionData<ISignaturePayload>[]
@@ -483,7 +483,7 @@ export class DataManagerForRewarding extends DataManager {
           votingRoundFinalizations,
           FDC_PROTOCOL_ID
         );
-        const fdcFirstSuccessfulFinalization = fdcFinalizations.find(finalization => finalization.successfulOnChain);
+        const fdcFirstSuccessfulFinalization = fdcFinalizations.find((finalization) => finalization.successfulOnChain);
         let fdcSignatures = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
         if (fdcFirstSuccessfulFinalization) {
           if (!fdcFirstSuccessfulFinalization.messages.protocolMessageMerkleRoot) {
@@ -769,7 +769,7 @@ export class DataManagerForRewarding extends DataManager {
         votingRoundId,
         feedValues: fastUpdateFeeds.feeds,
         feedDecimals: fastUpdateFeeds.decimals,
-        signingPolicyAddressesSubmitted: fastUpdateSubmissions.map(submission => submission.signingPolicyAddress),
+        signingPolicyAddressesSubmitted: fastUpdateSubmissions.map((submission) => submission.signingPolicyAddress),
       };
       result.push(value);
     }

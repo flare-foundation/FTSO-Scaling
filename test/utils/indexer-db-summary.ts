@@ -1,8 +1,5 @@
 import { EntityManager } from "typeorm";
-import {
-  EPOCH_SETTINGS,
-
-} from "../../libs/ftso-core/src/constants";
+import { EPOCH_SETTINGS } from "../../libs/ftso-core/src/constants";
 import { writeFileSync } from "fs";
 import {
   InflationRewardsOffered,
@@ -18,8 +15,8 @@ import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/or
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { TestVoter } from "./basic-generators";
 import { encodingUtils, sigCommit, sigReveal, sigSignature, relaySignature } from "./generators-rewards";
-import {BURN_ADDRESS, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC} from "../../libs/fsp-rewards/src/constants";
-import {CONTRACTS} from "../../libs/contracts/src/constants";
+import { BURN_ADDRESS, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC } from "../../libs/fsp-rewards/src/constants";
+import { CONTRACTS } from "../../libs/contracts/src/constants";
 
 export function getVoterToIndexMap(voters: TestVoter[]): Map<string, number> {
   const voterToIndexMap = new Map<string, number>();
@@ -249,7 +246,7 @@ export async function printSummary(
   }
 
   text += sortedSequence
-    .map(entity => {
+    .map((entity) => {
       if (entity instanceof TLPEvents) {
         return parseEventSummary(entity, voterToIndexMap);
       } else {

@@ -21,8 +21,8 @@ import { MockIndexerDB } from "../../utils/db";
 import { currentTimeSec, generateRewardEpochEvents, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
-import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../libs/contracts/src/constants";
+import { AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../libs/contracts/src/constants";
 
 export const testFeeds: Feed[] = [
   { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26

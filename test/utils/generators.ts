@@ -21,7 +21,6 @@ import { Feed, MedianCalculationResult } from "../../libs/ftso-core/src/voting-t
 import { TestVoter, generateEvent } from "./basic-generators";
 import { generateRandomAddress, unsafeRandomHex } from "./testRandom";
 
-
 import { ZERO_BYTES32 } from "../../libs/fsp-rewards/src/constants";
 import { RewardOffers } from "../../libs/ftso-core/src/data/RewardOffers";
 
@@ -88,8 +87,8 @@ export function generateRewardEpochEvents(
         startVotingRoundId: epochSettings.expectedFirstVotingRoundForRewardEpoch(rewardEpochId),
         threshold: 1,
         seed: BigInt("0x123"),
-        voters: voters.map(v => v.signingAddress),
-        weights: voters.map(v => v.registrationWeight),
+        voters: voters.map((v) => v.signingAddress),
+        weights: voters.map((v) => v.registrationWeight),
         signingPolicyBytes: "0x123",
         timestamp: rewardEpochStartSec + 50,
       }),
@@ -108,8 +107,8 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
         "InflationRewardsOffered",
         {
           rewardEpochId,
-          feedIds: "0x" + feeds.map(f => f.id).join(""),
-          decimals: "0x" + feeds.map(f => f.decimals.toString(16).padStart(2, "0")).join(""),
+          feedIds: "0x" + feeds.map((f) => f.id).join(""),
+          decimals: "0x" + feeds.map((f) => f.decimals.toString(16).padStart(2, "0")).join(""),
           amount: BigInt(1000),
           minRewardedTurnoutBIPS: 100,
           primaryBandRewardSharePPM: 10000,
@@ -226,7 +225,7 @@ export function generateRewardsOffer(
  * Generate an inflation reward offer for given feeds
  */
 export function generateInflationRewardOffer(feedNames: string[], rewardEpochId: number) {
-  const unprefixedFeedsInHex = feedNames.map(name => toFeedId(name, true));
+  const unprefixedFeedsInHex = feedNames.map((name) => toFeedId(name, true));
 
   const rawInflationRewardOffer = {
     rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
@@ -330,17 +329,17 @@ export function generateRewardEpoch() {
   const rawSigningPolicyInitialized = {
     rewardEpochId: rewardEpochIdHex(rewardEpochId),
     startVotingRoundId: Web3.utils.numberToHex(rewardEpochId * 3600),
-    threshold: Number(voters.map(v => v.registrationWeight).reduce((a, b) => a + b, 0n)) / 2,
+    threshold: Number(voters.map((v) => v.registrationWeight).reduce((a, b) => a + b, 0n)) / 2,
     seed: "0xaaaa",
     signingPolicyBytes: "0x12",
     timestamp: "0x1200000000000001",
-    voters: voters.map(voter => voter.signingPolicyAddress),
-    weights: voters.map(v => v.registrationWeight),
+    voters: voters.map((voter) => voter.signingPolicyAddress),
+    weights: voters.map((v) => v.registrationWeight),
   };
 
   const signingPolicyInitialized = new SigningPolicyInitialized(rawSigningPolicyInitialized);
 
-  const fullVotersRegistrationInfo = voters.map(voter => {
+  const fullVotersRegistrationInfo = voters.map((voter) => {
     return {
       voterRegistrationInfo: new VoterRegistrationInfo(voter),
       voterRegistered: new VoterRegistered(voter),

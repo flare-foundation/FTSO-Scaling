@@ -2,8 +2,8 @@ import { ethers } from "ethers";
 import { ContractMethodNames } from "../../../contracts/src/definitions";
 import { MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 
-import {AbiCache} from "../../../contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../contracts/src/constants";
+import { AbiCache } from "../../../contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../contracts/src/constants";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 // Needs to be kept in sync with IFtsoFeedPublisher.Feed struct in smart contracts

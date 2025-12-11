@@ -59,7 +59,7 @@ export class DataManager {
     protected readonly indexerClient: IndexerClient,
     protected readonly rewardEpochManager: RewardEpochManager,
     protected readonly logger: ILogger
-  ) { }
+  ) {}
 
   /**
    * Prepare data for median calculation and rewarding given the voting round id and the random generation benching window.
@@ -495,6 +495,6 @@ export class DataManager {
    * @returns
    */
   protected filterRevealsByDeadlineTime(reveals: SubmissionData[]) {
-    return reveals.filter(reveal => reveal.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds);
+    return reveals.filter((reveal) => reveal.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds);
   }
 }

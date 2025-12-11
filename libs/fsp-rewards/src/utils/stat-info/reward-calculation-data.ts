@@ -236,7 +236,7 @@ function augmentDataForCalculation(data: SDataForCalculation, rewardEpochInfo: R
     voterMedianVotingWeightsSet.set(voter.submitAddress.toLowerCase(), voter.weight);
   }
   const benchingWindowRevealOffendersSet = new Set<string>(
-    data.benchingWindowRevealOffenders.map(address => address.toLowerCase())
+    data.benchingWindowRevealOffenders.map((address) => address.toLowerCase())
   );
   data.validEligibleRevealsMap = validEligibleRevealsMap;
   data.revealOffendersSet = revealOffendersSet;

@@ -5,8 +5,7 @@ import { bigIntReplacer } from "../../../../ftso-core/src/utils/big-number-seria
 import { deserializeAggregatedClaimsForVotingRoundId } from "./aggregated-claims";
 import { TEMPORARY_INCREMENTAL_REWARDS_FILE } from "./constants";
 import { deserializeRewardEpochInfo } from "./reward-epoch-info";
-import {CALCULATIONS_FOLDER} from "../../constants";
-
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 import { FullVoterRegistrationInfo } from "../../../../ftso-core/src/data/FullVoterRegistrationInfo";
 
@@ -22,7 +21,10 @@ export interface IncrementalCalculationsTempRewards {
   otherRewards: IRewardClaim[];
 }
 
-export function getIncrementalCalculationsTempRewards(rewardEpochId: number, votingRoundId: number): IncrementalCalculationsTempRewards {
+export function getIncrementalCalculationsTempRewards(
+  rewardEpochId: number,
+  votingRoundId: number
+): IncrementalCalculationsTempRewards {
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const aggregatedClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, votingRoundId);
   const addressBeneficiaryToVoterId = new Map<string, number>();
@@ -33,20 +35,20 @@ export function getIncrementalCalculationsTempRewards(rewardEpochId: number, vot
     addressBeneficiaryToVoterId.set(voterRegInfo.voterRegistered.signingPolicyAddress.toLowerCase(), i);
     addressBeneficiaryToVoterId.set(voterRegInfo.voterRegistered.voter.toLowerCase(), i);
     addressBeneficiaryToVoterId.set(voterRegInfo.voterRegistrationInfo.delegationAddress.toLowerCase(), i);
-    for(const nodeId of voterRegInfo.voterRegistrationInfo.nodeIds) {
+    for (const nodeId of voterRegInfo.voterRegistrationInfo.nodeIds) {
       nodeIdBeneficiaryToVoterId.set(nodeId.toLowerCase(), i);
     }
   }
-  for(const claim of aggregatedClaims) {
+  for (const claim of aggregatedClaims) {
     let voterId = addressBeneficiaryToVoterId.get(claim.beneficiary.toLowerCase());
-    if(voterId !== undefined) {
+    if (voterId !== undefined) {
       let claims = voterIdToClaims.get(voterId) || [];
       voterIdToClaims.set(voterId, claims);
       claims.push(claim);
       continue;
     }
     voterId = nodeIdBeneficiaryToVoterId.get(claim.beneficiary.toLowerCase());
-    if(voterId !== undefined) {
+    if (voterId !== undefined) {
       let claims = voterIdToClaims.get(voterId) || [];
       voterIdToClaims.set(voterId, claims);
       claims.push(claim);
@@ -61,8 +63,8 @@ export function getIncrementalCalculationsTempRewards(rewardEpochId: number, vot
   for (let i = 0; i < rewardEpochInfo.voterRegistrationInfo.length; i++) {
     const voterReward: VoterRewards = {
       voter: rewardEpochInfo.voterRegistrationInfo[i],
-      aggregatedClaims: voterIdToClaims.get(i) || []
-    }
+      aggregatedClaims: voterIdToClaims.get(i) || [],
+    };
     voterRewards.push(voterReward);
   }
 
@@ -70,8 +72,8 @@ export function getIncrementalCalculationsTempRewards(rewardEpochId: number, vot
     rewardEpochId,
     votingRoundId,
     voterRewards,
-    otherRewards: voterIdToClaims.get(-1) || []
-  }
+    otherRewards: voterIdToClaims.get(-1) || [],
+  };
   return result;
 }
 
@@ -87,14 +89,10 @@ export function serializeIncrementalCalculationsTempRewards(
   if (!existsSync(calculationFolder)) {
     mkdirSync(calculationFolder);
   }
-  const rewardEpochFolder = path.join(
-    calculationFolder,
-    `${rewards.rewardEpochId}`
-  );
+  const rewardEpochFolder = path.join(calculationFolder, `${rewards.rewardEpochId}`);
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
   }
   const rewardsFile = path.join(rewardEpochFolder, TEMPORARY_INCREMENTAL_REWARDS_FILE);
   writeFileSync(rewardsFile, JSON.stringify(rewards, bigIntReplacer));
 }
-

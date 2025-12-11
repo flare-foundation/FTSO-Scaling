@@ -9,7 +9,7 @@ import { REWARD_EPOCH_INFO_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./const
 import { FUInflationRewardsOffered } from "../../../../contracts/src/events/FUInflationRewardsOffered";
 import { IncentiveOffered } from "../../../../contracts/src/events/IncentiveOffered";
 import { FDCInflationRewardsOffered } from "../../../../contracts/src/events/FDCInflationRewardsOffered";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 import { RewardOffers } from "../../../../ftso-core/src/data/RewardOffers";
 import { FullVoterRegistrationInfo } from "../../../../ftso-core/src/data/FullVoterRegistrationInfo";
 

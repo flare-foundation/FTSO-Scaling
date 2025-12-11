@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { ContractMethodNames } from "../../../contracts/src/definitions";
 
-import {CONTRACTS} from "../../../contracts/src/constants";
-import {AbiCache} from "../../../contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../contracts/src/constants";
+import { AbiCache } from "../../../contracts/src/abi/AbiCache";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 export enum ClaimType {
@@ -125,7 +125,7 @@ export namespace RewardClaim {
    * @returns
    */
   export function convertToRewardClaims(rewardEpochId: number, claims: IMergeableRewardClaim[]): IRewardClaim[] {
-    return claims.map(claim => {
+    return claims.map((claim) => {
       return {
         beneficiary: claim.beneficiary.toLowerCase(),
         claimType: claim.claimType,

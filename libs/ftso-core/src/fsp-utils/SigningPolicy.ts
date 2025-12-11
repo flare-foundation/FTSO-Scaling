@@ -140,7 +140,7 @@ export namespace SigningPolicy {
    */
   export function hashEncoded(signingPolicy: string) {
     const signingPolicyInternal = signingPolicy.startsWith("0x") ? signingPolicy.slice(2) : signingPolicy;
-    const splitted = signingPolicyInternal.match(/.{1,64}/g)!.map(x => x.padEnd(64, "0"))!;
+    const splitted = signingPolicyInternal.match(/.{1,64}/g)!.map((x) => x.padEnd(64, "0"))!;
     let hash: string = ethers.keccak256("0x" + splitted[0] + splitted[1])!;
     for (let i = 2; i < splitted!.length; i++) {
       hash = ethers.keccak256("0x" + hash.slice(2) + splitted[i])!;
@@ -152,7 +152,7 @@ export namespace SigningPolicy {
    * Normalizes addresses in signing policy by converting them to lower case.
    */
   export function normalizeAddresses(signingPolicy: ISigningPolicy) {
-    signingPolicy.voters = signingPolicy.voters.map(x => x.toLowerCase());
+    signingPolicy.voters = signingPolicy.voters.map((x) => x.toLowerCase());
     return signingPolicy;
   }
 

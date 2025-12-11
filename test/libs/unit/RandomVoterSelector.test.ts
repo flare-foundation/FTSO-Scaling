@@ -122,9 +122,9 @@ describe("RandomVoterSelector", () => {
     while (true) {
       const sequence = randomVoterSelector
         .randomNumberSequence(seed, i)
-        .map(s => BigInt(s) % BigInt(randomVoterSelector.totalWeight))
-        .map(n => randomVoterSelector.binarySearch(n))
-        .map(i => voters[i]);
+        .map((s) => BigInt(s) % BigInt(randomVoterSelector.totalWeight))
+        .map((n) => randomVoterSelector.binarySearch(n))
+        .map((i) => voters[i]);
       const selectedVotersSet = new Set(sequence);
       if (selectedVotersSet.size === result.length) {
         let sum2 = 0n;

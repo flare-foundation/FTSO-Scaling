@@ -144,7 +144,7 @@ export class RewardEpoch {
       this.submitSignatureAddressToSigningAddress.set(
         fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress.toLowerCase(),
         fullVoterRegistrationInfo.voterRegistered.signingPolicyAddress.toLowerCase()
-      )
+      );
 
       this.submitSignatureAddressToVoter.set(
         fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress.toLowerCase(),
@@ -156,7 +156,9 @@ export class RewardEpoch {
         fullVoterRegistrationInfo
       );
       this.orderedVotersSubmitAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitAddress);
-      this.orderedVotersSubmitSignatureAddresses.push(fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress);
+      this.orderedVotersSubmitSignatureAddresses.push(
+        fullVoterRegistrationInfo.voterRegistered.submitSignaturesAddress
+      );
 
       this.signingAddressToDelegationAddress.set(
         voterSigningAddress,
@@ -210,7 +212,9 @@ export class RewardEpoch {
   }
 
   public getSubmitSignatureAddressFromSubmitAddress(submitAddress: Address): Address | undefined {
-    return this.submitAddressToVoterRegistrationInfo.get(submitAddress.toLowerCase())?.voterRegistered.submitSignaturesAddress.toLowerCase();
+    return this.submitAddressToVoterRegistrationInfo
+      .get(submitAddress.toLowerCase())
+      ?.voterRegistered.submitSignaturesAddress.toLowerCase();
   }
 
   public getSubmitAddressFromSubmitSignatureAddress(submitSignatureAddress: Address): Address | undefined {
@@ -226,7 +230,9 @@ export class RewardEpoch {
     if (!voterAddress) {
       return undefined;
     }
-    const signingAddress = this.voterToRegistrationInfo.get(voterAddress.toLowerCase())?.voterRegistered.signingPolicyAddress.toLowerCase();
+    const signingAddress = this.voterToRegistrationInfo
+      .get(voterAddress.toLowerCase())
+      ?.voterRegistered.signingPolicyAddress.toLowerCase();
     if (!signingAddress) {
       return undefined;
     }

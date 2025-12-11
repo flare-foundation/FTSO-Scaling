@@ -47,7 +47,7 @@ describe(`SigningPolicy`, async () => {
   it("Should normalize addresses", async () => {
     const signingPolicyData2 = {
       ...signingPolicyData,
-      voters: signingPolicyData.voters.map(x => x.toUpperCase()),
+      voters: signingPolicyData.voters.map((x) => x.toUpperCase()),
     };
     SigningPolicy.normalizeAddresses(signingPolicyData2);
     for (let i = 0; i < signingPolicyData.voters.length; i++) {

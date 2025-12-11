@@ -64,7 +64,7 @@ export namespace FeedValueEncoder {
   }
 
   export function emptyFeeds(feeds: Feed[]): ValueWithDecimals[] {
-    return feeds.map(feed => emptyFeed(feed.decimals));
+    return feeds.map((feed) => emptyFeed(feed.decimals));
   }
 
   export function feedForValue(value: number, decimals: number) {

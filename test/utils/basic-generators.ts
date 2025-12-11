@@ -69,10 +69,10 @@ export function generateEvent(
 ): TLPEvents {
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
-  const types = abi.abi.inputs.filter(x => !x.indexed).map(x => x.type);
-  const values = abi.abi.inputs.filter(x => !x.indexed).map(x => eventData[x.name]);
-  const indexedTypes = abi.abi.inputs.filter(x => x.indexed).map(x => x.type);
-  const indexedValues = abi.abi.inputs.filter(x => x.indexed).map(x => eventData[x.name]);
+  const types = abi.abi.inputs.filter((x) => !x.indexed).map((x) => x.type);
+  const values = abi.abi.inputs.filter((x) => !x.indexed).map((x) => eventData[x.name]);
+  const indexedTypes = abi.abi.inputs.filter((x) => x.indexed).map((x) => x.type);
+  const indexedValues = abi.abi.inputs.filter((x) => x.indexed).map((x) => eventData[x.name]);
   const data = encodeParameters(types, values);
 
   if (indexedTypes.length > 3) {

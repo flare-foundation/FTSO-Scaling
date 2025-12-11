@@ -5,7 +5,7 @@ import { bigIntReplacer } from "../../../../ftso-core/src/utils/big-number-seria
 import { TEMPORARY_INCREMENTAL_FEED_SELECTION_FILE } from "./constants";
 import { deserializeDataForRewardCalculation } from "./reward-calculation-data";
 import { deserializeRewardEpochInfo } from "./reward-epoch-info";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 export interface FeedSelection {
   votingRoundId: number;
@@ -23,27 +23,37 @@ export interface IncrementalCalculationsFeedSelections {
  * Generates the feed selection temporary file for the given reward epoch and voting round.
  * The provider voting round must have the secure random number set.
  */
-export function getIncrementalCalculationsFeedSelections(rewardEpochId: number, votingRoundIdWithSecureRewardRandom: number): IncrementalCalculationsFeedSelections {
+export function getIncrementalCalculationsFeedSelections(
+  rewardEpochId: number,
+  votingRoundIdWithSecureRewardRandom: number
+): IncrementalCalculationsFeedSelections {
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const feedSelections: FeedSelection[] = [];
-  for(let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId; votingRoundId <= votingRoundIdWithSecureRewardRandom; votingRoundId++) {
-      const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
-      if(data.nextVotingRoundRandomResult === undefined) {
-        throw new Error(`Voting round ${votingRoundId} does not have the secure random number for rewarding set.`);
-      }
-      const selectedFeed = data.dataForCalculations.feedOrder[Number(BigInt(data.nextVotingRoundRandomResult) % BigInt(data.dataForCalculations.feedOrder.length))];
-      const feedSelection: FeedSelection = {
-        votingRoundId,
-        feed: selectedFeed,
-        secureRandomNumber: data.nextVotingRoundRandomResult,
-      }
-      feedSelections.push(feedSelection);
+  for (
+    let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
+    votingRoundId <= votingRoundIdWithSecureRewardRandom;
+    votingRoundId++
+  ) {
+    const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId);
+    if (data.nextVotingRoundRandomResult === undefined) {
+      throw new Error(`Voting round ${votingRoundId} does not have the secure random number for rewarding set.`);
+    }
+    const selectedFeed =
+      data.dataForCalculations.feedOrder[
+        Number(BigInt(data.nextVotingRoundRandomResult) % BigInt(data.dataForCalculations.feedOrder.length))
+      ];
+    const feedSelection: FeedSelection = {
+      votingRoundId,
+      feed: selectedFeed,
+      secureRandomNumber: data.nextVotingRoundRandomResult,
+    };
+    feedSelections.push(feedSelection);
   }
   const result: IncrementalCalculationsFeedSelections = {
     rewardEpochId,
     lastVotingRoundIdWithSelection: votingRoundIdWithSecureRewardRandom,
     feedSelections,
-  }
+  };
   return result;
 }
 
@@ -59,14 +69,10 @@ export function serializeIncrementalCalculationsFeedSelections(
   if (!existsSync(calculationFolder)) {
     mkdirSync(calculationFolder);
   }
-  const rewardEpochFolder = path.join(
-    calculationFolder,
-    `${feedSelections.rewardEpochId}`
-  );
+  const rewardEpochFolder = path.join(calculationFolder, `${feedSelections.rewardEpochId}`);
   if (!existsSync(rewardEpochFolder)) {
     mkdirSync(rewardEpochFolder);
   }
   const feedSelectionsFile = path.join(rewardEpochFolder, TEMPORARY_INCREMENTAL_FEED_SELECTION_FILE);
   writeFileSync(feedSelectionsFile, JSON.stringify(feedSelections, bigIntReplacer));
 }
-

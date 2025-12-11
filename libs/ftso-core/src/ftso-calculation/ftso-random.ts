@@ -9,7 +9,7 @@ import { MAX_2_256, NON_BENCHED_RANDOM_VOTERS_MIN_COUNT } from "./ftso-constants
  */
 export function calculateRandom(data: DataForCalculations): RandomCalculationResult {
   const nonBenchedOffendersSize = [...data.revealOffenders].filter(
-    voter => !data.benchingWindowRevealOffenders.has(voter.toLowerCase())
+    (voter) => !data.benchingWindowRevealOffenders.has(voter.toLowerCase())
   ).length;
   let random = 0n;
 

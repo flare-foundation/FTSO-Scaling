@@ -1,7 +1,10 @@
 import Web3 from "web3";
 
 export class Bytes32 {
-  private constructor(private readonly bytes: Uint8Array, private hex: string | undefined = undefined) {}
+  private constructor(
+    private readonly bytes: Uint8Array,
+    private hex: string | undefined = undefined
+  ) {}
 
   static fromHexString(input: string): Bytes32 {
     if (input == undefined) throw new Error("Input undefined");

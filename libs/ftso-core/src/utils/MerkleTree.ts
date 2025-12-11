@@ -133,7 +133,7 @@ export class MerkleTree {
    * @param values
    */
   build(values: string[]) {
-    const sorted = values.map(x => toHex(x, 32));
+    const sorted = values.map((x) => toHex(x, 32));
     sorted.sort();
 
     let hashes = [];
@@ -143,7 +143,7 @@ export class MerkleTree {
       }
     }
     if (this.initialHash) {
-      hashes = hashes.map(x => singleHash(x));
+      hashes = hashes.map((x) => singleHash(x));
     }
     const n = hashes.length;
     this._tree = [...new Array(Math.max(n - 1, 0)).fill(0), ...hashes];

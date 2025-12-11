@@ -66,7 +66,7 @@ export function calculateFinalizationRewardClaims(
     };
     return [otherFinalizerClaim];
   }
-  const gracePeriodFinalizations = finalizations.filter(finalization =>
+  const gracePeriodFinalizations = finalizations.filter((finalization) =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
   // Rewarding of first successful finalizations outside of the grace period are already handled above
@@ -127,9 +127,7 @@ export function calculateFinalizationRewardClaims(
 
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= 1n;
-    resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId)
-    );
+    resultClaims.push(...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId));
   }
 
   if (undistributedAmount < 0n) {

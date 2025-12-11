@@ -112,7 +112,7 @@ describe(`retry; ${getTestFile(__filename)}`, () => {
 
       await expect(retryWithTimeout(f, 1, MAX_RETRIES, ZERO_BACKOFF))
         .to.be.rejectedWith(Error)
-        .then(e => {
+        .then((e) => {
           expect(e.cause).to.be.instanceOf(TimeoutError);
         });
     });

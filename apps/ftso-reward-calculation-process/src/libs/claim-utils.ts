@@ -142,7 +142,7 @@ export async function calculateAndAggregateRemainingClaims(
       options.retryDelayMs,
       logger,
       false, //options.useFastUpdatesData
-      false, //options.useFDCData
+      false //options.useFDCData
     );
 
     logger.log(`Claims calculated for voting round ${tmpVotingRoundId}.`);

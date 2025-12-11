@@ -3,7 +3,7 @@ import path from "path/posix";
 import { IPartialRewardClaim } from "../RewardClaim";
 import { bigIntReplacer, bigIntReviver } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { CLAIMS_FILE } from "./constants";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 /**
  * Serializes a list of partial claims for a given voting round to disk.

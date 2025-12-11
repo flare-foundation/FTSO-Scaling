@@ -1,6 +1,6 @@
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 export class IncentiveOffered extends RawEventConstructible {
   static eventName = "IncentiveOffered";

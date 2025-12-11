@@ -25,7 +25,7 @@ export function calculatePenalties(
   penaltyType: RewardTypePrefix
 ): IPartialRewardClaim[] {
   const totalWeight = [...votersWeights.values()]
-    .map(voterWeight => medianRewardDistributionWeight(voterWeight))
+    .map((voterWeight) => medianRewardDistributionWeight(voterWeight))
     .reduce((a, b) => a + b, 0n);
 
   const penaltyClaims: IPartialRewardClaim[] = [];
@@ -43,7 +43,9 @@ export function calculatePenalties(
       }
       penalty = (-voterWeight * offer.amount * penaltyFactor) / totalWeight;
     }
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FTSO2_PROTOCOL_ID));
+    penaltyClaims.push(
+      ...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FTSO2_PROTOCOL_ID)
+    );
   }
   return penaltyClaims;
 }

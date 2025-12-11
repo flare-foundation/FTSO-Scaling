@@ -16,8 +16,8 @@ import { RandomVoterSelector } from "../../../libs/fsp-rewards/src/reward-calcul
 import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import { TestVoter, generateTx } from "../basic-generators";
 import { Queue } from "./Queue";
-import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../libs/contracts/src/constants";
+import { AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../libs/contracts/src/constants";
 
 const encodingUtils = AbiCache.instance;
 
@@ -97,7 +97,7 @@ export class MiniFinalizer {
       }
       const signaturePayloads = this.results.get(entry.votingRoundId)?.get(entry.protocolId)?.get(entry.messageHash);
 
-      const signatures: IECDSASignatureWithIndex[] = signaturePayloads.map(signaturePayload => {
+      const signatures: IECDSASignatureWithIndex[] = signaturePayloads.map((signaturePayload) => {
         return {
           r: signaturePayload.signature.r,
           s: signaturePayload.signature.s,
@@ -114,7 +114,7 @@ export class MiniFinalizer {
       let selectionIndex = -1;
       if (!overrideAddress) {
         selectionIndex = this.voterSelector.inSelectionList(
-          matchingSigningPolicy.voters.map(x => x.toLowerCase()),
+          matchingSigningPolicy.voters.map((x) => x.toLowerCase()),
           matchingSigningPolicy.seed,
           messageData.protocolId,
           messageData.votingRoundId,
@@ -179,7 +179,7 @@ export class MiniFinalizer {
       return;
     }
     for (const submissionList of finalizationMap.values()) {
-      const signaturePayloads = submissionList.map(submission => submission.messages);
+      const signaturePayloads = submissionList.map((submission) => submission.messages);
       this.processSignaturePayloads(signaturePayloads, rewardEpoch.signingPolicy);
     }
   }

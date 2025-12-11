@@ -503,9 +503,9 @@ export function updateClaimsForMinimalConditions(
   beneficiariesToBurn.add(BURN_ADDRESS.toLowerCase());
 
   const rewardDistributionData = deserializeRewardDistributionData(rewardEpochId);
-  const claims = rewardDistributionData.rewardClaims.map(item => item.body);
-  const fullClaims = claims.filter(claim => !beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
-  const claimsToBurn = claims.filter(claim => beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
+  const claims = rewardDistributionData.rewardClaims.map((item) => item.body);
+  const fullClaims = claims.filter((claim) => !beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
+  const claimsToBurn = claims.filter((claim) => beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
   const burnClaim: IRewardClaim = {
     beneficiary: BURN_ADDRESS.toLowerCase(),
     amount: claimsToBurn.reduce((acc, claim) => acc + claim.amount, 0n),

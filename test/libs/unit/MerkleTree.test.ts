@@ -38,7 +38,7 @@ describe(`Merkle Tree`, () => {
     });
 
     it("Should omit duplicates", () => {
-      const tree = new MerkleTree(["0x11", "0x11", "0x22"].map(x => ethers.zeroPadBytes(x, 32)));
+      const tree = new MerkleTree(["0x11", "0x11", "0x22"].map((x) => ethers.zeroPadBytes(x, 32)));
       assert(tree.tree.length === 3);
     });
 

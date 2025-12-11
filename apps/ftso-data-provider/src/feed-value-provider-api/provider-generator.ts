@@ -42,4 +42,4 @@ generateApi({
   .then(({ files, configuration }) => {
     console.log(`Generated ${files.length} files`);
   })
-  .catch(e => console.error(e));
+  .catch((e) => console.error(e));

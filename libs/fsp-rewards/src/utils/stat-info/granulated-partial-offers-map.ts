@@ -4,7 +4,7 @@ import { IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../P
 import { RewardEpochDuration } from "../../../../ftso-core/src/utils/RewardEpochDuration";
 import { bigIntReplacer, bigIntReviver } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { FDC_OFFERS_FILE, FU_OFFERS_FILE, OFFERS_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 export interface FeedOffers<T> {
   readonly feedId: string;
@@ -100,8 +100,6 @@ export function serializeGranulatedPartialOfferMapForFDC(
   }
 }
 
-
-
 /**
  * Creates necessary folders for reward epoch calculations. These include
  * the `<calculationsFolder>/<rewardEpochId>/<votingRoundId>` folders.
@@ -194,4 +192,3 @@ export function deserializeOffersForFDC(
   );
   return offersPerVotingRound;
 }
-

@@ -153,7 +153,7 @@ export function extractFDCRewardData(
     const submitSignatureAddress = rewardEpoch
       .getSubmitSignatureAddressFromSubmitAddress(submission.submitAddress.toLowerCase())
       .toLowerCase();
-    const message = submission.messages.find(m => m.protocolId === FDC_PROTOCOL_ID);
+    const message = submission.messages.find((m) => m.protocolId === FDC_PROTOCOL_ID);
     if (message && message.payload) {
       submitSignatureAddressToBitVote.set(submitSignatureAddress, message.payload.toLowerCase());
     }

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { generateEvent } from "./basic-generators";
-import {decodeEvent} from "../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../libs/contracts/src/constants";
+import { decodeEvent } from "../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../libs/contracts/src/constants";
 
 describe("generators", () => {
   // Event ABI example

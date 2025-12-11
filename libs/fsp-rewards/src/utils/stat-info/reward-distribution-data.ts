@@ -30,7 +30,10 @@ export function serializeRewardDistributionData(
   calculationFolder = CALCULATIONS_FOLDER()
 ): void {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
-  const rewardDistributionDataPath = path.join(rewardEpochFolder, appliedMinConditions ? REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE : REWARD_DISTRIBUTION_DATA_FILE);
+  const rewardDistributionDataPath = path.join(
+    rewardEpochFolder,
+    appliedMinConditions ? REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE : REWARD_DISTRIBUTION_DATA_FILE
+  );
   const abi = AbiCache.instance.getFunctionInputAbiData(
     CONTRACTS.ProtocolMerkleStructs.name,
     ContractMethodNames.rewardClaimStruct,
@@ -38,9 +41,9 @@ export function serializeRewardDistributionData(
   ).abi;
   const merkleTree = buildRewardClaimMerkleTree(rewardClaims);
   const merkleRoot = merkleTree.root ?? Web3.utils.keccak256(ZERO_BYTES32);
-  const rewardClaimsWithProof = rewardClaims.map(claim => getMerkleProof(claim, merkleTree));
+  const rewardClaimsWithProof = rewardClaims.map((claim) => getMerkleProof(claim, merkleTree));
   const noOfWeightBasedClaims = rewardClaims.filter(
-    claim =>
+    (claim) =>
       claim.claimType === ClaimType.WNAT || claim.claimType === ClaimType.MIRROR || claim.claimType === ClaimType.CCHAIN
   ).length;
   const result: IRewardDistributionData = {
@@ -66,7 +69,10 @@ export function deserializeRewardDistributionData(
   calculationFolder = CALCULATIONS_FOLDER()
 ): IRewardDistributionData {
   const rewardEpochFolder = path.join(calculationFolder, `${rewardEpochId}`);
-  const rewardDistributionDataPath = path.join(rewardEpochFolder, applyMinConditions ? REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE : REWARD_DISTRIBUTION_DATA_FILE);
+  const rewardDistributionDataPath = path.join(
+    rewardEpochFolder,
+    applyMinConditions ? REWARD_DISTRIBUTION_MIN_CONDITIONS_DATA_FILE : REWARD_DISTRIBUTION_DATA_FILE
+  );
   if (!existsSync(rewardDistributionDataPath)) {
     throw new Error(`Reward distribution data for epoch ${rewardEpochId} does not exist.`);
   }

@@ -1,6 +1,6 @@
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
  * RewardOffer object obtained from the FlareSystemsManager smart contract

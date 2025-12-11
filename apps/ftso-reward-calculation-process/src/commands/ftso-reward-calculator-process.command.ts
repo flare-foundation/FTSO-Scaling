@@ -181,5 +181,4 @@ export class FtsoRewardCalculationProcessCommand extends CommandRunner {
   parseMinimalConditions(val: string): boolean {
     return JSON.parse(val);
   }
-
 }

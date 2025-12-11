@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, rmSync } from "fs";
 import path from "path/posix";
 import { TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 /**
  * Destroys storage for a given reward epoch. It removes the folder.

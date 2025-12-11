@@ -89,7 +89,7 @@ export function calculateSigningRewards(
     );
     let signatures = data.signaturesMap.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
     // filter out double signers
-    signatures = signatures.filter(signature => !doubleSigners.has(signature.messages.signer!.toLowerCase()));
+    signatures = signatures.filter((signature) => !doubleSigners.has(signature.messages.signer!.toLowerCase()));
 
     // rewarded:
     // - all signatures in grace period (no matter of finalization timestamp)
@@ -100,7 +100,7 @@ export function calculateSigningRewards(
       EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1)
     );
     rewardEligibleSignatures = signatures.filter(
-      signature =>
+      (signature) =>
         isSignatureInGracePeriod(votingRoundId, signature) ||
         isSignatureBeforeTimestamp(votingRoundId, signature, deadlineTimestamp)
     );
@@ -234,7 +234,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   const hashToWeight = new Map<string, number>();
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     let weightSum = 0;
-    const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
+    const filteredSubmissions = signatureSubmissions.filter((signatureSubmission) =>
       isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
     );
     for (const signatureSubmission of filteredSubmissions) {
@@ -253,7 +253,7 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     const weightSum = hashToWeight.get(hash)!;
     if (weightSum === maxWeight && weightSum >= minimalWeightThreshold) {
-      const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
+      const filteredSubmissions = signatureSubmissions.filter((signatureSubmission) =>
         isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
       );
       result.push(...filteredSubmissions);

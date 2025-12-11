@@ -2,7 +2,7 @@ import { VoterWeights } from "../../../ftso-core/src/RewardEpoch";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
-import {CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS} from "../constants";
+import { CAPPED_STAKING_FEE_BIPS, TOTAL_BIPS } from "../constants";
 
 export enum SigningWeightRewardClaimType {
   NO_VOTER_WEIGHT = "NO_VOTER_WEIGHT",

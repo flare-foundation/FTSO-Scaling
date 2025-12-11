@@ -4,7 +4,7 @@ import { Observable, map } from "rxjs";
 @Injectable()
 export class BigIntInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    return next.handle().pipe(map(data => this.convertBigIntToString(data)));
+    return next.handle().pipe(map((data) => this.convertBigIntToString(data)));
   }
 
   private convertBigIntToString(data: any): any {
@@ -16,10 +16,10 @@ export class BigIntInterceptor implements NestInterceptor {
     }
 
     if (Array.isArray(data)) {
-      return data.map(item => this.convertBigIntToString(item));
+      return data.map((item) => this.convertBigIntToString(item));
     }
 
-    Object.keys(data).forEach(key => {
+    Object.keys(data).forEach((key) => {
       data[key] = this.convertBigIntToString(data[key]);
     });
 

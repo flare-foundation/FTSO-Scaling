@@ -29,7 +29,7 @@ export function prepareResultsForVotingRound(
 ): EpochResult {
   const merkleTree = new MerkleTree([
     MerkleTreeStructs.hashRandomCalculationResult(epochRandom),
-    ...medianResults.map(result => MerkleTreeStructs.hashMedianCalculationResult(result)),
+    ...medianResults.map((result) => MerkleTreeStructs.hashMedianCalculationResult(result)),
   ]);
 
   const epochResult: EpochResult = {

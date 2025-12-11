@@ -1,8 +1,8 @@
 import { Bytes32 } from "../../../ftso-core/src/utils/sol-types";
 import { Address } from "../../../ftso-core/src/voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
  * VoterRegistration object obtained from the VotingRegistry smart contract

@@ -44,7 +44,7 @@ describe("RewardEpochManager", () => {
 
     expect(rewardEpoch.rewardEpochId).to.be.equal(rewardEpochId);
     expect(rewardEpoch.startVotingRoundId).to.be.equal(votingRound);
-    expect(rewardEpoch.orderedVotersSubmitAddresses).to.eql(voters.map(v => v.submitAddress));
+    expect(rewardEpoch.orderedVotersSubmitAddresses).to.eql(voters.map((v) => v.submitAddress));
   });
 
   async function setUpRewardEpoch(rewardEpochId: number) {

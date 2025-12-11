@@ -7,7 +7,7 @@ import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { medianRewardDistributionWeight } from "./reward-utils";
-import {TOTAL_BIPS, TOTAL_PPM} from "../constants";
+import { TOTAL_BIPS, TOTAL_PPM } from "../constants";
 
 export enum MediantRewardClaimType {
   LOW_TURNOUT_CLAIM_BACK = "LOW_TURNOUT_CLAIM_BACK",
@@ -92,7 +92,7 @@ export function calculateMedianRewardClaims(
 
   const voterRecords: VoterRewarding[] = [];
 
-  const abs = n => (n < 0n ? -n : n);
+  const abs = (n) => (n < 0n ? -n : n);
   const secondaryBandDiff = (abs(median) * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
 
   const lowPCT = median - secondaryBandDiff;

@@ -1,5 +1,5 @@
-import {TLPTransaction} from "../orm/entities";
-import {IPayloadMessage, PayloadMessage} from "../fsp-utils/PayloadMessage";
+import { TLPTransaction } from "../orm/entities";
+import { IPayloadMessage, PayloadMessage } from "../fsp-utils/PayloadMessage";
 
 /**
  * Decode function call data encoded using PayloadMessage

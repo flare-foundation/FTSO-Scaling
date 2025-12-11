@@ -1,6 +1,6 @@
 import { InflationRewardsOffered, RewardsOffered } from "../../../contracts/src/events";
 import { Address } from "../../../ftso-core/src/voting-types";
-import {BURN_ADDRESS} from "../constants";
+import { BURN_ADDRESS } from "../constants";
 
 export interface IPartialRewardOfferForEpoch {
   // reward epoch id
@@ -56,7 +56,6 @@ export interface IFUPartialRewardOfferForRound {
   rewardBandValue: number;
   shouldBeBurned?: boolean;
 }
-
 
 export namespace PartialRewardOffer {
   export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOfferForEpoch {

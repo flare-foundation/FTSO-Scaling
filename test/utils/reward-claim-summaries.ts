@@ -2,8 +2,7 @@ import { RewardTypePrefix } from "../../libs/fsp-rewards/src/reward-calculation/
 import { ILogger, emptyLogger } from "../../libs/ftso-core/src/utils/ILogger";
 import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../libs/fsp-rewards/src/utils/RewardClaim";
 import { TestVoter } from "./basic-generators";
-import {BURN_ADDRESS} from "../../libs/fsp-rewards/src/constants";
-
+import { BURN_ADDRESS } from "../../libs/fsp-rewards/src/constants";
 
 import { RewardOffers } from "../../libs/ftso-core/src/data/RewardOffers";
 
@@ -14,15 +13,15 @@ function claimListSummary(
   claims: IRewardClaim[],
   padding = 10
 ) {
-  const feeClaim = claims.find(c => c.claimType === ClaimType.FEE);
+  const feeClaim = claims.find((c) => c.claimType === ClaimType.FEE);
   const fee = (feeClaim ? flrFormat(feeClaim.amount) : 0).toString().padStart(padding);
-  const wnatClaim = claims.find(c => c.claimType === ClaimType.WNAT);
+  const wnatClaim = claims.find((c) => c.claimType === ClaimType.WNAT);
   const wnat = (wnatClaim ? flrFormat(wnatClaim.amount) : 0).toString().padStart(padding);
-  const mirrorClaim = claims.find(c => c.claimType === ClaimType.MIRROR);
+  const mirrorClaim = claims.find((c) => c.claimType === ClaimType.MIRROR);
   const mirror = (mirrorClaim ? flrFormat(mirrorClaim.amount) : 0).toString().padStart(padding);
-  const directClaim = claims.find(c => c.claimType === ClaimType.DIRECT);
+  const directClaim = claims.find((c) => c.claimType === ClaimType.DIRECT);
   const direct = (directClaim ? flrFormat(directClaim.amount) : 0).toString().padStart(padding);
-  const cchainClaim = claims.find(c => c.claimType === ClaimType.CCHAIN);
+  const cchainClaim = claims.find((c) => c.claimType === ClaimType.CCHAIN);
   const cchain = (cchainClaim ? flrFormat(cchainClaim.amount) : 0).toString().padStart(padding);
 
   let indexValue = "-";
@@ -272,7 +271,9 @@ export function claimSummary(voters: TestVoter[], claims: IRewardClaim[], logger
   }
   logger.log("CLAIM SUMMARY");
   logger.log(`Total value: ${flrFormat(totalValue)}(${totalValue.toString()})`);
-  logger.log(`Burned value: ${flrFormat(burned)} (${burned.toString()}, ${Number(burned)/Number(totalValue)*100}%)`);
+  logger.log(
+    `Burned value: ${flrFormat(burned)} (${burned.toString()}, ${(Number(burned) / Number(totalValue)) * 100}%)`
+  );
   logger.log("VOTER FEES (by identity address):");
   for (let i = 0; i < voters.length; i++) {
     const voter = voters[i];

@@ -6,7 +6,7 @@ import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { generateAddress, generateRewardsOffer, generateVotersWeights } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { splitToVotingRoundsEqually } from "./generator-rewards.test";
-import {PENALTY_FACTOR} from "../../../libs/fsp-rewards/src/constants";
+import { PENALTY_FACTOR } from "../../../libs/fsp-rewards/src/constants";
 
 describe(`Reward penalties, ${getTestFile(__filename)}`, function () {
   const votersWeights = generateVotersWeights(10);

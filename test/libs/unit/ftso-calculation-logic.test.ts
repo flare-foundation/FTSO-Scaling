@@ -9,7 +9,6 @@ import { ValueWithDecimals } from "../../../libs/ftso-core/src/data/FeedValueEnc
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { getTestFile } from "../../utils/getTestFile";
 
-
 import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
 describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
