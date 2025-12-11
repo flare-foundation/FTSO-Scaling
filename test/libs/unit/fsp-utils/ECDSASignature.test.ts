@@ -5,7 +5,7 @@ import { ECDSASignature } from "../../../../libs/ftso-core/src/fsp-utils/ECDSASi
 describe(`ECDSASignature`, () => {
   const accountPrivateKeys = JSON.parse(
     readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")
-  ).map((x: { privateKey: string; }) => x.privateKey);
+  ).map((x: { privateKey: string }) => x.privateKey);
 
   it("Should encode and decode ECDSA signature", () => {
     const messageHash = "0x1122334455667788990011223344556677889900112233445566778899001122";

@@ -19,7 +19,7 @@ const ftso2ProtocolId = () => {
       return 100;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -80,7 +80,7 @@ const epochSettings = () => {
       );
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -124,7 +124,7 @@ const randomGenerationBenchingWindow = () => {
       return 20;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -159,7 +159,7 @@ const initialRewardEpochId = () => {
       return 0;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };

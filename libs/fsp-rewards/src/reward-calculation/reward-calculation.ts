@@ -389,7 +389,7 @@ export async function partialRewardClaimsForVotingRound(
         rewardEpochInfo,
         data,
         PENALTY_FACTOR(),
-         
+
         data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.FDC_OFFENDERS
       );

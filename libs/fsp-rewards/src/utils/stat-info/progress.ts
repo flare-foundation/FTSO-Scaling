@@ -66,7 +66,7 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
       };
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(progressType);
   }
 }

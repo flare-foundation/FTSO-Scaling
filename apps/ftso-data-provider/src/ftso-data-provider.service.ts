@@ -102,10 +102,7 @@ export class FtsoDataProviderService {
     return data;
   }
 
-  getRevealData(
-    votingRoundId: number,
-    submissionAddress: string
-  ): IPayloadMessage<IRevealData> | undefined {
+  getRevealData(votingRoundId: number, submissionAddress: string): IPayloadMessage<IRevealData> | undefined {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
     const revealData = this.votingRoundData.get(combine(votingRoundId, submissionAddress));

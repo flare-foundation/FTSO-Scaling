@@ -189,11 +189,7 @@ export function calculateMedianRewardClaims(
 
     totalReward += reward;
 
-    const rewardClaim = generateMedianRewardClaimsForVoter(
-      reward,
-      offer,
-      votersWeights.get(voterRecord.submitAddress)
-    );
+    const rewardClaim = generateMedianRewardClaimsForVoter(reward, offer, votersWeights.get(voterRecord.submitAddress));
     rewardClaims.push(...rewardClaim);
   }
   // Assert

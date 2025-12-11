@@ -162,7 +162,7 @@ const contracts = () => {
     }
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };

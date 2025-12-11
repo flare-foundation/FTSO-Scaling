@@ -50,7 +50,6 @@ export async function calculateClaimsAndAggregate(
 ) {
   let done = false;
   while (!done) {
-     
     try {
       logger.log(`Calculating claims for voting round: ${votingRoundId}`);
       await partialRewardClaimsForVotingRound(

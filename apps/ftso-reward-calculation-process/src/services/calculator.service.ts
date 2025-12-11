@@ -371,7 +371,6 @@ export class CalculatorService {
       return;
     }
     if (options.incrementalCalculation) {
-       
       while (true) {
         // Ends when the rewards for reward epoch are fully processed.
         await this.runRewardCalculationIncremental(options);

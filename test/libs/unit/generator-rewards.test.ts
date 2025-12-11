@@ -99,38 +99,32 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
   // no direct claims
   expect((claims as any).filter((c) => c.claimType === ClaimType.DIRECT).length).to.equal(0);
   // zero burn value
-  expect(
-    (claims).filter((c) => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length
-  ).to.equal(0);
+  expect(claims.filter((c) => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length).to.equal(0);
 
-  const finalizationClaims = (claims).filter((c) =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)
-  );
+  const finalizationClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION));
   expect(finalizationClaims.length).to.equal(60); // 5 voting rounds x 4 claims x 3 offers x 1 finalizer
   const feeFinalizationClams = finalizationClaims.filter((c) => c.claimType === ClaimType.FEE);
   expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
 
-  const signatureClaims = (claims).filter((c) =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)
-  );
+  const signatureClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING));
   // console.dir(finalizationClaims)
   expect(signatureClaims.length).to.equal(600); // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
   for (const voter of voters) {
     // all voters have fees in merged claims
-    const feeClaim = (mergedClaims).find(
+    const feeClaim = mergedClaims.find(
       (c) => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE
     );
     expect(feeClaim).to.not.be.undefined;
     expect(Number(feeClaim.amount)).gt(0);
     // all voters have delegation rewards in merged claims
-    const delegationClaim = (mergedClaims).find(
+    const delegationClaim = mergedClaims.find(
       (c) => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT
     );
     expect(delegationClaim).to.not.be.undefined;
     expect(Number(delegationClaim.amount)).gt(0);
     // all nodes of voters have staking rewards in merged claims
     for (const nodeId of voter.nodeIds) {
-      const stakingClaim = (mergedClaims).find(
+      const stakingClaim = mergedClaims.find(
         (c) => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR
       );
       expect(stakingClaim).to.not.be.undefined;
@@ -163,14 +157,10 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
     }
   }
   // no double signing penalties
-  const doubleSignerClaims = (claims).filter((c) =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)
-  );
+  const doubleSignerClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS));
   expect(doubleSignerClaims.length).to.equal(0);
   // no reveal offender penalties Reveal offenders
-  const revealOffenderClaims = (claims).filter((c) =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)
-  );
+  const revealOffenderClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS));
   expect(revealOffenderClaims.length).to.equal(0);
 }
 

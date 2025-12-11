@@ -105,7 +105,11 @@ export class AbiCache {
   /**
    * Returns ABI input definition for a given smart contract name, function name and function argument id
    */
-  getFunctionInputAbiData(contractName: string, functionName: ContractMethodNames, functionArgumentId: number): AbiDataInput {
+  getFunctionInputAbiData(
+    contractName: string,
+    functionName: ContractMethodNames,
+    functionArgumentId: number
+  ): AbiDataInput {
     return this.getAbiInput(contractName, functionName, functionArgumentId);
   }
 

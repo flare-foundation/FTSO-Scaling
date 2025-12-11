@@ -145,9 +145,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     clock.tick(EPOCH_SETTINGS().votingEpochDurationSeconds * 1000);
 
     for (let i = 0; i < voters.length; i++) {
-      const encodedReveal = encodeRevealPayloadMessage(
-        services[i].getRevealData(votingRound, voters[i].submitAddress)
-      );
+      const encodedReveal = encodeRevealPayloadMessage(services[i].getRevealData(votingRound, voters[i].submitAddress));
       const revealPayload = sigReveal + unPrefix0x(encodedReveal);
       const revealTx = generateTx(
         voters[i].submitAddress,

@@ -15,7 +15,7 @@ const ftso2FastUpdatesProtocolId = () => {
       return 255;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -35,7 +35,7 @@ const FDCProtocolId = () => {
       return 200;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -62,7 +62,7 @@ const additionalRewardFinalizationWindows = () => {
       return 0;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -83,7 +83,7 @@ const burnAddress = () => {
       return "0xD9e5B450773B17593abAfCF73aB96ad99d589751";
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -140,7 +140,7 @@ const penaltyFactor = () => {
       return 30n;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -173,7 +173,7 @@ const gracePeriodForSignaturesDurationSec = () => {
       return 15; // 15 seconds
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -208,7 +208,7 @@ const gracePeriodForFinalizationDurationSec = () => {
       return 20; // seconds
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -256,7 +256,7 @@ const minimalRewardedNonConsensusDepositedSignaturesPerHashBips = () => {
       return 3000;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -288,7 +288,7 @@ const finalizationVoterSelectionThresholdWeightBips = () => {
       return 500;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -323,7 +323,7 @@ export const CALCULATIONS_FOLDER = () => {
       return "calculations/local-test";
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -355,7 +355,7 @@ export const STAKING_DATA_FOLDER = () => {
       return `${STAKING_DATA_BASE_FOLDER}/local-test`;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
@@ -377,7 +377,7 @@ export const PASSES_DATA_FOLDER = () => {
       return `${PASSES_DATA_BASE_FOLDER}/local-test`;
     default:
       // Ensure exhaustive checking
-       
+
       ((_: never): void => {})(network);
   }
 };
