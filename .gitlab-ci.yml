@@ -4,22 +4,38 @@ workflow:
       when: never
     - when: always
 
-test-all:
+lint:
   stage: test
-  needs: []
   image: node:22
   cache:
-  - key:
-      files:
-      - yarn.lock
-    paths:
-    - node_modules
-    - .yarn-cache
-    policy: pull-push
+    - key:
+        files:
+          - yarn.lock
+      paths:
+        - node_modules
+        - .yarn-cache
+      policy: pull-push
   before_script:
-  - yarn install --frozen-lockfile --cache-folder .yarn-cache
+    - yarn install --frozen-lockfile --cache-folder .yarn-cache
   script:
-  - yarn test:all
+    - yarn format:check
+
+test-all:
+  stage: test
+  needs: [ ]
+  image: node:22
+  cache:
+    - key:
+        files:
+          - yarn.lock
+      paths:
+        - node_modules
+        - .yarn-cache
+      policy: pull-push
+  before_script:
+    - yarn install --frozen-lockfile --cache-folder .yarn-cache
+  script:
+    - yarn test:all
 
 # TODO: enable coverage reports
 # test-coverage:

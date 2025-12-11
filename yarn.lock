@@ -222,6 +222,11 @@
   resolved "https://registry.yarnpkg.com/@biomejs/wasm-nodejs/-/wasm-nodejs-2.0.0-beta.6.tgz#78f2b1714a7ebe3289a8295ab80985eeb24d50af"
   integrity sha512-UI8uhz8YUjROBqr8OX3M8aK5Dw+MQfpE3D8sODCoE1CHH/4lvYdYksO/hU6qUe7qOYTI/Dyf2/DOQA5XRvRtAg==
 
+"@bytecodealliance/preview2-shim@0.17.2":
+  version "0.17.2"
+  resolved "https://registry.yarnpkg.com/@bytecodealliance/preview2-shim/-/preview2-shim-0.17.2.tgz#8d0c732cba29169a85aa3e603c767e039378f89b"
+  integrity sha512-mNm/lblgES8UkVle8rGImXOz4TtL3eU3inHay/7TVchkKrb/lgcVvTK0+VAw8p5zQ0rgQsXm1j5dOlAAd+MeoA==
+
 "@colors/colors@1.5.0":
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
@@ -321,6 +326,13 @@
   integrity sha512-1Holl3XtRiANVKURZwgpjCnPuV4RsHp+XC0MhgvyAX/avQwj7F2HUItYOvGi/bXjJCkEzgBZmVfCr0HBA+q+Bw==
   dependencies:
     prettier "^3.2.5"
+
+"@flarenetwork/prettier-config-flare@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@flarenetwork/prettier-config-flare/-/prettier-config-flare-0.0.2.tgz#731e7247e75dec6386ada1a71059be3b6f7febcc"
+  integrity sha512-XgO2ia3W2iMrbujPDPrVcp9vzMRTqYqtKMgGn1ksWDsZNWOsKXkSpoWgm7IPWvj/M35i0HMC+eIj02QOAwjUMQ==
+  dependencies:
+    prettier-plugin-solidity "^2.1.0"
 
 "@gar/promisify@^1.0.1":
   version "1.1.3"
@@ -868,6 +880,13 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@nomicfoundation/slang@1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/slang/-/slang-1.3.0.tgz#10322465178f6e0638319875ff8f36fe190cd342"
+  integrity sha512-2PcwCF5cX2UjGi9cHd7E6XtLDaoyEVOTYt8WtOJ7GVpa68b+/sX0uFkb5/S67vxJb8eaVVFd2u6MTSVmE84QsQ==
+  dependencies:
+    "@bytecodealliance/preview2-shim" "0.17.2"
+
 "@npmcli/fs@^1.0.0":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@npmcli/fs/-/fs-1.1.1.tgz#72f719fe935e687c56a4faecf3c03d06ba593257"
@@ -979,6 +998,11 @@
     "@sinonjs/commons" "^3.0.1"
     lodash.get "^4.4.2"
     type-detect "^4.1.0"
+
+"@solidity-parser/parser@^0.20.2":
+  version "0.20.2"
+  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.20.2.tgz#e07053488ed60dae1b54f6fe37bb6d2c5fe146a7"
+  integrity sha512-rbu0bzwNvMcwAjH86hiEAcOeRI2EeK8zCkHDrFykh/Al8mvJeFmjy3UrE7GYQjNwOgbGUUtCn5/k8CB8zIu7QA==
 
 "@sqltools/formatter@^1.2.5":
   version "1.2.5"
@@ -5087,10 +5111,24 @@ prettier-linter-helpers@^1.0.0:
   dependencies:
     fast-diff "^1.1.2"
 
-prettier@^3.2.5, prettier@^3.5.3:
+prettier-plugin-solidity@^2.1.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/prettier-plugin-solidity/-/prettier-plugin-solidity-2.2.0.tgz#f1b85220585b0f4f7abaeacc85870befe7c0f383"
+  integrity sha512-CjDixURb1rXdT+i/PYN3WykOPbusGBmbaZrxraEIfFMAGNtGhALOcoZ5UWhhMWbwUGtXz4c5pnjCzVaBNF/3CA==
+  dependencies:
+    "@nomicfoundation/slang" "1.3.0"
+    "@solidity-parser/parser" "^0.20.2"
+    semver "^7.7.3"
+
+prettier@^3.2.5:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.5.3.tgz#4fc2ce0d657e7a02e602549f053b239cb7dfe1b5"
   integrity sha512-QQtaxnoDJeAkDvDKWCLiwIXkTgRhwYDEQCghU9Z6q03iyek/rxRh/2lC3HB7P8sWT2xC/y5JDctPLBIGzHKbhw==
+
+prettier@^3.7.4:
+  version "3.7.4"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.7.4.tgz#d2f8335d4b1cec47e1c8098645411b0c9dff9c0f"
+  integrity sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==
 
 process-on-spawn@^1.0.0:
   version "1.1.0"
@@ -5396,6 +5434,11 @@ semver@^7.3.4, semver@^7.3.5, semver@^7.3.8, semver@^7.5.3, semver@^7.5.4, semve
   version "7.7.2"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.2.tgz#67d99fdcd35cec21e6f8b87a7fd515a33f982b58"
   integrity sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==
+
+semver@^7.7.3:
+  version "7.7.3"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.3.tgz#4b5f4143d007633a8dc671cd0a6ef9147b8bb946"
+  integrity sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==
 
 send@^1.1.0, send@^1.2.0:
   version "1.2.0"

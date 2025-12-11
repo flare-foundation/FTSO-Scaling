@@ -53,6 +53,7 @@
     "workerpool": "^9.1.0"
   },
   "devDependencies": {
+    "@flarenetwork/prettier-config-flare": "^0.0.2",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@nestjs/cli": "^11.0.7",
     "@nestjs/schematics": "^11.0.5",
@@ -79,7 +80,7 @@
     "mocha": "^11.6.0",
     "nyc": "^17.1.0",
     "prando": "^6.0.1",
-    "prettier": "^3.5.3",
+    "prettier": "^3.7.4",
     "sinon": "^20.0.0",
     "source-map-support": "^0.5.21",
     "sqlite3": "^5.1.7",
@@ -116,14 +117,7 @@
     ],
     "report-dir": "coverage"
   },
-  "prettier": {
-    "printWidth": 120,
-    "semi": true,
-    "singleQuote": false,
-    "trailingComma": "es5",
-    "tabWidth": 2,
-    "arrowParens": "avoid"
-  },
+  "prettier": "@flarenetwork/prettier-config-flare",
   "eslintConfig": {
     "root": true,
     "env": {
