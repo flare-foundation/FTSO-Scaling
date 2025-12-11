@@ -13,7 +13,6 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "-----TESTS-----": "",
     "test": "NETWORK=local-test yarn mocha -r ts-node/register -t 0 --exit",
     "test:unit": "yarn test 'test/**/unit/**/*.test.ts'",
@@ -21,8 +20,10 @@
     "test:all": "yarn test 'test/**/*.test.ts'",
     "test:coverage": "nyc yarn test:all",
     "-----FORMATTING & LINTING-----": "",
-    "format:check": "prettier --check \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
-    "format:fix": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"{apps,libs,test}/**/*.ts\"",
+    "format:fix": "prettier --write \"{apps,libs,test}/**/*.ts\"",
+    "lint:check": "eslint \"{apps,libs,test}/**/*.ts\"",
+    "lint:fix": "eslint \"{apps,libs,test}/**/*.ts\" --fix",
     "-----DEVELOP-SCRIPTS-----": "echo ONLY FOR DEVELOPMENT",
     "ftso-data-provider-provider-api-gen": "ts-node apps/ftso-data-provider/src/feed-value-provider-api/provider-generator.ts"
   },
@@ -53,6 +54,8 @@
     "workerpool": "^9.1.0"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.0.0",
+    "@flarenetwork/eslint-config-flare": "^0.0.1",
     "@flarenetwork/prettier-config-flare": "^0.0.2",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@nestjs/cli": "^11.0.7",
@@ -74,8 +77,8 @@
     "axios-mock-adapter": "^2.1.0",
     "chai": "^4",
     "chai-as-promised": "7",
-    "eslint": "^9.28.0",
-    "eslint-config-prettier": "^10.1.5",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.4.1",
     "mocha": "^11.6.0",
     "nyc": "^17.1.0",
@@ -117,46 +120,5 @@
     ],
     "report-dir": "coverage"
   },
-  "prettier": "@flarenetwork/prettier-config-flare",
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "es2022": true,
-      "browser": false
-    },
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended"
-    ],
-    "overrides": [],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module",
-      "project": "./tsconfig.json"
-    },
-    "plugins": [
-      "@typescript-eslint",
-      "prettier"
-    ],
-    "rules": {
-      "prettier/prettier": "error",
-      "linebreak-style": [
-        "error",
-        "unix"
-      ],
-      "guard-for-in": "warn",
-      "@typescript-eslint/await-thenable": "warn",
-      "@typescript-eslint/no-floating-promises": [
-        "error",
-        {
-          "ignoreVoid": true
-        }
-      ],
-      "no-fallthrough": "error",
-      "@typescript-eslint/prefer-namespace-keyword": "off",
-      "@typescript-eslint/no-namespace": "off",
-      "@typescript-eslint/no-inferrable-types": "off"
-    }
-  }
+  "prettier": "@flarenetwork/prettier-config-flare"
 }

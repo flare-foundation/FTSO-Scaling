@@ -18,11 +18,22 @@ lint:
   before_script:
     - yarn install --frozen-lockfile --cache-folder .yarn-cache
   script:
-    - yarn format:check
+    - |
+      set +e  # don't stop on first failure
+      yarn lint:check
+      LINT_EXIT=$?
+      yarn format:check
+      FORMAT_EXIT=$?
+      set -e
+
+      if [ "$LINT_EXIT" -ne 0 ] || [ "$FORMAT_EXIT" -ne 0 ]; then
+        echo "lint:check exit=$LINT_EXIT, format:check exit=$FORMAT_EXIT"
+        exit 1
+      fi
 
 test-all:
   stage: test
-  needs: [ ]
+  needs: []
   image: node:22
   cache:
     - key:
