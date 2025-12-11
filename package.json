@@ -20,6 +20,9 @@
     "test:integration": "yarn test 'test/**/integration/**/*.test.ts'",
     "test:all": "yarn test 'test/**/*.test.ts'",
     "test:coverage": "nyc yarn test:all",
+    "-----FORMATTING & LINTING-----": "",
+    "format:check": "prettier --check \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
+    "format:fix": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
     "-----DEVELOP-SCRIPTS-----": "echo ONLY FOR DEVELOPMENT",
     "ftso-data-provider-provider-api-gen": "ts-node apps/ftso-data-provider/src/feed-value-provider-api/provider-generator.ts"
   },
