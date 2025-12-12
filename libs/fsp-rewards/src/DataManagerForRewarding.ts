@@ -185,14 +185,14 @@ export class DataManagerForRewarding extends DataManager {
         rewardEpoch.canonicalFeedOrder
       );
       const partialData = this.getDataForCalculationsPartial(votersToCommitsAndReveals, rewardEpoch);
-      const benchingWindowRevealOffenders = this.getBenchingWindowRevealOffenders(
+      const benchingWindowRevealOffenders = await this.getBenchingWindowRevealOffenders(
         votingRoundId,
         rewardEpoch.rewardEpochId,
         rewardEpoch.startVotingRoundId,
         mappingsResponse.data.votingRoundIdToCommits,
         mappingsResponse.data.votingRoundIdToReveals,
         randomGenerationBenchingWindow,
-        (votingRoundId: number) => rewardEpochForVotingRoundId(votingRoundId)
+        (votingRoundId: number) => Promise.resolve(rewardEpochForVotingRoundId(votingRoundId))
       );
       if (!process.env.REMOVE_ANNOYING_MESSAGES) {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
@@ -759,7 +759,6 @@ export class DataManagerForRewarding extends DataManager {
         throw new Error(`FastUpdateFeeds is undefined for voting round ${votingRoundId}`);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((fastUpdateFeeds as any) === "MISSING_FAST_UPDATE_FEEDS") {
         result.push(undefined);
         this.logger.error(`WARN: FastUpdateFeeds missing for voting round ${votingRoundId}`);
