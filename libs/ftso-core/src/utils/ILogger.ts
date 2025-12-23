@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export interface ILogger {
   log(message: any, ...optionalParams: any[]): any;
   error(message: any, ...optionalParams: any[]): any;

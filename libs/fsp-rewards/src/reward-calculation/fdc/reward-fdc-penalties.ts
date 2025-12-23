@@ -21,19 +21,21 @@ export function calculateFdcPenalties(
   penaltyType: RewardTypePrefix
 ): IPartialRewardClaim[] {
   const penaltyClaims: IPartialRewardClaim[] = [];
-  if(!data.fdcData.fdcOffenders) {
+  if (!data.fdcData.fdcOffenders) {
     return penaltyClaims;
   }
   const totalWeight = BigInt(rewardEpochInfo.signingPolicy.weights.reduce((acc, weight) => acc + weight, 0));
-  
+
   for (const offender of data.fdcData.fdcOffenders) {
-    const voterWeights = votersWeights.get(offender.submissionAddress)!;
+    const voterWeights = votersWeights.get(offender.submissionAddress);
     let penalty = 0n;
     if (offender.weight > 0) {
       penalty = (-BigInt(offender.weight) * offer.amount * penaltyFactor) / totalWeight;
     }
     if (penalty < 0n) {
-      penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FDC_PROTOCOL_ID));
+      penaltyClaims.push(
+        ...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FDC_PROTOCOL_ID)
+      );
     }
   }
   return penaltyClaims;

@@ -1,3 +1,4 @@
+/* eslint-disable  */
 import { ILogger } from "./ILogger";
 import { asError, errorString } from "./error";
 
@@ -8,7 +9,6 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_TIMEOUT_MULTIPLIER = 1.5;
 
 export async function sleepFor(ms: number) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await new Promise((resolve: any) => {
     setTimeout(() => resolve(), ms);
   });
@@ -36,7 +36,6 @@ export async function retry<T>(
   let backoffMs = initialBackOffMs;
   while (attempt <= maxRetries) {
     try {
-      // eslint-disable-next-line @typescript-eslint/await-thenable
       return await action();
     } catch (e) {
       const error = asError(e);

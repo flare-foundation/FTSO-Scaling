@@ -9,7 +9,6 @@ import { ValueWithDecimals } from "../../../libs/ftso-core/src/data/FeedValueEnc
 import { Address } from "../../../libs/ftso-core/src/voting-types";
 import { getTestFile } from "../../utils/getTestFile";
 
-
 import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
 describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
@@ -241,7 +240,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 100;
 
         for (let index = 0; index < numVoters; index++) {
-          if (index % 2 == 0) continue;
+          if (index % 2 === 0) continue;
           const voter = "voter" + index;
           const weight = 10n;
 
@@ -276,7 +275,7 @@ describe(`FTSO calculation logic, (${getTestFile(__filename)})`, () => {
         numVoters = 100;
 
         for (let index = 0; index < numVoters; index++) {
-          if (index % 2 == 1) continue;
+          if (index % 2 === 1) continue;
           const voter = "voter" + index;
           const weight = 10n;
 

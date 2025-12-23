@@ -28,7 +28,7 @@ const config: RewardEpochDataGenerationConfig = {
 
 runDBGenerator(config)
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch((error) => {
     // log something
     process.exit(1);
   });

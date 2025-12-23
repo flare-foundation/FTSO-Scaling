@@ -69,14 +69,14 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
 
   @ApiTags(ApiTagsEnum.PDP)
   @Get("submit2/:votingRoundId/:submitAddress")
-  async submit2(
+  submit2(
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
     @Param("submitAddress") submitAddress: string
-  ): Promise<PDPResponse> {
+  ): PDPResponse {
     this.logger.log(
       `Calling GET on submit2 with param: votingRoundId ${votingRoundId} and query param: submitAddress ${submitAddress}`
     );
-    const data = await this.ftsoDataProviderService.getRevealData(votingRoundId, submitAddress);
+    const data = this.ftsoDataProviderService.getRevealData(votingRoundId, submitAddress);
     const encodedData = data ? encodeRevealPayloadMessage(data) : undefined;
     this.logger.log(`Returning reveal data for voting round ${votingRoundId}`);
     if (encodedData) this.pendingReveals.delete(votingRoundId);
@@ -106,7 +106,7 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
 
   @ApiTags(ApiTagsEnum.PDP)
   @Get("submit3/:votingRoundId/:submitAddress")
-  async submit3(
+  submit3(
     @Param("votingRoundId", ParseIntPipe) votingRoundId: number,
     @Param("submitAddress") submitAddress: string
   ): Promise<PDPResponse> {
@@ -153,7 +153,7 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
 
   @ApiTags(ApiTagsEnum.EXTERNAL)
   @Get("data-abis")
-  async treeAbis(): Promise<AbiDefinitionsResponse> {
+  treeAbis(): AbiDefinitionsResponse {
     const data = this.ftsoDataProviderService.getAbiDefinitions();
     return {
       status: ExternalResponseStatusEnum.OK,
@@ -183,9 +183,7 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
 
     if (this.pendingReveals.size > 0) {
       this.logger.warn(
-        `Pending reveals for rounds: ${[
-          ...this.pendingReveals,
-        ]}, waiting to complete. If you force kill the application now, you might get a reward penalty for intentionally not revealing voting round data.`
+        `Pending reveals for rounds: ${[...this.pendingReveals].join()}, waiting to complete. If you force kill the application now, you might get a reward penalty for intentionally not revealing voting round data.`
       );
     }
     while (this.pendingReveals.size > 0) {

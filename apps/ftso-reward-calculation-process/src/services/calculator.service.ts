@@ -254,7 +254,7 @@ export class CalculatorService {
       newOptions
     );
     logger.log(rewardEpochDuration2);
-    await runRandomNumberFixing(options.rewardEpochId, FUTURE_VOTING_ROUNDS());
+    runRandomNumberFixing(options.rewardEpochId, FUTURE_VOTING_ROUNDS());
     destroyStorage(options.rewardEpochId + 1, true);
     calculateAttestationTypeAppearances(options.rewardEpochId);
   }
@@ -271,7 +271,7 @@ export class CalculatorService {
     await runCalculateRewardClaimsTopJob(adaptedOptions);
   }
 
-  async fullRoundAggregateClaims(options: OptionalCommandOptions): Promise<void> {
+  fullRoundAggregateClaims(options: OptionalCommandOptions): void {
     const logger = new Logger();
     const rewardEpochId = options.rewardEpochId;
     const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
@@ -309,7 +309,7 @@ export class CalculatorService {
     }
 
     if (options.calculateOffers) {
-      await fullRoundOfferCalculation(options);
+      fullRoundOfferCalculation(options);
     }
 
     if (options.calculateClaims) {
@@ -317,7 +317,7 @@ export class CalculatorService {
     }
 
     if (options.aggregateClaims) {
-      await this.fullRoundAggregateClaims(options);
+      this.fullRoundAggregateClaims(options);
     }
   }
 
@@ -371,7 +371,6 @@ export class CalculatorService {
       return;
     }
     if (options.incrementalCalculation) {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         // Ends when the rewards for reward epoch are fully processed.
         await this.runRewardCalculationIncremental(options);

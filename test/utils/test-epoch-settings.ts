@@ -1,3 +1,4 @@
+/* eslint-disable */
 // IMPORTANT: This file should never import constants.ts.
 // The functions in this file are intended to be used in tests only and should be executed
 // before network.ts is imported. This is to ensure that the environment variables are set properly.
@@ -25,11 +26,11 @@ export function setupEpochSettings(config: EpochSettingsConfig) {
     throw new Error("Stashed epoch settings already exists");
   }
   stashedEpochSettings = {
-    firstVotingRoundStartTs: parseInt(process.env.ES_FIRST_VOTING_ROUND_START_TS!),
-    votingEpochDurationSeconds: parseInt(process.env.ES_VOTING_EPOCH_DURATION_SECONDS!),
-    firstRewardEpochStartVotingRoundId: parseInt(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID!),
-    rewardEpochDurationInVotingEpochs: parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS!),
-    revealDeadlineSeconds: parseInt(process.env.FTSO_REVEAL_DEADLINE_SECONDS!),
+    firstVotingRoundStartTs: parseInt(process.env.ES_FIRST_VOTING_ROUND_START_TS),
+    votingEpochDurationSeconds: parseInt(process.env.ES_VOTING_EPOCH_DURATION_SECONDS),
+    firstRewardEpochStartVotingRoundId: parseInt(process.env.ES_FIRST_REWARD_EPOCH_START_VOTING_ROUND_ID),
+    rewardEpochDurationInVotingEpochs: parseInt(process.env.ES_REWARD_EPOCH_DURATION_IN_VOTING_EPOCHS),
+    revealDeadlineSeconds: parseInt(process.env.FTSO_REVEAL_DEADLINE_SECONDS),
   };
   internalSetupEpochSettings(config);
 }

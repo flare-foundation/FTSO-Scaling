@@ -3,10 +3,7 @@ import { expect } from "chai";
 import { DataSource, EntityManager } from "typeorm";
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
-import {
-  EPOCH_SETTINGS,
-  RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../libs/ftso-core/src/constants";
+import { EPOCH_SETTINGS, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/constants";
 import { RewardTypePrefix } from "../../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
 import {
   aggregateRewardClaimsInStorage,
@@ -72,8 +69,7 @@ import {
 } from "../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { destroyStorage } from "../../../libs/fsp-rewards/src/utils/stat-info/storage";
 import { toFeedId } from "../../utils/generators";
-import {BURN_ADDRESS, CALCULATIONS_FOLDER} from "../../../libs/fsp-rewards/src/constants";
-
+import { BURN_ADDRESS, CALCULATIONS_FOLDER } from "../../../libs/fsp-rewards/src/constants";
 
 import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
@@ -86,63 +82,57 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
   // Number of claims checks
   expect(claims.length).to.equal(960);
   expect(mergedClaims.length).to.equal(40);
-  expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
-  expect((claims as any).filter(c => c.claimType === ClaimType.FEE).length).to.equal(315);
-  expect((claims as any).filter(c => c.claimType === ClaimType.WNAT).length).to.equal(315);
-  expect((claims as any).filter(c => c.claimType === ClaimType.MIRROR).length).to.equal(330);
-  expect((claims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
+  expect((claims as any).filter((c) => c.claimType === ClaimType.DIRECT).length).to.equal(0);
+  expect((claims as any).filter((c) => c.claimType === ClaimType.FEE).length).to.equal(315);
+  expect((claims as any).filter((c) => c.claimType === ClaimType.WNAT).length).to.equal(315);
+  expect((claims as any).filter((c) => c.claimType === ClaimType.MIRROR).length).to.equal(330);
+  expect((claims as any).filter((c) => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
 
-  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
-  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.FEE).length).to.equal(10);
-  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.WNAT).length).to.equal(10);
-  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.MIRROR).length).to.equal(20);
-  expect((mergedClaims as any).filter(c => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
+  expect((mergedClaims as any).filter((c) => c.claimType === ClaimType.DIRECT).length).to.equal(0);
+  expect((mergedClaims as any).filter((c) => c.claimType === ClaimType.FEE).length).to.equal(10);
+  expect((mergedClaims as any).filter((c) => c.claimType === ClaimType.WNAT).length).to.equal(10);
+  expect((mergedClaims as any).filter((c) => c.claimType === ClaimType.MIRROR).length).to.equal(20);
+  expect((mergedClaims as any).filter((c) => c.claimType === ClaimType.CCHAIN).length).to.equal(0);
 
   // no negative claims
-  expect((claims as any).filter(c => c.amount < 0).length).to.equal(0);
+  expect((claims as any).filter((c) => c.amount < 0).length).to.equal(0);
   // no direct claims
-  expect((claims as any).filter(c => c.claimType === ClaimType.DIRECT).length).to.equal(0);
+  expect((claims as any).filter((c) => c.claimType === ClaimType.DIRECT).length).to.equal(0);
   // zero burn value
-  expect(
-    (claims as IPartialRewardClaim[]).filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length
-  ).to.equal(0);
+  expect(claims.filter((c) => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase()).length).to.equal(0);
 
-  const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)
-  );
+  const finalizationClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION));
   expect(finalizationClaims.length).to.equal(60); // 5 voting rounds x 4 claims x 3 offers x 1 finalizer
-  const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
+  const feeFinalizationClams = finalizationClaims.filter((c) => c.claimType === ClaimType.FEE);
   expect(feeFinalizationClams.length).to.equal(15); // one finalizer x 3 offers x 5 voting rounds
 
-  const signatureClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)
-  );
+  const signatureClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING));
   // console.dir(finalizationClaims)
   expect(signatureClaims.length).to.equal(600); // 3 offers x 10 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
   for (const voter of voters) {
     // all voters have fees in merged claims
-    const feeClaim = (mergedClaims as IRewardClaim[]).find(
-      c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE
+    const feeClaim = mergedClaims.find(
+      (c) => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase() && c.claimType === ClaimType.FEE
     );
     expect(feeClaim).to.not.be.undefined;
     expect(Number(feeClaim.amount)).gt(0);
     // all voters have delegation rewards in merged claims
-    const delegationClaim = (mergedClaims as IRewardClaim[]).find(
-      c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT
+    const delegationClaim = mergedClaims.find(
+      (c) => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase() && c.claimType === ClaimType.WNAT
     );
     expect(delegationClaim).to.not.be.undefined;
     expect(Number(delegationClaim.amount)).gt(0);
     // all nodes of voters have staking rewards in merged claims
     for (const nodeId of voter.nodeIds) {
-      const stakingClaim = (mergedClaims as IRewardClaim[]).find(
-        c => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR
+      const stakingClaim = mergedClaims.find(
+        (c) => c.beneficiary.toLowerCase() === nodeId.toLowerCase() && c.claimType === ClaimType.MIRROR
       );
       expect(stakingClaim).to.not.be.undefined;
       expect(Number(stakingClaim.amount)).gt(0);
     }
     // each voter has a signature claims for each voting round
     const signatureFeeClaim = signatureClaims.filter(
-      c => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase()
+      (c) => c.beneficiary.toLowerCase() === voter.identityAddress.toLowerCase()
     );
     expect(signatureFeeClaim.length).to.equal(15); // 3 offers x 5 voting rounds
     for (const c of signatureFeeClaim) {
@@ -150,7 +140,7 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
       expect(c.claimType).to.equal(ClaimType.FEE);
     }
     const signatureDelegationClaim = signatureClaims.filter(
-      c => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase()
+      (c) => c.beneficiary.toLowerCase() === voter.delegationAddress.toLowerCase()
     );
     expect(signatureDelegationClaim.length).to.equal(15); // 3 offers x 5 voting rounds
     for (const c of signatureDelegationClaim) {
@@ -158,7 +148,7 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
       expect(c.claimType).to.equal(ClaimType.WNAT);
     }
     for (const nodeId of voter.nodeIds) {
-      const stakingClaim = signatureClaims.filter(c => c.beneficiary.toLowerCase() === nodeId.toLowerCase());
+      const stakingClaim = signatureClaims.filter((c) => c.beneficiary.toLowerCase() === nodeId.toLowerCase());
       expect(stakingClaim.length).to.equal(15); // 5 voting rounds x 3 offers
       for (const c of stakingClaim) {
         expect(Number(c.amount)).gt(0);
@@ -167,14 +157,10 @@ function happyPathChecks(voters: TestVoter[], claims: IPartialRewardClaim[], mer
     }
   }
   // no double signing penalties
-  const doubleSignerClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS)
-  );
+  const doubleSignerClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.DOUBLE_SIGNERS));
   expect(doubleSignerClaims.length).to.equal(0);
   // no reveal offender penalties Reveal offenders
-  const revealOffenderClaims = (claims as IPartialRewardClaim[]).filter(c =>
-    c.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS)
-  );
+  const revealOffenderClaims = claims.filter((c) => c.rewardTypeTag.startsWith(RewardTypePrefix.REVEAL_OFFENDERS));
   expect(revealOffenderClaims.length).to.equal(0);
 }
 
@@ -327,21 +313,21 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     claimSummary(voters, mergedClaims, logger);
 
     // extract signing claims
-    const signatureClaims = (claims as IPartialRewardClaim[]).filter(c =>
+    const signatureClaims = (claims as IPartialRewardClaim[]).filter((c) =>
       c.rewardTypeTag.startsWith(RewardTypePrefix.SIGNING)
     );
-    const finalizationClaims = (claims as IPartialRewardClaim[]).filter(c =>
+    const finalizationClaims = (claims as IPartialRewardClaim[]).filter((c) =>
       c.rewardTypeTag.startsWith(RewardTypePrefix.FINALIZATION)
     );
     expect(signatureClaims.length).to.equal(540); // 3 offers x 9 voters x 5 voting rounds x (1 fee + 1 delegation + 2 staking)
-    const feeFinalizationClams = finalizationClaims.filter(c => c.claimType === ClaimType.FEE);
+    const feeFinalizationClams = finalizationClaims.filter((c) => c.claimType === ClaimType.FEE);
     expect(feeFinalizationClams.length).to.equal(12); // 3 offers x 4 voting rounds (1 finalizer per voting round, amoung them is the first voter)
     expect(claims.length).to.equal(960 - 60 - 12 + 3); // 60 less signature claims + 12 less finalization claims, but 3 additional burn claims
     // exacty 1/5 of finalization rewards should be burned
-    const finalizationTotalAmount = finalizationClaims.map(c => c.amount).reduce((a, b) => a + b, BigInt(0));
+    const finalizationTotalAmount = finalizationClaims.map((c) => c.amount).reduce((a, b) => a + b, BigInt(0));
     const finalizationBurnAmount = finalizationClaims
-      .filter(c => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase())
-      .map(c => c.amount)
+      .filter((c) => c.beneficiary.toLowerCase() === BURN_ADDRESS.toLowerCase())
+      .map((c) => c.amount)
       .reduce((a, b) => a + b, BigInt(0));
     expect(finalizationBurnAmount * 5n).to.equal(finalizationTotalAmount);
 
@@ -546,7 +532,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
     expect(claimSummaries.length).to.equal(numberOfVoters + 1); // 1 external voter
     expect(claimSummaries[numberOfVoters].externalVoter.toLowerCase()).to.equal(externalVoter.toLowerCase());
     expect(claimSummaries[numberOfVoters].directClaims.length).to.equal(3);
-    const aSet = new Set(claimSummaries[numberOfVoters].directClaims.map(c => c.votingRoundId));
+    const aSet = new Set(claimSummaries[numberOfVoters].directClaims.map((c) => c.votingRoundId));
     expect(aSet.size).to.equal(1);
     expect(aSet.has(1005)).to.be.true;
   });
@@ -802,7 +788,7 @@ export function granulatedPartialOfferMap(
   rewardOffers: RewardOffers
 ): Map<number, Map<string, IPartialRewardOfferForRound[]>> {
   const rewardOfferMap = new Map<number, Map<string, IPartialRewardOfferForRound[]>>();
-  const allRewardOffers = rewardOffers.rewardOffers.map(rewardOffer =>
+  const allRewardOffers = rewardOffers.rewardOffers.map((rewardOffer) =>
     PartialRewardOffer.fromRewardOffered(rewardOffer)
   );
   for (const inflationRewardOffer of rewardOffers.inflationOffers) {
@@ -811,7 +797,7 @@ export function granulatedPartialOfferMap(
   for (const rewardOffer of allRewardOffers) {
     const votingEpochRewardOffers = splitToVotingRoundsEqually(startVotingRoundId, endVotingRoundId, rewardOffer);
     for (const votingEpochRewardOffer of votingEpochRewardOffers) {
-      const votingRoundId = votingEpochRewardOffer.votingRoundId!;
+      const votingRoundId = votingEpochRewardOffer.votingRoundId;
       const feedId = votingEpochRewardOffer.feedId;
       const feedOffers = rewardOfferMap.get(votingRoundId) || new Map<string, IPartialRewardOfferForRound[]>();
       rewardOfferMap.set(votingRoundId, feedOffers);

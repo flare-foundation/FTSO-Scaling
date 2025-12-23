@@ -52,10 +52,10 @@ export function calculateFinalizationRewardClaims(
   }
   const votingRoundId = data.dataForCalculations.votingRoundId;
   // No voter provided finalization in grace period. Whoever finalizes gets the full reward.
-  if (isFinalizationOutsideOfGracePeriod(votingRoundId, firstSuccessfulFinalization!)) {
+  if (isFinalizationOutsideOfGracePeriod(votingRoundId, firstSuccessfulFinalization)) {
     const otherFinalizerClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,
-      beneficiary: firstSuccessfulFinalization!.submitAddress.toLowerCase(),
+      beneficiary: firstSuccessfulFinalization.submitAddress.toLowerCase(),
       amount: offer.amount,
       claimType: ClaimType.DIRECT,
       offerIndex: offer.offerIndex,
@@ -66,7 +66,7 @@ export function calculateFinalizationRewardClaims(
     };
     return [otherFinalizerClaim];
   }
-  const gracePeriodFinalizations = finalizations.filter(finalization =>
+  const gracePeriodFinalizations = finalizations.filter((finalization) =>
     isFinalizationInGracePeriodAndEligible(votingRoundId, eligibleFinalizationRewardVotersInGracePeriod, finalization)
   );
   // Rewarding of first successful finalizations outside of the grace period are already handled above
@@ -117,7 +117,7 @@ export function calculateFinalizationRewardClaims(
       throw new Error("Critical: eligible finalization submit address must be equal to signingAddress of an entity");
     }
 
-    const voterWeight = data.dataForCalculations.votersWeightsMap!.get(submitAddress);
+    const voterWeight = data.dataForCalculations.votersWeightsMap.get(submitAddress);
 
     // sanity check
     if (undistributedSigningRewardWeight === 0n) {
@@ -127,9 +127,7 @@ export function calculateFinalizationRewardClaims(
 
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= 1n;
-    resultClaims.push(
-      ...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId)
-    );
+    resultClaims.push(...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId));
   }
 
   if (undistributedAmount < 0n) {

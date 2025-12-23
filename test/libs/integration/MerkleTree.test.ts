@@ -47,7 +47,7 @@ describe("MerkleTree", () => {
       });
     }
 
-    const merkleTree = new MerkleTree(nodes.map(n => n.hash));
+    const merkleTree = new MerkleTree(nodes.map((n) => n.hash));
 
     for (const node of nodes) {
       node.proof = merkleTree.getProof(node.hash);

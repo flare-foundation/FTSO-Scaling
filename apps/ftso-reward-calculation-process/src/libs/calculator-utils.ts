@@ -1,10 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { DataManagerForRewarding } from "../../../../libs/fsp-rewards/src/DataManagerForRewarding";
 import { IndexerClientForRewarding } from "../../../../libs/fsp-rewards/src/IndexerClientForRewarding";
-import {
-  EPOCH_SETTINGS,
-  RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../../libs/ftso-core/src/constants";
+import { EPOCH_SETTINGS, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../../libs/ftso-core/src/constants";
 import { RewardEpochStarted } from "../../../../libs/contracts/src/events";
 import { prepareDataForRewardCalculationsForRange } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-calculation";
 import { fixOffersForRandomFeedSelection } from "../../../../libs/fsp-rewards/src/reward-calculation/reward-offers";
@@ -13,8 +10,8 @@ import { serializeRewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils
 import { IncrementalCalculationState } from "../interfaces/IncrementalCalculationState";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
 import { initializeTemplateOffers } from "./offer-utils";
-import {CALCULATIONS_FOLDER, FUTURE_VOTING_ROUNDS} from "../../../../libs/fsp-rewards/src/constants";
-import {CONTRACTS} from "../../../../libs/contracts/src/constants";
+import { CALCULATIONS_FOLDER, FUTURE_VOTING_ROUNDS } from "../../../../libs/fsp-rewards/src/constants";
+import { CONTRACTS } from "../../../../libs/contracts/src/constants";
 
 /**
  * Checks into the indexer for the latest reward epoch start event and returns the reward epoch id.
@@ -31,7 +28,7 @@ export async function latestRewardEpochStart(
     EPOCH_SETTINGS().votingEpochDurationSeconds;
   const startTime = Math.floor(Date.now() / 1000) - historyDepth;
   const result = await indexerClient.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
-  const events = result.map(event => RewardEpochStarted.fromRawEvent(event));
+  const events = result.map((event) => RewardEpochStarted.fromRawEvent(event));
   if (events.length > 0) {
     return events[events.length - 1].rewardEpochId;
   }
@@ -56,12 +53,12 @@ export async function tryFindNextRewardEpoch(
   if (!signingPolicyInitializedEvents.data) {
     return false;
   }
-  let i = signingPolicyInitializedEvents.data!.length - 1;
-  while (i >= 0 && signingPolicyInitializedEvents.data![i].rewardEpochId > state.rewardEpochId + 1) {
+  let i = signingPolicyInitializedEvents.data.length - 1;
+  while (i >= 0 && signingPolicyInitializedEvents.data[i].rewardEpochId > state.rewardEpochId + 1) {
     i--;
   }
-  if (i >= 0 && signingPolicyInitializedEvents.data![i].rewardEpochId === state.rewardEpochId + 1) {
-    const realEndVotingRoundId = signingPolicyInitializedEvents.data![i].startVotingRoundId - 1;
+  if (i >= 0 && signingPolicyInitializedEvents.data[i].rewardEpochId === state.rewardEpochId + 1) {
+    const realEndVotingRoundId = signingPolicyInitializedEvents.data[i].startVotingRoundId - 1;
 
     state.rewardEpochInfo.endVotingRoundId = realEndVotingRoundId;
     serializeRewardEpochInfo(state.rewardEpochId, state.rewardEpochInfo);

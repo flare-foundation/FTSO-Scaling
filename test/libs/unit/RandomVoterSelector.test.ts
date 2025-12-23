@@ -115,21 +115,21 @@ describe("RandomVoterSelector", () => {
     const result = randomVoterSelector.randomSelectThresholdWeightVoters(seed);
     let sum = 0n;
     for (const voter of result) {
-      sum += voterWeightMap.get(voter)!;
+      sum += voterWeightMap.get(voter);
     }
     expect(Number(sum)).to.be.greaterThanOrEqual(Number(thresholdWeight));
     let i = 1;
     while (true) {
       const sequence = randomVoterSelector
         .randomNumberSequence(seed, i)
-        .map(s => BigInt(s) % BigInt(randomVoterSelector.totalWeight))
-        .map(n => randomVoterSelector.binarySearch(n))
-        .map(i => voters[i]);
+        .map((s) => BigInt(s) % BigInt(randomVoterSelector.totalWeight))
+        .map((n) => randomVoterSelector.binarySearch(n))
+        .map((i) => voters[i]);
       const selectedVotersSet = new Set(sequence);
       if (selectedVotersSet.size === result.length) {
         let sum2 = 0n;
         for (const voter of selectedVotersSet) {
-          sum2 += voterWeightMap.get(voter)!;
+          sum2 += voterWeightMap.get(voter);
         }
         expect(Number(sum2)).to.be.equal(Number(sum));
         break;

@@ -17,7 +17,7 @@ export interface VoteData {
  */
 export function calculateMedianResults(data: DataForCalculations): MedianCalculationResult[] {
   const votersSubmitAddresses = data.orderedVotersSubmitAddresses;
-  const weights = votersSubmitAddresses.map(voter => data.voterMedianVotingWeights.get(voter.toLowerCase())!);
+  const weights = votersSubmitAddresses.map((voter) => data.voterMedianVotingWeights.get(voter.toLowerCase()));
 
   // "mapping": feedIndex => array of submissions by voters (in signing policy order)
   const feedValues = new Map<number, ValueWithDecimals[]>();
@@ -111,14 +111,14 @@ export function calculateMedian(
     }
   }
 
-  const voteData = repack(voters, feedValues, weights).filter(voteDataItem => !voteDataItem.feedValue.isEmpty);
+  const voteData = repack(voters, feedValues, weights).filter((voteDataItem) => !voteDataItem.feedValue.isEmpty);
   if (voteData.length === 0) {
     return emptyResult;
   }
   // Sort by value
   voteData.sort((a, b) => a.feedValue.value - b.feedValue.value);
   let totalWeight = 0n;
-  voteData.forEach(vote => (totalWeight += vote.weight));
+  voteData.forEach((vote) => (totalWeight += vote.weight));
   const medianWeight = totalWeight / 2n + (totalWeight % 2n);
   let currentWeightSum = 0n;
 

@@ -7,7 +7,7 @@ import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { medianRewardDistributionWeight } from "./reward-utils";
-import {TOTAL_BIPS, TOTAL_PPM} from "../constants";
+import { TOTAL_BIPS, TOTAL_PPM } from "../constants";
 
 export enum MediantRewardClaimType {
   LOW_TURNOUT_CLAIM_BACK = "LOW_TURNOUT_CLAIM_BACK",
@@ -43,7 +43,7 @@ export function calculateMedianRewardClaims(
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
       BigInt(
-        soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))!
+        soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))
       ) %
         2n ===
       1n
@@ -92,23 +92,23 @@ export function calculateMedianRewardClaims(
 
   const voterRecords: VoterRewarding[] = [];
 
-  const abs = n => (n < 0n ? -n : n);
+  const abs = (n) => (n < 0n ? -n : n);
   const secondaryBandDiff = (abs(median) * BigInt(offer.secondaryBandWidthPPM)) / TOTAL_PPM;
 
   const lowPCT = median - secondaryBandDiff;
   const highPCT = median + secondaryBandDiff;
 
   // assemble voter records
-  for (let i = 0; i < calculationResult.votersSubmitAddresses!.length; i++) {
-    const submitAddress = calculationResult.votersSubmitAddresses![i];
-    const feedValue = calculationResult.feedValues![i];
+  for (let i = 0; i < calculationResult.votersSubmitAddresses.length; i++) {
+    const submitAddress = calculationResult.votersSubmitAddresses[i];
+    const feedValue = calculationResult.feedValues[i];
     if (feedValue.isEmpty) {
       continue;
     }
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
       submitAddress: submitAddress,
-      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)!),
+      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)),
       iqr:
         (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedId, votingRoundId, submitAddress)),
@@ -189,11 +189,7 @@ export function calculateMedianRewardClaims(
 
     totalReward += reward;
 
-    const rewardClaim = generateMedianRewardClaimsForVoter(
-      reward,
-      offer,
-      votersWeights.get(voterRecord.submitAddress)!
-    );
+    const rewardClaim = generateMedianRewardClaimsForVoter(reward, offer, votersWeights.get(voterRecord.submitAddress));
     rewardClaims.push(...rewardClaim);
   }
   // Assert

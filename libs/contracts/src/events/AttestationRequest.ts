@@ -1,9 +1,10 @@
+/* eslint-disable */
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
- * Represents and event emitted on submission of an attestation request on 
+ * Represents and event emitted on submission of an attestation request on
  * FdcHub smart contract.
  */
 export class AttestationRequest extends RawEventConstructible {
@@ -30,7 +31,7 @@ export class AttestationRequest extends RawEventConstructible {
   /**
    * Gets the attestation request prefix.
    * The prefix consists of the first 64 bytes of the data.
-   */  
+   */
   static getPrefix(attestationRequest: AttestationRequest): string {
     // 0x + 64 bytes in hex
     if (attestationRequest.data.length < 130) {

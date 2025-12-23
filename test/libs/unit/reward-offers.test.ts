@@ -10,7 +10,6 @@ import { getTestFile } from "../../utils/getTestFile";
 import { PartialRewardOffer } from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { granulatedPartialOfferMap } from "./generator-rewards.test";
 
-
 import { RewardOffers } from "../../../libs/ftso-core/src/data/RewardOffers";
 
 describe(`Reward offers, ${getTestFile(__filename)}`, function () {
@@ -74,7 +73,9 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
 
     const partialRewardOffer = PartialRewardOffer.fromRewardOffered(rewardOffered);
 
-    const splitRewardOffers = splitRewardOfferByTypes(PartialRewardOffer.remapToPartialOfferForRound(partialRewardOffer, 1));
+    const splitRewardOffers = splitRewardOfferByTypes(
+      PartialRewardOffer.remapToPartialOfferForRound(partialRewardOffer, 1)
+    );
 
     const finalization = splitRewardOffers.finalizationRewardOffer;
     const signing = splitRewardOffers.signingRewardOffer;
@@ -89,7 +90,9 @@ describe(`Reward offers, ${getTestFile(__filename)}`, function () {
 
     const partialRewardOffers = distributeInflationRewardOfferToFeeds(rewardOffered);
 
-    const splitRewardOffers = splitRewardOfferByTypes(PartialRewardOffer.remapToPartialOfferForRound(partialRewardOffers[0], 1));
+    const splitRewardOffers = splitRewardOfferByTypes(
+      PartialRewardOffer.remapToPartialOfferForRound(partialRewardOffers[0], 1)
+    );
 
     const finalization = splitRewardOffers.finalizationRewardOffer;
     const signing = splitRewardOffers.signingRewardOffer;

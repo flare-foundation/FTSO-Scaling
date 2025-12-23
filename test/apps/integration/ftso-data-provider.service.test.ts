@@ -21,8 +21,8 @@ import { MockIndexerDB } from "../../utils/db";
 import { currentTimeSec, generateRewardEpochEvents, toFeedId } from "../../utils/generators";
 import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
-import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../libs/contracts/src/constants";
+import { AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../libs/contracts/src/constants";
 
 export const testFeeds: Feed[] = [
   { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26
@@ -99,7 +99,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     const commit = (await service.getCommitData(votingRound, submissionAddress)).payload;
 
-    const reveal = (await service.getRevealData(votingRound, submissionAddress)).payload;
+    const reveal = service.getRevealData(votingRound, submissionAddress).payload;
 
     const expectedCommit = CommitData.hashForCommit(
       submissionAddress,
@@ -145,9 +145,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     clock.tick(EPOCH_SETTINGS().votingEpochDurationSeconds * 1000);
 
     for (let i = 0; i < voters.length; i++) {
-      const encodedReveal = encodeRevealPayloadMessage(
-        await services[i].getRevealData(votingRound, voters[i].submitAddress)
-      );
+      const encodedReveal = encodeRevealPayloadMessage(services[i].getRevealData(votingRound, voters[i].submitAddress));
       const revealPayload = sigReveal + unPrefix0x(encodedReveal);
       const revealTx = generateTx(
         voters[i].submitAddress,
@@ -246,7 +244,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
         if (i < missedRevealers) continue;
 
         const encodedReveal = encodeRevealPayloadMessage(
-          await services[i].getRevealData(votingRound, voters[i].submitAddress)
+          services[i].getRevealData(votingRound, voters[i].submitAddress)
         );
         const revealPayload = sigReveal + unPrefix0x(encodedReveal);
         const revealTx = generateTx(
@@ -274,7 +272,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
       for (let i = 0; i < voters.length; i++) {
         const encodedReveal = encodeRevealPayloadMessage(
-          await services[i].getRevealData(votingRound + 1, voters[i].submitAddress)
+          services[i].getRevealData(votingRound + 1, voters[i].submitAddress)
         );
         const revealPayload = sigReveal + unPrefix0x(encodedReveal);
         const revealTx = generateTx(
@@ -300,7 +298,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {
-    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
+    const epochEvents = generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
 
     await db.addEvent(epochEvents);
 

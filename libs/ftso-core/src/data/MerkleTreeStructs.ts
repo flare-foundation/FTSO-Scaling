@@ -2,8 +2,8 @@ import { ethers } from "ethers";
 import { ContractMethodNames } from "../../../contracts/src/definitions";
 import { MedianCalculationResult, RandomCalculationResult } from "../voting-types";
 
-import {AbiCache} from "../../../contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../contracts/src/constants";
+import { AbiCache } from "../../../contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../contracts/src/constants";
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
 // Needs to be kept in sync with IFtsoFeedPublisher.Feed struct in smart contracts
@@ -30,6 +30,7 @@ export namespace MerkleTreeStructs {
       ContractMethodNames.feedStruct,
       0
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const abiEncoded = coder.encode([abiInput.abi as any], [feedResult]);
     return ethers.keccak256(abiEncoded);
   }
@@ -40,6 +41,7 @@ export namespace MerkleTreeStructs {
       ContractMethodNames.randomStruct,
       0
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const abiEncoded = coder.encode([abiInput.abi as any], [randomResult]);
     return ethers.keccak256(abiEncoded);
   }

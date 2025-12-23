@@ -11,17 +11,13 @@ type verifiedCallback = (err: Error | null, user?: object, info?: object) => voi
  */
 export class ApiKeyStrategy extends PassportStrategy(HeaderAPIKeyStrategy, "api-key-strategy") {
   constructor(private readonly authService: AuthService) {
-    super(
-      { header: "X-API-KEY", prefix: "" },
-      true,
-      async (apiKey: string, verified: verifiedCallback, req: Request) => {
-        if (this.authService.validateApiKey(apiKey)) {
-          verified(null, {}, {});
-          return req;
-        } else {
-          verified(new UnauthorizedException(), {}, {});
-        }
+    super({ header: "X-API-KEY", prefix: "" }, true, (apiKey: string, verified: verifiedCallback, req: Request) => {
+      if (this.authService.validateApiKey(apiKey)) {
+        verified(null, {}, {});
+        return req;
+      } else {
+        verified(new UnauthorizedException(), {}, {});
       }
-    );
+    });
   }
 }

@@ -44,7 +44,7 @@ export function calculateSigningRewards(
   const doubleSigners = calculateDoubleSigners(
     data.dataForCalculations.votingRoundId,
     FTSO2_PROTOCOL_ID,
-    data.signaturesMap!
+    data.signaturesMap
   );
   if (!data.firstSuccessfulFinalization) {
     // const deadlineTimestamp = EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1);
@@ -85,11 +85,11 @@ export function calculateSigningRewards(
     return [backClaim];
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
-      data.firstSuccessfulFinalization!.messages.protocolMessageMerkleRoot
+      data.firstSuccessfulFinalization.messages.protocolMessageMerkleRoot
     );
     let signatures = data.signaturesMap.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
     // filter out double signers
-    signatures = signatures.filter(signature => !doubleSigners.has(signature.messages.signer!.toLowerCase()));
+    signatures = signatures.filter((signature) => !doubleSigners.has(signature.messages.signer.toLowerCase()));
 
     // rewarded:
     // - all signatures in grace period (no matter of finalization timestamp)
@@ -100,15 +100,15 @@ export function calculateSigningRewards(
       EPOCH_SETTINGS().votingEpochEndSec(votingRoundId + 1)
     );
     rewardEligibleSignatures = signatures.filter(
-      signature =>
+      (signature) =>
         isSignatureInGracePeriod(votingRoundId, signature) ||
         isSignatureBeforeTimestamp(votingRoundId, signature, deadlineTimestamp)
     );
   }
   let undistributedSigningRewardWeight = 0n;
   for (const signature of rewardEligibleSignatures) {
-    const signer = signature.messages.signer!.toLowerCase();
-    const weight = signature.messages.weight!;
+    const signer = signature.messages.signer.toLowerCase();
+    const weight = signature.messages.weight;
     if (!BURN_NON_ELIGIBLE_REWARDS && !eligibleVoters.has(signer)) {
       // redistribute the reward to eligible voters by not including the weight
       continue;
@@ -134,7 +134,7 @@ export function calculateSigningRewards(
   let undistributedAmount = offer.amount;
   const resultClaims: IPartialRewardClaim[] = [];
   // sort signatures according to signing policy order (index in signing policy)
-  rewardEligibleSignatures.sort((a, b) => a.messages.index! - b.messages.index!);
+  rewardEligibleSignatures.sort((a, b) => a.messages.index - b.messages.index);
 
   // assert check for duplicate voter indices
   for (let i = 0; i < rewardEligibleSignatures.length - 1; i++) {
@@ -143,12 +143,12 @@ export function calculateSigningRewards(
     }
   }
   for (const signature of rewardEligibleSignatures) {
-    const signer = signature.messages.signer!.toLowerCase();
+    const signer = signature.messages.signer.toLowerCase();
     if (!BURN_NON_ELIGIBLE_REWARDS && !eligibleVoters.has(signer)) {
       // ignore non-eligible voters in reward distribution when not burning the claims
       continue;
     }
-    const weight = BigInt(signature.messages.weight!);
+    const weight = BigInt(signature.messages.weight);
     let amount = 0n;
     if (weight > 0n) {
       // sanity check
@@ -234,14 +234,14 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   const hashToWeight = new Map<string, number>();
   for (const [hash, signatureSubmissions] of signatures.entries()) {
     let weightSum = 0;
-    const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
+    const filteredSubmissions = signatureSubmissions.filter((signatureSubmission) =>
       isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
     );
     for (const signatureSubmission of filteredSubmissions) {
       if (signatureSubmission.messages.message.protocolId !== protocolId) {
         throw new Error("Critical error: Illegal protocol id");
       }
-      weightSum += signatureSubmission.messages.weight!;
+      weightSum += signatureSubmission.messages.weight;
     }
     hashToWeight.set(hash, weightSum);
     if (weightSum > maxWeight) {
@@ -251,9 +251,9 @@ export function mostFrequentHashSignaturesBeforeDeadline(
   const minimalWeightThreshold =
     (totalSigningWeight * MINIMAL_REWARDED_NON_CONSENSUS_DEPOSITED_SIGNATURES_PER_HASH_BIPS()) / Number(TOTAL_BIPS);
   for (const [hash, signatureSubmissions] of signatures.entries()) {
-    const weightSum = hashToWeight.get(hash)!;
+    const weightSum = hashToWeight.get(hash);
     if (weightSum === maxWeight && weightSum >= minimalWeightThreshold) {
-      const filteredSubmissions = signatureSubmissions.filter(signatureSubmission =>
+      const filteredSubmissions = signatureSubmissions.filter((signatureSubmission) =>
         isSignatureBeforeTimestamp(votingRoundId, signatureSubmission, deadlineTimestamp)
       );
       result.push(...filteredSubmissions);

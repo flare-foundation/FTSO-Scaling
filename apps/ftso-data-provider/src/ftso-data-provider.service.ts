@@ -11,10 +11,7 @@ import { DataAvailabilityStatus, DataManager } from "../../../libs/ftso-core/src
 import { IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { RewardEpochManager } from "../../../libs/ftso-core/src/RewardEpochManager";
 import { ContractMethodNames } from "../../../libs/contracts/src/definitions";
-import {
-  FTSO2_PROTOCOL_ID,
-  RANDOM_GENERATION_BENCHING_WINDOW,
-} from "../../../libs/ftso-core/src/constants";
+import { FTSO2_PROTOCOL_ID, RANDOM_GENERATION_BENCHING_WINDOW } from "../../../libs/ftso-core/src/constants";
 import { calculateResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
 import { CommitData, ICommitData } from "../../../libs/ftso-core/src/data/CommitData";
 import { FeedValueEncoder } from "../../../libs/ftso-core/src/data/FeedValueEncoder";
@@ -28,8 +25,8 @@ import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api, FeedId, FeedValuesResponse } from "./feed-value-provider-api/generated/provider-api";
 
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
-import {AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../libs/contracts/src/constants";
+import { AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../libs/contracts/src/constants";
 import { AxiosResponse } from "axios";
 
 type RoundAndAddress = string;
@@ -105,10 +102,7 @@ export class FtsoDataProviderService {
     return data;
   }
 
-  async getRevealData(
-    votingRoundId: number,
-    submissionAddress: string
-  ): Promise<IPayloadMessage<IRevealData> | undefined> {
+  getRevealData(votingRoundId: number, submissionAddress: string): IPayloadMessage<IRevealData> | undefined {
     this.logger.log(`Getting reveal for voting round ${votingRoundId}`);
 
     const revealData = this.votingRoundData.get(combine(votingRoundId, submissionAddress));
@@ -151,7 +145,7 @@ export class FtsoDataProviderService {
     const merkleRoot = result.merkleTree.root;
     const treeNodes = [
       MerkleTreeStructs.fromRandomCalculationResult(result.randomData),
-      ...result.medianData.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+      ...result.medianData.map((result) => MerkleTreeStructs.fromMedianCalculationResult(result)),
     ];
     const response: IProtocolMessageMerkleData = {
       protocolId: FTSO2_PROTOCOL_ID,
@@ -168,7 +162,7 @@ export class FtsoDataProviderService {
     if (result === undefined) {
       return undefined;
     }
-    const feed = result.medianData.find(median => median.feed.id === feedId);
+    const feed = result.medianData.find((median) => median.feed.id === feedId);
     if (feed === undefined) {
       return undefined;
     }
@@ -241,30 +235,32 @@ export class FtsoDataProviderService {
   // Internal methods
 
   private async getFeedValuesForEpoch(votingRoundId: number, supportedFeeds: Feed[]): Promise<IRevealData> {
-    let response: AxiosResponse<FeedValuesResponse, any>;
+    let response: AxiosResponse<FeedValuesResponse, unknown>;
 
     try {
       response = await retry(
         async () =>
           await this.feedValueProviderClient.feedValueProviderApi.getFeedValues(votingRoundId, {
-            feeds: supportedFeeds.map(feed => decodeFeed(feed.id)),
+            feeds: supportedFeeds.map((feed) => decodeFeed(feed.id)),
           })
       );
     } catch (e) {
       if (e instanceof RetryError) {
-        throw new Error(`Failed to get feed values for epoch ${votingRoundId}, error connecting to value provider:\n${e.cause}`);
+        throw new Error(
+          `Failed to get feed values for epoch ${votingRoundId}, error connecting to value provider:\n${e.cause as Error}`
+        );
       }
     }
 
     if (response.status < 200 || response.status >= 300) {
-      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${response.data}`);
+      throw new Error(`Failed to get feed values for epoch ${votingRoundId}: ${JSON.stringify(response.data)}`);
     }
 
     const values = response.data;
 
     // transfer values to 4 byte hex strings and concatenate them
     // make sure that the order of values is in line with protocol definition
-    const extractedValues = values.data.map(d => d.value);
+    const extractedValues = values.data.map((d) => d.value);
 
     return {
       values: extractedValues,

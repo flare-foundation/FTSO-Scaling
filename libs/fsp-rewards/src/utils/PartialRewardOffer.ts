@@ -1,6 +1,6 @@
 import { InflationRewardsOffered, RewardsOffered } from "../../../contracts/src/events";
 import { Address } from "../../../ftso-core/src/voting-types";
-import {BURN_ADDRESS} from "../constants";
+import { BURN_ADDRESS } from "../constants";
 
 export interface IPartialRewardOfferForEpoch {
   // reward epoch id
@@ -57,7 +57,6 @@ export interface IFUPartialRewardOfferForRound {
   shouldBeBurned?: boolean;
 }
 
-
 export namespace PartialRewardOffer {
   export function fromRewardOffered(rewardOffer: RewardsOffered): IPartialRewardOfferForEpoch {
     return {
@@ -70,7 +69,7 @@ export namespace PartialRewardOffer {
       secondaryBandWidthPPM: rewardOffer.secondaryBandWidthPPM,
       claimBackAddress: rewardOffer.claimBackAddress,
       isInflation: false,
-      offerIndex: rewardOffer.offerIndex!,
+      offerIndex: rewardOffer.offerIndex,
     };
   }
 
@@ -96,7 +95,7 @@ export namespace PartialRewardOffer {
         secondaryBandWidthPPM: inflationRewardOffer.secondaryBandWidthPPMs[i],
         claimBackAddress: BURN_ADDRESS,
         isInflation: true,
-        offerIndex: inflationRewardOffer.offerIndex!,
+        offerIndex: inflationRewardOffer.offerIndex,
       });
     }
     return rewardOffers;

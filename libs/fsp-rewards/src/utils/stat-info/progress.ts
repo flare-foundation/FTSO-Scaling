@@ -13,7 +13,7 @@ import {
   TEMP_REWARD_EPOCH_FOLDER_PREFIX,
 } from "./constants";
 import { RewardCalculationStatus, deserializeRewardEpochCalculationStatus } from "./reward-calculation-status";
-import {CALCULATIONS_FOLDER} from "../../constants";
+import { CALCULATIONS_FOLDER } from "../../constants";
 
 export enum ProgressType {
   OFFER_DISTRIBUTION = "OFFER_DISTRIBUTION",
@@ -66,7 +66,7 @@ function progressConfig(progressType: ProgressType): ProgressConfig {
       };
     default:
       // Ensure exhaustive checking
-      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+
       ((_: never): void => {})(progressType);
   }
 }
@@ -108,8 +108,8 @@ export function rewardCalculationProgress(
   const result = globSync(
     `${tempRewardEpochFolder ? TEMP_REWARD_EPOCH_FOLDER_PREFIX : ""}${rewardEpochFolder}/**/${config.fileName}`
   )
-    .map(file => parseInt(file.replace(numberExtractRegex, "$1")))
-    .filter(votingRoundId => status.startVotingRoundId <= votingRoundId && votingRoundId <= status.endVotingRoundId);
+    .map((file) => parseInt(file.replace(numberExtractRegex, "$1")))
+    .filter((votingRoundId) => status.startVotingRoundId <= votingRoundId && votingRoundId <= status.endVotingRoundId);
   result.sort();
 
   if (result.length === 0) {

@@ -25,12 +25,12 @@ export function calculatePenalties(
   penaltyType: RewardTypePrefix
 ): IPartialRewardClaim[] {
   const totalWeight = [...votersWeights.values()]
-    .map(voterWeight => medianRewardDistributionWeight(voterWeight))
+    .map((voterWeight) => medianRewardDistributionWeight(voterWeight))
     .reduce((a, b) => a + b, 0n);
 
   const penaltyClaims: IPartialRewardClaim[] = [];
   for (const submitAddress of offenders) {
-    const voterWeights = votersWeights.get(submitAddress)!;
+    const voterWeights = votersWeights.get(submitAddress);
     if (!voterWeights) {
       throw new Error("Critical error: Illegal offender");
     }
@@ -43,7 +43,9 @@ export function calculatePenalties(
       }
       penalty = (-voterWeight * offer.amount * penaltyFactor) / totalWeight;
     }
-    penaltyClaims.push(...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FTSO2_PROTOCOL_ID));
+    penaltyClaims.push(
+      ...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FTSO2_PROTOCOL_ID)
+    );
   }
   return penaltyClaims;
 }

@@ -171,14 +171,14 @@ export async function partialRewardClaimsForVotingRound(
       const medianRewardClaims = calculateMedianRewardClaims(
         splitOffers.medianRewardOffer,
         medianResult,
-        data.dataForCalculations.votersWeightsMap!
+        data.dataForCalculations.votersWeightsMap
       );
 
       // Extract voter signing addresses that are eligible for median reward
       const medianEligibleVoters = new Set(
         medianRewardClaims
-          .filter(claim => claim.claimType === ClaimType.WNAT && claim.amount > 0n)
-          .map(claim => {
+          .filter((claim) => claim.claimType === ClaimType.WNAT && claim.amount > 0n)
+          .map((claim) => {
             const delegationAddress = claim.beneficiary.toLowerCase();
             const signingAddress = delegationAddressToSigningAddress.get(delegationAddress);
             if (!signingAddress) {
@@ -205,18 +205,18 @@ export async function partialRewardClaimsForVotingRound(
       const revealWithdrawalPenalties = calculatePenalties(
         offer,
         PENALTY_FACTOR(),
-        data.dataForCalculations.revealOffendersSet!,
-        data.dataForCalculations.votersWeightsMap!,
+        data.dataForCalculations.revealOffendersSet,
+        data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.REVEAL_OFFENDERS
       );
 
       // Calculate penalties for reveal double signers
       // get signingAddresses of double signers
-      const doubleSigners = calculateDoubleSigners(votingRoundId, FTSO2_PROTOCOL_ID, data.signaturesMap!);
+      const doubleSigners = calculateDoubleSigners(votingRoundId, FTSO2_PROTOCOL_ID, data.signaturesMap);
 
       // convert signingAddresses to submitAddresses
       const doubleSignersSubmit = new Set(
-        [...doubleSigners.keys()].map(signingAddress =>
+        [...doubleSigners.keys()].map((signingAddress) =>
           data.dataForCalculations.signingAddressToSubmitAddress.get(signingAddress)
         )
       );
@@ -226,7 +226,7 @@ export async function partialRewardClaimsForVotingRound(
         offer,
         PENALTY_FACTOR(),
         doubleSignersSubmit,
-        data.dataForCalculations.votersWeightsMap!,
+        data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.DOUBLE_SIGNERS
       );
 
@@ -250,7 +250,7 @@ export async function partialRewardClaimsForVotingRound(
       votingRoundId,
       calculationFolder
     );
-    for (const [feedId, offers] of fuFeedOffers.entries()) {
+    for (const [, offers] of fuFeedOffers.entries()) {
       for (const offer of offers) {
         allRewardClaims.push({
           votingRoundId: offer.votingRoundId,
@@ -389,8 +389,8 @@ export async function partialRewardClaimsForVotingRound(
         rewardEpochInfo,
         data,
         PENALTY_FACTOR(),
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        data.dataForCalculations.votersWeightsMap!,
+
+        data.dataForCalculations.votersWeightsMap,
         RewardTypePrefix.FDC_OFFENDERS
       );
 
@@ -435,7 +435,7 @@ export async function prepareDataForRewardCalculations(
   // Select eligible voters for finalization rewards
   const randomVoterSelector = new RandomVoterSelector(
     rewardEpoch.signingPolicy.voters,
-    rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
+    rewardEpoch.signingPolicy.weights.map((weight) => BigInt(weight)),
     FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
   );
 
@@ -459,7 +459,7 @@ export async function prepareDataForRewardCalculations(
   const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
   const calculationResults = [
     MerkleTreeStructs.fromRandomCalculationResult(randomData),
-    ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+    ...medianResults.map((result) => MerkleTreeStructs.fromMedianCalculationResult(result)),
   ];
   serializeFeedValuesForVotingRoundId(rewardEpochId, votingRoundId, calculationResults, false, calculationFolder);
   serializeDataForRewardCalculation(
@@ -508,7 +508,7 @@ export async function prepareDataForRewardCalculationsForRange(
     // Select eligible voters for finalization rewards
     const randomVoterSelector = new RandomVoterSelector(
       rewardEpoch.signingPolicy.voters,
-      rewardEpoch.signingPolicy.weights.map(weight => BigInt(weight)),
+      rewardEpoch.signingPolicy.weights.map((weight) => BigInt(weight)),
       FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
     );
 
@@ -533,7 +533,7 @@ export async function prepareDataForRewardCalculationsForRange(
     const randomData = calculateRandom(rewardDataForCalculations.dataForCalculations);
     const calculationResults = [
       MerkleTreeStructs.fromRandomCalculationResult(randomData),
-      ...medianResults.map(result => MerkleTreeStructs.fromMedianCalculationResult(result)),
+      ...medianResults.map((result) => MerkleTreeStructs.fromMedianCalculationResult(result)),
     ];
     serializeFeedValuesForVotingRoundId(
       rewardEpochId,

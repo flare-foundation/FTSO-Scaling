@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { SigningPolicyInitialized } from "../../../libs/contracts/src/events";
 import { getTestFile } from "../../utils/getTestFile";
-import {decodeEvent, AbiCache} from "../../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../../libs/contracts/src/constants";
+import { decodeEvent, AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../../libs/contracts/src/constants";
 
 describe(`SigningPolicyInitialized (${getTestFile(__filename)})`, () => {
   const rawEvent = {

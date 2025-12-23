@@ -1,6 +1,7 @@
+/* eslint-disable */
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 export class FastUpdateFeeds extends RawEventConstructible {
   static eventName = "FastUpdateFeeds";

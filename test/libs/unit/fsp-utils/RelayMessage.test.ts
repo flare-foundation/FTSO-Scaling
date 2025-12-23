@@ -12,11 +12,11 @@ import { defaultTestSigningPolicy, generateSignatures } from "./coding-helpers";
 import e from "express";
 
 const web3 = new Web3("https://dummy");
-describe(`RelayMessage`, async () => {
+describe(`RelayMessage`, () => {
   const accountPrivateKeys = JSON.parse(
     readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")
-  ).map((x: any) => x.privateKey);
-  const accountAddresses = accountPrivateKeys.map((x: any) => web3.eth.accounts.privateKeyToAccount(x).address);
+  ).map((x: { privateKey: string }) => x.privateKey);
+  const accountAddresses = accountPrivateKeys.map((x: string) => web3.eth.accounts.privateKeyToAccount(x).address);
 
   const N = 100;
   const singleWeight = 500;
@@ -34,7 +34,7 @@ describe(`RelayMessage`, async () => {
     newSigningPolicyData.rewardEpochId++;
   });
 
-  it("Should encode and decode Relay message", async () => {
+  it("Should encode and decode Relay message", () => {
     const merkleRoot = ethers.hexlify(ethers.randomBytes(32));
     const messageData = {
       protocolId: 15,
@@ -44,7 +44,7 @@ describe(`RelayMessage`, async () => {
     } as IProtocolMessageMerkleRoot;
 
     const messageHash = ProtocolMessageMerkleRoot.hash(messageData);
-    const signatures = await generateSignatures(accountPrivateKeys, messageHash, N / 2 + 1);
+    const signatures = generateSignatures(accountPrivateKeys, messageHash, N / 2 + 1);
 
     const relayMessage = {
       signingPolicy: signingPolicyData,
@@ -70,7 +70,7 @@ describe(`RelayMessage`, async () => {
     expect(RelayMessage.equals(relayMessage2, decodedRelayMessage)).to.be.true;
   });
 
-  it("Should equals work", async () => {
+  it("Should equals work", () => {
     const merkleRoot = ethers.hexlify(ethers.randomBytes(32));
     const messageData = {
       protocolId: 15,
@@ -86,8 +86,8 @@ describe(`RelayMessage`, async () => {
     } as IProtocolMessageMerkleRoot;
 
     const messageHash = ProtocolMessageMerkleRoot.hash(messageData);
-    const signatures = await generateSignatures(accountPrivateKeys, messageHash, N / 2 + 1);
-    const signatures2 = await generateSignatures(accountPrivateKeys, messageHash, N / 2 + 2);
+    const signatures = generateSignatures(accountPrivateKeys, messageHash, N / 2 + 1);
+    const signatures2 = generateSignatures(accountPrivateKeys, messageHash, N / 2 + 2);
     const signingPolicyData2 = defaultTestSigningPolicy(accountAddresses, N - 1, singleWeight);
     const relayMessage = {
       signingPolicy: signingPolicyData,
@@ -146,7 +146,7 @@ describe(`RelayMessage`, async () => {
     expect(RelayMessage.equals(relayMessage9, relayMessage8)).to.be.false;
   });
 
-  it("Should encode and verify", async () => {
+  it("Should encode and verify", () => {
     const merkleRoot = ethers.hexlify(ethers.randomBytes(32));
     const messageData = {
       protocolId: 15,
@@ -156,7 +156,7 @@ describe(`RelayMessage`, async () => {
     } as IProtocolMessageMerkleRoot;
 
     const messageHash = ProtocolMessageMerkleRoot.hash(messageData);
-    const signatures = await generateSignatures(accountPrivateKeys, messageHash, N / 2);
+    const signatures = generateSignatures(accountPrivateKeys, messageHash, N / 2);
 
     const relayMessage = {
       signingPolicy: signingPolicyData,

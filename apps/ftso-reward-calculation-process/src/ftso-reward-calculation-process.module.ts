@@ -14,8 +14,8 @@ const IMPORTS_ARRAY = [
   TypeOrmModule.forRootAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
-    useFactory: async (configService: ConfigService<IConfig>) => {
-      const sqliteDatabase = configService.get("db_sqlite3_path");
+    useFactory: (configService: ConfigService<IConfig>) => {
+      const sqliteDatabase: string = configService.get("db_sqlite3_path");
       if (sqliteDatabase) {
         return {
           type: "sqlite",

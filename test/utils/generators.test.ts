@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { generateEvent } from "./basic-generators";
-import {decodeEvent} from "../../libs/contracts/src/abi/AbiCache";
-import {CONTRACTS} from "../../libs/contracts/src/constants";
+import { decodeEvent } from "../../libs/contracts/src/abi/AbiCache";
+import { CONTRACTS } from "../../libs/contracts/src/constants";
 
 describe("generators", () => {
   // Event ABI example
@@ -51,6 +51,7 @@ describe("generators", () => {
       1,
       Math.floor(Date.now() / 1000)
     );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const decoded = decodeEvent<any>(CONTRACTS.Relay.name, "ProtocolMessageRelayed", eventEntity, (data: any) => data);
     expect(decoded.protocolId).to.be.equal(eventData.protocolId);
     expect(decoded.votingRoundId).to.be.equal(eventData.votingRoundId);

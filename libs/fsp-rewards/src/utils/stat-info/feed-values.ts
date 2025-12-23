@@ -5,9 +5,9 @@ import { MerkleTree } from "../../../../ftso-core/src/utils/MerkleTree";
 import { FeedResult, MerkleTreeStructs, RandomResult } from "../../../../ftso-core/src/data/MerkleTreeStructs";
 import { bigIntReplacer } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { FEED_VALUES_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
-import {AbiCache} from "../../../../contracts/src/abi/AbiCache";
-import {CALCULATIONS_FOLDER} from "../../constants";
-import {CONTRACTS} from "../../../../contracts/src/constants";
+import { AbiCache } from "../../../../contracts/src/abi/AbiCache";
+import { CALCULATIONS_FOLDER } from "../../constants";
+import { CONTRACTS } from "../../../../contracts/src/constants";
 
 export interface FeedResultWithMerkleProof {
   body: FeedResult;
@@ -59,21 +59,21 @@ export function serializeFeedValuesForVotingRoundId(
     ContractMethodNames.randomStruct,
     0
   ).abi;
-  const randomResult = calculationResults.find(x => !(x as any).id) as RandomResult;
-  const feedResults = calculationResults.filter(x => (x as any).id) as FeedResult[];
+  const randomResult = calculationResults.find((x) => !(x as any).id) as RandomResult;
+  const feedResults = calculationResults.filter((x) => (x as any).id) as FeedResult[];
   if (!randomResult || feedResults.length + 1 !== calculationResults.length) {
     throw new Error("Invalid calculation results!");
   }
   const merkleTree = new MerkleTree([
     MerkleTreeStructs.hashRandomResult(randomResult),
-    ...feedResults.map(result => MerkleTreeStructs.hashFeedResult(result)),
+    ...feedResults.map((result) => MerkleTreeStructs.hashFeedResult(result)),
   ]);
   const merkleRoot = merkleTree.root;
   const randomValue = {
     body: randomResult,
     merkleProof: merkleTree.getProof(MerkleTreeStructs.hashRandomResult(randomResult)),
   };
-  const feedValues = feedResults.map(result => ({
+  const feedValues = feedResults.map((result) => ({
     body: result,
     merkleProof: merkleTree.getProof(MerkleTreeStructs.hashFeedResult(result)),
   }));

@@ -5,7 +5,7 @@ import { IRewardClaim, IRewardClaimWithProof, RewardClaim } from "../utils/Rewar
  * Builds a reward claim Merkle tree from the given reward epoch claims.
  */
 export function buildRewardClaimMerkleTree(rewardClaims: IRewardClaim[]): MerkleTree {
-  const leaves = rewardClaims.map(rewardClaim => RewardClaim.hashRewardClaim(rewardClaim));
+  const leaves = rewardClaims.map((rewardClaim) => RewardClaim.hashRewardClaim(rewardClaim));
   // assert different hashes
   const uniqueLeaves = new Set(leaves);
   if (uniqueLeaves.size !== leaves.length) {

@@ -35,7 +35,7 @@ export function calculateDoubleSigners(
         // non-punishable
         continue;
       }
-      const signer = signature.messages.signer!.toLowerCase();
+      const signer = signature.messages.signer.toLowerCase();
       const existingHash = signerCounter.get(signer);
       if (existingHash && existingHash !== hash) {
         doubleSigners.add(signer);

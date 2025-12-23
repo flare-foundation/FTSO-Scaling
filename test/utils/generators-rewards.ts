@@ -29,7 +29,9 @@ import {
 import {
   BURN_ADDRESS,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
-  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC, ZERO_BYTES32
+  GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
+  GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC,
+  ZERO_BYTES32,
 } from "../../libs/fsp-rewards/src/constants";
 import { RandomVoterSelector } from "../../libs/fsp-rewards/src/reward-calculation/RandomVoterSelector";
 import { CommitData, ICommitData } from "../../libs/ftso-core/src/data/CommitData";
@@ -59,7 +61,7 @@ export interface IndexerPosition<T> {
 }
 
 export function voterFeedValue(votingRoundId: number, voterIndex: number, feedSequence: Feed[]): number[] {
-  const feedValues = [];
+  const feedValues: number[] = [];
   for (let i = 0; i < feedSequence.length; i++) {
     const value = Math.sin(votingRoundId / 90) * 1000 + Math.cos(voterIndex + votingRoundId / 90);
     feedValues.push(value);
@@ -214,7 +216,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
   function generateSigningPolicy(voters: TestVoter[], rewardEpochId: number) {
     const weightSum = voters.reduce((sum, v) => sum + Number(v.registrationWeight), 0);
-    const newWeightsNormalized = voters.map(v =>
+    const newWeightsNormalized = voters.map((v) =>
       Math.floor((Number(v.registrationWeight) / weightSum) * (2 ** 16 - 1))
     );
     const newWeightSum = newWeightsNormalized.reduce((sum, w) => sum + w, 0);
@@ -224,7 +226,7 @@ export async function generateRewardEpochDataForRewardCalculation(
       startVotingRoundId: EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId),
       threshold: threshold,
       seed: "0x1234567890123456789012345678901234567890123456789012345678901234",
-      voters: voters.map(v => v.signingAddress),
+      voters: voters.map((v) => v.signingAddress),
       weights: newWeightsNormalized,
     };
     return signingPolicy;
@@ -550,7 +552,7 @@ export async function generateRewardEpochDataForRewardCalculation(
 
   const voterSelector = new RandomVoterSelector(
     signingPolicy.voters,
-    signingPolicy.weights.map(n => BigInt(n)),
+    signingPolicy.weights.map((n) => BigInt(n)),
     FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS()
   );
 
@@ -722,7 +724,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         const finalizer = voterIndexToMiniFinalizer.get(voterIndex);
 
         const selectionIndex = voterSelector.inSelectionList(
-          signingPolicy.voters.map(x => x.toLowerCase()),
+          signingPolicy.voters.map((x) => x.toLowerCase()),
           signingPolicy.seed,
           FTSO2_PROTOCOL_ID,
           votingEpochId - 1,
@@ -749,7 +751,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         const finalizer = voterIndexToMiniFinalizer.get(voterIndex);
 
         const selectionIndex = voterSelector.inSelectionList(
-          signingPolicy.voters.map(x => x.toLowerCase()),
+          signingPolicy.voters.map((x) => x.toLowerCase()),
           signingPolicy.seed,
           FTSO2_PROTOCOL_ID,
           votingEpochId - 1,
@@ -847,5 +849,5 @@ export async function generateRewardEpochDataForRewardCalculation(
   }
   // Move beyond the last relevant voting epoch
   moveToVotingEpochOffset(lastVotingEpochId + 2, 1);
-  mineFakeTransaction();
+  await mineFakeTransaction();
 }

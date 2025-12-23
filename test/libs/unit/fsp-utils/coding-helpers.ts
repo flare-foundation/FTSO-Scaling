@@ -21,22 +21,22 @@ export function defaultTestSigningPolicy(accounts: string[], N: number, singleWe
   return signingPolicyData;
 }
 
-export async function generateSignatures(
+export function generateSignatures(
   privateKeys: string[],
   messageHash: string,
   count: number,
   indices?: number[]
-): Promise<IECDSASignatureWithIndex[]> {
+): IECDSASignatureWithIndex[] {
   const signatures: IECDSASignatureWithIndex[] = [];
   if (indices) {
     for (const i of indices) {
-      const signature = await ECDSASignatureWithIndex.signMessageHash(messageHash, privateKeys[i], i);
+      const signature = ECDSASignatureWithIndex.signMessageHash(messageHash, privateKeys[i], i);
       signatures.push(signature);
     }
     return signatures;
   }
   for (let i = 0; i < count; i++) {
-    const signature = await ECDSASignatureWithIndex.signMessageHash(messageHash, privateKeys[i], i);
+    const signature = ECDSASignatureWithIndex.signMessageHash(messageHash, privateKeys[i], i);
     signatures.push(signature);
   }
   return signatures;

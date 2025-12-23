@@ -228,7 +228,6 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
 
   // Processing by voting rounds
   let totalFUUpdates = 0;
-  let nonEmptyFeedValues = 0;
   let totalRewardedVotingRounds = 0;
   for (
     let votingRoundId = rewardEpochInfo.signingPolicy.startVotingRoundId;
@@ -260,7 +259,6 @@ export function calculateMinimalConditions(rewardEpochId: number): DataProviderC
         continue;
       }
       const median = feedRecord.data.finalMedian.value;
-      nonEmptyFeedValues++;
       const delta = (BigInt(median) * FTSO_SCALING_CLOSENESS_THRESHOLD_PPM) / TOTAL_PPM;
       const low = median - Number(delta);
       const high = median + Number(delta);
@@ -503,9 +501,9 @@ export function updateClaimsForMinimalConditions(
   beneficiariesToBurn.add(BURN_ADDRESS.toLowerCase());
 
   const rewardDistributionData = deserializeRewardDistributionData(rewardEpochId);
-  const claims = rewardDistributionData.rewardClaims.map(item => item.body);
-  const fullClaims = claims.filter(claim => !beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
-  const claimsToBurn = claims.filter(claim => beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
+  const claims = rewardDistributionData.rewardClaims.map((item) => item.body);
+  const fullClaims = claims.filter((claim) => !beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
+  const claimsToBurn = claims.filter((claim) => beneficiariesToBurn.has(claim.beneficiary.toLowerCase()));
   const burnClaim: IRewardClaim = {
     beneficiary: BURN_ADDRESS.toLowerCase(),
     amount: claimsToBurn.reduce((acc, claim) => acc + claim.amount, 0n),

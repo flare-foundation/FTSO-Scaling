@@ -64,11 +64,11 @@ export namespace FeedValueEncoder {
   }
 
   export function emptyFeeds(feeds: Feed[]): ValueWithDecimals[] {
-    return feeds.map(feed => emptyFeed(feed.decimals));
+    return feeds.map((feed) => emptyFeed(feed.decimals));
   }
 
   export function feedForValue(value: number, decimals: number) {
-    if (value == undefined) return emptyFeed(decimals);
+    if (value === undefined) return emptyFeed(decimals);
 
     return {
       isEmpty: false,
@@ -78,6 +78,6 @@ export namespace FeedValueEncoder {
   }
 }
 
-function padEndArray(array: any[], minLength: number, fillValue: any = undefined) {
+function padEndArray(array: string[], minLength: number, fillValue: string = undefined) {
   return Object.assign(new Array(minLength).fill(fillValue), array);
 }

@@ -1,6 +1,6 @@
-import {RewardEpochStarted} from "../../contracts/src/events";
-import {EpochSettings} from "./utils/EpochSettings";
-import {networks} from "../../contracts/src/constants";
+import { RewardEpochStarted } from "../../contracts/src/events";
+import { EpochSettings } from "./utils/EpochSettings";
+import { networks } from "../../contracts/src/constants";
 
 // State names in indexer database
 export const LAST_CHAIN_INDEX_STATE = "last_chain_block";
@@ -19,8 +19,8 @@ const ftso2ProtocolId = () => {
       return 100;
     default:
       // Ensure exhaustive checking
-      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(network);
+
+      ((_: never): void => {})(network);
   }
 };
 
@@ -80,8 +80,8 @@ const epochSettings = () => {
       );
     default:
       // Ensure exhaustive checking
-      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(network);
+
+      ((_: never): void => {})(network);
   }
 };
 
@@ -124,8 +124,8 @@ const randomGenerationBenchingWindow = () => {
       return 20;
     default:
       // Ensure exhaustive checking
-      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(network);
+
+      ((_: never): void => {})(network);
   }
 };
 
@@ -159,8 +159,8 @@ const initialRewardEpochId = () => {
       return 0;
     default:
       // Ensure exhaustive checking
-      // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-      ((_: never): void => { })(network);
+
+      ((_: never): void => {})(network);
   }
 };
 
@@ -174,4 +174,3 @@ export const GENESIS_REWARD_EPOCH_START_EVENT = () => {
   };
   return result;
 };
-

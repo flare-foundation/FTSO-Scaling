@@ -1,6 +1,5 @@
 import { Feed } from "../voting-types";
 
-
 import { RewardOffers } from "../data/RewardOffers";
 
 /**
@@ -53,7 +52,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
 
   const feedSequence = sortFeedWithValuesToCanonicalOrder(Array.from(feedValues.values()));
 
-  return feedSequence.map(feedValueType => {
+  return feedSequence.map((feedValueType) => {
     return {
       id: feedValueType.id,
       decimals: feedValueType.decimals,

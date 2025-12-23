@@ -20,7 +20,7 @@ export function extractRandomNumbers(
     }
     const randomNumberResult = data.nextVotingRoundRandomResult;
     if (randomNumberResult !== undefined) {
-      randomNumbers.push(BigInt(data.nextVotingRoundRandomResult!));
+      randomNumbers.push(BigInt(data.nextVotingRoundRandomResult));
     } else {
       randomNumbers.push(undefined);
     }
@@ -67,7 +67,7 @@ export function processRandomNumberFixingRange(
         );
       }
       const newRandomNumber = BigInt(
-        soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
+        soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))
       ).toString();
       previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;
 
@@ -81,7 +81,7 @@ export function processRandomNumberFixingRange(
   return nextVotingRoundIdWithNoSecureRandom;
 }
 
-export async function runRandomNumberFixing(rewardEpochId: number, newEpochVotingRoundOffset: number): Promise<void> {
+export function runRandomNumberFixing(rewardEpochId: number, newEpochVotingRoundOffset: number): void {
   const logger = new Logger();
   const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
   const newRewardEpochId = rewardEpochId + 1;
@@ -132,7 +132,7 @@ export async function runRandomNumberFixing(rewardEpochId: number, newEpochVotin
         );
       }
       const newRandomNumber = BigInt(
-        soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))!
+        soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))
       ).toString();
 
       previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;

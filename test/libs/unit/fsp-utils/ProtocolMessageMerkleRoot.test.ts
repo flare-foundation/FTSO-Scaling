@@ -4,7 +4,7 @@ import {
   ProtocolMessageMerkleRoot,
 } from "../../../../libs/ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 
-describe(`ProtocolMessageMerkleRoot`, async () => {
+describe(`ProtocolMessageMerkleRoot`, () => {
   it("Should encode and decode protocol message merkle root", async () => {
     const messageData = {
       protocolId: 15,

@@ -1,7 +1,8 @@
+/* eslint-disable */
 import { unPrefix0x } from "../../../ftso-core/src/utils/encoding";
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
  * Inflation rewards offer as obtained from an event of
@@ -16,13 +17,13 @@ export class InflationRewardsOffered extends RawEventConstructible {
     if (unPrefixed.length % 42 !== 0) {
       throw new Error("Feed names must be multiple of 21 bytes");
     }
-    this.feedIds = unPrefixed.match(/.{1,42}/g).map(x => "0x" + x);
+    this.feedIds = unPrefixed.match(/.{1,42}/g).map((x) => "0x" + x);
 
     unPrefixed = unPrefix0x(data.secondaryBandWidthPPMs);
     if (unPrefixed.length % 6 !== 0) {
       throw new Error("Secondary band width PPMs must be multiple of 3 bytes");
     }
-    this.secondaryBandWidthPPMs = unPrefixed.match(/.{1,6}/g).map(v => parseInt(v, 16));
+    this.secondaryBandWidthPPMs = unPrefixed.match(/.{1,6}/g).map((v) => parseInt(v, 16));
     if (this.feedIds.length !== this.secondaryBandWidthPPMs.length) {
       throw new Error("Feed names and secondary band width PPMs must have same length");
     }
@@ -33,7 +34,7 @@ export class InflationRewardsOffered extends RawEventConstructible {
       throw new Error("Decimals must be multiple of 1 byte");
     }
 
-    this.decimals = unprefixedDecimals.match(/.{1,2}/g).map(v => parseInt(v, 16));
+    this.decimals = unprefixedDecimals.match(/.{1,2}/g).map((v) => parseInt(v, 16));
     if (this.decimals.length !== this.feedIds.length) {
       throw new Error("Feed names and decimals must have same length");
     }

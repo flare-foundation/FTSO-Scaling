@@ -1,16 +1,10 @@
 import { ISignaturePayload } from "../../../ftso-core/src/fsp-utils/SignaturePayload";
 import { GenericSubmissionData, ParsedFinalizationData } from "../../../ftso-core/src/IndexerClient";
 import { VoterWeights } from "../../../ftso-core/src/RewardEpoch";
-import {
-  EPOCH_SETTINGS,
-
-} from "../../../ftso-core/src/constants";
+import { EPOCH_SETTINGS } from "../../../ftso-core/src/constants";
 import { Address } from "../../../ftso-core/src/voting-types";
-import {
-    GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC,
-    GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC
-} from "../constants";
-import {FDCEligibleSigner} from "../data-calculation-interfaces";
+import { GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC, GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC } from "../constants";
+import { FDCEligibleSigner } from "../data-calculation-interfaces";
 
 /**
  * Returns reward distribution weight for the voter.
@@ -27,7 +21,7 @@ export function isSignatureInGracePeriod(
   signatureSubmission: GenericSubmissionData<ISignaturePayload> | FDCEligibleSigner
 ) {
   return (
-    signatureSubmission.votingEpochIdFromTimestamp == votingRoundId + 1 &&
+    signatureSubmission.votingEpochIdFromTimestamp === votingRoundId + 1 &&
     signatureSubmission.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     signatureSubmission.relativeTimestamp <
       EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_SIGNATURES_DURATION_SEC()
@@ -60,7 +54,7 @@ export function isFinalizationInGracePeriodAndEligible(
 ) {
   return (
     eligibleVoters.has(finalization.submitAddress) &&
-    finalization.votingEpochIdFromTimestamp == votingRoundId + 1 &&
+    finalization.votingEpochIdFromTimestamp === votingRoundId + 1 &&
     finalization.relativeTimestamp >= EPOCH_SETTINGS().revealDeadlineSeconds &&
     finalization.relativeTimestamp <=
       EPOCH_SETTINGS().revealDeadlineSeconds + GRACE_PERIOD_FOR_FINALIZATION_DURATION_SEC()

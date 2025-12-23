@@ -101,7 +101,7 @@ export class DataManagerForRewarding extends DataManager {
       signaturesResponse.data.finalizations,
       FTSO2_PROTOCOL_ID
     );
-    const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
+    const firstSuccessfulFinalization = finalizations.find((finalization) => finalization.successfulOnChain);
     return {
       status: DataAvailabilityStatus.OK,
       data: {
@@ -163,7 +163,7 @@ export class DataManagerForRewarding extends DataManager {
       };
     }
 
-    async function rewardEpochForVotingRoundId(votingRoundId: number): Promise<RewardEpoch> {
+    function rewardEpochForVotingRoundId(votingRoundId: number): RewardEpoch {
       if (votingRoundId < lastRewardEpoch.startVotingRoundId) {
         return firstRewardEpoch;
       }
@@ -177,7 +177,7 @@ export class DataManagerForRewarding extends DataManager {
       // this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
       // this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
-      const rewardEpoch = await rewardEpochForVotingRoundId(votingRoundId);
+      const rewardEpoch = rewardEpochForVotingRoundId(votingRoundId);
       const votersToCommitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(
         votingRoundId,
         commits,
@@ -192,7 +192,7 @@ export class DataManagerForRewarding extends DataManager {
         mappingsResponse.data.votingRoundIdToCommits,
         mappingsResponse.data.votingRoundIdToReveals,
         randomGenerationBenchingWindow,
-        (votingRoundId: number) => rewardEpochForVotingRoundId(votingRoundId)
+        (votingRoundId: number) => Promise.resolve(rewardEpochForVotingRoundId(votingRoundId))
       );
       if (!process.env.REMOVE_ANNOYING_MESSAGES) {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
@@ -213,7 +213,7 @@ export class DataManagerForRewarding extends DataManager {
     }
     return {
       status: mappingsResponse.status,
-      data: result as DataForCalculations[],
+      data: result,
     };
   }
 
@@ -258,7 +258,7 @@ export class DataManagerForRewarding extends DataManager {
             // - Override the messageHash if provided
             // - Require
 
-            let messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
+            const messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
 
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
             // submit signature address should match the signingPolicyAddress
@@ -314,7 +314,7 @@ export class DataManagerForRewarding extends DataManager {
           }
         } catch (e) {
           console.log(e);
-          logger.warn(`Issues with parsing submission message: ${e.message}`);
+          logger.warn(`Issues with parsing submission message: ${(e as Error).message}`);
         }
       }
     }
@@ -447,7 +447,7 @@ export class DataManagerForRewarding extends DataManager {
         votingRoundFinalizations,
         FTSO2_PROTOCOL_ID
       );
-      const firstSuccessfulFinalization = finalizations.find(finalization => finalization.successfulOnChain);
+      const firstSuccessfulFinalization = finalizations.find((finalization) => finalization.successfulOnChain);
       let signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> = new Map<
         MessageHash,
         GenericSubmissionData<ISignaturePayload>[]
@@ -483,7 +483,7 @@ export class DataManagerForRewarding extends DataManager {
           votingRoundFinalizations,
           FDC_PROTOCOL_ID
         );
-        const fdcFirstSuccessfulFinalization = fdcFinalizations.find(finalization => finalization.successfulOnChain);
+        const fdcFirstSuccessfulFinalization = fdcFinalizations.find((finalization) => finalization.successfulOnChain);
         let fdcSignatures = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
         if (fdcFirstSuccessfulFinalization) {
           if (!fdcFirstSuccessfulFinalization.messages.protocolMessageMerkleRoot) {
@@ -661,11 +661,11 @@ export class DataManagerForRewarding extends DataManager {
           // The message is eligible for consideration.
           finalizations.push(finalization);
         } catch (e) {
-          this.logger.log(`Unparsable relay message. Ignored: ${e.message}`);
+          this.logger.log(`Unparsable relay message. Ignored: ${(e as Error).message}`);
         }
       } catch (e) {
         // ignore unparsable message
-        this.logger.warn(`Unparsable or non-finalisable finalization message: ${e.message}`);
+        this.logger.warn(`Unparsable or non-finalisable finalization message: ${(e as Error).message}`);
       }
     }
     // consider only the first sent successful finalization
@@ -769,7 +769,7 @@ export class DataManagerForRewarding extends DataManager {
         votingRoundId,
         feedValues: fastUpdateFeeds.feeds,
         feedDecimals: fastUpdateFeeds.decimals,
-        signingPolicyAddressesSubmitted: fastUpdateSubmissions.map(submission => submission.signingPolicyAddress),
+        signingPolicyAddressesSubmitted: fastUpdateSubmissions.map((submission) => submission.signingPolicyAddress),
       };
       result.push(value);
     }

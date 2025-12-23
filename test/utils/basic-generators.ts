@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 // IMPORTANT: This file should never import constants.ts
 import { utils } from "web3";
 import { encodeParameter, encodeParameters } from "web3-eth-abi";
@@ -69,10 +70,10 @@ export function generateEvent(
 ): TLPEvents {
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
-  const types = abi.abi.inputs.filter(x => !x.indexed).map(x => x.type);
-  const values = abi.abi.inputs.filter(x => !x.indexed).map(x => eventData[x.name]);
-  const indexedTypes = abi.abi.inputs.filter(x => x.indexed).map(x => x.type);
-  const indexedValues = abi.abi.inputs.filter(x => x.indexed).map(x => eventData[x.name]);
+  const types = abi.abi.inputs.filter((x) => !x.indexed).map((x) => x.type);
+  const values = abi.abi.inputs.filter((x) => !x.indexed).map((x) => eventData[x.name]);
+  const indexedTypes = abi.abi.inputs.filter((x) => x.indexed).map((x) => x.type);
+  const indexedValues = abi.abi.inputs.filter((x) => x.indexed).map((x) => eventData[x.name]);
   const data = encodeParameters(types, values);
 
   if (indexedTypes.length > 3) {

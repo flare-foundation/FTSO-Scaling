@@ -12,10 +12,10 @@ import { ISigningPolicy } from "../../../../libs/ftso-core/src/fsp-utils/Signing
 import { defaultTestSigningPolicy } from "./coding-helpers";
 
 const web3 = new Web3("http://dummy");
-describe(`SignaturePayload`, async () => {
+describe(`SignaturePayload`, () => {
   const accountPrivateKeys = JSON.parse(
     readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")
-  ).map((x: any) => x.privateKey);
+  ).map((x: { privateKey: string }) => x.privateKey);
   const accountAddresses = accountPrivateKeys.map((x: any) => web3.eth.accounts.privateKeyToAccount(x).address);
 
   const N = 100;
@@ -33,7 +33,7 @@ describe(`SignaturePayload`, async () => {
     newSigningPolicyData = { ...signingPolicyData };
     newSigningPolicyData.rewardEpochId++;
   });
-  it("Should encode and decode signature payload", async () => {
+  it("Should encode and decode signature payload", () => {
     const message = {
       protocolId: 15,
       votingRoundId: 1234,
@@ -42,7 +42,7 @@ describe(`SignaturePayload`, async () => {
     } as IProtocolMessageMerkleRoot;
 
     const messageHash = ProtocolMessageMerkleRoot.hash(message);
-    const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
+    const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
 
     const payload = {
       type: "0x00",
@@ -56,7 +56,7 @@ describe(`SignaturePayload`, async () => {
     expect(decoded).to.deep.equal(payload);
   });
 
-  it("Should encode with empty unsignedMessage", async () => {
+  it("Should encode with empty unsignedMessage", () => {
     const message = {
       protocolId: 15,
       votingRoundId: 1234,
@@ -65,7 +65,7 @@ describe(`SignaturePayload`, async () => {
     } as IProtocolMessageMerkleRoot;
 
     const messageHash = ProtocolMessageMerkleRoot.hash(message);
-    const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
+    const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
 
     const payload = {
       type: "0x00",
@@ -79,7 +79,7 @@ describe(`SignaturePayload`, async () => {
     expect(SignaturePayload.decode(SignaturePayload.encode(payload).slice(2))).to.deep.equal(payload);
   });
 
-  it("Should fail to encode wrong data", async () => {
+  it("Should fail to encode wrong data", () => {
     const message = {
       protocolId: 15,
       votingRoundId: 1234,
@@ -88,7 +88,7 @@ describe(`SignaturePayload`, async () => {
     } as IProtocolMessageMerkleRoot;
 
     const messageHash = ProtocolMessageMerkleRoot.hash(message);
-    const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
+    const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[0]);
 
     let payload = {
       type: "00",
@@ -123,7 +123,7 @@ describe(`SignaturePayload`, async () => {
     expect(() => SignaturePayload.decode("0x1234567890")).to.throw("Invalid format - too short");
   });
 
-  it("Should decode call data", async () => {
+  it("Should decode call data", () => {
     let encoded = "0x12345678"; // function prefix
     const protocolId = 15;
     const votingRoundId = 1234;
@@ -138,7 +138,7 @@ describe(`SignaturePayload`, async () => {
       } as IProtocolMessageMerkleRoot;
 
       const messageHash = ProtocolMessageMerkleRoot.hash(message);
-      const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
+      const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
 
       const payload = {
         type: "0x00",
@@ -167,7 +167,7 @@ describe(`SignaturePayload`, async () => {
     expect(() => SignaturePayload.decodeCalldata("0x123456")).to.throw("Invalid format - too short");
   });
 
-  it("Should verify signature payloads against signing policy", async () => {
+  it("Should verify signature payloads against signing policy", () => {
     const protocolId = 15;
     const votingRoundId = 1234;
     const messages: IPayloadMessage<ISignaturePayload>[] = [];
@@ -181,7 +181,7 @@ describe(`SignaturePayload`, async () => {
       } as IProtocolMessageMerkleRoot;
 
       const messageHash = ProtocolMessageMerkleRoot.hash(message);
-      const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
+      const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
 
       const payload = {
         type: "0x00",
@@ -201,7 +201,7 @@ describe(`SignaturePayload`, async () => {
     expect(SignaturePayload.verifySignaturePayloads(messages.slice(0, 50), signingPolicyData)).to.equal(false);
   });
 
-  it("Should correctly augment signature payloads with additional data", async () => {
+  it("Should correctly augment signature payloads with additional data", () => {
     const protocolId = 15;
     const votingRoundId = 1234;
     const messages: ISignaturePayload[] = [];
@@ -220,7 +220,7 @@ describe(`SignaturePayload`, async () => {
       } as IProtocolMessageMerkleRoot;
 
       messageHash = ProtocolMessageMerkleRoot.hash(message);
-      const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
+      const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[i]);
 
       const payload = {
         type: "0x00",
@@ -237,7 +237,7 @@ describe(`SignaturePayload`, async () => {
     }
   });
 
-  it("Should correctly insert signature payloads into sorted list", async () => {
+  it("Should correctly insert signature payloads into sorted list", () => {
     const protocolId = 15;
     const votingRoundId = 1234;
     const messages: ISignaturePayload[] = [];
@@ -272,7 +272,7 @@ describe(`SignaturePayload`, async () => {
       } as IProtocolMessageMerkleRoot;
 
       messageHash = ProtocolMessageMerkleRoot.hash(message);
-      const signature = await ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[randomSignerIndex]);
+      const signature = ECDSASignature.signMessageHash(messageHash, accountPrivateKeys[randomSignerIndex]);
 
       const payload = {
         type: "0x00",
@@ -287,6 +287,4 @@ describe(`SignaturePayload`, async () => {
       expect(checkIfSortedAndIndexIsInserted(sortedList, augmented.index)).to.equal(true);
     }
   });
-
-  it("Should correctly encode for relay", async () => {});
 });

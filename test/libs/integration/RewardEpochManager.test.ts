@@ -44,11 +44,11 @@ describe("RewardEpochManager", () => {
 
     expect(rewardEpoch.rewardEpochId).to.be.equal(rewardEpochId);
     expect(rewardEpoch.startVotingRoundId).to.be.equal(votingRound);
-    expect(rewardEpoch.orderedVotersSubmitAddresses).to.eql(voters.map(v => v.submitAddress));
+    expect(rewardEpoch.orderedVotersSubmitAddresses).to.eql(voters.map((v) => v.submitAddress));
   });
 
   async function setUpRewardEpoch(rewardEpochId: number) {
-    const epochEvents = await generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
+    const epochEvents = generateRewardEpochEvents(EPOCH_SETTINGS(), testFeeds, offerCount, rewardEpochId, voters);
     await em.save(epochEvents);
 
     const lowerState = generateState(FIRST_DATABASE_INDEX_STATE, 0);

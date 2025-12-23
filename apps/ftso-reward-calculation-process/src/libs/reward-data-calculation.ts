@@ -53,7 +53,7 @@ export async function runCalculateRewardCalculationTopJob(
     if (fuInflationRewardsOfferedResponse.status !== BlockAssuranceResult.OK) {
       throw new Error(`Error while fetching FUInflationRewardsOffered events for reward epoch ${rewardEpochId}`);
     }
-    fuInflationRewardsOffered = fuInflationRewardsOfferedResponse.data.find(x => x.rewardEpochId === rewardEpochId);
+    fuInflationRewardsOffered = fuInflationRewardsOfferedResponse.data.find((x) => x.rewardEpochId === rewardEpochId);
     if (fuInflationRewardsOffered === undefined) {
       throw new Error(`No FUInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
     }
@@ -66,7 +66,7 @@ export async function runCalculateRewardCalculationTopJob(
     }
     fuIncentivesOfferedData = fuIncentivesOfferedResponse.data;
   }
-  if(options.useFDCData) {
+  if (options.useFDCData) {
     const fdcInflationRewardsOfferedResponse = await indexerClient.getFDCInflationRewardsOfferedEvents(
       rewardEpoch.previousRewardEpochStartedEvent.startVotingRoundId,
       rewardEpoch.signingPolicy.startVotingRoundId - 1
@@ -74,7 +74,7 @@ export async function runCalculateRewardCalculationTopJob(
     if (fdcInflationRewardsOfferedResponse.status !== BlockAssuranceResult.OK) {
       throw new Error(`Error while fetching FDCInflationRewardsOffered events for reward epoch ${rewardEpochId}`);
     }
-    fdcInflationRewardsOffered = fdcInflationRewardsOfferedResponse.data.find(x => x.rewardEpochId === rewardEpochId);
+    fdcInflationRewardsOffered = fdcInflationRewardsOfferedResponse.data.find((x) => x.rewardEpochId === rewardEpochId);
     if (fdcInflationRewardsOffered === undefined) {
       throw new Error(`No FDCInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
     }

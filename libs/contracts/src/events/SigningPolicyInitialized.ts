@@ -1,8 +1,9 @@
+/* eslint-disable */
 import { ISigningPolicy } from "../../../ftso-core/src/fsp-utils/SigningPolicy";
 import { Address } from "../../../ftso-core/src/voting-types";
 import { RawEventConstructible } from "./RawEventConstructible";
-import {decodeEvent} from "../abi/AbiCache";
-import {CONTRACTS} from "../constants";
+import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
  * SigningPolicyInitialized object obtained from the Relay smart contract
@@ -17,7 +18,7 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
     this.threshold = Number(data.threshold);
     this.seed = "0x" + data.seed.toString(16).padStart(64, "0");
     this.voters = data.voters.map((v: Address) => v.toLowerCase());
-    this.weights = data.weights.map(v => Number(v));
+    this.weights = data.weights.map((v) => Number(v));
     this.signingPolicyBytes = data.signingPolicyBytes;
     this.timestamp = Number(data.timestamp);
   }

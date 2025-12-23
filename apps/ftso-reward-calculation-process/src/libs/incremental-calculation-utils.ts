@@ -12,7 +12,7 @@ import { IncrementalCalculationState } from "../interfaces/IncrementalCalculatio
 import { OptionalCommandOptions } from "../interfaces/OptionalCommandOptions";
 import { initializeTemplateOffers } from "./offer-utils";
 import { extractRandomNumbers } from "./random-number-fixing-utils";
-import {FUTURE_VOTING_ROUNDS} from "../../../../libs/fsp-rewards/src/constants";
+import { FUTURE_VOTING_ROUNDS } from "../../../../libs/fsp-rewards/src/constants";
 
 // incremental
 

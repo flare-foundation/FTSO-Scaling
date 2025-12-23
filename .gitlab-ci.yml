@@ -4,22 +4,49 @@ workflow:
       when: never
     - when: always
 
+lint:
+  stage: test
+  image: node:22
+  cache:
+    - key:
+        files:
+          - yarn.lock
+      paths:
+        - node_modules
+        - .yarn-cache
+      policy: pull-push
+  before_script:
+    - yarn install --frozen-lockfile --cache-folder .yarn-cache
+  script:
+    - |
+      set +e  # don't stop on first failure
+      yarn lint:check
+      LINT_EXIT=$?
+      yarn format:check
+      FORMAT_EXIT=$?
+      set -e
+
+      if [ "$LINT_EXIT" -ne 0 ] || [ "$FORMAT_EXIT" -ne 0 ]; then
+        echo "lint:check exit=$LINT_EXIT, format:check exit=$FORMAT_EXIT"
+        exit 1
+      fi
+
 test-all:
   stage: test
   needs: []
   image: node:22
   cache:
-  - key:
-      files:
-      - yarn.lock
-    paths:
-    - node_modules
-    - .yarn-cache
-    policy: pull-push
+    - key:
+        files:
+          - yarn.lock
+      paths:
+        - node_modules
+        - .yarn-cache
+      policy: pull-push
   before_script:
-  - yarn install --frozen-lockfile --cache-folder .yarn-cache
+    - yarn install --frozen-lockfile --cache-folder .yarn-cache
   script:
-  - yarn test:all
+    - yarn test:all
 
 # TODO: enable coverage reports
 # test-coverage:

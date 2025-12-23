@@ -58,9 +58,9 @@ export class RewardEpochManager {
     // With a limited history the number of possible events is small. Therefore linear search is ok.
     let hintRewardEpochData: SigningPolicyInitialized | undefined;
 
-    let i = signingPolicyInitializedEvents.data!.length - 1;
+    let i = signingPolicyInitializedEvents.data.length - 1;
     while (i >= 0) {
-      const signingPolicyInitializedEvent = signingPolicyInitializedEvents.data![i];
+      const signingPolicyInitializedEvent = signingPolicyInitializedEvents.data[i];
       if (
         nextRewardEpochIdHint !== undefined &&
         signingPolicyInitializedEvent.rewardEpochId === nextRewardEpochIdHint
@@ -143,7 +143,7 @@ export class RewardEpochManager {
 
     const fullVoterRegistrationInfoResponse = await this.indexerClient.getFullVoterRegistrationInfoEvents(
       rewardEpochId,
-      votePowerBlockSelectedEventResponse.data!.timestamp,
+      votePowerBlockSelectedEventResponse.data.timestamp,
       signingPolicyInitializedEvent.timestamp
     );
 
@@ -174,12 +174,12 @@ export class RewardEpochManager {
         // must exist
         const lastRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(
           this.startVotingRoundIds[this.startVotingRoundIds.length - 1]
-        )!;
+        );
         if (rewardEpoch.rewardEpochId === lastRewardEpoch.rewardEpochId + 1) {
           this.startVotingRoundIds.push(rewardEpoch.startVotingRoundId);
         }
       } else if (rewardEpoch.startVotingRoundId < this.startVotingRoundIds[0]) {
-        const firstRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(this.startVotingRoundIds[0])!;
+        const firstRewardEpoch = this.startVotingRoundIdToRewardEpoch.get(this.startVotingRoundIds[0]);
         if (firstRewardEpoch.rewardEpochId - 1 === rewardEpoch.rewardEpochId) {
           this.startVotingRoundIds.unshift(rewardEpoch.startVotingRoundId);
         }
@@ -232,10 +232,10 @@ export class RewardEpochManager {
         "Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history"
       );
     }
-    for (let i = 0; i < signingPolicyInitializedEventsResponse.data!.length; i++) {
-      const signingPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i];
+    for (let i = 0; i < signingPolicyInitializedEventsResponse.data.length; i++) {
+      const signingPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data[i];
       if (signingPolicyInitializedEvent.rewardEpochId === rewardEpochId) {
-        if (i === signingPolicyInitializedEventsResponse.data!.length - 1) {
+        if (i === signingPolicyInitializedEventsResponse.data.length - 1) {
           if (!useExpectedEndIfNoSigningPolicyAfter) {
             throw new Error(
               "Critical error: SigningPolicyInitialized events not found - most likely the indexer has too short history"
@@ -251,7 +251,7 @@ export class RewardEpochManager {
             };
           }
         }
-        const nextSigningPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data![i + 1];
+        const nextSigningPolicyInitializedEvent = signingPolicyInitializedEventsResponse.data[i + 1];
         return {
           rewardEpochId,
           startVotingRoundId: signingPolicyInitializedEvent.startVotingRoundId,

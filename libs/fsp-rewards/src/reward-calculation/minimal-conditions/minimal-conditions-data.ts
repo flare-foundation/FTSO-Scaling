@@ -18,7 +18,7 @@ import {
 export function readStakingInfo(rewardEpochId: number, stakingDataFolder = STAKING_DATA_FOLDER()): ValidatorInfo[] {
   const fname = path.join(stakingDataFolder, `${rewardEpochId}-nodes-data.json`);
   const data = readFileSync(fname, "utf8");
-  const result: ValidatorInfo[] = JSON.parse(data, bigIntReviver);
+  const result = JSON.parse(data, bigIntReviver) as ValidatorInfo[];
   for (const validatorInfo of result) {
     // "NodeID-2a7BPY7UeJv2njMuyUHfBSTeQCYZj6bwV"
     // Checksum is not validated
@@ -74,5 +74,5 @@ export function writeDataProviderConditions(
 export function readListedDataProviders(): ListedProviderList {
   const fname = path.join(`listed-data-providers`, `bifrost-wallet.providerlist.json`);
   const data = readFileSync(fname, "utf8");
-  return JSON.parse(data);
+  return JSON.parse(data) as ListedProviderList;
 }

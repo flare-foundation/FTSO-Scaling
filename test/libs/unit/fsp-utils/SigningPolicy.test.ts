@@ -5,10 +5,11 @@ import { ISigningPolicy, SigningPolicy } from "../../../../libs/ftso-core/src/fs
 import { defaultTestSigningPolicy } from "./coding-helpers";
 
 const web3 = new Web3("https://dummy");
-describe(`SigningPolicy`, async () => {
+describe(`SigningPolicy`, () => {
   const accountPrivateKeys = JSON.parse(
     readFileSync("test/libs/unit/fsp-utils/data/test-1020-accounts.json", "utf8")
-  ).map((x: any) => x.privateKey);
+  ).map((x: { privateKey: string }) => x.privateKey);
+
   const accountAddresses = accountPrivateKeys.map((x: any) => web3.eth.accounts.privateKeyToAccount(x).address);
 
   const N = 100;
@@ -47,7 +48,7 @@ describe(`SigningPolicy`, async () => {
   it("Should normalize addresses", async () => {
     const signingPolicyData2 = {
       ...signingPolicyData,
-      voters: signingPolicyData.voters.map(x => x.toUpperCase()),
+      voters: signingPolicyData.voters.map((x) => x.toUpperCase()),
     };
     SigningPolicy.normalizeAddresses(signingPolicyData2);
     for (let i = 0; i < signingPolicyData.voters.length; i++) {
