@@ -45,71 +45,40 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
     // TEMP CHANGE
     let oldTransactionsResults: TLPTransaction[] = [];
-    let secondOldTransactionsResults: TLPTransaction[] = [];
     let oldRelay: ContractDefinitions | undefined;
-    let secondOldRelay: ContractDefinitions | undefined;
     const network = process.env.NETWORK as networks;
 
     // Do this for every network with change
-    const oldCostonRelayAddress = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
-    if (network === "coston" && CONTRACTS.Relay.address !== oldCostonRelayAddress) {
+    if (network === "coston") {
       oldRelay = {
         ...CONTRACTS.Relay,
-        address: oldCostonRelayAddress,
+        address: "0x92a6E1127262106611e1e129BB64B6D8654273F7",
       };
     }
 
-    const secondOldCostonRelayAddress = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    if (network === "coston" && CONTRACTS.Relay.address !== secondOldCostonRelayAddress) {
-      secondOldRelay = {
-        ...CONTRACTS.Relay,
-        address: secondOldCostonRelayAddress,
-      };
-    }
-
-    const oldCoston2RelayAddress = "0x4087D4B5E009Af9FF41db910205439F82C3dc63c";
-    if (network === "coston2" && CONTRACTS.Relay.address !== oldCoston2RelayAddress) {
+    if (network === "coston2") {
       oldRelay = {
         ...CONTRACTS.Relay,
-        address: oldCoston2RelayAddress,
+        address: "0x97702e350CaEda540935d92aAf213307e9069784",
       };
     }
 
-    const oldSongbirdRelayAddress = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
-    if (network === "songbird" && CONTRACTS.Relay.address !== oldSongbirdRelayAddress) {
+    if (network === "songbird") {
       oldRelay = {
         ...CONTRACTS.Relay,
-        address: oldSongbirdRelayAddress,
+        address: "0x67a916E175a2aF01369294739AA60dDdE1Fad189",
       };
     }
 
-    const secondOldSongbirdRelayAddress = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    if (network === "songbird" && CONTRACTS.Relay.address !== secondOldSongbirdRelayAddress) {
-      secondOldRelay = {
-        ...CONTRACTS.Relay,
-        address: secondOldSongbirdRelayAddress,
-      };
-    }
-
-    const oldFlareRelayAddress = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
-    if (network === "flare" && CONTRACTS.Relay.address !== oldFlareRelayAddress) {
+    if (network === "flare") {
       oldRelay = {
         ...CONTRACTS.Relay,
-        address: oldFlareRelayAddress,
+        address: "0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45",
       };
     }
 
     if (oldRelay !== undefined) {
       oldTransactionsResults = await this.queryTransactions(oldRelay, ContractMethodNames.relay, startTime, endTime);
-    }
-
-    if (secondOldRelay !== undefined) {
-      secondOldTransactionsResults = await this.queryTransactions(
-        secondOldRelay,
-        ContractMethodNames.relay,
-        startTime,
-        endTime
-      );
     }
 
     // END TEMP CHANGE
@@ -130,10 +99,6 @@ export class IndexerClientForRewarding extends IndexerClient {
         transactionsResults: oldTransactionsResults,
       },
       {
-        address: secondOldRelay?.address,
-        transactionsResults: secondOldTransactionsResults,
-      },
-      {
         address: CONTRACTS.Relay.address,
         transactionsResults: newTransactionsResults,
       },
@@ -142,9 +107,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     const finalizations: FinalizationData[] = [];
     for (const txListPair of jointTransactionResults) {
       const { address, transactionsResults } = txListPair;
-      const isOldRelay =
-        (oldRelay !== undefined && address === oldRelay.address) ||
-        (secondOldRelay !== undefined && address === secondOldRelay.address);
+      const isOldRelay = oldRelay !== undefined && address === oldRelay.address;
       const tmpFinalizations: FinalizationData[] = transactionsResults.map((tx) => {
         const timestamp = tx.timestamp;
         const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
