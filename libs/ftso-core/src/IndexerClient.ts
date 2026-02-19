@@ -391,53 +391,32 @@ export class IndexerClient {
 
     const result: TLPEvents[] = [];
 
-    // TEMP CHANGE for upgrading Relay contract, can be removed in December 2024
+    // TEMP CHANGE for upgrading Relay contract, can be removed in March 2026
     const network = process.env.NETWORK as networks;
 
-    const oldSongbirdRelay = "0xbA35e39D01A3f5710d1e43FC61dbb738B68641c4";
-    if (network === "songbird" && CONTRACTS.Relay.address !== oldSongbirdRelay) {
+    if (network === "songbird") {
+      const oldSongbirdRelay = "0x67a916E175a2aF01369294739AA60dDdE1Fad189";
       this.logger.log(`Querying old Relay address for Songbird: ${oldSongbirdRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
       );
     }
-
-    const secondOldSongbirdRelay = "0x0D462d2Fec11554D64F52D7c5A5C269d748037aD";
-    if (network === "songbird" && CONTRACTS.Relay.address !== secondOldSongbirdRelay) {
-      this.logger.log(`Querying second old Relay address for Songbird: ${secondOldSongbirdRelay}`);
-      result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldSongbirdRelay }, eventName, fromStartTime))
-      );
-    }
-
-    const oldCostonRelay = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC";
-    if (network === "coston" && CONTRACTS.Relay.address !== oldCostonRelay) {
+    if (network === "coston") {
+      const oldCostonRelay = "0x92a6E1127262106611e1e129BB64B6D8654273F7";
       this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
       );
     }
-
-    const secondOldCostonRelay = "0xA300E71257547e645CD7241987D3B75f2012E0E3";
-    if (network === "coston" && CONTRACTS.Relay.address !== secondOldCostonRelay) {
-      this.logger.log(`Querying second old Relay address for Coston: ${secondOldCostonRelay}`);
-      result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: secondOldCostonRelay }, eventName, fromStartTime))
-      );
-    }
-
-    // TEMP CHANGE for upgrading Relay contract on Coston2, can be removed in February 2025
-    const oldCoston2Relay = "0x4087D4B5E009Af9FF41db910205439F82C3dc63c";
-    if (network === "coston2" && CONTRACTS.Relay.address !== oldCoston2Relay) {
+    if (network === "coston2") {
+      const oldCoston2Relay = "0x97702e350CaEda540935d92aAf213307e9069784";
       this.logger.log(`Querying old Relay address for Coston2: ${oldCoston2Relay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCoston2Relay }, eventName, fromStartTime))
       );
     }
-
-    // TEMP CHANGE for upgrading Relay contract on Flare, can be removed in March 2025
-    const oldFlareRelay = "0xea077600E3065F4FAd7161a6D0977741f2618eec";
-    if (network === "flare" && CONTRACTS.Relay.address !== oldFlareRelay) {
+    if (network === "flare") {
+      const oldFlareRelay = "0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45";
       this.logger.log(`Querying old Relay address for Flare: ${oldFlareRelay}`);
       result.push(
         ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime))
