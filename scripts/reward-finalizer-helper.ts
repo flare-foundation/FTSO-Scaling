@@ -10,26 +10,26 @@ For calculation of specific reward epoch set the parameters in the call in the s
 Once the relevant reward epoch data are calculated, the tool can be used to:
 - check some reward distribution stats (option `stats`).
 
-      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
+      env NETWORK=coston pnpm ts-node scripts/reward-finalizer-helper.ts stats <rewardEpochId>
 
 - voting for uptime using dummy hash (vote for it). This option is currently used as real uptime voting is not enabled, but it will be in the future and 
   it is needed as pre-condition for reward merkle root voting. (option `uptime`)
 
-      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts uptime <rewardEpochId> [endRewardEpochId]
+      env NETWORK=coston pnpm ts-node scripts/reward-finalizer-helper.ts uptime <rewardEpochId> [endRewardEpochId]
 
 - voting for reward merkle root. (option `rewards`). The data is extracted from the calculation result in the file
   `calculations/<reward epoch id>/reward-distribution-data.json`.
 
-      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts rewards <rewardEpochId> [endRewardEpochId]
+      env NETWORK=coston pnpm ts-node scripts/reward-finalizer-helper.ts rewards <rewardEpochId> [endRewardEpochId]
 
 - check the finalization status of the reward epochs. (option `finalizations`)
-      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts finalizations <startRewardEpochId> [endRewardEpochId]
+      env NETWORK=coston pnpm ts-node scripts/reward-finalizer-helper.ts finalizations <startRewardEpochId> [endRewardEpochId]
 
 - initialize weight based claims. (option `winit`)
-      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts winit <rewardEpochId> [batchSize] [offset] [noBatches]
+      env NETWORK=coston pnpm ts-node scripts/reward-finalizer-helper.ts winit <rewardEpochId> [batchSize] [offset] [noBatches]
 
 - check the number of uninitialized weight based claims. (option `uninitialized`)
-      env NETWORK=coston yarn ts-node scripts/reward-finalizer-helper.ts uninitialized <rewardEpochId>
+      env NETWORK=coston pnpm ts-node scripts/reward-finalizer-helper.ts uninitialized <rewardEpochId>
 
 Note the actions `uptime` and `rewards` need private key(s) since they are signing some data an sending to smart contracts on
 `Coston` blockchain. For that purpose, pack the private keys (comma separate, no spaces) into variable env variable 

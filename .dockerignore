@@ -6,4 +6,4 @@
 !package.json
 !tsconfig.build.json
 !tsconfig.json
-!yarn.lock
+!pnpm-lock.yaml

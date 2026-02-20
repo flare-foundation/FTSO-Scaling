@@ -12,7 +12,7 @@
       "program": "${file}",
       // "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["start:debug"]
     },
 
@@ -28,21 +28,21 @@
       "type": "node",
       "request": "launch",
       "name": "Test FTSO reward logic",
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["test", "test/libs/unit/generator-rewards.test.ts"]
     },
     {
       "type": "node",
       "request": "launch",
       "name": "Test Integration",
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["test:integration"]
     },
     {
       "type": "node",
       "request": "launch",
       "name": "Test basic generation",
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "pnpm",
       "env": {
         "NETWORK": "local-test"
       },
@@ -52,7 +52,7 @@
       "type": "node",
       "request": "launch",
       "name": "Calculation process",
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "pnpm",
       "env": {
         "NETWORK": "from-env",
         "FTSO_CA_FTSO_SYSTEMS_MANAGER_ADDRESS": "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF",

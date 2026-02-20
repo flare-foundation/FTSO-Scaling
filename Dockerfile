@@ -1,21 +1,24 @@
-FROM node:22-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 AS nodemodules
+FROM node:24-slim@sha256:bf22df20270b654c4e9da59d8d4a3516cce6ba2852e159b27288d645b7a7eedc AS base
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 100000
+RUN corepack enable
+COPY package.json pnpm-lock.yaml ./
 
-FROM node:22-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 AS build
+FROM base AS nodemodules
+RUN corepack prepare "$(node -p "require('./package.json').packageManager")" --activate && \
+    pnpm install --frozen-lockfile --ignore-scripts
+
+FROM base AS build
 
 WORKDIR /app
 
 COPY --from=nodemodules /app/node_modules /app/node_modules
 COPY . ./
 
-RUN yarn build
-RUN yarn build ftso-reward-calculation-process
+RUN pnpm exec nest build ftso-data-provider
 
-FROM node:22-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 AS runtime
+FROM node:24-slim@sha256:bf22df20270b654c4e9da59d8d4a3516cce6ba2852e159b27288d645b7a7eedc AS runtime
 
 WORKDIR /app
 
@@ -24,5 +27,4 @@ COPY --from=build /app/dist /app/dist
 
 COPY . .
 
-CMD ["bash"]
-
+CMD ["node", "dist/apps/ftso-data-provider/src/main.js"]

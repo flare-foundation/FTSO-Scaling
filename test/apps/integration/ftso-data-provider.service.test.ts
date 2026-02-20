@@ -70,7 +70,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     Logger.overrideLogger(new Logger());
   });
 
-  beforeEach(async () => {
+  beforeEach(async function () {
     db = await MockIndexerDB.create();
     clock = FakeTimers.install({ now: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0) * 1000 });
     mock = new MockAdapter(axios);

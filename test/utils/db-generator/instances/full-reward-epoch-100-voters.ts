@@ -1,5 +1,5 @@
 // running:
-// env NETWORK=local-test yarn ts-node test/utils/db-generator/instances/full-reward-epoch-100-voters.ts
+// env NETWORK=local-test pnpm ts-node test/utils/db-generator/instances/full-reward-epoch-100-voters.ts
 
 import { voterFeedValue } from "../../generators-rewards";
 import { runDBGenerator } from "../db-generator";
