@@ -23,7 +23,7 @@ describe("RewardEpochManager", () => {
   let em: EntityManager;
   let clock: FakeTimers.InstalledClock;
 
-  beforeEach(async () => {
+  beforeEach(async function () {
     ds = await getDataSource(false);
     em = ds.createEntityManager();
     clock = FakeTimers.install({ now: EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(0) * 1000 });

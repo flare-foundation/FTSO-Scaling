@@ -4,25 +4,31 @@ workflow:
       when: never
     - when: always
 
-lint:
-  stage: test
-  image: node:22
+.node_pnpm_job:
+  image: node:24
   cache:
     - key:
         files:
-          - yarn.lock
+          - pnpm-lock.yaml
       paths:
         - node_modules
-        - .yarn-cache
+        - .pnpm-store
       policy: pull-push
   before_script:
-    - yarn install --frozen-lockfile --cache-folder .yarn-cache
+    - corepack enable
+    - corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install --frozen-lockfile
+
+lint:
+  extends: .node_pnpm_job
+  stage: test
   script:
     - |
       set +e  # don't stop on first failure
-      yarn lint:check
+      pnpm lint:check
       LINT_EXIT=$?
-      yarn format:check
+      pnpm format:check
       FORMAT_EXIT=$?
       set -e
 
@@ -32,24 +38,14 @@ lint:
       fi
 
 test-all:
+  extends: .node_pnpm_job
   stage: test
   needs: []
-  image: node:22
-  cache:
-    - key:
-        files:
-          - yarn.lock
-      paths:
-        - node_modules
-        - .yarn-cache
-      policy: pull-push
-  before_script:
-    - yarn install --frozen-lockfile --cache-folder .yarn-cache
   script:
-    - yarn test:all
+    - pnpm test:all
 
 # TODO: enable coverage reports
 # test-coverage:
 #   extends: test-all
 #   script:
-#     - yarn test:coverage
+#     - pnpm test:coverage

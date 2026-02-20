@@ -18,6 +18,6 @@ export ALLOW_IDENTITY_ADDRESS_SIGNING=true
 export START_REWARD_EPOCH_ID=2344
 
 # COMPILATION
-yarn nest build ftso-reward-calculation-process
+pnpm nest build ftso-reward-calculation-process
 
-node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -f -r $1
+node dist/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -f -r $1

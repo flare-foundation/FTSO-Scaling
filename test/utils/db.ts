@@ -7,13 +7,15 @@ import { generateState } from "./basic-generators";
 const sqliteDatabase = `:memory:`;
 
 export async function getDataSource(readOnly = false) {
-  const dataSource = new DataSource({
-    type: "sqlite",
+  const options = {
+    type: "better-sqlite3" as const,
     database: sqliteDatabase,
     entities: [TLPTransaction, TLPEvents, TLPState],
     synchronize: !readOnly,
-    flags: readOnly ? 1 : undefined,
-  });
+    readonly: readOnly,
+  };
+
+  const dataSource = new DataSource(options);
 
   await dataSource.initialize();
   return dataSource;

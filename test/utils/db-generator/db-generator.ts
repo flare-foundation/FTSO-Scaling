@@ -46,11 +46,10 @@ export async function runDBGenerator(config: RewardEpochDataGenerationConfig) {
   }
 
   const dataSource = new DataSource({
-    type: "sqlite",
+    type: "better-sqlite3",
     database: config.dbPath,
     entities: [TLPTransaction, TLPEvents, TLPState],
     synchronize: true,
-    flags: undefined,
   });
 
   await dataSource.initialize();
@@ -71,4 +70,6 @@ export async function runDBGenerator(config: RewardEpochDataGenerationConfig) {
   if (config.printSummary) {
     await printSummary(entityManager, voters, undefined, logger);
   }
+  await dataSource.destroy();
+  clock.uninstall();
 }

@@ -29,13 +29,13 @@ also welcome.
 Prerequisites:
 
 - Node.js, as specified in the `.nvmrc` file. We recommend using `nvm` to manage versions.
-- Yarn 1.22.x
+- pnpm 10.28.x
 - Git
 
 Install the dependencies:
 
 ```bash
-$ yarn install
+$ pnpm install
 ```
 
 ### Configuration
@@ -49,18 +49,18 @@ To start the app run:
 
 ```bash
 # development
-$ yarn run start
+$ pnpm run start
 
 # watch mode
-$ yarn run start:dev
+$ pnpm run start:dev
 ```
 
 ### Testing
 
 To run all tests or check code coverage, use the following commands:
 ```bash
-yarn test:all
-yarn test:coverage
+pnpm test:all
+pnpm test:coverage
 ```
 ### Linting and formatting
 
@@ -68,23 +68,23 @@ We use ESLint and Prettier:
 - Check lint:
 
   ```bash
-  yarn lint:check
+  pnpm lint:check
   ```
 
 - Auto-fix lint issues:
 
   ```bash
-  yarn lint:fix
+  pnpm lint:fix
   ```
 
 - Check formatting:
 
   ```bash
-  yarn format:check
+  pnpm format:check
   ```
 
 - Auto-format:
 
   ```bash
-  yarn format:fix
+  pnpm format:fix
   ```

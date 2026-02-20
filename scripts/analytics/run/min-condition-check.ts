@@ -1,5 +1,5 @@
-// env NETWORK=flare yarn ts-node scripts/analytics/run/min-condition-check.ts 265
-// env NETWORK=songbird yarn ts-node scripts/analytics/run/min-condition-check.ts 265
+// env NETWORK=flare pnpm ts-node scripts/analytics/run/min-condition-check.ts 265
+// env NETWORK=songbird pnpm ts-node scripts/analytics/run/min-condition-check.ts 265
 
 import { BURN_ADDRESS } from "../../../libs/fsp-rewards/src/constants";
 import { buildRewardClaimMerkleTree } from "../../../libs/fsp-rewards/src/reward-calculation/reward-merkle-tree";

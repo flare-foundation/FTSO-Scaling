@@ -18,11 +18,11 @@ const IMPORTS_ARRAY = [
       const sqliteDatabase: string = configService.get("db_sqlite3_path");
       if (sqliteDatabase) {
         return {
-          type: "sqlite",
+          type: "better-sqlite3",
           database: sqliteDatabase,
           entities: [TLPTransaction, TLPEvents, TLPState],
           synchronize: false,
-          flags: 1,
+          readonly: true,
           // logging: true,
         };
       }

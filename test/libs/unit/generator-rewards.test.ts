@@ -173,8 +173,7 @@ describe(`generator-rewards, ${getTestFile(__filename)}`, () => {
   let offerAmount: bigint;
   let rewardEpochId: number;
   let clock: FakeTimers.InstalledClock;
-
-  before(async () => {
+  before(function () {
     // DO NOT CHANGE THESE SETTING AS TESTS BASE ON THME
     clock = FakeTimers.install({ now: Date.now() });
     process.env.NETWORK = "from-env";

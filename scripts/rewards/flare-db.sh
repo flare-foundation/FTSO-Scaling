@@ -20,17 +20,17 @@ export REMOVE_ANNOYING_MESSAGES=true
 # 9.  getCurrentRewardEpochId to get current reward epoch (required indexer history is 4 epochs/ 14 days)
 
 # COMPILATION
-yarn nest build ftso-reward-calculation-process
+pnpm nest build ftso-reward-calculation-process
 
 # ---------------------------------------------------------------------------------------------------------------------------
 # Calculating all reward data from the starting reward epoch id. The calculation of claims is parallelized. 
 # In the current (ongoing) reward epoch the calculation is switched to incremental, as data becomes available. 
 # If the data for a specific reward epoch id is already available, the calculation is skipped.
 export FROM_REWARD_EPOCH_ID=228
-node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 100 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
+node dist/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 100 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000
 
 
 # ---------------------------------------------------------------------------------------------------------------------------
 # Calculating for specific reward epoch id
 # export SPECIFIC_REWARD_EPOCH_ID=2380
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -b 10 -w 24 -r $SPECIFIC_REWARD_EPOCH_ID -m 10000
+# node dist/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -b 10 -w 24 -r $SPECIFIC_REWARD_EPOCH_ID -m 10000

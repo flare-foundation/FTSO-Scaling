@@ -314,7 +314,7 @@ The script produces the following files in the folder `calculations/<network>/<r
 Public reward data are extracted using from outputs of reward calculation and minimal condition scripts by the following script.
 
 ```bash
-yarn ts-node scripts/analytics/run/extract-reward-data.ts <network> <rewardEpochId>
+pnpm ts-node scripts/analytics/run/extract-reward-data.ts <network> <rewardEpochId>
 ```
 Network can be `flare`, `songbird` or `coston`.
 

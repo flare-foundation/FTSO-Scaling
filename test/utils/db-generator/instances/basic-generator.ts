@@ -1,5 +1,5 @@
 // running:
-// env NETWORK=local-test yarn ts-node test/utils/db-generator/instances/basic-generator.ts
+// env NETWORK=local-test pnpm ts-node test/utils/db-generator/instances/basic-generator.ts
 import { happyRewardDataSimulationScenario, voterFeedValue } from "../../generators-rewards";
 import {
   defaultSigningPolicyProtocolSettings,

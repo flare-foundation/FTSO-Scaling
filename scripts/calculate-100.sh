@@ -23,16 +23,16 @@ export VOTING_ROUND_HISTORY_SIZE=10000
 export INDEXER_TOP_TIMEOUT=1000
 export FORCE_NOW=1704945457
 
-# yarn nest build ftso-reward-calculation-process
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js
+# pnpm nest build ftso-reward-calculation-process
+# node dist/apps/ftso-reward-calculation-process/src/main.js
 
-# yarn nest start ftso-reward-calculation-process
-# yarn ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -i
+# pnpm nest start ftso-reward-calculation-process
+# pnpm ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -i
 
-# yarn ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4370 -c
-# yarn ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4370 -a
+# pnpm ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4370 -c
+# pnpm ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4370 -a
 
-# yarn ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4500 -c -b 10 -w 10
+# pnpm ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4500 -c -b 10 -w 10
 
-# node dist/apps/ftso-reward-calculation-process/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r 1 -s 4360 -e 4500 -c -b 10 -w 10
-yarn ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4510 -a
+# node dist/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -r 1 -s 4360 -e 4500 -c -b 10 -w 10
+pnpm ts-node apps/ftso-reward-calculation-process/src/main.ts ftso-reward-calculation-process -r 1 -s 4360 -e 4510 -a
