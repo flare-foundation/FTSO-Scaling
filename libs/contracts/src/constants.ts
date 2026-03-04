@@ -33,7 +33,7 @@ export const COSTON2_CONTRACTS: NetworkContractAddresses = {
     name: "FastUpdateIncentiveManager",
     address: "0xC71C1C6E6FB31eF6D948B2C074fA0d38a07D4f68",
   },
-  FdcHub: { name: "FdcHub", address: "" },
+  FdcHub: { name: "FdcHub", address: "0x48aC463d7975828989331F4De43341627b9c5f1D" },
 };
 
 export const SONGBIRD_CONTRACTS: NetworkContractAddresses = {
