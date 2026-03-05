@@ -389,43 +389,7 @@ export class IndexerClient {
     const eventName = SigningPolicyInitialized.eventName;
     const status = await this.ensureLowerBlock(fromStartTime);
 
-    const result: TLPEvents[] = [];
-
-    // TEMP CHANGE for upgrading Relay contract, can be removed in March 2026
-    const network = process.env.NETWORK as networks;
-
-    if (network === "songbird") {
-      const oldSongbirdRelay = "0x67a916E175a2aF01369294739AA60dDdE1Fad189";
-      this.logger.log(`Querying old Relay address for Songbird: ${oldSongbirdRelay}`);
-      result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldSongbirdRelay }, eventName, fromStartTime))
-      );
-    }
-    if (network === "coston") {
-      const oldCostonRelay = "0x92a6E1127262106611e1e129BB64B6D8654273F7";
-      this.logger.log(`Querying old Relay address for Coston: ${oldCostonRelay}`);
-      result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCostonRelay }, eventName, fromStartTime))
-      );
-    }
-    if (network === "coston2") {
-      const oldCoston2Relay = "0x97702e350CaEda540935d92aAf213307e9069784";
-      this.logger.log(`Querying old Relay address for Coston2: ${oldCoston2Relay}`);
-      result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldCoston2Relay }, eventName, fromStartTime))
-      );
-    }
-    if (network === "flare") {
-      const oldFlareRelay = "0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45";
-      this.logger.log(`Querying old Relay address for Flare: ${oldFlareRelay}`);
-      result.push(
-        ...(await this.queryEvents({ ...CONTRACTS.Relay, address: oldFlareRelay }, eventName, fromStartTime))
-      );
-    }
-
-    // END TEMP CHANGE
-
-    result.push(...(await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime)));
+    const result: TLPEvents[] = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
     IndexerClient.sortEvents(result);
 
     const data = result.map((event) => SigningPolicyInitialized.fromRawEvent(event));
@@ -443,7 +407,6 @@ export class IndexerClient {
    * The function checks the availability of block range in the indexer database.
    */
   public async getFullVoterRegistrationInfoEvents(
-    rewardEpochId: number,
     startTime: number,
     endTime: number
   ): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
@@ -452,27 +415,17 @@ export class IndexerClient {
       return { status };
     }
 
-    // TEMP CHANGE
     const voterRegistryContract = { ...CONTRACTS.VoterRegistry };
     const flareSystemsCalculatorContract = { ...CONTRACTS.FlareSystemsCalculator };
 
     const network = process.env.NETWORK as networks;
     if (network === "coston") {
-      // Reward epoch during which contracts redeployed
-      const upgradeEpochId = 4506;
-      if (rewardEpochId <= upgradeEpochId) {
-        // Use old contract addresses and abi
-        voterRegistryContract.address = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3";
-        flareSystemsCalculatorContract.address = "0x43CBAB9C953F54533aadAf7ffCD13c30ec05Edc9";
-      } else {
-        // Use new contract addresses and abi
-        // @ts-expect-error workaround
-        voterRegistryContract.name = "VoterRegistryNext";
-        // @ts-expect-error workaround
-        flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
-      }
+      // Coston uses redeployed contracts with new abi
+      // @ts-expect-error workaround
+      voterRegistryContract.name = "VoterRegistryNext";
+      // @ts-expect-error workaround
+      flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
     }
-    // END TEMP CHANGE
 
     const voterRegisteredResults = await this.queryEvents(
       voterRegistryContract,
