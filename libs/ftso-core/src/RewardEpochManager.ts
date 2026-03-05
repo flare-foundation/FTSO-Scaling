@@ -142,7 +142,6 @@ export class RewardEpochManager {
     }
 
     const fullVoterRegistrationInfoResponse = await this.indexerClient.getFullVoterRegistrationInfoEvents(
-      rewardEpochId,
       votePowerBlockSelectedEventResponse.data.timestamp,
       signingPolicyInitializedEvent.timestamp
     );
