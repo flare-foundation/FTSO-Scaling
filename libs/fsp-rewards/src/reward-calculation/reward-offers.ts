@@ -269,17 +269,22 @@ export function granulatedPartialOfferMapForFastUpdates(
   // Filter FU feed configurations to only include feeds present in canonicalFeedOrder.
   // A feed in feedConfigurations may reference an old feed ID that was renamed, so we
   // also check the feeds renaming map (oldFeedId -> newFeedId).
-  const canonicalFeedIds = new Set(rewardEpochInfo.canonicalFeedOrder.map(f => f.id));
+  const canonicalFeedIds = new Set(rewardEpochInfo.canonicalFeedOrder.map(f => f.id.toLowerCase()));
   const feedRenamingMap = new Map<string, string>();
   if (existsSync(FEEDS_RENAMING_FILE())) {
     const feedRenamingData = JSON.parse(readFileSync(FEEDS_RENAMING_FILE(), "utf8"));
     for (const feed of feedRenamingData) {
-      feedRenamingMap.set(feed.oldFeedId, feed.newFeedId);
+      feedRenamingMap.set(feed.oldFeedId.toLowerCase(), feed.newFeedId.toLowerCase());
     }
   }
-  const eligibleFeedConfigurations = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.filter(
-    config => canonicalFeedIds.has(config.feedId) || canonicalFeedIds.has(feedRenamingMap.get(config.feedId))
-  );
+  const eligibleFeedConfigurations = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.filter(config => {
+    const feedId = config.feedId.toLowerCase();
+    if (canonicalFeedIds.has(feedId)) {
+      return true;
+    }
+    const renamedFeedId = feedRenamingMap.get(feedId);
+    return renamedFeedId !== undefined && canonicalFeedIds.has(renamedFeedId);
+  });
 
   if (eligibleFeedConfigurations.length === 0) {
     throw new Error("No eligible FU feed configurations found after filtering against canonicalFeedOrder");
