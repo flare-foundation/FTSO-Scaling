@@ -13,7 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Switched from Yarn to pnpm package manager
+- ...
+
+## [1.0.6] - 2026-03-09
+
+### Changed
+
+- Switched from Yarn to pnpm package manager.
 - Updated Dockerfile to only include `ftso-data-provider` and start it automatically. 
 No need to pass an extra command to the container anymore.
 
