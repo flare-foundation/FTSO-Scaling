@@ -269,7 +269,7 @@ export function granulatedPartialOfferMapForFastUpdates(
   // Filter FU feed configurations to only include feeds present in canonicalFeedOrder.
   // A feed in feedConfigurations may reference an old feed ID that was renamed, so we
   // also check the feeds renaming map (oldFeedId -> newFeedId).
-  const canonicalFeedIds = new Set(rewardEpochInfo.canonicalFeedOrder.map(f => f.id.toLowerCase()));
+  const canonicalFeedIds = new Set(rewardEpochInfo.canonicalFeedOrder.map((f) => f.id.toLowerCase()));
   const feedRenamingMap = new Map<string, string>();
   if (existsSync(FEEDS_RENAMING_FILE())) {
     const feedRenamingData = JSON.parse(readFileSync(FEEDS_RENAMING_FILE(), "utf8"));
@@ -277,7 +277,7 @@ export function granulatedPartialOfferMapForFastUpdates(
       feedRenamingMap.set(feed.oldFeedId.toLowerCase(), feed.newFeedId.toLowerCase());
     }
   }
-  const eligibleFeedConfigurations = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.filter(config => {
+  const eligibleFeedConfigurations = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.filter((config) => {
     const feedId = config.feedId.toLowerCase();
     if (canonicalFeedIds.has(feedId)) {
       return true;
@@ -310,9 +310,7 @@ export function granulatedPartialOfferMapForFastUpdates(
     const randomNumber = randomNumbers[votingRoundId - startVotingRoundId];
 
     const selectedFeedIndex =
-      randomNumber === undefined
-        ? 0
-        : Number(randomNumber % BigInt(eligibleFeedConfigurations.length));
+      randomNumber === undefined ? 0 : Number(randomNumber % BigInt(eligibleFeedConfigurations.length));
 
     const selectedFeedConfig = eligibleFeedConfigurations[selectedFeedIndex];
     const selectedFeedId = selectedFeedConfig.feedId;
