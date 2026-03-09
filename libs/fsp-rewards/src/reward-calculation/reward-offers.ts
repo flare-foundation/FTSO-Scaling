@@ -14,7 +14,8 @@ import {
 } from "../utils/stat-info/granulated-partial-offers-map";
 import { deserializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 import { RewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
-import { BURN_ADDRESS, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../constants";
+import { BURN_ADDRESS, FEEDS_RENAMING_FILE, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../constants";
+import { existsSync, readFileSync } from "fs";
 
 /**
  * A split of partial reward offer into three parts:
@@ -265,6 +266,25 @@ export function granulatedPartialOfferMapForFastUpdates(
     );
   }
 
+  // Filter FU feed configurations to only include feeds present in canonicalFeedOrder.
+  // A feed in feedConfigurations may reference an old feed ID that was renamed, so we
+  // also check the feeds renaming map (oldFeedId -> newFeedId).
+  const canonicalFeedIds = new Set(rewardEpochInfo.canonicalFeedOrder.map(f => f.id));
+  const feedRenamingMap = new Map<string, string>();
+  if (existsSync(FEEDS_RENAMING_FILE())) {
+    const feedRenamingData = JSON.parse(readFileSync(FEEDS_RENAMING_FILE(), "utf8"));
+    for (const feed of feedRenamingData) {
+      feedRenamingMap.set(feed.oldFeedId, feed.newFeedId);
+    }
+  }
+  const eligibleFeedConfigurations = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.filter(
+    config => canonicalFeedIds.has(config.feedId) || canonicalFeedIds.has(feedRenamingMap.get(config.feedId))
+  );
+
+  if (eligibleFeedConfigurations.length === 0) {
+    throw new Error("No eligible FU feed configurations found after filtering against canonicalFeedOrder");
+  }
+
   // Calculate total amount of rewards for the reward epoch
   let totalAmount = rewardEpochInfo.fuInflationRewardsOffered.amount;
 
@@ -287,9 +307,9 @@ export function granulatedPartialOfferMapForFastUpdates(
     const selectedFeedIndex =
       randomNumber === undefined
         ? 0
-        : Number(randomNumber % BigInt(rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length));
+        : Number(randomNumber % BigInt(eligibleFeedConfigurations.length));
 
-    const selectedFeedConfig = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations[selectedFeedIndex];
+    const selectedFeedConfig = eligibleFeedConfigurations[selectedFeedIndex];
     const selectedFeedId = selectedFeedConfig.feedId;
     const amount = sharePerOne + (votingRoundId - startVotingRoundId < remainder ? 1n : 0n);
 
