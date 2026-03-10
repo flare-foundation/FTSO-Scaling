@@ -119,6 +119,7 @@ export async function partialRewardClaimsForVotingRound(
   const medianCalculationMap = new Map<string, MedianCalculationResult>();
   for (const medianResult of data.medianCalculationResults) {
     medianCalculationMap.set(medianResult.feed.id, medianResult);
+    medianCalculationMap.set(medianResult.feed.id.toLowerCase(), medianResult);
   }
 
   const delegationAddressToSigningAddress = new Map<string, string>();
@@ -279,7 +280,7 @@ export async function partialRewardClaimsForVotingRound(
     const fuConfigurationMap = new Map<string, FastUpdateFeedConfiguration>();
     if (rewardEpochInfo.fuInflationRewardsOffered) {
       for (const feedConfiguration of rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations) {
-        fuConfigurationMap.set(feedConfiguration.feedId, feedConfiguration);
+        fuConfigurationMap.set(feedConfiguration.feedId.toLowerCase(), feedConfiguration);
       }
     }
     const fuFeedValueMap = new Map<string, FUFeedValue>();
@@ -289,9 +290,10 @@ export async function partialRewardClaimsForVotingRound(
     // if new feeds are introduced during the voting round, they are ignored
     for (let i = 0; i < rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations.length; i++) {
       const feedConfiguration = rewardEpochInfo.fuInflationRewardsOffered.feedConfigurations[i];
+      const feedId = feedConfiguration.feedId.toLowerCase();
       const value = data.fastUpdatesData.feedValues[i];
       const decimals = data.fastUpdatesData.feedDecimals[i];
-      fuFeedValueMap.set(feedConfiguration.feedId, {
+      fuFeedValueMap.set(feedId, {
         feedId: feedConfiguration.feedId,
         value,
         decimals,
@@ -303,10 +305,11 @@ export async function partialRewardClaimsForVotingRound(
     if (existsSync(FEEDS_RENAMING_FILE())) {
       const feedRenamingData = JSON.parse(readFileSync(FEEDS_RENAMING_FILE(), "utf8"));
       for (const feed of feedRenamingData) {
-        feedRenamingMap.set(feed.oldFeedId, feed.newFeedId);
+        feedRenamingMap.set(feed.oldFeedId.toLowerCase(), feed.newFeedId.toLowerCase());
       }
     }
-    for (const [feedId, offers] of fuFeedOffers.entries()) {
+    for (const [rawFeedId, offers] of fuFeedOffers.entries()) {
+      const feedId = rawFeedId.toLowerCase();
       const medianResult =
         medianCalculationMap.get(feedId) == undefined
           ? medianCalculationMap.get(feedRenamingMap.get(feedId))
@@ -317,11 +320,11 @@ export async function partialRewardClaimsForVotingRound(
       }
       const feedValue = fuFeedValueMap.get(feedId);
       if (feedValue === undefined) {
-        throw new Error(`Critical error: No feed value for feedId ${feedId}`);
+        throw new Error(`Critical error: No feed value for feedId ${rawFeedId}`);
       }
       const feedConfiguration = fuConfigurationMap.get(feedId);
       if (feedConfiguration === undefined) {
-        throw new Error(`Critical error: No feed configuration for feedId ${feedId}`);
+        throw new Error(`Critical error: No feed configuration for feedId ${rawFeedId}`);
       }
 
       // Calculate reward claims for each offer
