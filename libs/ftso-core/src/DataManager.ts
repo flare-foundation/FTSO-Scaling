@@ -7,7 +7,7 @@ import { DataForCalculations, DataForCalculationsPartial } from "./data/DataForC
 import { CommitData, ICommitData } from "./data/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./data/RevealData";
-import { errorString } from "./utils/error";
+import { asError, errorString } from "./utils/error";
 import { Address, Feed } from "./voting-types";
 
 /**
@@ -214,7 +214,7 @@ export class DataManager {
         eligibleCommits.set(submitAddress, commit);
       } else {
         if (!process.env.REMOVE_ANNOYING_MESSAGES) {
-          this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+          this.logger.debug(`Non-eligible commit found for address ${submitAddress}`);
         }
       }
     }
@@ -224,7 +224,7 @@ export class DataManager {
         eligibleReveals.set(submitAddress, reveal);
       } else {
         if (!process.env.REMOVE_ANNOYING_MESSAGES) {
-          this.logger.warn(`Non-eligible commit found for address ${submitAddress}`);
+          this.logger.debug(`Non-eligible commit found for address ${submitAddress}`);
         }
       }
     }
@@ -443,7 +443,9 @@ export class DataManager {
             const reveal = RevealData.decode(message.payload, feedOrder);
             voterToLastReveal.set(submission.submitAddress, reveal);
           } catch (e) {
-            this.logger.warn(`Unparsable reveal message: ${message.payload}, error: ${errorString(e)}`);
+            this.logger.debug(
+              `Skipping invalid reveal payload from ${submission.submitAddress}: ${asError(e).message}`
+            );
           }
         }
       }
