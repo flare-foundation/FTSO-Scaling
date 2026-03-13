@@ -47,4 +47,9 @@ describe("FeedValueEncoder", () => {
     expect(decoded[0].isEmpty).to.equal(true);
     expect(decoded[1].isEmpty).to.equal(true);
   });
+
+  it("should throw when packed values contain more entries than feeds", () => {
+    const encoded = "0x000000000000000000000000";
+    expect(() => FeedValueEncoder.decode(encoded, feeds)).to.throw("Invalid feed values count: 3; expected at most 2");
+  });
 });

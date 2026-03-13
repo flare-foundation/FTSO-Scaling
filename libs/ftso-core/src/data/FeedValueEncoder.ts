@@ -42,9 +42,14 @@ export namespace FeedValueEncoder {
     if (unPrefixedValues.length % 8 !== 0) {
       throw new Error(`Invalid packed values length: ${unPrefixedValues.length}: must be multiple of 8`);
     }
-    let feedValue = [...unPrefixedValues.match(/(.{1,8})/g)];
-    feedValue = padEndArray(feedValue, feeds.length, EMPTY_FEED_VALUE);
-    return feedValue.map((hex, index) => {
+    const feedValue = [...unPrefixedValues.match(/(.{1,8})/g)];
+    if (feedValue.length > feeds.length) {
+      throw new Error(
+        `Invalid feed values count: ${feedValue.length}; expected at most ${feeds.length} (number of supported feeds)`
+      );
+    }
+    const paddedFeedValues = padEndArray(feedValue, feeds.length, EMPTY_FEED_VALUE);
+    return paddedFeedValues.map((hex, index) => {
       const isEmpty = hex === EMPTY_FEED_VALUE;
       const result: ValueWithDecimals = {
         isEmpty,
@@ -78,6 +83,6 @@ export namespace FeedValueEncoder {
   }
 }
 
-function padEndArray(array: string[], minLength: number, fillValue: string = undefined) {
+function padEndArray(array: string[], minLength: number, fillValue: string = undefined): string[] {
   return Object.assign(new Array(minLength).fill(fillValue), array);
 }

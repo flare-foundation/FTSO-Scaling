@@ -17,7 +17,7 @@ import { RelayMessage } from "../../ftso-core/src/fsp-utils/RelayMessage";
 import { ISignaturePayload, SignaturePayload } from "../../ftso-core/src/fsp-utils/SignaturePayload";
 import { SigningPolicy } from "../../ftso-core/src/fsp-utils/SigningPolicy";
 import { ILogger } from "../../ftso-core/src/utils/ILogger";
-import { errorString } from "../../ftso-core/src/utils/error";
+import { asError } from "../../ftso-core/src/utils/error";
 import { Address, MessageHash } from "../../ftso-core/src/voting-types";
 import { IndexerClientForRewarding } from "./IndexerClientForRewarding";
 import {
@@ -834,7 +834,9 @@ export class DataManagerForRewarding extends DataManager {
               }
             }
           } catch (e) {
-            this.logger.warn(`Unparsable reveal message: ${message.payload}, error: ${errorString(e)}`);
+            this.logger.debug(
+              `Skipping invalid reveal payload from ${submission.submitAddress}: ${asError(e).message}`
+            );
           }
         }
       }
