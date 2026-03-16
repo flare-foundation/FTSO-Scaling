@@ -407,6 +407,7 @@ export class IndexerClient {
    * The function checks the availability of block range in the indexer database.
    */
   public async getFullVoterRegistrationInfoEvents(
+    rewardEpochId: number,
     startTime: number,
     endTime: number
   ): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
@@ -425,6 +426,22 @@ export class IndexerClient {
       voterRegistryContract.name = "VoterRegistryNext";
       // @ts-expect-error workaround
       flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
+    }
+    if (network === "coston2") {
+      // Coston2 uses redeployed contracts with new abi
+      // Reward epoch during which contracts redeployed
+      const upgradeEpochId = 5338;
+      if (rewardEpochId <= upgradeEpochId) {
+        // Use old contract addresses and abi
+        voterRegistryContract.address = "0xc6E40401395DCc648bC4bBb38fE4552423cD9BAC";
+        flareSystemsCalculatorContract.address = "0x9aF60c16192330EC98d04Ec9675d22dBb9892951";
+      } else {
+        // Use new contract addresses and abi
+        // @ts-expect-error workaround
+        voterRegistryContract.name = "VoterRegistryNext";
+        // @ts-expect-error workaround
+        flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
+      }
     }
 
     const voterRegisteredResults = await this.queryEvents(
