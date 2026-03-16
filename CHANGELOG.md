@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ...
 
+## [1.0.7] - 2026-03-16
+
+### Changed
+
+- Logging fix: reduce reveal message parsing error spam.
+
 ## [1.0.6] - 2026-03-09
 
 ### Changed
