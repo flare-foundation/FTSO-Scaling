@@ -116,9 +116,19 @@ export function calculateSigningRewardsForFDC(
     const submitAddress = data.dataForCalculations.orderedVotersSubmitAddresses[i];
     const voterData = signingAddressToVoter.get(submitSignatureAddress);
     if (voterData) {
-      let voterAmount = (BigInt(voterData.weight) * undistributedAmount) / undistributedWeight;
+      const voterWeight = BigInt(voterData.weight);
+      let voterAmount = 0n;
+
+      if (voterWeight > 0n) {
+        if (undistributedWeight === 0n) {
+          throw new Error("Critical error: fdc0reward-signing: undistributedWeight must be non-zero");
+        }
+        // avoiding case when 0 weight voter is the last one
+        voterAmount = (voterWeight * undistributedAmount) / undistributedWeight;
+      }
+
       undistributedAmount -= voterAmount;
-      undistributedWeight -= BigInt(voterData.weight);
+      undistributedWeight -= voterWeight;
       const voterWeights = data.dataForCalculations.votersWeightsMap.get(submitAddress);
       if (!voterData.dominatesConsensusBitVote) {
         // burn 20%
