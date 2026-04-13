@@ -7,7 +7,7 @@ export const COSTON_CONTRACTS: NetworkContractAddresses = {
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x051f214D346Cfd97B107BECb87E2B35D1b4287E9" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x3787dcbd770202f856ed9204c19d6f9022ff3bf2" },
-  VoterRegistry: { name: "VoterRegistry", address: "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6" },
+  VoterRegistry: { name: "VoterRegistry", address: "0x4C797636FC2410e1BbA7CF4bf2e397d94e65DfB8" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
   ProtocolMerkleStructs: { name: "ProtocolMerkleStructs", address: "" },
   FastUpdater: { name: "FastUpdater", address: "0xB8336A96b4b8af89f60EA080002214191Bc8293A" },

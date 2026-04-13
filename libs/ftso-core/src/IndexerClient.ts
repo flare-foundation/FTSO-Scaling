@@ -422,6 +422,10 @@ export class IndexerClient {
     const network = process.env.NETWORK as networks;
     if (network === "coston") {
       // Coston uses redeployed contracts with new abi
+      if (rewardEpochId <= 5450) {
+        // New VoterRegistry contract in effect from epoch 5451 onwards
+        voterRegistryContract.address = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6";
+      }
       // @ts-expect-error workaround
       voterRegistryContract.name = "VoterRegistryNext";
       // @ts-expect-error workaround
@@ -429,19 +433,10 @@ export class IndexerClient {
     }
     if (network === "coston2") {
       // Coston2 uses redeployed contracts with new abi
-      // Reward epoch during which contracts redeployed
-      const upgradeEpochId = 5338;
-      if (rewardEpochId <= upgradeEpochId) {
-        // Use old contract addresses and abi
-        voterRegistryContract.address = "0xc6E40401395DCc648bC4bBb38fE4552423cD9BAC";
-        flareSystemsCalculatorContract.address = "0x9aF60c16192330EC98d04Ec9675d22dBb9892951";
-      } else {
-        // Use new contract addresses and abi
-        // @ts-expect-error workaround
-        voterRegistryContract.name = "VoterRegistryNext";
-        // @ts-expect-error workaround
-        flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
-      }
+      // @ts-expect-error workaround
+      voterRegistryContract.name = "VoterRegistryNext";
+      // @ts-expect-error workaround
+      flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
     }
 
     const voterRegisteredResults = await this.queryEvents(
