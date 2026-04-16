@@ -6,6 +6,7 @@ import { networks } from "../../contracts/src/constants";
 export const LAST_CHAIN_INDEX_STATE = "last_chain_block";
 export const LAST_DATABASE_INDEX_STATE = "last_database_block";
 export const FIRST_DATABASE_INDEX_STATE = "first_database_block";
+export const FIRST_DATABASE_FSP_EVENT_INDEX_STATE = "first_database_fsp_event_block";
 
 const ftso2ProtocolId = () => {
   const network = process.env.NETWORK as networks;

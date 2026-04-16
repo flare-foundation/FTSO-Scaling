@@ -6,7 +6,12 @@ import { Address, VotingEpochId } from "./voting-types";
 import { IPayloadMessage } from "./fsp-utils/PayloadMessage";
 import { IRelayMessage } from "./fsp-utils/RelayMessage";
 import { ContractDefinitions, ContractMethodNames } from "../../contracts/src/definitions";
-import { EPOCH_SETTINGS, FIRST_DATABASE_INDEX_STATE, LAST_DATABASE_INDEX_STATE } from "./constants";
+import {
+  EPOCH_SETTINGS,
+  FIRST_DATABASE_FSP_EVENT_INDEX_STATE,
+  FIRST_DATABASE_INDEX_STATE,
+  LAST_DATABASE_INDEX_STATE,
+} from "./constants";
 import {
   InflationRewardsOffered,
   RandomAcquisitionStarted,
@@ -191,14 +196,25 @@ export class IndexerClient {
   }
 
   /**
-   * Checks the indexer database has a block hat has a timestamp strictly smaller than startTime
+   * Checks the earliest indexed log has a strictly smaller timestamp strictly smaller than startTime.
+   * Only relevant for "FSP" indexer mode where we store additional event history without processing full blocks.
    * @param startTime timestamp in seconds
    * @returns BlockAssuranceResult status (OK | NOT_OK)
    */
-  protected async ensureLowerBlock(startTime: number): Promise<BlockAssuranceResult> {
+  protected async ensureEventsIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
+    // Check if we have an earlier fully indexed block
+    const blockStateCheck = await this.ensureLowerState(startTime, FIRST_DATABASE_INDEX_STATE);
+    if (blockStateCheck === BlockAssuranceResult.OK) {
+      return BlockAssuranceResult.OK;
+    }
+    // If not, check if we have indexed logs with an earlier timestamp
+    return this.ensureLowerState(startTime, FIRST_DATABASE_FSP_EVENT_INDEX_STATE);
+  }
+
+  protected async ensureLowerState(startTime: number, stateName: string): Promise<BlockAssuranceResult> {
     const queryFirst = this.entityManager
       .createQueryBuilder(TLPState, "state")
-      .andWhere("state.name = :name", { name: FIRST_DATABASE_INDEX_STATE });
+      .andWhere("state.name = :name", { name: stateName });
     const firstState = await queryFirst.getOne();
     if (!firstState) {
       return BlockAssuranceResult.NOT_OK;
@@ -262,7 +278,7 @@ export class IndexerClient {
     endTimeout?: number
   ): Promise<BlockAssuranceResult> {
     const [bottomState, topState] = await Promise.all([
-      this.ensureLowerBlock(startTime),
+      this.ensureEventsIndexedBefore(startTime),
       this.ensureTopBlock(endTime, endTimeout),
     ]);
     if (bottomState === BlockAssuranceResult.OK) {
@@ -279,7 +295,7 @@ export class IndexerClient {
   public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<IndexerResponse<RewardEpochStarted>> {
     const eventName = RewardEpochStarted.eventName;
     const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId);
-    const status = await this.ensureLowerBlock(startTime);
+    const status = await this.ensureEventsIndexedBefore(startTime);
     let data: RewardEpochStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
@@ -300,7 +316,7 @@ export class IndexerClient {
   public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<IndexerResponse<RandomAcquisitionStarted>> {
     const eventName = RandomAcquisitionStarted.eventName;
     const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const status = await this.ensureLowerBlock(startTime);
+    const status = await this.ensureEventsIndexedBefore(startTime);
     let data: RandomAcquisitionStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
@@ -365,7 +381,7 @@ export class IndexerClient {
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
     const eventName = VotePowerBlockSelected.eventName;
     const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const status = await this.ensureLowerBlock(startTime);
+    const status = await this.ensureEventsIndexedBefore(startTime);
     let data: VotePowerBlockSelected | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
@@ -387,7 +403,7 @@ export class IndexerClient {
     fromStartTime: number
   ): Promise<IndexerResponse<SigningPolicyInitialized[]>> {
     const eventName = SigningPolicyInitialized.eventName;
-    const status = await this.ensureLowerBlock(fromStartTime);
+    const status = await this.ensureEventsIndexedBefore(fromStartTime);
 
     const result: TLPEvents[] = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
     IndexerClient.sortEvents(result);
