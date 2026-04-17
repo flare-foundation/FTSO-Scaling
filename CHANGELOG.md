@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ...
 
+## [1.0.9] - 2026-04-17
+
+### Changed
+
+- Handle Coston `VoterRegistry` and `VoterPreRegistry` contract upgrade.
+
+### Fixed
+
+- Excluded zero-weight voters from FDC signing reward calculation.
+
 ## [1.0.7] - 2026-03-16
 
 ### Changed
