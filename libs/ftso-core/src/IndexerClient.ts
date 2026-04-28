@@ -196,48 +196,52 @@ export class IndexerClient {
   }
 
   /**
-   * Checks the earliest indexed log has a strictly smaller timestamp strictly smaller than startTime.
-   * Only relevant for "FSP" indexer mode where we store additional event history without processing full blocks.
-   * @param startTime timestamp in seconds
-   * @returns BlockAssuranceResult status (OK | NOT_OK)
+   * Earliest timestamp at which the indexer is guaranteed to have indexed events,
+   * across both the fully-indexed-block floor and the FSP-event-only floor.
+   * In FSP mode the event floor reaches further back than the block floor; in
+   * legacy/full mode only the block floor exists and this falls back to it.
+   * Returns undefined if neither state row is set.
    */
-  protected async ensureEventsIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
-    // Check if we have an earlier fully indexed block
-    const blockStateCheck = await this.ensureLowerState(startTime, FIRST_DATABASE_INDEX_STATE);
-    if (blockStateCheck === BlockAssuranceResult.OK) {
-      return BlockAssuranceResult.OK;
-    }
-    // If not, check if we have indexed logs with an earlier timestamp
-    return this.ensureLowerState(startTime, FIRST_DATABASE_FSP_EVENT_INDEX_STATE);
+  private async lowestIndexedEventTimestamp(): Promise<number | undefined> {
+    const states = await this.entityManager
+      .createQueryBuilder(TLPState, "state")
+      .where("state.name IN (:...names)", {
+        names: [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE],
+      })
+      .getMany();
+
+    const timestamps = states
+      .map(s => s.block_timestamp)
+      .filter((ts): ts is number => ts != null && ts > 0);
+
+    return timestamps.length === 0 ? undefined : Math.min(...timestamps);
   }
 
-  protected async ensureLowerState(startTime: number, stateName: string): Promise<BlockAssuranceResult> {
-    const queryFirst = this.entityManager
-      .createQueryBuilder(TLPState, "state")
-      .andWhere("state.name = :name", { name: stateName });
-    const firstState = await queryFirst.getOne();
-    if (!firstState) {
-      return BlockAssuranceResult.NOT_OK;
-    }
-    if (firstState.block_timestamp >= startTime) {
+  /**
+   * Checks the indexer is guaranteed to have indexed events with a timestamp
+   * strictly smaller than startTime. Returns OK if either index-state floor is
+   * strictly below startTime; NOT_OK otherwise.
+   * @param startTime timestamp in seconds
+   */
+  protected async ensureEventsIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
+    const earliest = await this.lowestIndexedEventTimestamp();
+    if (earliest === undefined || earliest >= startTime) {
       return BlockAssuranceResult.NOT_OK;
     }
     return BlockAssuranceResult.OK;
   }
 
   /**
-   * Returns the lowest timestamp in the indexer database + 1, which is considered as a
-   * secure lowest timestamp.
+   * Returns the lowest timestamp in the indexer database + 1, which is considered
+   * a secure lowest timestamp. In FSP mode this draws from the FSP-event floor when
+   * it's older than the fully-indexed-block floor.
    */
   public async secureLowestTimestamp(): Promise<number> {
-    const queryFirst = this.entityManager
-      .createQueryBuilder(TLPState, "state")
-      .andWhere("state.name = :name", { name: FIRST_DATABASE_INDEX_STATE });
-    const firstState = await queryFirst.getOne();
-    if (!firstState) {
+    const earliest = await this.lowestIndexedEventTimestamp();
+    if (earliest === undefined) {
       throw new Error("Critical error: First state not found in the indexer database");
     }
-    return firstState.block_timestamp + 1;
+    return earliest + 1;
   }
 
   /**
