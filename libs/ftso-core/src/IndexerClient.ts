@@ -210,11 +210,10 @@ export class IndexerClient {
       })
       .getMany();
 
-    const timestamps = states
-      .map(s => s.block_timestamp)
-      .filter((ts): ts is number => ts != null && ts > 0);
-
-    return timestamps.length === 0 ? undefined : Math.min(...timestamps);
+    if (states.length === 0) {
+      return undefined;
+    }
+    return Math.min(...states.map((s) => s.block_timestamp));
   }
 
   /**
