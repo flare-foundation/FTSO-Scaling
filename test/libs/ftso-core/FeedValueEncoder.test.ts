@@ -72,4 +72,14 @@ describe(`FeedValueEncoder (${getTestFile(__filename)})`, () => {
       "Invalid decimals"
     );
   });
+
+  it("should treat empty packed values as all feeds empty", () => {
+    const decoded = FeedValueEncoder.decode("0x", feeds);
+    expect(decoded.length).to.equal(feeds.length);
+    decoded.forEach((value, index) => {
+      expect(value.isEmpty).to.equal(true);
+      expect(value.value).to.equal(0);
+      expect(value.decimals).to.equal(feeds[index].decimals);
+    });
+  });
 });

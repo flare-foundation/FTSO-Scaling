@@ -46,6 +46,9 @@ export namespace FeedValueEncoder {
 
   export function decode(packedValues: string, feeds: Feed[]): ValueWithDecimals[] {
     const unPrefixedValues = packedValues.startsWith("0x") ? packedValues.slice(2) : packedValues;
+    if (unPrefixedValues.length === 0) {
+      return emptyFeeds(feeds);
+    }
     if (unPrefixedValues.length % 8 !== 0) {
       throw new Error(`Invalid packed values length: ${unPrefixedValues.length}: must be multiple of 8`);
     }
