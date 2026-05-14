@@ -23,7 +23,7 @@ export namespace FeedValueEncoder {
         return EMPTY_FEED_VALUE; // undefined value is encoded as 0
       }
       const value = Math.round(formattedValue * 10 ** feeds[index].decimals) + 2 ** 31;
-      if (value <= 0 || value >= 2 ** 32) {
+      if (!Number.isFinite(value) || value <= 0 || value >= 2 ** 32) {
         throw new Error(`Value ${formattedValue} is out of range for feed ${JSON.stringify(feeds[index])}`);
       }
       return value.toString(16).padStart(8, "0");
