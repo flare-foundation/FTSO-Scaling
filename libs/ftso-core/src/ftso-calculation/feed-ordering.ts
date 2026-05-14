@@ -47,7 +47,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
       };
       feedValues.set(feedValueType.id, feedValueType);
     }
-    feedValueType.flrValue += feedValueType.flrValue + communityOffer.amount;
+    feedValueType.flrValue += communityOffer.amount;
   }
 
   const feedSequence = sortFeedWithValuesToCanonicalOrder(Array.from(feedValues.values()));
