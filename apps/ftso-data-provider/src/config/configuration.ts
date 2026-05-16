@@ -35,9 +35,7 @@ export default () => {
     value_provider_url:
       process.env.VALUE_PROVIDER_BASE_URL ?? throwError("VALUE_PROVIDER_BASE_URL env variable not set"),
     feed_value_provider_timeout_ms: parseInt(process.env.FEED_VALUE_PROVIDER_TIMEOUT_MS ?? "30000"),
-    feed_value_provider_max_response_bytes: parseInt(
-      process.env.FEED_VALUE_PROVIDER_MAX_RESPONSE_BYTES ?? "10485760"
-    ),
+    feed_value_provider_max_response_bytes: parseInt(process.env.FEED_VALUE_PROVIDER_MAX_RESPONSE_BYTES ?? "10485760"),
     required_indexer_history_time_sec: parseInt(
       process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC ??
         throwError("DB_REQUIRED_INDEXER_HISTORY_TIME_SEC env variable not set")
