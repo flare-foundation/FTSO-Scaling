@@ -31,6 +31,8 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
           flrValue: 0n, // irrelevant for inflation offers
         };
         feedValues.set(feedValueType.id, feedValueType);
+      } else {
+        assertMatchingDecimals(feedId, feedValueType.decimals, inflationOffer.decimals[i]);
       }
     }
   }
@@ -46,6 +48,8 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
         flrValue: 0n,
       };
       feedValues.set(feedValueType.id, feedValueType);
+    } else {
+      assertMatchingDecimals(feedId, feedValueType.decimals, communityOffer.decimals);
     }
     feedValueType.flrValue += communityOffer.amount;
   }
@@ -58,6 +62,12 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
       decimals: feedValueType.decimals,
     };
   });
+}
+
+function assertMatchingDecimals(feedId: string, existingDecimals: number, newDecimals: number): void {
+  if (existingDecimals !== newDecimals) {
+    throw new Error(`Conflicting decimals for feed ${feedId}: ${existingDecimals} !== ${newDecimals}`);
+  }
 }
 
 /**
