@@ -19,15 +19,15 @@ export namespace FeedValueEncoder {
       throw new Error(`Number of values (${values.length}) does not match number of feeds (${feeds.length})`);
     }
     const result = values.map((formattedValue, index) => {
+      const decimals = feeds[index].decimals;
+      if (!Number.isInteger(decimals) || decimals < 0) {
+        throw new Error(`Invalid decimals ${decimals} for feed ${JSON.stringify(feeds[index])}`);
+      }
       if (formattedValue === undefined) {
         return EMPTY_FEED_VALUE; // undefined value is encoded as 0
       }
       if (typeof formattedValue !== "number" || !Number.isFinite(formattedValue)) {
         throw new Error(`Value ${formattedValue} is not a finite number for feed ${JSON.stringify(feeds[index])}`);
-      }
-      const decimals = feeds[index].decimals;
-      if (!Number.isInteger(decimals) || decimals < 0) {
-        throw new Error(`Invalid decimals ${decimals} for feed ${JSON.stringify(feeds[index])}`);
       }
       const value = Math.round(formattedValue * 10 ** decimals) + 2 ** 31;
       if (!Number.isFinite(value) || value <= 0 || value >= 2 ** 32) {

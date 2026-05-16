@@ -71,6 +71,9 @@ describe(`FeedValueEncoder (${getTestFile(__filename)})`, () => {
     expect(() => FeedValueEncoder.encode([1], [{ id: "0000000000000000", decimals: 1.5 }])).to.throw(
       "Invalid decimals"
     );
+    expect(() => FeedValueEncoder.encode([undefined], [{ id: "0000000000000000", decimals: -1 }])).to.throw(
+      "Invalid decimals"
+    );
   });
 
   it("should treat empty packed values as all feeds empty", () => {
