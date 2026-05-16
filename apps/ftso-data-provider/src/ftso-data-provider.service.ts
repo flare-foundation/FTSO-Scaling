@@ -52,11 +52,14 @@ export class FtsoDataProviderService {
     this.indexer_top_timeout = configService.get<number>("indexer_top_timeout");
     this.indexerClient = new IndexerClient(manager, required_history_sec, new Logger(IndexerClient.name));
     this.rewardEpochManager = new RewardEpochManager(this.indexerClient);
+    const feedValueProviderTimeoutMs = configService.get<number>("feed_value_provider_timeout_ms") ?? 30_000;
+    const feedValueProviderMaxResponseBytes =
+      configService.get<number>("feed_value_provider_max_response_bytes") ?? 10 * 1024 * 1024;
     this.feedValueProviderClient = new Api({
       baseURL: configService.get<string>("value_provider_url"),
-      timeout: 30_000,
-      maxContentLength: 10 * 1024 * 1024,
-      maxBodyLength: 10 * 1024 * 1024,
+      timeout: feedValueProviderTimeoutMs,
+      maxContentLength: feedValueProviderMaxResponseBytes,
+      maxBodyLength: feedValueProviderMaxResponseBytes,
     });
     this.dataManager = new DataManager(this.indexerClient, this.rewardEpochManager, this.logger);
     this.votingRoundData = new LRUCache({
