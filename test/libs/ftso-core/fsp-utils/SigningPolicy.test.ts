@@ -162,4 +162,23 @@ describe(`SigningPolicy (${getTestFile(__filename)})`, () => {
     signingPolicyData2 = { ...signingPolicyData, threshold: 3.14 };
     expect(() => SigningPolicy.encode(signingPolicyData2)).to.throw("Threshold out of range");
   });
+
+  it("Should fail to hash empty 0x-prefixed signing policy", async () => {
+    expect(() => SigningPolicy.hashEncoded("0x")).to.throw("Invalid signing policy");
+  });
+
+  it("Should fail to hash empty unprefixed signing policy", async () => {
+    expect(() => SigningPolicy.hashEncoded("")).to.throw("too short");
+  });
+
+  it("Should fail to hash signing policy shorter than two 32-byte chunks", async () => {
+    expect(() => SigningPolicy.hashEncoded("0x" + "00".repeat(31))).to.throw("Invalid signing policy");
+  });
+
+  it("Should hash a valid encoded signing policy", async () => {
+    const encoded = SigningPolicy.encode(signingPolicyData);
+    const hash = SigningPolicy.hashEncoded(encoded);
+    expect(hash.startsWith("0x")).to.be.true;
+    expect(hash.length).to.equal(66);
+  });
 });
