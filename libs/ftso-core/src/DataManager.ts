@@ -94,8 +94,14 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
-    this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
-    this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
+    // LOW-04: reveal payloads are attacker-controllable hex calldata of unbounded size,
+    // so emit only a short, safe summary at .debug. Full payload (hex bytes included)
+    // is gated behind .verbose, which is below .debug in NestJS Logger levels and is
+    // only enabled by operators who have explicitly opted in.
+    this.logger.debug(`Commits for voting round ${votingRoundId}: ${formatSubmissionsForLog(commits)}`);
+    this.logger.debug(`Reveals for voting round ${votingRoundId}: ${formatSubmissionsForLog(reveals)}`);
+    this.logger.verbose?.(`Commits payload for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
+    this.logger.verbose?.(`Reveals payload for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
@@ -499,4 +505,27 @@ export class DataManager {
   protected filterRevealsByDeadlineTime(reveals: SubmissionData[]) {
     return reveals.filter((reveal) => reveal.relativeTimestamp < EPOCH_SETTINGS().revealDeadlineSeconds);
   }
+}
+
+/**
+ * Returns a short, log-safe summary of a `SubmissionData[]` array.
+ *
+ * Reveal/commit payloads contain attacker-controllable hex calldata of unbounded size.
+ * `JSON.stringify` on a full array dumps every byte and can flood logs.
+ * This helper returns only `count` plus a short prefix of the first message payload
+ * (up to 18 chars, i.e. `0x` + 8 bytes), keeping the result well under ~120 characters.
+ * Full payloads are still available via the `.verbose` logger level.
+ *
+ * @param items submission data array (commits or reveals).
+ * @returns a single-line summary safe to emit at `.debug` level.
+ */
+export function formatSubmissionsForLog(items: SubmissionData[]): string {
+  const count = items?.length ?? 0;
+  if (count === 0) {
+    return `count=0`;
+  }
+  const firstMessage = items[0]?.messages?.[0];
+  const firstPayload = firstMessage?.payload;
+  const firstHash = typeof firstPayload === "string" ? firstPayload.slice(0, 18) : "<none>";
+  return `count=${count}, firstPayloadPrefix=${firstHash}`;
 }
