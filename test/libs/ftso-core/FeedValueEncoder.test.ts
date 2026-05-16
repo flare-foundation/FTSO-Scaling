@@ -82,4 +82,9 @@ describe(`FeedValueEncoder (${getTestFile(__filename)})`, () => {
       expect(value.decimals).to.equal(feeds[index].decimals);
     });
   });
+
+  it("should reject non-hex packed values", () => {
+    expect(() => FeedValueEncoder.decode("0xzzzzzzzz", feeds)).to.throw("Invalid packed values format");
+    expect(() => FeedValueEncoder.decode("0x1234567z", feeds)).to.throw("Invalid packed values format");
+  });
 });

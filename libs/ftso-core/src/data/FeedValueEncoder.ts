@@ -49,6 +49,9 @@ export namespace FeedValueEncoder {
     if (unPrefixedValues.length === 0) {
       return emptyFeeds(feeds);
     }
+    if (!/^[0-9a-f]*$/i.test(unPrefixedValues)) {
+      throw new Error("Invalid packed values format: not hex");
+    }
     if (unPrefixedValues.length % 8 !== 0) {
       throw new Error(`Invalid packed values length: ${unPrefixedValues.length}: must be multiple of 8`);
     }
