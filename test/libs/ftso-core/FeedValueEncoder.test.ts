@@ -65,9 +65,7 @@ describe(`FeedValueEncoder (${getTestFile(__filename)})`, () => {
   });
 
   it("should reject invalid feed decimals before encoding", () => {
-    expect(() => FeedValueEncoder.encode([1], [{ id: "0000000000000000", decimals: -1 }])).to.throw(
-      "Invalid decimals"
-    );
+    expect(() => FeedValueEncoder.encode([1], [{ id: "0000000000000000", decimals: -1 }])).to.throw("Invalid decimals");
     expect(() => FeedValueEncoder.encode([1], [{ id: "0000000000000000", decimals: 1.5 }])).to.throw(
       "Invalid decimals"
     );
