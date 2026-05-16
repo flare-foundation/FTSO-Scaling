@@ -140,10 +140,11 @@ export namespace SigningPolicy {
    */
   export function hashEncoded(signingPolicy: string) {
     const signingPolicyInternal = signingPolicy.startsWith("0x") ? signingPolicy.slice(2) : signingPolicy;
-    const splitted = (signingPolicyInternal.match(/.{1,64}/g) ?? []).map((x) => x.padEnd(64, "0"));
-    if (splitted.length < 2) {
+    const matched = signingPolicyInternal.match(/.{1,64}/g);
+    if (matched === null || matched.length < 2) {
       throw new Error("Invalid signing policy: too short to hash (need at least two 32-byte chunks)");
     }
+    const splitted = matched.map((x) => x.padEnd(64, "0"));
     let hash: string = ethers.keccak256("0x" + splitted[0] + splitted[1]);
     for (let i = 2; i < splitted.length; i++) {
       hash = ethers.keccak256("0x" + hash.slice(2) + splitted[i])!;
