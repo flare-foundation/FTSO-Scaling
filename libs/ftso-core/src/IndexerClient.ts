@@ -83,17 +83,20 @@ export function queryBytesFormat(address: string): string {
  */
 export enum BlockAssuranceResult {
   /**
-   * Block range indexed and we have insurance of having one block with strictly
-   * lower timestamp then startTime and one block with strictly greater timestamp than endTime
+   * The requested timestamp range is covered by the indexer. The lower-bound check uses
+   * either the fully-indexed-block floor or the FSP-event floor depending on the caller
+   * ({@link IndexerClient.ensureBlockRange} vs {@link IndexerClient.ensureFspEventRange});
+   * the upper bound is always a block with timestamp strictly greater than endTime.
    */
   OK,
   /**
-   * Block range not indexed
+   * The requested range is not covered by the indexer.
    */
   NOT_OK,
   /**
-   * There exists a block with timestamp strictly lower than startTime but there is no
-   * block with timestamp strictly greater that endTim,e but
+   * The lower bound is satisfied but no block with timestamp strictly greater than endTime
+   * is indexed; returned only when an endTimeout is given and the local clock has advanced
+   * past endTime + endTimeout.
    */
   TIMEOUT_OK,
 }
@@ -196,20 +199,19 @@ export class IndexerClient {
   }
 
   /**
-   * Earliest timestamp at which the indexer is guaranteed to have indexed events,
-   * across both the fully-indexed-block floor and the FSP-event-only floor.
-   * In FSP mode the event floor reaches further back than the block floor; in
-   * legacy/full mode only the block floor exists and this falls back to it.
-   * Returns undefined if neither state row is set.
+   * Minimum `block_timestamp` across the given index-state rows, or undefined if none are set.
+   *
+   * FSP-event-scope callers pass both [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE] —
+   * in FSP mode the FSP-event floor reaches further back than the fully-indexed-block floor.
+   * Whole-block-scope callers (transactions, and events emitted during voting rounds) pass only
+   * [FIRST_DATABASE_INDEX_STATE]; the FSP-event floor does not guarantee transactions or
+   * non-FSP events in its range.
    */
-  private async lowestIndexedEventTimestamp(): Promise<number | undefined> {
+  private async lowestIndexedTimestamp(stateNames: readonly string[]): Promise<number | undefined> {
     const states = await this.entityManager
       .createQueryBuilder(TLPState, "state")
-      .where("state.name IN (:...names)", {
-        names: [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE],
-      })
+      .where("state.name IN (:...names)", { names: [...stateNames] })
       .getMany();
-
     if (states.length === 0) {
       return undefined;
     }
@@ -217,13 +219,11 @@ export class IndexerClient {
   }
 
   /**
-   * Checks the indexer is guaranteed to have indexed events with a timestamp
-   * strictly smaller than startTime. Returns OK if either index-state floor is
-   * strictly below startTime; NOT_OK otherwise.
-   * @param startTime timestamp in seconds
+   * Common lower-bound check used by event- and transaction-scoped range assurance.
+   * Returns OK iff the lowest indexed timestamp for the given scope is strictly below startTime.
    */
-  protected async ensureEventsIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
-    const earliest = await this.lowestIndexedEventTimestamp();
+  private async ensureIndexedBefore(stateNames: readonly string[], startTime: number): Promise<BlockAssuranceResult> {
+    const earliest = await this.lowestIndexedTimestamp(stateNames);
     if (earliest === undefined || earliest >= startTime) {
       return BlockAssuranceResult.NOT_OK;
     }
@@ -231,12 +231,55 @@ export class IndexerClient {
   }
 
   /**
-   * Returns the lowest timestamp in the indexer database + 1, which is considered
+   * Common range assurance used by event- and transaction-scoped checks.
+   */
+  private async ensureIndexedRange(
+    stateNames: readonly string[],
+    startTime: number,
+    endTime: number,
+    endTimeout?: number
+  ): Promise<BlockAssuranceResult> {
+    const [bottomState, topState] = await Promise.all([
+      this.ensureIndexedBefore(stateNames, startTime),
+      this.ensureTopBlock(endTime, endTimeout),
+    ]);
+    if (bottomState === BlockAssuranceResult.OK) {
+      return topState;
+    }
+    return bottomState;
+  }
+
+  /**
+   * Checks the indexer is guaranteed to have indexed FSP events with a timestamp
+   * strictly smaller than startTime. "FSP events" are events emitted during the
+   * signing-policy protocol window (reward offers, voter registration, signing-policy
+   * initialization). Uses the broader floor (min of block + FSP-event floors).
+   * For transactions or events emitted during voting rounds use {@link ensureBlocksIndexedBefore}.
+   */
+  protected ensureFspEventsIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
+    return this.ensureIndexedBefore([FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE], startTime);
+  }
+
+  /**
+   * Checks the indexer is guaranteed to have indexed the full block range (transactions
+   * and all events emitted in those blocks) before startTime. Uses only the
+   * fully-indexed-block floor; the FSP-event-only floor does not imply transactions or
+   * non-FSP events in the same range are present.
+   */
+  protected ensureBlocksIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
+    return this.ensureIndexedBefore([FIRST_DATABASE_INDEX_STATE], startTime);
+  }
+
+  /**
+   * Returns the lowest event-indexing timestamp in the indexer database + 1, considered
    * a secure lowest timestamp. In FSP mode this draws from the FSP-event floor when
    * it's older than the fully-indexed-block floor.
    */
   public async secureLowestTimestamp(): Promise<number> {
-    const earliest = await this.lowestIndexedEventTimestamp();
+    const earliest = await this.lowestIndexedTimestamp([
+      FIRST_DATABASE_INDEX_STATE,
+      FIRST_DATABASE_FSP_EVENT_INDEX_STATE,
+    ]);
     if (earliest === undefined) {
       throw new Error("Critical error: First state not found in the indexer database");
     }
@@ -273,21 +316,33 @@ export class IndexerClient {
   }
 
   /**
-   * Checks the indexer database for a given minimal timestamp range, possibly with given timeout.
+   * Checks the indexer database for a given minimal timestamp range covering FSP events,
+   * possibly with given timeout. "FSP events" are events emitted during the signing-policy
+   * protocol window (reward offers, voter registration, signing-policy initialization).
+   * Uses the broader floor (min of block + FSP-event floors). For transactions or events
+   * emitted during voting rounds use {@link ensureBlockRange}.
    */
-  protected async ensureEventRange(
+  protected ensureFspEventRange(
     startTime: number,
     endTime: number,
     endTimeout?: number
   ): Promise<BlockAssuranceResult> {
-    const [bottomState, topState] = await Promise.all([
-      this.ensureEventsIndexedBefore(startTime),
-      this.ensureTopBlock(endTime, endTimeout),
-    ]);
-    if (bottomState === BlockAssuranceResult.OK) {
-      return topState;
-    }
-    return bottomState;
+    return this.ensureIndexedRange(
+      [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE],
+      startTime,
+      endTime,
+      endTimeout
+    );
+  }
+
+  /**
+   * Checks the indexer database for a given minimal timestamp range covering whole blocks,
+   * possibly with given timeout. Uses only the fully-indexed-block floor for the bottom check,
+   * so both transactions and any events emitted in those blocks are guaranteed to be present.
+   * The FSP-event-only floor does not provide this guarantee.
+   */
+  protected ensureBlockRange(startTime: number, endTime: number, endTimeout?: number): Promise<BlockAssuranceResult> {
+    return this.ensureIndexedRange([FIRST_DATABASE_INDEX_STATE], startTime, endTime, endTimeout);
   }
 
   /**
@@ -298,7 +353,7 @@ export class IndexerClient {
   public async getStartOfRewardEpochEvent(rewardEpochId: number): Promise<IndexerResponse<RewardEpochStarted>> {
     const eventName = RewardEpochStarted.eventName;
     const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId);
-    const status = await this.ensureEventsIndexedBefore(startTime);
+    const status = await this.ensureFspEventsIndexedBefore(startTime);
     let data: RewardEpochStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
@@ -319,7 +374,7 @@ export class IndexerClient {
   public async getRandomAcquisitionStarted(rewardEpochId: number): Promise<IndexerResponse<RandomAcquisitionStarted>> {
     const eventName = RandomAcquisitionStarted.eventName;
     const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const status = await this.ensureEventsIndexedBefore(startTime);
+    const status = await this.ensureFspEventsIndexedBefore(startTime);
     let data: RandomAcquisitionStarted | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
@@ -333,14 +388,13 @@ export class IndexerClient {
   }
 
   /**
-   * Assuming that the indexer has indexed all the events in the given timestamp range,
-   * it extracts all the reward offers and inflation reward offers in the given timestamp range.
-   * Timestamp range are obtained from timestamps of relevant events RewardEpochStarted and RandomAcquisitionStarted.
-   * IMPORTANT: If this is not the case the function does not provide any guarantee of sufficient data availability in
-   * indexer database.
+   * Extracts all reward offers and inflation reward offers in the given timestamp range.
+   * The range is expected to be bounded by timestamps of RewardEpochStarted and
+   * RandomAcquisitionStarted. The function checks the availability of the FSP-event range
+   * in the indexer database and returns NOT_OK/TIMEOUT_OK without data if the range is not covered.
    */
   public async getRewardOffers(startTime: number, endTime: number): Promise<IndexerResponse<RewardOffers>> {
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureFspEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
@@ -384,7 +438,7 @@ export class IndexerClient {
   public async getVotePowerBlockSelectedEvent(rewardEpochId: number): Promise<IndexerResponse<VotePowerBlockSelected>> {
     const eventName = VotePowerBlockSelected.eventName;
     const startTime = EPOCH_SETTINGS().expectedRewardEpochStartTimeSec(rewardEpochId - 1);
-    const status = await this.ensureEventsIndexedBefore(startTime);
+    const status = await this.ensureFspEventsIndexedBefore(startTime);
     let data: VotePowerBlockSelected | undefined;
     if (status === BlockAssuranceResult.OK) {
       const result = await this.queryEvents(CONTRACTS.FlareSystemsManager, eventName, startTime);
@@ -398,15 +452,16 @@ export class IndexerClient {
   }
 
   /**
-   * Returns the all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
+   * Returns all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
    * Events are sorted by timestamp, hence also by rewardEpochId.
-   * The query result is returned even if the indexer database does not contain a block with timestamp strictly lower than fromStartTime.
+   * The query result is returned even if the indexer's FSP-event floor is not strictly below
+   * fromStartTime; the floor status is reflected in the response `status`.
    */
   public async getLatestSigningPolicyInitializedEvents(
     fromStartTime: number
   ): Promise<IndexerResponse<SigningPolicyInitialized[]>> {
     const eventName = SigningPolicyInitialized.eventName;
-    const status = await this.ensureEventsIndexedBefore(fromStartTime);
+    const status = await this.ensureFspEventsIndexedBefore(fromStartTime);
 
     const result: TLPEvents[] = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
     IndexerClient.sortEvents(result);
@@ -419,18 +474,18 @@ export class IndexerClient {
   }
 
   /**
-   * Assuming that the indexer has indexed all the events in the given timestamp range,
-   * it extracts all the 'VoterRegistered' (VoterRegistry contract) and
-   * VoterRegistrationInfo (FlareSystemsCalculator contract) events in the given timestamp range.
-   * Timestamp range are obtained from timestamps of relevant events VotePowerBlockSelectedEvent and SigningPolicyInitialized.
-   * The function checks the availability of block range in the indexer database.
+   * Extracts all 'VoterRegistered' (VoterRegistry contract) and VoterRegistrationInfo
+   * (FlareSystemsCalculator contract) events in the given timestamp range.
+   * The range is expected to be bounded by timestamps of VotePowerBlockSelected and
+   * SigningPolicyInitialized. The function checks the availability of the FSP-event range
+   * in the indexer database and returns NOT_OK/TIMEOUT_OK without data if the range is not covered.
    */
   public async getFullVoterRegistrationInfoEvents(
     rewardEpochId: number,
     startTime: number,
     endTime: number
   ): Promise<IndexerResponse<FullVoterRegistrationInfo[]>> {
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureFspEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
@@ -532,6 +587,9 @@ export class IndexerClient {
 
   /**
    * Extracts all the submissions through function @param functionName in a given time range.
+   *
+   * Submission queries are transaction-backed, so range assurance uses the full block floor
+   * rather than the FSP-event-only floor.
    */
   public async getSubmissionDataInRange(
     functionName: ContractMethodNames,
@@ -540,7 +598,7 @@ export class IndexerClient {
     endTimeout?: number,
     queryResultsEvenIfRangeCheckFails?: boolean
   ): Promise<IndexerResponse<SubmissionData[]>> {
-    const ensureRange = await this.ensureEventRange(startTime, endTime, endTimeout);
+    const ensureRange = await this.ensureBlockRange(startTime, endTime, endTimeout);
     if (!queryResultsEvenIfRangeCheckFails && ensureRange === BlockAssuranceResult.NOT_OK) {
       return {
         status: ensureRange,
