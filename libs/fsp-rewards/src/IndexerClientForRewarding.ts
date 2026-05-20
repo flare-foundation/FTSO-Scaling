@@ -36,7 +36,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     startTime: number,
     endTime: number
   ): Promise<IndexerResponse<FinalizationData[]>> {
-    const ensureRange = await this.ensureEventRange(startTime, endTime);
+    const ensureRange = await this.ensureBlockRange(startTime, endTime);
     if (ensureRange !== BlockAssuranceResult.OK) {
       return {
         status: ensureRange,
@@ -143,7 +143,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     // take one voting epoch more for buffer
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 2);
     const eventName = FastUpdateFeeds.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureBlockRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
@@ -265,7 +265,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     // This is safe to do as we only process events containing votingRoundId within the range.
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 2);
     const eventName = FastUpdateFeedsSubmitted.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureBlockRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
@@ -349,7 +349,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = IncentiveOffered.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureBlockRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
@@ -373,7 +373,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = FUInflationRewardsOffered.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureFspEventRange(startTime, endTime);
     const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
@@ -396,7 +396,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = AttestationRequest.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureBlockRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
@@ -431,7 +431,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
     const eventName = FDCInflationRewardsOffered.eventName;
-    const status = await this.ensureEventRange(startTime, endTime);
+    const status = await this.ensureFspEventRange(startTime, endTime);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
