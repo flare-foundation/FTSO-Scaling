@@ -16,8 +16,6 @@
     "start:debug": "nest start --debug --watch",
     "-----TESTS-----": "",
     "test": "NETWORK=local-test pnpm exec mocha --require ts-node/register --require ts-node/register/transpile-only --extension ts -t 0 --exit",
-    "test:unit": "pnpm test 'test/**/unit/**/*.test.ts'",
-    "test:integration": "pnpm test 'test/**/integration/**/*.test.ts'",
     "test:all": "pnpm test 'test/**/*.test.ts'",
     "test:coverage": "nyc pnpm test:all",
     "-----FORMATTING & LINTING-----": "",
@@ -110,6 +108,10 @@
     "extends": "@istanbuljs/nyc-config-typescript",
     "check-coverage": true,
     "all": true,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 55,
     "include": [
       "{apps,libs}/**/!(*.test|*.spec|*.dto).[tj]s?(x)"
     ],
@@ -118,12 +120,15 @@
       "apps/**/*.module.ts",
       "apps/ftso-data-provider/src/feed-value-provider-api/**/*",
       "apps/**/configuration.ts",
+      "apps/ftso-reward-calculation-process/**/*",
+      "libs/fsp-rewards/**/*",
       "libs/ftso-core/src/utils/error.ts",
       "libs/ftso-core/src/utils/voting-utils.ts"
     ],
     "reporter": [
       "html",
       "lcov",
+      "cobertura",
       "text",
       "text-summary"
     ],

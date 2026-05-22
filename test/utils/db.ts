@@ -40,9 +40,13 @@ export class MockIndexerDB {
   }
 
   private async updateTime(items: any[]) {
+    if (items.length === 0) return;
     const maxTimestamp = items.reduce((max, i: any) => Math.max(max, i.timestamp), 0);
-    this.upperState.block_timestamp = maxTimestamp + 1;
-    await this.em.save(this.upperState);
+    // Advance only — never rewind the upper-bound (some callers add zero or stale-timestamped items).
+    if (maxTimestamp + 1 > this.upperState.block_timestamp) {
+      this.upperState.block_timestamp = maxTimestamp + 1;
+      await this.em.save(this.upperState);
+    }
   }
 
   /** Increases the last seen block timestamp in the database. */

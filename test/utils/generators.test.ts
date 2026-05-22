@@ -2,8 +2,9 @@ import { expect } from "chai";
 import { generateEvent } from "./basic-generators";
 import { decodeEvent } from "../../libs/contracts/src/abi/AbiCache";
 import { CONTRACTS } from "../../libs/contracts/src/constants";
+import { getTestFile } from "./getTestFile";
 
-describe("generators", () => {
+describe(`generators (${getTestFile(__filename)})`, () => {
   // Event ABI example
   // const eventABI = {
   //    "anonymous": false,
@@ -37,7 +38,7 @@ describe("generators", () => {
   //    "type": "event"
   // }
 
-  it("should encode and decode event correctly", () => {
+  it("roundtrips a synthetic ProtocolMessageRelayed event through encode/decode", () => {
     const eventData = {
       protocolId: 1n,
       votingRoundId: 2n,

@@ -29,14 +29,7 @@
       "request": "launch",
       "name": "Test FTSO reward logic",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["test", "test/libs/unit/generator-rewards.test.ts"]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Test Integration",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["test:integration"]
+      "runtimeArgs": ["test", "test/libs/fsp-rewards/generator-rewards.test.ts"]
     },
     {
       "type": "node",
@@ -46,7 +39,7 @@
       "env": {
         "NETWORK": "local-test"
       },
-      "runtimeArgs": ["ts-node", "test/utils/db-generator/instances/full-reward-epoch-100-voters.ts"]
+      "runtimeArgs": ["ts-node", "test/libs/fsp-rewards/utils/db-generator/instances/full-reward-epoch-100-voters.ts"]
     },
     {
       "type": "node",

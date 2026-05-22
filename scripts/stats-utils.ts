@@ -8,7 +8,7 @@ import {
 import { deserializeRewardDistributionData } from "../libs/fsp-rewards/src/utils/stat-info/reward-distribution-data";
 import { RewardEpochInfo, deserializeRewardEpochInfo } from "../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { TestVoter } from "../test/utils/basic-generators";
-import { claimSummary } from "../test/utils/reward-claim-summaries";
+import { claimSummary } from "../test/libs/fsp-rewards/utils/reward-claim-summaries";
 
 import {CALCULATIONS_FOLDER} from "../libs/fsp-rewards/src/constants";
 
