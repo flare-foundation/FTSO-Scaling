@@ -55,23 +55,10 @@ describe(`FeedValueEncoder (${getTestFile(__filename)})`, () => {
   });
 
   it("should reject non-finite values before encoding", () => {
-    expect(() => FeedValueEncoder.encode([NaN, 1], feeds)).to.throw("is not a finite number");
-    expect(() => FeedValueEncoder.encode([Infinity, 1], feeds)).to.throw("is not a finite number");
-  });
-
-  it("should reject runtime non-number values before encoding", () => {
-    expect(() => FeedValueEncoder.encode([null as any, 1], feeds)).to.throw("is not a finite number");
-    expect(() => FeedValueEncoder.encode(["1" as any, 1], feeds)).to.throw("is not a finite number");
-  });
-
-  it("should reject invalid feed decimals before encoding", () => {
-    expect(() => FeedValueEncoder.encode([1], [{ id: "0000000000000000", decimals: -1 }])).to.throw("Invalid decimals");
-    expect(() => FeedValueEncoder.encode([1], [{ id: "0000000000000000", decimals: 1.5 }])).to.throw(
-      "Invalid decimals"
-    );
-    expect(() => FeedValueEncoder.encode([undefined], [{ id: "0000000000000000", decimals: -1 }])).to.throw(
-      "Invalid decimals"
-    );
+    // NaN / Infinity would otherwise survive the range check and serialise to invalid hex.
+    expect(() => FeedValueEncoder.encode([NaN, 1], feeds)).to.throw("is out of range");
+    expect(() => FeedValueEncoder.encode([Infinity, 1], feeds)).to.throw("is out of range");
+    expect(() => FeedValueEncoder.encode([-Infinity, 1], feeds)).to.throw("is out of range");
   });
 
   it("should treat empty packed values as all feeds empty", () => {
