@@ -168,10 +168,13 @@ describe(`SigningPolicy (${getTestFile(__filename)})`, () => {
   });
 
   it("Should fail to hash empty unprefixed signing policy", async () => {
-    expect(() => SigningPolicy.hashEncoded("")).to.throw("too short");
+    expect(() => SigningPolicy.hashEncoded("")).to.throw("shorter than");
   });
 
-  it("Should fail to hash signing policy shorter than two 32-byte chunks", async () => {
+  it("Should fail to hash signing policy shorter than the fixed header", async () => {
+    // 42 bytes (84 hex) is one byte short of the 43-byte header. The old "two 32-byte
+    // chunks" heuristic accepted this (it splits into two chunks); the header check rejects it.
+    expect(() => SigningPolicy.hashEncoded("0x" + "00".repeat(42))).to.throw("Invalid signing policy");
     expect(() => SigningPolicy.hashEncoded("0x" + "00".repeat(31))).to.throw("Invalid signing policy");
   });
 
