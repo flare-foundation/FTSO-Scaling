@@ -28,6 +28,10 @@ Two mechanical consequences:
    stakers. (FIP.16 also raises the max validator node size 200M→300M; that cap is enforced on-chain and needs no
    change here.)
 
+FIP.16 also introduces a minimum 20% entity fee share. That fee floor is enforced by the smart contracts and reflected
+in the emitted voter-registration data consumed by this repository, so the reward calculator continues to use the
+emitted `delegationFeeBIPS` value as authoritative.
+
 ## 2. On-chain vs off-chain: what actually had to change
 
 The signing weight per voter (`signingPolicy.weights[i]`) is computed **on-chain** by `FlareSystemsCalculator` and
@@ -69,6 +73,10 @@ behaviour.
 node-to-node sub-distribution stays proportional to raw node weights (the multiplier cancels), so per-node shares are
 unchanged.
 
+For FTSO block-latency feeds, the reward opportunity is treated as already earned through the signing-weight-based
+protocol mechanics. The calculator therefore keeps the existing per-submission share assignment and applies FIP.16 to
+the split of that earned share into capped delegation and 5× stake.
+
 ### Median-eligibility for signing/finalization rewards
 
 A voter is eligible for signing/finalization rewards if it earned a non-zero accuracy (median) reward. Before FIP.16
@@ -92,7 +100,7 @@ When active, the Median and Fast-updates accuracy rewards are split with the sig
 - `FIP16_ACTIVATION_REWARD_EPOCH()` — per-network first reward epoch (inclusive) at which FIP.16 applies. **All
   networks are currently set to `FIP16_NOT_ACTIVATED` (`Number.MAX_SAFE_INTEGER`).** Fill in the real epoch ids once
   the matching on-chain `FlareSystemsCalculator` deployment epoch is known for each network. For `from-env`, the value
-  is read from the `FIP16_ACTIVATION_REWARD_EPOCH` environment variable.
+  is read from the `FIP16_ACTIVATION_REWARD_EPOCH` environment variable and must be a non-negative safe integer.
 - `FIP16_STAKE_WEIGHT_MULTIPLIER = 5n` — the stake multiplier (governance-adjustable in the future).
 - `isFip16Active(rewardEpochId)` / `stakeWeightMultiplier(rewardEpochId)` — the gating helpers used throughout.
 
@@ -110,6 +118,6 @@ the published ones.
 
 - Fill in `FIP16_ACTIVATION_REWARD_EPOCH` for `flare`, `songbird`, `coston`, `coston2` once the on-chain activation
   epochs are known. Confirm whether the FTSO weight clause applies to Songbird, and with what multiplier.
-- Add activation-on integration tests once the epochs are set (or via the `from-env` `FIP16_ACTIVATION_REWARD_EPOCH`
-  override in CI), covering: median computed on signing weight, accuracy/fast-update rewards split to stakers (MIRROR
-  claims), and stake-only voters being eligible for signing rewards.
+- Add activation-on end-to-end/golden tests once the real epochs are set. Unit coverage already exercises strict
+  activation parsing, median computed on signing weight, accuracy/fast-update rewards split to stakers (MIRROR claims),
+  and stake-only voters being eligible for signing rewards.

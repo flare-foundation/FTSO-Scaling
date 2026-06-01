@@ -194,14 +194,29 @@ export const FIP16_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
 // FIP.16 sets this initially to 5; it is subject to future governance adjustment.
 export const FIP16_STAKE_WEIGHT_MULTIPLIER = 5n;
 
+function activationRewardEpochFromEnv(): number {
+  const rawValue = process.env.FIP16_ACTIVATION_REWARD_EPOCH;
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return FIP16_NOT_ACTIVATED;
+  }
+
+  const value = rawValue.trim();
+  if (!/^\d+$/.test(value)) {
+    throw new Error("FIP16_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error("FIP16_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+  }
+  return parsed;
+}
+
 const fip16ActivationRewardEpoch = (): number => {
   const network = process.env.NETWORK as networks;
   switch (network) {
     case "from-env": {
-      if (!process.env.FIP16_ACTIVATION_REWARD_EPOCH) {
-        return FIP16_NOT_ACTIVATED;
-      }
-      return parseInt(process.env.FIP16_ACTIVATION_REWARD_EPOCH);
+      return activationRewardEpochFromEnv();
     }
     // TODO(FIP.16): set the activation reward epoch ids once the on-chain deployment epochs are known.
     case "flare":
