@@ -155,7 +155,8 @@ export function calculateSigningRewardsForFDC(
           offer,
           voterWeights,
           RewardTypePrefix.FDC_SIGNING,
-          FDC_PROTOCOL_ID
+          FDC_PROTOCOL_ID,
+          rewardEpochInfo.rewardEpochId
         )
       );
     }

@@ -5,6 +5,7 @@ import {
   VotePowerBlockSelected,
 } from "../../contracts/src/events";
 import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
+import { isFip16Active } from "./constants";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 import { RewardOffers } from "./data/RewardOffers";
 import { FullVoterRegistrationInfo } from "./data/FullVoterRegistrationInfo";
@@ -45,6 +46,8 @@ export class RewardEpoch {
   readonly submitSignatureAddressToVoter = new Map<Address, Address>();
 
   readonly submitAddressToCappedWeight = new Map<Address, bigint>();
+  // submitAddress => normalized on-chain signing-policy weight (uint16). Used for the median once FIP.16 is active.
+  readonly submitAddressToSigningWeight = new Map<Address, number>();
   readonly submitAddressToVoterRegistrationInfo = new Map<Address, FullVoterRegistrationInfo>();
   readonly signingAddressToDelegationAddress = new Map<Address, Address>();
   readonly signingAddressToSubmitAddress = new Map<Address, Address>();
@@ -139,6 +142,10 @@ export class RewardEpoch {
       this.submitAddressToCappedWeight.set(
         fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
         fullVoterRegistrationInfo.voterRegistrationInfo.wNatCappedWeight
+      );
+      this.submitAddressToSigningWeight.set(
+        fullVoterRegistrationInfo.voterRegistered.submitAddress.toLowerCase(),
+        signingWeight
       );
 
       this.submitSignatureAddressToSigningAddress.set(
@@ -241,12 +248,20 @@ export class RewardEpoch {
 
   /**
    * Returns weight for participation in median voting.
+   *
+   * Before FIP.16 the median weight is the capped C-chain WFLR delegation weight only. Once FIP.16 is active for this
+   * reward epoch, the median (a consensus quantity) is computed with the normalized on-chain signing-policy weight,
+   * which already combines capped delegation and P-chain stake (the latter counted 5x) as produced on-chain. See
+   * `docs/migrations/FIP-16-signing-weight-unification.md`.
    * @param submissionAddress
    * @returns
    */
   public ftsoMedianVotingWeight(submissionAddress: Address): bigint {
     if (!this.isEligibleSubmitAddress(submissionAddress)) {
       throw new Error("Invalid submission address");
+    }
+    if (isFip16Active(this.rewardEpochId)) {
+      return BigInt(this.submitAddressToSigningWeight.get(submissionAddress.toLowerCase()));
     }
     return this.submitAddressToCappedWeight.get(submissionAddress.toLowerCase());
   }

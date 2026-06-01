@@ -1,4 +1,5 @@
 import { VoterWeights } from "../../../ftso-core/src/RewardEpoch";
+import { stakeWeightMultiplier } from "../../../ftso-core/src/constants";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
@@ -20,20 +21,28 @@ export enum SigningWeightRewardClaimType {
  * - claim for WNAT participation weight
  * - claims for mirror node participation weight.
  * The function also works with negative amount, that being used to calculate penalty claims.
+ *
+ * FIP.16: once active for @param rewardEpochId, P-chain stake is weighted by {@link stakeWeightMultiplier} (5x) relative
+ * to capped C-chain delegation when splitting the reward between delegators (WNAT) and stakers (MIRROR). This mirrors
+ * the on-chain signing weight that earned the reward. The node-to-node sub-distribution stays proportional to raw node
+ * weights (the multiplier cancels). See `docs/migrations/FIP-16-signing-weight-unification.md`.
  */
 export function generateSigningWeightBasedClaimsForVoter(
   amount: bigint,
   offer: IPartialRewardOfferForRound,
   voterWeights: VoterWeights,
   rewardType: RewardTypePrefix,
-  protocolId: number
+  protocolId: number,
+  rewardEpochId: number
 ): IPartialRewardClaim[] {
   const rewardClaims: IPartialRewardClaim[] = [];
   let stakedWeight = 0n;
   for (let i = 0; i < voterWeights.nodeWeights.length; i++) {
     stakedWeight += voterWeights.nodeWeights[i];
   }
-  const totalWeight = voterWeights.cappedDelegationWeight + stakedWeight;
+  // P-chain stake is up-weighted relative to capped C-chain delegation when splitting the earned reward (FIP.16).
+  const effectiveStakedWeight = stakedWeight * stakeWeightMultiplier(rewardEpochId);
+  const totalWeight = voterWeights.cappedDelegationWeight + effectiveStakedWeight;
   if (totalWeight === 0n) {
     // this should never happen.
     return [
@@ -50,7 +59,7 @@ export function generateSigningWeightBasedClaimsForVoter(
       } as IPartialRewardClaim,
     ];
   }
-  const stakingAmount = (amount * stakedWeight) / totalWeight;
+  const stakingAmount = (amount * effectiveStakedWeight) / totalWeight;
   const delegationAmount = amount - stakingAmount;
   const delegationFee = (delegationAmount * BigInt(voterWeights.feeBIPS)) / TOTAL_BIPS;
 

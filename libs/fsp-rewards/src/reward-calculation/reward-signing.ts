@@ -132,6 +132,7 @@ export function calculateSigningRewards(
   }
 
   let undistributedAmount = offer.amount;
+  const rewardEpochId = data.dataForCalculations.rewardEpochId;
   const resultClaims: IPartialRewardClaim[] = [];
   // sort signatures according to signing policy order (index in signing policy)
   rewardEligibleSignatures.sort((a, b) => a.messages.index - b.messages.index);
@@ -186,7 +187,8 @@ export function calculateSigningRewards(
           offer,
           voterWeights,
           RewardTypePrefix.SIGNING,
-          FTSO2_PROTOCOL_ID
+          FTSO2_PROTOCOL_ID,
+          rewardEpochId
         )
       );
     }

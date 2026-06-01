@@ -1,11 +1,14 @@
 import { FastUpdateFeedConfiguration } from "../../../contracts/src/events/FUInflationRewardsOffered";
 import { ILogger } from "../../../ftso-core/src/utils/ILogger";
+import { VoterWeights } from "../../../ftso-core/src/RewardEpoch";
+import { isFip16Active } from "../../../ftso-core/src/constants";
 import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
 import { BURN_ADDRESS, FTSO2_FAST_UPDATES_PROTOCOL_ID, TOTAL_BIPS } from "../constants";
 import { FUFeedValue } from "../data-calculation-interfaces";
-import { IFUPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
+import { IFUPartialRewardOfferForRound, IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { RewardTypePrefix } from "./RewardTypePrefix";
+import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 
 const TOTAL_PPM = 1000000n;
 
@@ -35,6 +38,8 @@ export function calculateFastUpdatesClaims(
   signingAddressToDelegationAddress: Map<Address, Address>,
   signingAddressToIdentityAddress: Map<Address, Address>,
   signingAddressToFeeBips: Map<Address, number>,
+  signingAddressToVoterWeights: Map<Address, VoterWeights>,
+  rewardEpochId: number,
   logger: ILogger
 ): IPartialRewardClaim[] {
   if (offer.shouldBeBurned) {
@@ -132,6 +137,38 @@ export function calculateFastUpdatesClaims(
       );
     }
     const voterAmount = sharePerOne + (i < remainder ? 1n : 0n);
+
+    // FIP.16: block-latency (fast updates) rewards are also split to stakers. The submitter earns an equal share per
+    // submission (unchanged); that share is then split between delegators (WNAT) and stakers (MIRROR) in the ratio
+    // cappedDelegation : 5*stake, exactly like signing/finalization/median. Before activation the share goes to fee +
+    // WNAT (delegation) only. See `docs/migrations/FIP-16-signing-weight-unification.md`.
+    if (isFip16Active(rewardEpochId)) {
+      const voterWeights = signingAddressToVoterWeights.get(signingAddress);
+      if (!voterWeights) {
+        throw new Error(
+          `Critical error: no voter weights for signing address ${signingAddress}. This should never happen.`
+        );
+      }
+      const fuOffer: IPartialRewardOfferForRound = {
+        votingRoundId: offer.votingRoundId,
+        feedId: offer.feedId,
+        amount: voterAmount,
+        offerIndex: 0,
+        claimBackAddress: BURN_ADDRESS,
+      };
+      allRewardClaims.push(
+        ...generateSigningWeightBasedClaimsForVoter(
+          voterAmount,
+          fuOffer,
+          voterWeights,
+          RewardTypePrefix.FAST_UPDATES_ACCURACY,
+          FTSO2_FAST_UPDATES_PROTOCOL_ID,
+          rewardEpochId
+        )
+      );
+      continue;
+    }
+
     const feeAmount = (voterAmount * BigInt(feeBIPS)) / TOTAL_BIPS;
     const feeClaim: IPartialRewardClaim = {
       votingRoundId: offer.votingRoundId,

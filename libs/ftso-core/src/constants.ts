@@ -175,3 +175,75 @@ export const GENESIS_REWARD_EPOCH_START_EVENT = () => {
   };
   return result;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// FIP.16 — unification of vote power onto signing weight (stake + delegation), with P-chain stake counted 5x.
+// See `docs/migrations/FIP-16-signing-weight-unification.md` for the full analysis.
+//
+// The reward calculator reproduces historical reward epochs, and the data provider service computes the live median.
+// Both must therefore switch behaviour at the EXACT reward epoch in which the matching on-chain FlareSystemsCalculator
+// change takes effect. Until those epoch ids are known they are set to a sentinel far in the future, so that the code
+// reproduces the pre-FIP.16 behaviour byte-for-byte. Data providers are expected to run a version of the code in which
+// this constant has been set to the correct value for the network.
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Sentinel meaning "not activated yet". Any realistic reward epoch id is far below this value.
+export const FIP16_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
+
+// Multiplier applied to P-chain stake relative to C-chain WFLR power in the delegation-vs-stake reward split.
+// FIP.16 sets this initially to 5; it is subject to future governance adjustment.
+export const FIP16_STAKE_WEIGHT_MULTIPLIER = 5n;
+
+const fip16ActivationRewardEpoch = (): number => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env": {
+      if (!process.env.FIP16_ACTIVATION_REWARD_EPOCH) {
+        return FIP16_NOT_ACTIVATED;
+      }
+      return parseInt(process.env.FIP16_ACTIVATION_REWARD_EPOCH);
+    }
+    // TODO(FIP.16): set the activation reward epoch ids once the on-chain deployment epochs are known.
+    case "flare":
+      return FIP16_NOT_ACTIVATED;
+    case "songbird":
+      return FIP16_NOT_ACTIVATED;
+    case "coston":
+      return FIP16_NOT_ACTIVATED;
+    case "coston2":
+      return FIP16_NOT_ACTIVATED;
+    case "local-test":
+      return FIP16_NOT_ACTIVATED;
+    default:
+      // Ensure exhaustive checking
+      ((_: never): void => {})(network);
+  }
+};
+
+const constantFip16ActivationRewardEpoch = fip16ActivationRewardEpoch();
+
+/**
+ * The first reward epoch id (inclusive) in which FIP.16 vote-power unification is in effect for the current network.
+ */
+export const FIP16_ACTIVATION_REWARD_EPOCH = (): number => {
+  if (process.env.NETWORK === "from-env") {
+    return fip16ActivationRewardEpoch();
+  }
+  return constantFip16ActivationRewardEpoch;
+};
+
+/**
+ * Whether FIP.16 vote-power unification (median on signing weight, stake counted 5x in reward distribution) applies
+ * to the given reward epoch.
+ */
+export const isFip16Active = (rewardEpochId: number): boolean => {
+  return rewardEpochId >= FIP16_ACTIVATION_REWARD_EPOCH();
+};
+
+/**
+ * Weight multiplier applied to P-chain stake in the delegation-vs-stake reward distribution split for the given reward
+ * epoch. Returns {@link FIP16_STAKE_WEIGHT_MULTIPLIER} once FIP.16 is active, otherwise 1 (legacy 1:1 behaviour).
+ */
+export const stakeWeightMultiplier = (rewardEpochId: number): bigint => {
+  return isFip16Active(rewardEpochId) ? FIP16_STAKE_WEIGHT_MULTIPLIER : 1n;
+};

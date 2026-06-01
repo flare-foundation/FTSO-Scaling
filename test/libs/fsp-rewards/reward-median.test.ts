@@ -35,40 +35,51 @@ describe(`Reward median (${getTestFile(__filename)})`, () => {
 
   const splitPartialOfferedRewardNoSecondary = splitToVotingRoundsEqually(10, 100, partialOfferedRewardNoSecondary);
 
+  // Pre-FIP.16 reward epoch id, so the legacy delegation-only behaviour is exercised.
+  const rewardEpochId = 0;
+
   it("distributes the full inflation offer across median claims", () => {
-    const claims = calculateMedianRewardClaims(
+    const { rewardClaims } = calculateMedianRewardClaims(
       splitPartialRewardOfferInflation[0],
       medianCalculationResult,
-      voterWeights
+      voterWeights,
+      rewardEpochId
     );
 
-    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
+    expect(rewardClaims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
   });
 
   it("burns the inflation offer in a single claim when turnout is too low", () => {
-    const claims = calculateMedianRewardClaims(
+    const { rewardClaims } = calculateMedianRewardClaims(
       splitPartialRewardOfferInflation[0],
       medianCalculationResultLowTurnout,
-      voterWeights
+      voterWeights,
+      rewardEpochId
     );
 
-    expect(claims.length).to.eq(1);
-    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
+    expect(rewardClaims.length).to.eq(1);
+    expect(rewardClaims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialRewardOfferInflation[0].amount);
   });
 
   it("distributes the full community offer across median claims", () => {
-    const claims = calculateMedianRewardClaims(splitPartialOfferedReward[0], medianCalculationResult, voterWeights);
+    const { rewardClaims } = calculateMedianRewardClaims(
+      splitPartialOfferedReward[0],
+      medianCalculationResult,
+      voterWeights,
+      rewardEpochId
+    );
 
-    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedReward[0].amount);
+    expect(rewardClaims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedReward[0].amount);
   });
 
   it("distributes a community offer with zero secondary band width", () => {
-    const claims = calculateMedianRewardClaims(
+    const { rewardClaims } = calculateMedianRewardClaims(
       splitPartialOfferedRewardNoSecondary[0],
       medianCalculationResult,
-      voterWeights
+      voterWeights,
+      rewardEpochId
     );
 
-    expect(claims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedRewardNoSecondary[0].amount);
+    expect(rewardClaims.reduce((a, b) => a + b.amount, 0n)).to.be.eq(splitPartialOfferedRewardNoSecondary[0].amount);
   });
 });
