@@ -22,6 +22,11 @@ export namespace SigningPolicy {
   // - 2 bytes weight
   // Total 43 + size * (20 + 2) bytes
   //////////////////////////////////////////////////////////////////////////////
+
+  // Hex-char length of the fixed header that every encoded signing policy starts with:
+  // (2 + 3 + 4 + 2 + 32) bytes * 2 = 86. A shorter string cannot be a signing policy.
+  const HEADER_HEX_LENGTH = 86;
+
   /**
    * Encodes signing policy into 0x-prefixed hex string representing byte encoding
    */
@@ -140,6 +145,13 @@ export namespace SigningPolicy {
    */
   export function hashEncoded(signingPolicy: string) {
     const signingPolicyInternal = signingPolicy.startsWith("0x") ? signingPolicy.slice(2) : signingPolicy;
+    // A valid encoded signing policy always contains at least the fixed header (size,
+    // rewardEpochId, startVotingRoundId, threshold, seed).
+    if (signingPolicyInternal.length < HEADER_HEX_LENGTH) {
+      throw new Error(
+        `Invalid signing policy: encoded length ${signingPolicyInternal.length} is shorter than the ${HEADER_HEX_LENGTH}-character header`
+      );
+    }
     const splitted = signingPolicyInternal.match(/.{1,64}/g).map((x) => x.padEnd(64, "0"));
     let hash: string = ethers.keccak256("0x" + splitted[0] + splitted[1]);
     for (let i = 2; i < splitted.length; i++) {
