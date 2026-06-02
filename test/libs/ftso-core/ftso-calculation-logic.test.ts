@@ -617,5 +617,88 @@ describe(`FTSO calculation logic (${getTestFile(__filename)})`, () => {
       expect(feedSequence[0].id).to.equal("0x464c520055534454");
       expect(feedSequence[1].id).to.equal("0x5347420055534454");
     });
+
+    it("should sum duplicate community offers without inflating their weight", () => {
+      const rewardOffers: RewardOffers = {
+        inflationOffers: [],
+        rewardOffers: [
+          {
+            rewardEpochId: 1,
+            feedId: "0x464c520055534454",
+            decimals: 4,
+            amount: 10n,
+            minRewardedTurnoutBIPS: 100,
+            primaryBandRewardSharePPM: 500000,
+            secondaryBandWidthPPM: 100000,
+            claimBackAddress: "offer1",
+          },
+          {
+            rewardEpochId: 1,
+            feedId: "0x464c520055534454",
+            decimals: 4,
+            amount: 10n,
+            minRewardedTurnoutBIPS: 100,
+            primaryBandRewardSharePPM: 500000,
+            secondaryBandWidthPPM: 100000,
+            claimBackAddress: "offer2",
+          },
+          {
+            rewardEpochId: 1,
+            feedId: "0x464c520055534454",
+            decimals: 4,
+            amount: 1n,
+            minRewardedTurnoutBIPS: 100,
+            primaryBandRewardSharePPM: 500000,
+            secondaryBandWidthPPM: 100000,
+            claimBackAddress: "offer3",
+          },
+          {
+            rewardEpochId: 1,
+            feedId: "0x5347420055534454",
+            decimals: 4,
+            amount: 30n,
+            minRewardedTurnoutBIPS: 100,
+            primaryBandRewardSharePPM: 500000,
+            secondaryBandWidthPPM: 100000,
+            claimBackAddress: "offer4",
+          },
+        ],
+      };
+
+      const feedSequence = rewardEpochFeedSequence(rewardOffers);
+      expect(feedSequence.length).to.equal(2);
+      expect(feedSequence[0].id).to.equal("0x5347420055534454");
+      expect(feedSequence[1].id).to.equal("0x464c520055534454");
+    });
+
+    it("should reject duplicate feed offers with conflicting decimals", () => {
+      const rewardOffers: RewardOffers = {
+        inflationOffers: [],
+        rewardOffers: [
+          {
+            rewardEpochId: 1,
+            feedId: "0x464c520055534454",
+            decimals: 4,
+            amount: 10n,
+            minRewardedTurnoutBIPS: 100,
+            primaryBandRewardSharePPM: 500000,
+            secondaryBandWidthPPM: 100000,
+            claimBackAddress: "offer1",
+          },
+          {
+            rewardEpochId: 1,
+            feedId: "0x464c520055534454",
+            decimals: 5,
+            amount: 10n,
+            minRewardedTurnoutBIPS: 100,
+            primaryBandRewardSharePPM: 500000,
+            secondaryBandWidthPPM: 100000,
+            claimBackAddress: "offer2",
+          },
+        ],
+      };
+
+      expect(() => rewardEpochFeedSequence(rewardOffers)).to.throw("Conflicting decimals for feed");
+    });
   });
 });
