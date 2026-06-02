@@ -8,6 +8,7 @@ import { CommitData, ICommitData } from "./data/CommitData";
 import { ILogger } from "./utils/ILogger";
 import { IRevealData, RevealData } from "./data/RevealData";
 import { asError, errorString } from "./utils/error";
+import { formatSubmissionsForLog, payloadPreview } from "./utils/log-format";
 import { Address, Feed } from "./voting-types";
 
 /**
@@ -94,8 +95,8 @@ export class DataManager {
     }
     const commits = mappingsResponse.data.votingRoundIdToCommits.get(votingRoundId) || [];
     const reveals = mappingsResponse.data.votingRoundIdToReveals.get(votingRoundId) || [];
-    this.logger.debug(`Commits for voting round ${votingRoundId}: ${JSON.stringify(commits)}`);
-    this.logger.debug(`Reveals for voting round ${votingRoundId}: ${JSON.stringify(reveals)}`);
+    this.logger.debug(`Commits for voting round ${votingRoundId}: ${formatSubmissionsForLog(commits)}`);
+    this.logger.debug(`Reveals for voting round ${votingRoundId}: ${formatSubmissionsForLog(reveals)}`);
 
     const rewardEpoch = await this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId);
     if (!rewardEpoch) {
@@ -407,7 +408,7 @@ export class DataManager {
             const commit = CommitData.decode(message.payload);
             voterToLastCommit.set(submission.submitAddress, commit);
           } catch (e) {
-            this.logger.warn(`Unparsable commit message: ${message.payload}, error: ${errorString(e)}`);
+            this.logger.warn(`Unparsable commit message: ${payloadPreview(message.payload)}, error: ${errorString(e)}`);
           }
         }
       }
