@@ -45,6 +45,8 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     indexer_top_timeout: 1000,
     voting_round_history_size: 10000,
     value_provider_url: "http://localhost:3000",
+    feed_value_provider_timeout_ms: 30000,
+    feed_value_provider_max_response_bytes: 10 * 1024 * 1024,
     port: -1,
     db_host: "",
     db_name: "",
@@ -80,6 +82,20 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     await db.close();
     clock.uninstall();
     mock.restore();
+  });
+
+  it("should configure feed value provider request bounds", async () => {
+    const boundedConfigService = new ConfigService({
+      ...configValues,
+      feed_value_provider_timeout_ms: 1234,
+      feed_value_provider_max_response_bytes: 5678,
+    });
+    const service = new FtsoDataProviderService(db.em, boundedConfigService);
+    const client = (service as any).feedValueProviderClient;
+
+    expect(client.instance.defaults.timeout).to.equal(1234);
+    expect(client.instance.defaults.maxContentLength).to.equal(5678);
+    expect(client.instance.defaults.maxBodyLength).to.equal(5678);
   });
 
   it("emits reveal data whose hash matches the corresponding commit hash", async () => {
