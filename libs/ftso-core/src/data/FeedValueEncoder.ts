@@ -23,7 +23,7 @@ export namespace FeedValueEncoder {
         return EMPTY_FEED_VALUE; // undefined value is encoded as 0
       }
       const value = Math.round(formattedValue * 10 ** feeds[index].decimals) + 2 ** 31;
-      if (value <= 0 || value >= 2 ** 32) {
+      if (!Number.isFinite(value) || value <= 0 || value >= 2 ** 32) {
         throw new Error(`Value ${formattedValue} is out of range for feed ${JSON.stringify(feeds[index])}`);
       }
       return value.toString(16).padStart(8, "0");
@@ -39,6 +39,12 @@ export namespace FeedValueEncoder {
 
   export function decode(packedValues: string, feeds: Feed[]): ValueWithDecimals[] {
     const unPrefixedValues = packedValues.startsWith("0x") ? packedValues.slice(2) : packedValues;
+    if (unPrefixedValues.length === 0) {
+      return emptyFeeds(feeds);
+    }
+    if (!/^[0-9a-f]*$/i.test(unPrefixedValues)) {
+      throw new Error("Invalid packed values format: not hex");
+    }
     if (unPrefixedValues.length % 8 !== 0) {
       throw new Error(`Invalid packed values length: ${unPrefixedValues.length}: must be multiple of 8`);
     }

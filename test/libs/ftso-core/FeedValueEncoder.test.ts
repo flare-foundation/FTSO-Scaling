@@ -53,4 +53,26 @@ describe(`FeedValueEncoder (${getTestFile(__filename)})`, () => {
     const encoded = "0x000000000000000000000000";
     expect(() => FeedValueEncoder.decode(encoded, feeds)).to.throw("Invalid feed values count: 3; expected at most 2");
   });
+
+  it("should reject non-finite values before encoding", () => {
+    // NaN / Infinity would otherwise survive the range check and serialise to invalid hex.
+    expect(() => FeedValueEncoder.encode([NaN, 1], feeds)).to.throw("is out of range");
+    expect(() => FeedValueEncoder.encode([Infinity, 1], feeds)).to.throw("is out of range");
+    expect(() => FeedValueEncoder.encode([-Infinity, 1], feeds)).to.throw("is out of range");
+  });
+
+  it("should treat empty packed values as all feeds empty", () => {
+    const decoded = FeedValueEncoder.decode("0x", feeds);
+    expect(decoded.length).to.equal(feeds.length);
+    decoded.forEach((value, index) => {
+      expect(value.isEmpty).to.equal(true);
+      expect(value.value).to.equal(0);
+      expect(value.decimals).to.equal(feeds[index].decimals);
+    });
+  });
+
+  it("should reject non-hex packed values", () => {
+    expect(() => FeedValueEncoder.decode("0xzzzzzzzz", feeds)).to.throw("Invalid packed values format");
+    expect(() => FeedValueEncoder.decode("0x1234567z", feeds)).to.throw("Invalid packed values format");
+  });
 });
