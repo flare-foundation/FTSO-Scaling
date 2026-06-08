@@ -260,6 +260,9 @@ export class RewardEpochManager {
         };
       }
     }
+    throw new Error(
+      `Critical error: SigningPolicyInitialized for reward epoch ${rewardEpochId} not found - most likely the indexer has too short history`
+    );
   }
 
   /**
