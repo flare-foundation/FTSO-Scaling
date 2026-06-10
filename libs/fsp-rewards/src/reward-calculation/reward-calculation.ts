@@ -1,9 +1,9 @@
 import { DataAvailabilityStatus } from "../../../ftso-core/src/DataManager";
 import { RewardEpochManager } from "../../../ftso-core/src/RewardEpochManager";
-import { FTSO2_PROTOCOL_ID } from "../../../ftso-core/src/constants";
+import { FTSO2_PROTOCOL_ID, isFip16Active } from "../../../ftso-core/src/constants";
 import { calculateMedianResults } from "../../../ftso-core/src/ftso-calculation/ftso-median";
 import { RewardEpochDuration } from "../../../ftso-core/src/utils/RewardEpochDuration";
-import { MedianCalculationResult } from "../../../ftso-core/src/voting-types";
+import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
 import { ClaimType, IMergeableRewardClaim, IPartialRewardClaim, IRewardClaim, RewardClaim } from "../utils/RewardClaim";
 import { RandomVoterSelector } from "./RandomVoterSelector";
 import { RewardTypePrefix } from "./RewardTypePrefix";
@@ -14,7 +14,7 @@ import { splitRewardOfferByTypes } from "./reward-offers";
 
 import { existsSync, readFileSync } from "fs";
 import { FastUpdateFeedConfiguration } from "../../../contracts/src/events/FUInflationRewardsOffered";
-import { RewardEpoch } from "../../../ftso-core/src/RewardEpoch";
+import { RewardEpoch, VoterWeights } from "../../../ftso-core/src/RewardEpoch";
 import { MerkleTreeStructs } from "../../../ftso-core/src/data/MerkleTreeStructs";
 import { calculateRandom } from "../../../ftso-core/src/ftso-calculation/ftso-random";
 import { ILogger } from "../../../ftso-core/src/utils/ILogger";
@@ -126,6 +126,8 @@ export async function partialRewardClaimsForVotingRound(
   const signingAddressToDelegationAddress = new Map<string, string>();
   const signingAddressToIdentityAddress = new Map<string, string>();
   const signingAddressToFeeBips = new Map<string, number>();
+  // signingAddress => full voter weights, used by fast updates to split the reward to stakers once FIP.16 is active.
+  const signingAddressToVoterWeights = new Map<string, VoterWeights>();
   for (const voterWeight of data.dataForCalculations.votersWeightsMap.values()) {
     delegationAddressToSigningAddress.set(
       voterWeight.delegationAddress.toLowerCase(),
@@ -140,6 +142,7 @@ export async function partialRewardClaimsForVotingRound(
       voterWeight.identityAddress.toLowerCase()
     );
     signingAddressToFeeBips.set(voterWeight.signingAddress.toLowerCase(), voterWeight.feeBIPS);
+    signingAddressToVoterWeights.set(voterWeight.signingAddress.toLowerCase(), voterWeight);
   }
 
   // Calculate reward claims for each feed offer
@@ -169,25 +172,34 @@ export async function partialRewardClaimsForVotingRound(
       // First each offer is split into three parts: median, signing and finalization
       const splitOffers = splitRewardOfferByTypes(offer);
       // From each partial offer in split calculate reward claims
-      const medianRewardClaims = calculateMedianRewardClaims(
+      const { rewardClaims: medianRewardClaims, rewardedSigningAddresses } = calculateMedianRewardClaims(
         splitOffers.medianRewardOffer,
         medianResult,
-        data.dataForCalculations.votersWeightsMap
+        data.dataForCalculations.votersWeightsMap,
+        rewardEpochId
       );
 
-      // Extract voter signing addresses that are eligible for median reward
-      const medianEligibleVoters = new Set(
-        medianRewardClaims
-          .filter((claim) => claim.claimType === ClaimType.WNAT && claim.amount > 0n)
-          .map((claim) => {
-            const delegationAddress = claim.beneficiary.toLowerCase();
-            const signingAddress = delegationAddressToSigningAddress.get(delegationAddress);
-            if (!signingAddress) {
-              throw new Error(`Critical error: No signing address for delegation address: ${delegationAddress}`);
-            }
-            return signingAddress;
-          })
-      );
+      // Extract voter signing addresses that are eligible for signing/finalization rewards (non-zero accuracy reward).
+      // Once FIP.16 is active a stake-only voter can earn an accuracy reward without producing a WNAT claim, so the
+      // precise set returned by calculateMedianRewardClaims is used. Before activation we keep deriving eligibility from
+      // the WNAT claims to reproduce historical results byte-for-byte.
+      let medianEligibleVoters: Set<Address>;
+      if (isFip16Active(rewardEpochId)) {
+        medianEligibleVoters = rewardedSigningAddresses;
+      } else {
+        medianEligibleVoters = new Set(
+          medianRewardClaims
+            .filter((claim) => claim.claimType === ClaimType.WNAT && claim.amount > 0n)
+            .map((claim) => {
+              const delegationAddress = claim.beneficiary.toLowerCase();
+              const signingAddress = delegationAddressToSigningAddress.get(delegationAddress);
+              if (!signingAddress) {
+                throw new Error(`Critical error: No signing address for delegation address: ${delegationAddress}`);
+              }
+              return signingAddress;
+            })
+        );
+      }
 
       const signingRewardClaims = calculateSigningRewards(splitOffers.signingRewardOffer, data, medianEligibleVoters);
 
@@ -208,7 +220,8 @@ export async function partialRewardClaimsForVotingRound(
         PENALTY_FACTOR(),
         data.dataForCalculations.revealOffendersSet,
         data.dataForCalculations.votersWeightsMap,
-        RewardTypePrefix.REVEAL_OFFENDERS
+        RewardTypePrefix.REVEAL_OFFENDERS,
+        rewardEpochId
       );
 
       // Calculate penalties for reveal double signers
@@ -228,7 +241,8 @@ export async function partialRewardClaimsForVotingRound(
         PENALTY_FACTOR(),
         doubleSignersSubmit,
         data.dataForCalculations.votersWeightsMap,
-        RewardTypePrefix.DOUBLE_SIGNERS
+        RewardTypePrefix.DOUBLE_SIGNERS,
+        rewardEpochId
       );
 
       // Merge all reward claims into a single array
@@ -338,6 +352,8 @@ export async function partialRewardClaimsForVotingRound(
           signingAddressToDelegationAddress,
           signingAddressToIdentityAddress,
           signingAddressToFeeBips,
+          signingAddressToVoterWeights,
+          rewardEpochId,
           logger
         );
         allRewardClaims.push(...fastUpdatesClaims);

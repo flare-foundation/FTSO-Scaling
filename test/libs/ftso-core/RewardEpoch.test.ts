@@ -2,6 +2,27 @@ import { expect, assert } from "chai";
 import { getTestFile } from "../../utils/getTestFile";
 import { generateAddress, generateRewardEpoch } from "../../utils/generators";
 
+function withFip16Activation(fn: () => void) {
+  const originalNetwork = process.env.NETWORK;
+  const originalActivation = process.env.FIP16_ACTIVATION_REWARD_EPOCH;
+  process.env.NETWORK = "from-env";
+  process.env.FIP16_ACTIVATION_REWARD_EPOCH = "513";
+  try {
+    fn();
+  } finally {
+    if (originalNetwork === undefined) {
+      delete process.env.NETWORK;
+    } else {
+      process.env.NETWORK = originalNetwork;
+    }
+    if (originalActivation === undefined) {
+      delete process.env.FIP16_ACTIVATION_REWARD_EPOCH;
+    } else {
+      process.env.FIP16_ACTIVATION_REWARD_EPOCH = originalActivation;
+    }
+  }
+}
+
 describe(`RewardEpoch (${getTestFile(__filename)})`, () => {
   const rewardEpoch = generateRewardEpoch();
 
@@ -40,6 +61,19 @@ describe(`RewardEpoch (${getTestFile(__filename)})`, () => {
     const votingWeight = rewardEpoch.ftsoMedianVotingWeight(okAddress);
 
     expect(votingWeight).to.eq(1000n);
+  });
+
+  it("uses signing-policy weight for median voting once FIP.16 is active", () => {
+    withFip16Activation(() => {
+      const activeRewardEpoch = generateRewardEpoch();
+      const okAddress = generateAddress("1submit");
+      activeRewardEpoch.submitAddressToCappedWeight.set(okAddress.toLowerCase(), 1000n);
+      activeRewardEpoch.submitAddressToSigningWeight.set(okAddress.toLowerCase(), 4321);
+
+      const votingWeight = activeRewardEpoch.ftsoMedianVotingWeight(okAddress);
+
+      expect(votingWeight).to.eq(4321n);
+    });
   });
 
   it("throws on ftsoMedianVotingWeight for an unregistered address", () => {

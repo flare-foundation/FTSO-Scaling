@@ -127,7 +127,16 @@ export function calculateFinalizationRewardClaims(
 
     undistributedAmount -= amount;
     undistributedSigningRewardWeight -= 1n;
-    resultClaims.push(...generateSigningWeightBasedClaimsForVoter(amount, offer, voterWeight, rewardType, protocolId));
+    resultClaims.push(
+      ...generateSigningWeightBasedClaimsForVoter(
+        amount,
+        offer,
+        voterWeight,
+        rewardType,
+        protocolId,
+        data.dataForCalculations.rewardEpochId
+      )
+    );
   }
 
   if (undistributedAmount < 0n) {

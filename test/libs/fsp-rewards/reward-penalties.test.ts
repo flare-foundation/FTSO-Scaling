@@ -22,12 +22,16 @@ describe(`Reward penalties (${getTestFile(__filename)})`, () => {
 
   const perRoundOffer = splitToVotingRoundsEqually(10, 109, offerPartial);
 
+  // Pre-FIP.16 reward epoch id, so the legacy delegation-only weighting is exercised.
+  const rewardEpochId = 0;
+
   const penaltyClaims = calculatePenalties(
     perRoundOffer[0],
     PENALTY_FACTOR(),
     revealOffenders,
     votersWeights,
-    RewardTypePrefix.REVEAL_OFFENDERS
+    RewardTypePrefix.REVEAL_OFFENDERS,
+    rewardEpochId
   );
 
   it("emits the expected number of penalty claims for the reveal-offender set", () => {

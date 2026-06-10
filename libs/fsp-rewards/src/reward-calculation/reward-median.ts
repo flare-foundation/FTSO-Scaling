@@ -1,13 +1,26 @@
 import { encodeParameters } from "web3-eth-abi";
 import { soliditySha3 } from "web3-utils";
 import { VoterWeights } from "../../../ftso-core/src/RewardEpoch";
-import { FTSO2_PROTOCOL_ID } from "../../../ftso-core/src/constants";
+import { FTSO2_PROTOCOL_ID, isFip16Active } from "../../../ftso-core/src/constants";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { Address, MedianCalculationResult } from "../../../ftso-core/src/voting-types";
 import { RewardTypePrefix } from "./RewardTypePrefix";
 import { medianRewardDistributionWeight } from "./reward-utils";
+import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { TOTAL_BIPS, TOTAL_PPM } from "../constants";
+
+/**
+ * Result of median (accuracy) reward calculation for a single offer.
+ * `rewardedSigningAddresses` are the signing addresses of voters that received a strictly positive accuracy reward.
+ * It is used to determine eligibility for signing and finalization rewards. Before FIP.16 the orchestrator derives
+ * eligibility from the produced WNAT claims; once stakers can earn accuracy rewards (FIP.16) a stake-only voter may
+ * have no WNAT claim, so this precomputed set is used instead.
+ */
+export interface MedianRewardClaimsResult {
+  rewardClaims: IPartialRewardClaim[];
+  rewardedSigningAddresses: Set<Address>;
+}
 
 export enum MediantRewardClaimType {
   LOW_TURNOUT_CLAIM_BACK = "LOW_TURNOUT_CLAIM_BACK",
@@ -24,8 +37,9 @@ export enum MediantRewardClaimType {
 export function calculateMedianRewardClaims(
   offer: IPartialRewardOfferForRound,
   calculationResult: MedianCalculationResult,
-  votersWeights: Map<Address, VoterWeights>
-): IPartialRewardClaim[] {
+  votersWeights: Map<Address, VoterWeights>,
+  rewardEpochId: number
+): MedianRewardClaimsResult {
   interface VoterRewarding {
     readonly submitAddress: Address;
     weight: bigint;
@@ -76,7 +90,7 @@ export function calculateMedianRewardClaims(
       rewardTypeTag: RewardTypePrefix.MEDIAN,
       rewardDetailTag: MediantRewardClaimType.LOW_TURNOUT_CLAIM_BACK,
     };
-    return [backClaim];
+    return { rewardClaims: [backClaim], rewardedSigningAddresses: new Set() };
   }
 
   // Use bigint for proper integer division
@@ -108,7 +122,7 @@ export function calculateMedianRewardClaims(
     const value = BigInt(feedValue.value);
     const record: VoterRewarding = {
       submitAddress: submitAddress,
-      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress)),
+      weight: medianRewardDistributionWeight(votersWeights.get(submitAddress), rewardEpochId),
       iqr:
         (value > lowIQR && value < highIQR) ||
         ((value === lowIQR || value === highIQR) && randomSelect(offer.feedId, votingRoundId, submitAddress)),
@@ -163,10 +177,15 @@ export function calculateMedianRewardClaims(
       rewardTypeTag: RewardTypePrefix.MEDIAN,
       rewardDetailTag: MediantRewardClaimType.NO_NORMALIZED_WEIGHT,
     };
-    return [backClaim];
+    return { rewardClaims: [backClaim], rewardedSigningAddresses: new Set() };
   }
 
   const rewardClaims: IPartialRewardClaim[] = [];
+  const rewardedSigningAddresses = new Set<Address>();
+  // Once FIP.16 is active, the accuracy reward earned by a voter is split between its delegators (WNAT) and stakers
+  // (MIRROR) in the ratio cappedDelegation : 5*stake, exactly like signing/finalization rewards. Before activation it
+  // is split into fee + WNAT (delegation) only. See `docs/migrations/FIP-16-signing-weight-unification.md`.
+  const fip16Active = isFip16Active(rewardEpochId);
   let totalReward = 0n;
   let availableReward = offer.amount;
   let availableWeight = totalNormalizedRewardedWeight;
@@ -189,15 +208,28 @@ export function calculateMedianRewardClaims(
 
     totalReward += reward;
 
-    const rewardClaim = generateMedianRewardClaimsForVoter(reward, offer, votersWeights.get(voterRecord.submitAddress));
+    const voterWeights = votersWeights.get(voterRecord.submitAddress);
+    const rewardClaim = fip16Active
+      ? generateSigningWeightBasedClaimsForVoter(
+          reward,
+          offer,
+          voterWeights,
+          RewardTypePrefix.MEDIAN,
+          FTSO2_PROTOCOL_ID,
+          rewardEpochId
+        )
+      : generateMedianRewardClaimsForVoter(reward, offer, voterWeights);
     rewardClaims.push(...rewardClaim);
+    if (reward > 0n) {
+      rewardedSigningAddresses.add(voterWeights.signingAddress.toLowerCase());
+    }
   }
   // Assert
   if (totalReward !== offer.amount) {
     throw new Error(`Total reward for ${offer.feedId} is not equal to the offer amount`);
   }
 
-  return rewardClaims;
+  return { rewardClaims, rewardedSigningAddresses };
 }
 
 /**

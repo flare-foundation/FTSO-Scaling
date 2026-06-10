@@ -34,7 +34,14 @@ export function calculateFdcPenalties(
     }
     if (penalty < 0n) {
       penaltyClaims.push(
-        ...generateSigningWeightBasedClaimsForVoter(penalty, offer, voterWeights, penaltyType, FDC_PROTOCOL_ID)
+        ...generateSigningWeightBasedClaimsForVoter(
+          penalty,
+          offer,
+          voterWeights,
+          penaltyType,
+          FDC_PROTOCOL_ID,
+          rewardEpochInfo.rewardEpochId
+        )
       );
     }
   }
