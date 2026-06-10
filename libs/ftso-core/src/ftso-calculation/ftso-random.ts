@@ -15,7 +15,7 @@ export function calculateRandom(data: DataForCalculations): RandomCalculationRes
 
   let nonBencherCount = 0;
   for (const [voter, revealData] of data.validEligibleReveals) {
-    if (!data.benchingWindowRevealOffenders.has(voter)) {
+    if (!data.benchingWindowRevealOffenders.has(voter.toLowerCase())) {
       // only non-benched voters are considered for the random
       // reveal offenders for this round are not in the validEligibleReveals map
       random = random + BigInt(revealData.random);
