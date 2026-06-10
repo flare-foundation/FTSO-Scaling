@@ -23,6 +23,9 @@ export namespace RevealData {
     if (!/^0x[0-9a-f]*$/i.test(encoded) || encoded.length % 2 !== 0) {
       throw Error(`Invalid encoding format: ${encoded}`);
     }
+    if (encoded.length < 66) {
+      throw Error(`Invalid reveal: missing 32-byte random (length ${encoded.length})`);
+    }
     return {
       random: encoded.slice(0, 66),
       feeds,

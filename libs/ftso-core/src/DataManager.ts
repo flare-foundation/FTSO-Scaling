@@ -273,8 +273,8 @@ export class DataManager {
         continue;
       }
 
-      const commitHash = CommitData.hashForCommit(submitAddress, votingRoundId, reveal.random, reveal.encodedValues);
-      if (commit.commitHash !== commitHash) {
+      const commitHash = this.safeCommitHash(submitAddress, votingRoundId, reveal);
+      if (commitHash === undefined || commit.commitHash !== commitHash) {
         this.logger.warn(
           `Invalid reveal found for address ${submitAddress}, commit: ${commit.commitHash}, reveal: ${commitHash}`
         );
@@ -301,12 +301,28 @@ export class DataManager {
         revealOffenders.add(submitAddress);
         continue;
       }
-      const commitHash = CommitData.hashForCommit(submitAddress, votingRoundId, reveal.random, reveal.encodedValues);
-      if (commit.commitHash !== commitHash) {
+      const commitHash = this.safeCommitHash(submitAddress, votingRoundId, reveal);
+      if (commitHash === undefined || commit.commitHash !== commitHash) {
         revealOffenders.add(submitAddress);
       }
     }
     return revealOffenders;
+  }
+
+  /**
+   * Computes the commit hash for a reveal, returning undefined instead of throwing if the reveal is malformed
+   * (e.g. an invalid random that cannot be encoded as a uint256). A reveal whose hash cannot be computed can never
+   * match its commit, so callers treat undefined exactly like a hash mismatch. This keeps a single malformed reveal
+   * from aborting the whole voting round. The payload should already be rejected by RevealData.decode; this is
+   * defense in depth.
+   */
+  private safeCommitHash(submitAddress: Address, votingRoundId: number, reveal: IRevealData): string | undefined {
+    try {
+      return CommitData.hashForCommit(submitAddress, votingRoundId, reveal.random, reveal.encodedValues);
+    } catch (e) {
+      this.logger.debug(`Unable to hash reveal for address ${submitAddress}: ${asError(e).message}`);
+      return undefined;
+    }
   }
 
   /**
