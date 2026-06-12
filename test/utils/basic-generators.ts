@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 // IMPORTANT: This file should never import constants.ts
-import { utils } from "web3";
-import { encodeParameter, encodeParameters } from "web3-eth-abi";
+import { AbiCoder, computeAddress, hexlify, randomBytes, toBeHex } from "ethers";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
 import { Bytes20 } from "../../libs/ftso-core/src/voting-types";
-import { encodingUtils, web3 } from "./generators";
+import { encodingUtils } from "./generators";
 import { generateRandomAddress, randomHash, unsafeRandomHex } from "./testRandom";
+
+const coder = AbiCoder.defaultAbiCoder();
 
 export interface TestVoter {
   identityAddress: string;
@@ -25,8 +26,8 @@ export interface TestVoter {
 }
 
 export function generateVoter(): TestVoter {
-  const signingPrivateKey = utils.randomHex(32);
-  const signingAddress = web3.eth.accounts.privateKeyToAccount(signingPrivateKey).address.toLowerCase();
+  const signingPrivateKey = hexlify(randomBytes(32));
+  const signingAddress = computeAddress(signingPrivateKey).toLowerCase();
   return {
     identityAddress: generateRandomAddress(),
     signingAddress,
@@ -70,11 +71,12 @@ export function generateEvent(
 ): TLPEvents {
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
-  const types = abi.abi.inputs.filter((x) => !x.indexed).map((x) => x.type);
-  const values = abi.abi.inputs.filter((x) => !x.indexed).map((x) => eventData[x.name]);
-  const indexedTypes = abi.abi.inputs.filter((x) => x.indexed).map((x) => x.type);
-  const indexedValues = abi.abi.inputs.filter((x) => x.indexed).map((x) => eventData[x.name]);
-  const data = encodeParameters(types, values);
+  const inputs = abi.abi.inputs;
+  const types = inputs.filter((x) => !x.indexed).map((x) => x.type);
+  const values = inputs.filter((x) => !x.indexed).map((x) => eventData[x.name]);
+  const indexedTypes = inputs.filter((x) => x.indexed).map((x) => x.type);
+  const indexedValues = inputs.filter((x) => x.indexed).map((x) => eventData[x.name]);
+  const data = coder.encode(types, values);
 
   if (indexedTypes.length > 3) {
     throw new Error("Too many indexed types");
@@ -84,9 +86,10 @@ export function generateEvent(
   e.address = queryBytesFormat(contract.address);
   e.data = queryBytesFormat(data);
   e.topic0 = queryBytesFormat(topic0);
-  e.topic1 = indexedValues.length >= 1 ? encodeParameter(indexedTypes[0], indexedValues[0]) : "NULL";
-  e.topic2 = indexedValues.length >= 2 ? encodeParameter(indexedTypes[1], indexedValues[1]) : "NULL";
-  e.topic3 = indexedValues.length >= 3 ? encodeParameter(indexedTypes[2], indexedValues[2]) : "NULL";
+  const encodeParam = (type: string, value: unknown) => coder.encode([type], [value]);
+  e.topic1 = indexedValues.length >= 1 ? encodeParam(indexedTypes[0], indexedValues[0]) : "NULL";
+  e.topic2 = indexedValues.length >= 2 ? encodeParam(indexedTypes[1], indexedValues[1]) : "NULL";
+  e.topic3 = indexedValues.length >= 3 ? encodeParam(indexedTypes[2], indexedValues[2]) : "NULL";
   e.log_index = 1;
   e.block_number = blockNumber;
   e.timestamp = timestamp;
@@ -110,8 +113,8 @@ export function generateTx(
   tx.to_address = queryBytesFormat(to);
   tx.input = queryBytesFormat(payload);
   tx.status = status;
-  tx.value = queryBytesFormat(utils.toHex(1));
-  tx.gas_price = queryBytesFormat(utils.toHex(1000));
+  tx.value = queryBytesFormat(toBeHex(1));
+  tx.gas_price = queryBytesFormat(toBeHex(1000));
   tx.gas = 10000;
   tx.timestamp = timestamp;
   tx.hash = queryBytesFormat(randomHash());

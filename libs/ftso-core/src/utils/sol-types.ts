@@ -1,4 +1,4 @@
-import Web3 from "web3";
+import { getBytes, hexlify, randomBytes } from "ethers";
 
 export class Bytes32 {
   private constructor(
@@ -10,7 +10,7 @@ export class Bytes32 {
     if (input === undefined) throw new Error("Input undefined");
     let bytes: Uint8Array;
     try {
-      bytes = Web3.utils.hexToBytes(input);
+      bytes = getBytes(input);
     } catch (e) {
       throw new Error(`Input must be a hex string: ${e}`);
     }
@@ -20,7 +20,7 @@ export class Bytes32 {
 
   /** Returns the hexadecimal representation of the value, prefixed with "0x". */
   get value(): string {
-    if (this.hex === undefined) this.hex = Web3.utils.bytesToHex(this.bytes);
+    if (this.hex === undefined) this.hex = hexlify(this.bytes);
     return this.hex;
   }
 
@@ -43,7 +43,7 @@ export class Bytes32 {
   }
 
   static random(): Bytes32 {
-    return this.fromHexString(Web3.utils.randomHex(32));
+    return this.fromHexString(hexlify(randomBytes(32)));
   }
 
   static ZERO: Bytes32 = new Bytes32(new Uint8Array(32).fill(0));

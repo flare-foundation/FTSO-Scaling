@@ -1,5 +1,5 @@
 import { EntityManager } from "typeorm";
-import Web3 from "web3";
+import { hexlify, keccak256, randomBytes } from "ethers";
 import { ECDSASignature } from "../../../../../libs/ftso-core/src/fsp-utils/ECDSASignature";
 import { PayloadMessage } from "../../../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 import {
@@ -19,8 +19,6 @@ import { calculateResultsForVotingRound } from "../../../../../libs/ftso-core/sr
 import { errorString } from "../../../../../libs/ftso-core/src/utils/error";
 import { EpochResult } from "../../../../../libs/ftso-core/src/voting-types";
 import { ILogger } from "../../../../../libs/ftso-core/src/utils/ILogger";
-
-const web3 = new Web3("https://dummy");
 
 export class MiniFtsoCalculator {
   voterIndex: number;
@@ -85,7 +83,7 @@ export class MiniFtsoCalculator {
     providedEpochResult?: EpochResult
   ): Promise<string> {
     const result = providedEpochResult ?? (await this.prepareCalculationResultData(votingRoundId));
-    const merkleRoot = doubleSignRandom ? Web3.utils.randomHex(32) : result.merkleTree.root;
+    const merkleRoot = doubleSignRandom ? hexlify(randomBytes(32)) : result.merkleTree.root;
 
     const message: IProtocolMessageMerkleRoot = {
       protocolId: FTSO2_PROTOCOL_ID,
@@ -95,7 +93,7 @@ export class MiniFtsoCalculator {
     };
     const messageToSign = ProtocolMessageMerkleRoot.encode(message);
     const unsignedMessage = "";
-    const messageHash = web3.utils.keccak256(messageToSign);
+    const messageHash = keccak256(messageToSign);
     const signaturePayload = {
       type: "0x00",
       message,

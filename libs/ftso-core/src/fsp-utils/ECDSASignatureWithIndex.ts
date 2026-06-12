@@ -1,4 +1,4 @@
-import Web3 from "web3";
+import { getBytes, hashMessage, recoverAddress, Signature, SigningKey } from "ethers";
 
 export interface IECDSASignatureWithIndex {
   r: string;
@@ -7,7 +7,6 @@ export interface IECDSASignatureWithIndex {
   index: number;
 }
 
-const web3 = new Web3("https://dummy");
 export namespace ECDSASignatureWithIndex {
   //////////////////////////////////////////////////////////////////////////////
   // Signature with index structure
@@ -98,9 +97,9 @@ export namespace ECDSASignatureWithIndex {
     if (!/^0x[0-9a-f]{64}$/i.test(messageHash)) {
       throw Error(`Invalid message hash format: ${messageHash}`);
     }
-    const signatureObject = web3.eth.accounts.sign(messageHash, privateKey);
+    const signatureObject = new SigningKey(privateKey).sign(hashMessage(getBytes(messageHash)));
     return {
-      v: parseInt(signatureObject.v.slice(2), 16),
+      v: signatureObject.v,
       r: signatureObject.r,
       s: signatureObject.s,
       index,
@@ -111,9 +110,10 @@ export namespace ECDSASignatureWithIndex {
    * Recovers signer address from message hash and signature
    */
   export function recoverSigner(messageHash: string, signature: IECDSASignatureWithIndex): string {
-    return web3.eth.accounts
-      .recover(messageHash, "0x" + signature.v.toString(16), signature.r, signature.s)
-      .toLowerCase();
+    return recoverAddress(
+      hashMessage(getBytes(messageHash)),
+      Signature.from({ r: signature.r, s: signature.s, v: signature.v })
+    ).toLowerCase();
   }
 
   /**

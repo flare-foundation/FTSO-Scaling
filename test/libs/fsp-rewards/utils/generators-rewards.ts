@@ -1,5 +1,5 @@
 import { EntityManager } from "typeorm";
-import Web3 from "web3";
+import { hexlify, randomBytes } from "ethers";
 import {
   encodeCommitPayloadMessage,
   encodeRevealPayloadMessage,
@@ -804,7 +804,7 @@ export async function generateRewardEpochDataForRewardCalculation(
         const feedValues = valueFunction(votingEpochId, voterIndex, feeds);
         const feedEncoded = FeedValueEncoder.encode(feedValues, feeds);
         const voterRevealData: IRevealData = {
-          random: Web3.utils.randomHex(32),
+          random: hexlify(randomBytes(32)),
           feeds,
           values: feedValues,
           encodedValues: feedEncoded,

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import Web3 from "web3";
+import { hexlify, id, toBeHex, toUtf8Bytes, zeroPadValue } from "ethers";
 import { AbiCache } from "../../libs/contracts/src/abi/AbiCache";
 import { CONTRACTS } from "../../libs/contracts/src/constants";
 import {
@@ -27,7 +27,6 @@ import { RewardOffers } from "../../libs/ftso-core/src/data/RewardOffers";
 
 export const encodingUtils = AbiCache.instance;
 const burnAddress = generateRandomAddress();
-export const web3 = new Web3("https://dummy");
 const FEED_TYPE_CRYPTO = "0x01";
 
 // TODO: fix event timings
@@ -90,7 +89,7 @@ export function generateRewardEpochEvents(
         seed: BigInt("0x123"),
         voters: voters.map((v) => v.signingAddress),
         weights: voters.map((v) => v.registrationWeight),
-        signingPolicyBytes: "0x123",
+        signingPolicyBytes: "0x1234",
         timestamp: rewardEpochStartSec + 50,
       }),
       4,
@@ -193,7 +192,7 @@ export function currentTimeSec(): number {
 }
 
 export function generateAddress(name: string) {
-  return Web3.utils.keccak256(name).slice(0, 42);
+  return id(name).slice(0, 42);
 }
 
 /**
@@ -209,13 +208,13 @@ export function generateRewardsOffer(
   feedName = feedName.slice(0, 19);
 
   const rawRewardsOffered = {
-    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    rewardEpochId: toBeHex(rewardEpochId),
     feedId: toFeedId(feedName),
     decimals: "0x02",
-    amount: Web3.utils.numberToHex(value),
-    minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
-    primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
-    secondaryBandWidthPPM: Web3.utils.numberToHex(secondaryBandWidthPPM),
+    amount: toBeHex(value),
+    minRewardedTurnoutBIPS: toBeHex(1000),
+    primaryBandRewardSharePPM: toBeHex(8000),
+    secondaryBandWidthPPM: toBeHex(secondaryBandWidthPPM),
     claimBackAddress: generateAddress(claimBack),
   };
 
@@ -229,12 +228,12 @@ export function generateInflationRewardOffer(feedNames: string[], rewardEpochId:
   const unprefixedFeedsInHex = feedNames.map((name) => toFeedId(name, true));
 
   const rawInflationRewardOffer = {
-    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    rewardEpochId: toBeHex(rewardEpochId),
     feedIds: "0x" + unprefixedFeedsInHex.join(""),
     decimals: "0x" + "02".repeat(feedNames.length),
     amount: "0x10000000001",
-    minRewardedTurnoutBIPS: Web3.utils.numberToHex(1000),
-    primaryBandRewardSharePPM: Web3.utils.numberToHex(8000),
+    minRewardedTurnoutBIPS: toBeHex(1000),
+    primaryBandRewardSharePPM: toBeHex(8000),
     secondaryBandWidthPPMs: "0x" + "0007d0".repeat(feedNames.length),
     mode: "0x00",
   };
@@ -244,7 +243,7 @@ export function generateInflationRewardOffer(feedNames: string[], rewardEpochId:
 
 export function generateRawFullVoter(name: string, rewardEpochId: number, weight: number, delegationFee: number) {
   return {
-    rewardEpochId: Web3.utils.numberToHex(rewardEpochId),
+    rewardEpochId: toBeHex(rewardEpochId),
     voter: generateAddress(name),
     wNatWeight: BigInt(weight),
     wNatCappedWeight: BigInt(weight),
@@ -271,7 +270,7 @@ export function generateRawFullVoters(count: number, rewardEpochId: number) {
 
 export function generateRewardEpoch() {
   const rewardEpochId = 513;
-  const rewardEpochIdHex = (id: number) => Web3.utils.padLeft(Web3.utils.numberToHex(id), 6);
+  const rewardEpochIdHex = (id: number) => zeroPadValue(toBeHex(id), 3);
 
   const rawPreviousEpochStarted = {
     rewardEpochId: rewardEpochIdHex(rewardEpochId - 1),
@@ -329,7 +328,7 @@ export function generateRewardEpoch() {
 
   const rawSigningPolicyInitialized = {
     rewardEpochId: rewardEpochIdHex(rewardEpochId),
-    startVotingRoundId: Web3.utils.numberToHex(rewardEpochId * 3600),
+    startVotingRoundId: toBeHex(rewardEpochId * 3600),
     threshold: Number(voters.map((v) => v.registrationWeight).reduce((a, b) => a + b, 0n)) / 2,
     seed: "0xaaaa",
     signingPolicyBytes: "0x12",
@@ -425,7 +424,7 @@ export function generateMedianCalculationResult(
 }
 
 export function toFeedId(feedName: string, unprefixed: boolean = false) {
-  const feedIdHex = FEED_TYPE_CRYPTO + Web3.utils.utf8ToHex(feedName).slice(2).padEnd(40, "0");
+  const feedIdHex = FEED_TYPE_CRYPTO + hexlify(toUtf8Bytes(feedName)).slice(2).padEnd(40, "0");
   if (unprefixed) return feedIdHex.slice(2);
   else return feedIdHex;
 }

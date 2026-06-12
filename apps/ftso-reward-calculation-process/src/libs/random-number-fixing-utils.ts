@@ -1,11 +1,12 @@
 import { Logger } from "@nestjs/common";
-import { encodeParameters } from "web3-eth-abi";
-import { soliditySha3 } from "web3-utils";
+import { AbiCoder, keccak256 } from "ethers";
 import {
   deserializeDataForRewardCalculation,
   writeDataForRewardCalculation,
 } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-calculation-data";
 import { deserializeRewardEpochInfo } from "../../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
+
+const coder = AbiCoder.defaultAbiCoder();
 
 export function extractRandomNumbers(
   rewardEpochId: number,
@@ -67,7 +68,7 @@ export function processRandomNumberFixingRange(
         );
       }
       const newRandomNumber = BigInt(
-        soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))
+        keccak256(coder.encode(["uint256", "uint256"], [secureRandom, votingRoundId]))
       ).toString();
       previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;
 
@@ -132,7 +133,7 @@ export function runRandomNumberFixing(rewardEpochId: number, newEpochVotingRound
         );
       }
       const newRandomNumber = BigInt(
-        soliditySha3(encodeParameters(["uint256", "uint256"], [secureRandom, votingRoundId]))
+        keccak256(coder.encode(["uint256", "uint256"], [secureRandom, votingRoundId]))
       ).toString();
 
       previousCalculationData.nextVotingRoundRandomResult = newRandomNumber;

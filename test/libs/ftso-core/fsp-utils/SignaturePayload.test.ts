@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { readFileSync } from "fs";
-import Web3 from "web3";
+import { computeAddress } from "ethers";
 import { ECDSASignature } from "../../../../libs/ftso-core/src/fsp-utils/ECDSASignature";
 import { IPayloadMessage, PayloadMessage } from "../../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 import {
@@ -12,12 +12,11 @@ import { ISigningPolicy } from "../../../../libs/ftso-core/src/fsp-utils/Signing
 import { getTestFile } from "../../../utils/getTestFile";
 import { defaultTestSigningPolicy } from "./coding-helpers";
 
-const web3 = new Web3("http://dummy");
 describe(`SignaturePayload (${getTestFile(__filename)})`, () => {
   const accountPrivateKeys = JSON.parse(
     readFileSync("test/libs/ftso-core/fsp-utils/data/test-1020-accounts.json", "utf8")
   ).map((x: { privateKey: string }) => x.privateKey);
-  const accountAddresses = accountPrivateKeys.map((x: any) => web3.eth.accounts.privateKeyToAccount(x).address);
+  const accountAddresses = accountPrivateKeys.map((x: any) => computeAddress(x));
 
   const N = 100;
   const singleWeight = 500;

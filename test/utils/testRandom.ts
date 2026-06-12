@@ -1,13 +1,12 @@
 import Prando from "prando";
-import { keccak256 } from "ethers";
-import { privateKeyToAddress } from "web3-eth-accounts";
+import { computeAddress, keccak256 } from "ethers";
 
 /** Deterministic random. */
 export const testRandom = new Prando(42);
 
 export function generateRandomAddress(): string {
   const privateKeyHex = unsafeRandomHex(32);
-  return privateKeyToAddress(privateKeyHex).toLowerCase();
+  return computeAddress(privateKeyHex).toLowerCase();
 }
 
 export function randomHash() {

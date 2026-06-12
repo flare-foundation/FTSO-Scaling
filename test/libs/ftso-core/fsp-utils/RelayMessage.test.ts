@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
 import { readFileSync } from "fs";
-import Web3 from "web3";
+import { computeAddress } from "ethers";
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
@@ -12,12 +12,11 @@ import { getTestFile } from "../../../utils/getTestFile";
 import { defaultTestSigningPolicy, generateSignatures } from "./coding-helpers";
 import e from "express";
 
-const web3 = new Web3("https://dummy");
 describe(`RelayMessage (${getTestFile(__filename)})`, () => {
   const accountPrivateKeys = JSON.parse(
     readFileSync("test/libs/ftso-core/fsp-utils/data/test-1020-accounts.json", "utf8")
   ).map((x: { privateKey: string }) => x.privateKey);
-  const accountAddresses = accountPrivateKeys.map((x: string) => web3.eth.accounts.privateKeyToAccount(x).address);
+  const accountAddresses = accountPrivateKeys.map((x: string) => computeAddress(x));
 
   const N = 100;
   const singleWeight = 500;

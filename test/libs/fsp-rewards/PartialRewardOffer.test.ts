@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { getTestFile } from "../../utils/getTestFile";
-import Web3 from "web3";
+import { id } from "ethers";
 import { InflationRewardsOffered, RewardsOffered } from "../../../libs/contracts/src/events";
 import { PartialRewardOffer } from "../../../libs/fsp-rewards/src/utils/PartialRewardOffer";
 import { toFeedId } from "../../utils/generators";
@@ -15,7 +15,7 @@ describe(`PartialRewardOffer (${getTestFile(__filename)})`, () => {
     minRewardedTurnoutBIPS: "0x010000",
     primaryBandRewardSharePPM: "0x000100",
     secondaryBandWidthPPM: "0x000011",
-    claimBackAddress: Web3.utils.keccak256("address").slice(0, 42),
+    claimBackAddress: id("address").slice(0, 42),
   };
 
   const rawInflationRewardOffer = {
@@ -39,7 +39,7 @@ describe(`PartialRewardOffer (${getTestFile(__filename)})`, () => {
     expect(partialRewardOffer.rewardEpochId).to.eq(17);
     expect(partialRewardOffer.decimals).to.eq(18);
     expect(partialRewardOffer.isInflation).to.eq(false);
-    expect(partialRewardOffer.claimBackAddress).to.eq(Web3.utils.keccak256("address").slice(0, 42));
+    expect(partialRewardOffer.claimBackAddress).to.eq(id("address").slice(0, 42));
     expect(partialRewardOffer.amount).to.eq(16n ** 10n);
   });
 

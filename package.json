@@ -49,10 +49,6 @@
     "rxjs": "^7.8.1",
     "string-width": "7.2.0",
     "typeorm": "^0.3.17",
-    "web3": "^4",
-    "web3-eth-abi": "^4.4.1",
-    "web3-eth-accounts": "^4.3.1",
-    "web3-utils": "^4.3.3",
     "workerpool": "^9.1.0"
   },
   "devDependencies": {
@@ -79,6 +75,7 @@
     "better-sqlite3": "^12.6.2",
     "chai": "^4",
     "chai-as-promised": "7",
+    "dotenv": "^17.4.2",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.4.1",

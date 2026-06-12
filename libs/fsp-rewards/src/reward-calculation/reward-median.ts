@@ -1,5 +1,4 @@
-import { encodeParameters } from "web3-eth-abi";
-import { soliditySha3 } from "web3-utils";
+import { AbiCoder, keccak256 } from "ethers";
 import { VoterWeights } from "../../../ftso-core/src/RewardEpoch";
 import { FTSO2_PROTOCOL_ID, isFip16Active } from "../../../ftso-core/src/constants";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
@@ -9,6 +8,8 @@ import { RewardTypePrefix } from "./RewardTypePrefix";
 import { medianRewardDistributionWeight } from "./reward-utils";
 import { generateSigningWeightBasedClaimsForVoter } from "./reward-signing-split";
 import { TOTAL_BIPS, TOTAL_PPM } from "../constants";
+
+const coder = AbiCoder.defaultAbiCoder();
 
 /**
  * Result of median (accuracy) reward calculation for a single offer.
@@ -56,9 +57,7 @@ export function calculateMedianRewardClaims(
   function randomSelect(feedId: string, votingRoundId: number, voterAddress: Address): boolean {
     const prefixedFeedId = feedId.startsWith("0x") ? feedId : "0x" + feedId;
     return (
-      BigInt(
-        soliditySha3(encodeParameters(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))
-      ) %
+      BigInt(keccak256(coder.encode(["bytes", "uint256", "address"], [prefixedFeedId, votingRoundId, voterAddress]))) %
         2n ===
       1n
     );
