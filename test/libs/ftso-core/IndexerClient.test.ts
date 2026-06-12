@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ContractMethodNames } from "../../../libs/contracts/src/definitions";
 import { BlockAssuranceResult, IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import {
-  FIRST_DATABASE_FSP_EVENT_INDEX_STATE,
+  FIRST_DATABASE_LOG_INDEX_STATE,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
 } from "../../../libs/ftso-core/src/constants";
@@ -17,7 +17,7 @@ describe(`IndexerClient (${getTestFile(__filename)})`, () => {
     try {
       const entityManager = dataSource.createEntityManager();
       await entityManager.save([
-        generateState(FIRST_DATABASE_FSP_EVENT_INDEX_STATE, 0, 0, 500),
+        generateState(FIRST_DATABASE_LOG_INDEX_STATE, 0, 0, 500),
         generateState(FIRST_DATABASE_INDEX_STATE, 1, 0, 1000),
         generateState(LAST_DATABASE_INDEX_STATE, 2, 0, 1001),
       ]);

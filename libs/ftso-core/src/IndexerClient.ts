@@ -8,7 +8,7 @@ import { IRelayMessage } from "./fsp-utils/RelayMessage";
 import { ContractDefinitions, ContractMethodNames } from "../../contracts/src/definitions";
 import {
   EPOCH_SETTINGS,
-  FIRST_DATABASE_FSP_EVENT_INDEX_STATE,
+  FIRST_DATABASE_LOG_INDEX_STATE,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
 } from "./constants";
@@ -201,7 +201,7 @@ export class IndexerClient {
   /**
    * Minimum `block_timestamp` across the given index-state rows, or undefined if none are set.
    *
-   * FSP-event-scope callers pass both [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE] —
+   * FSP-event-scope callers pass both [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_LOG_INDEX_STATE] —
    * in FSP mode the FSP-event floor reaches further back than the fully-indexed-block floor.
    * Whole-block-scope callers (transactions, and events emitted during voting rounds) pass only
    * [FIRST_DATABASE_INDEX_STATE]; the FSP-event floor does not guarantee transactions or
@@ -257,7 +257,7 @@ export class IndexerClient {
    * For transactions or events emitted during voting rounds use {@link ensureBlocksIndexedBefore}.
    */
   protected ensureFspEventsIndexedBefore(startTime: number): Promise<BlockAssuranceResult> {
-    return this.ensureIndexedBefore([FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE], startTime);
+    return this.ensureIndexedBefore([FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_LOG_INDEX_STATE], startTime);
   }
 
   /**
@@ -276,10 +276,7 @@ export class IndexerClient {
    * it's older than the fully-indexed-block floor.
    */
   public async secureLowestTimestamp(): Promise<number> {
-    const earliest = await this.lowestIndexedTimestamp([
-      FIRST_DATABASE_INDEX_STATE,
-      FIRST_DATABASE_FSP_EVENT_INDEX_STATE,
-    ]);
+    const earliest = await this.lowestIndexedTimestamp([FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_LOG_INDEX_STATE]);
     if (earliest === undefined) {
       throw new Error("Critical error: First state not found in the indexer database");
     }
@@ -328,7 +325,7 @@ export class IndexerClient {
     endTimeout?: number
   ): Promise<BlockAssuranceResult> {
     return this.ensureIndexedRange(
-      [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_FSP_EVENT_INDEX_STATE],
+      [FIRST_DATABASE_INDEX_STATE, FIRST_DATABASE_LOG_INDEX_STATE],
       startTime,
       endTime,
       endTimeout
