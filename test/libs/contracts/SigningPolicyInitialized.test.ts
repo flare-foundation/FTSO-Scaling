@@ -19,6 +19,14 @@ describe(`SigningPolicyInitialized (${getTestFile(__filename)})`, () => {
   it("decodes a raw event into a typed SigningPolicyInitialized", () => {
     const event = SigningPolicyInitialized.fromRawEvent(rawEvent);
 
-    expect(event.rewardEpochId).to.be.equal(1);
+    expect(event.rewardEpochId).to.be.equal(1); // indexed topic1
+    // Full field assertions guard the ethers decodeEventLog migration (indexed topic + data split).
+    expect(event.startVotingRoundId).to.be.equal(0x3ed);
+    expect(event.threshold).to.be.equal(1);
+    expect(event.seed).to.be.equal("0x" + "123".padStart(64, "0"));
+    expect(event.voters).to.deep.equal(["0xf252dca332f04d84542c0db27e784a7645b140d3"]);
+    expect(event.weights).to.deep.equal([1000]);
+    expect(event.timestamp).to.be.equal(0x65951b4a);
+    expect(event.signingPolicyBytes).to.be.equal("0x1230");
   });
 });

@@ -1,10 +1,9 @@
-import Web3 from "web3";
+import { getBytes, hashMessage, keccak256, recoverAddress, Signature } from "ethers";
 import { ECDSASignature, IECDSASignature } from "./ECDSASignature";
 import { IPayloadMessage, PayloadMessage } from "./PayloadMessage";
 import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "./ProtocolMessageMerkleRoot";
 import { ISigningPolicy } from "./SigningPolicy";
 
-const web3 = new Web3("https://dummy");
 export interface ISignaturePayload {
   type: string;
   message: IProtocolMessageMerkleRoot;
@@ -137,9 +136,10 @@ export namespace SignaturePayload {
     let totalWeight = 0;
     let nextAllowedSignerIndex = 0;
     for (const signature of signatures) {
-      const signer = web3.eth.accounts
-        .recover(messageHash, "0x" + signature.v.toString(16), signature.r, signature.s)
-        .toLowerCase();
+      const signer = recoverAddress(
+        hashMessage(getBytes(messageHash)),
+        Signature.from({ r: signature.r, s: signature.s, v: signature.v })
+      ).toLowerCase();
       const index = signerIndex.get(signer);
       if (index === undefined) {
         throw Error(`Invalid signer: ${signer}. Not in signing policy`);
@@ -174,7 +174,7 @@ export namespace SignaturePayload {
       return false;
     }
     const message: IProtocolMessageMerkleRoot = signaturePayloads[0].payload.message;
-    const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(message));
+    const messageHash = keccak256(ProtocolMessageMerkleRoot.encode(message));
     const signatures: IECDSASignature[] = [];
     for (const payload of signaturePayloads) {
       if (!ProtocolMessageMerkleRoot.equals(payload.payload.message, message)) {
@@ -190,15 +190,15 @@ export namespace SignaturePayload {
    * Also adds message hash.
    */
   export function augment(signaturePayload: ISignaturePayload, signerIndices: Map<string, number>) {
-    const messageHash = web3.utils.keccak256(ProtocolMessageMerkleRoot.encode(signaturePayload.message));
-    const signer = web3.eth.accounts
-      .recover(
-        messageHash,
-        "0x" + signaturePayload.signature.v.toString(16),
-        signaturePayload.signature.r,
-        signaturePayload.signature.s
-      )
-      .toLowerCase();
+    const messageHash = keccak256(ProtocolMessageMerkleRoot.encode(signaturePayload.message));
+    const signer = recoverAddress(
+      hashMessage(getBytes(messageHash)),
+      Signature.from({
+        r: signaturePayload.signature.r,
+        s: signaturePayload.signature.s,
+        v: signaturePayload.signature.v,
+      })
+    ).toLowerCase();
     const index = signerIndices.get(signer);
     return {
       ...signaturePayload,

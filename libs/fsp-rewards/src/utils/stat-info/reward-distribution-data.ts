@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path/posix";
-import Web3 from "web3";
+import { keccak256 } from "ethers";
 import { AbiCache } from "../../../../contracts/src/abi/AbiCache";
 import { CONTRACTS } from "../../../../contracts/src/constants";
 import { ContractMethodNames } from "../../../../contracts/src/definitions";
@@ -40,7 +40,7 @@ export function serializeRewardDistributionData(
     0
   ).abi;
   const merkleTree = buildRewardClaimMerkleTree(rewardClaims);
-  const merkleRoot = merkleTree.root ?? Web3.utils.keccak256(ZERO_BYTES32);
+  const merkleRoot = merkleTree.root ?? keccak256(ZERO_BYTES32);
   const rewardClaimsWithProof = rewardClaims.map((claim) => getMerkleProof(claim, merkleTree));
   const noOfWeightBasedClaims = rewardClaims.filter(
     (claim) =>

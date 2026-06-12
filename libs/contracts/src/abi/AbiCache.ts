@@ -1,7 +1,5 @@
-import { decodeLog } from "web3-eth-abi";
 import { readFileSync } from "fs";
-import { AbiEventFragment, AbiFunctionFragment, AbiInput, DecodedParams } from "web3";
-import { encodeEventSignature, encodeFunctionSignature } from "web3-eth-abi";
+import { EventFragment, FunctionFragment, Interface, JsonFragment, JsonFragmentType, Result } from "ethers";
 import { ContractDefinitionsNames, ContractMethodNames } from "../definitions";
 import {
   InflationRewardsOffered,
@@ -21,16 +19,18 @@ import { IncentiveOffered } from "../events/IncentiveOffered";
 import { AttestationRequest } from "../events/AttestationRequest";
 import { FDCInflationRewardsOffered } from "../events/FDCInflationRewardsOffered";
 
-type AbiItem = AbiFunctionFragment | AbiEventFragment;
+type AbiItem = JsonFragment;
 
 export interface AbiData {
   abi: AbiItem;
   signature: string;
   isEvent: boolean;
+  // Cached ethers Interface for event log decoding (events only).
+  iface?: Interface;
 }
 
 export interface AbiDataInput {
-  abi: AbiInput;
+  abi: JsonFragmentType;
   signature: string;
 }
 
@@ -159,7 +159,8 @@ export class AbiCache {
     abiData = {
       abi: item,
       isEvent: !!eventName,
-      signature: functionName ? encodeFunctionSignature(item) : encodeEventSignature(item),
+      signature: functionName ? FunctionFragment.from(item).selector : EventFragment.from(item).topicHash,
+      iface: eventName ? new Interface([item]) : undefined,
     };
     this.contractAndNameToAbiData.set(key, abiData);
     return abiData;
@@ -195,12 +196,16 @@ export interface RawEvent {
  * Decodes and transforms event @param data obtained from the indexer database,
  * for a given @param smartContractName and @param eventName into target
  * transformation type T, using @param transform function.
+ *
+ * Note on indexed fixed-size bytes (bytesN, N < 32): the value is stored as a right-padded
+ * 32-byte topic, but decoding returns the trimmed N-byte value, not the raw topic.
+ * See "indexed fixed-size bytes topics" in AbiCache.test.ts.
  */
 export function decodeEvent<T>(
   smartContractName: string,
   eventName: string,
   data: RawEvent,
-  transform: (data: DecodedParams, entity?: RawEvent) => T
+  transform: (data: Result, entity?: RawEvent) => T
 ): T {
   const abiData = AbiCache.instance.getEventAbiData(smartContractName, eventName);
 
@@ -208,11 +213,12 @@ export function decodeEvent<T>(
     return x.startsWith("0x") ? x : "0x" + x;
   }
 
-  const inputs = [...abiData.abi.inputs];
-  // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts
+  // Assumption: we will use it only with Solidity generated non-anonymous events from trusted contracts.
+  // ethers' decodeEventLog expects the full topics array (including topic0, the event signature),
+  // and validates topic0 against the event fragment's topic hash.
   const topics = [data.topic0, data.topic1, data.topic2, data.topic3]
     .filter((x) => x && x !== "NULL")
     .map((x) => prefix0x(x));
-  const decoded = decodeLog(inputs, prefix0x(data.data), topics);
+  const decoded = abiData.iface.decodeEventLog(eventName, prefix0x(data.data), topics);
   return transform(decoded, data);
 }

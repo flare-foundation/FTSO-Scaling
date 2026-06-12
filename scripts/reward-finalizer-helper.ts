@@ -42,7 +42,7 @@ Also, option `winit` needs one private key, which is taken as the first private 
 */
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
-import Web3 from "web3";
+import { AbiCoder, Contract, JsonRpcProvider, keccak256, Wallet } from "ethers";
 import { CONTRACTS } from "../libs/contracts/src/constants";
 import { ZERO_BYTES32 } from "../libs/fsp-rewards/src/constants";
 import { ClaimType, IRewardClaimWithProof } from "../libs/fsp-rewards/src/utils/RewardClaim";
@@ -55,15 +55,25 @@ dotenv.config();
 const COSTON_RPC = "https://coston-api.flare.network/ext/bc/C/rpc";
 
 const RPC = process.env.RPC || COSTON_RPC;
-const web3 = new Web3(RPC);
+const provider = new JsonRpcProvider(RPC);
 console.log(`Connected to ${RPC}`);
 
 const flareSystemsManagerAbi = JSON.parse(readFileSync(`abi/FlareSystemsManager.json`).toString()).abi;
 const rewardManagerAbi = JSON.parse(readFileSync(`abi/RewardManager.json`).toString()).abi;
 const relayAbi = JSON.parse(readFileSync(`abi/Relay.json`).toString()).abi;
-const flareSystemsManager = new web3.eth.Contract(flareSystemsManagerAbi, CONTRACTS.FlareSystemsManager.address);
-const rewardManager = new web3.eth.Contract(rewardManagerAbi, CONTRACTS.RewardManager.address);
-const relay = new web3.eth.Contract(relayAbi, CONTRACTS.Relay.address);
+const flareSystemsManager = new Contract(CONTRACTS.FlareSystemsManager.address, flareSystemsManagerAbi, provider);
+const rewardManager = new Contract(CONTRACTS.RewardManager.address, rewardManagerAbi, provider);
+const relay = new Contract(CONTRACTS.Relay.address, relayAbi, provider);
+const coder = AbiCoder.defaultAbiCoder();
+
+/**
+ * Bumps the network gas price by 20%.
+ */
+async function bumpedGasPrice(): Promise<bigint> {
+  const feeData = await provider.getFeeData();
+  if (feeData.gasPrice === null) throw new Error("Could not fetch gas price from RPC");
+  return (feeData.gasPrice * 120n) / 100n;
+}
 
 // struct Signature {
 //    uint8 v;
@@ -86,48 +96,46 @@ const relay = new web3.eth.Contract(relayAbi, CONTRACTS.Relay.address);
 
 async function sendFakeUptimeVote(rewardEpochId: number, signingPrivateKey: string) {
   // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _uptimeVoteHash));
-  const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
+  const wallet = new Wallet(signingPrivateKey, provider);
   console.log(`Sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}`);
-  const fakeVoteHash = web3.utils.keccak256(ZERO_BYTES32);
+  const fakeVoteHash = keccak256(ZERO_BYTES32);
   const message = "0x" + rewardEpochId.toString(16).padStart(64, "0") + fakeVoteHash.slice(2);
-  const messageHash = web3.utils.keccak256(message);
+  const messageHash = keccak256(message);
   const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
-  let gasPrice = await web3.eth.getGasPrice();
-  const nonce = await web3.eth.getTransactionCount(wallet.address);
-  gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
-  const tx = {
-    from: wallet.address,
+  const gasPrice = await bumpedGasPrice();
+  const nonce = await provider.getTransactionCount(wallet.address);
+  const tx = await wallet.sendTransaction({
     to: CONTRACTS.FlareSystemsManager.address,
-    data: flareSystemsManager.methods.signUptimeVote(rewardEpochId, fakeVoteHash, signature).encodeABI(),
-    value: "0",
-    gas: "500000",
+    data: flareSystemsManager.interface.encodeFunctionData("signUptimeVote", [rewardEpochId, fakeVoteHash, signature]),
+    value: 0,
+    gasLimit: 500000n,
     gasPrice,
-    nonce: Number(nonce).toString(),
-  };
-  const signed = await wallet.signTransaction(tx);
-  const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+    nonce,
+  });
+  await tx.wait();
   console.log(`Uptime vote for epoch ${rewardEpochId} from ${wallet.address} sent`);
 }
 
 async function sendNewSigningPolicy(rewardEpochId: number, signingPrivateKey: string) {
-  const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
+  const wallet = new Wallet(signingPrivateKey, provider);
   console.log(`Sending signing policy vote for epoch ${rewardEpochId} from ${wallet.address}`);
-  const signingPolicyHash: string = await relay.methods.toSigningPolicyHash(rewardEpochId).call();
+  const signingPolicyHash: string = await relay.toSigningPolicyHash(rewardEpochId);
   const signature = await ECDSASignature.signMessageHash(signingPolicyHash, signingPrivateKey);
-  let gasPrice = await web3.eth.getGasPrice();
-  const nonce = await web3.eth.getTransactionCount(wallet.address);
-  gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
-  const tx = {
-    from: wallet.address,
+  const gasPrice = await bumpedGasPrice();
+  const nonce = await provider.getTransactionCount(wallet.address);
+  const tx = await wallet.sendTransaction({
     to: CONTRACTS.FlareSystemsManager.address,
-    data: flareSystemsManager.methods.signNewSigningPolicy(rewardEpochId, signingPolicyHash, signature).encodeABI(),
-    value: "0",
-    gas: "500000",
+    data: flareSystemsManager.interface.encodeFunctionData("signNewSigningPolicy", [
+      rewardEpochId,
+      signingPolicyHash,
+      signature,
+    ]),
+    value: 0,
+    gasLimit: 500000n,
     gasPrice,
-    nonce: Number(nonce).toString(),
-  };
-  const signed = await wallet.signTransaction(tx);
-  const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+    nonce,
+  });
+  await tx.wait();
   console.log(`New signing policy vote for epoch ${rewardEpochId} from ${wallet.address} sent`);
 }
 
@@ -138,14 +146,11 @@ async function sendMerkleRoot(
   signingPrivateKey: string
 ) {
   // bytes32 messageHash = keccak256(abi.encode(_rewardEpochId, _noOfWeightBasedClaims, _rewardsHash));
-  const wallet = web3.eth.accounts.privateKeyToAccount(signingPrivateKey);
+  const wallet = new Wallet(signingPrivateKey, provider);
   console.log(`Sending merkle root for epoch ${rewardEpochId} from ${wallet.address}`);
-  const rewardManagerId = await web3.eth.getChainId();
+  const rewardManagerId = (await provider.getNetwork()).chainId;
   const noOfWeightBasedClaimsAndId = [[rewardManagerId, noOfWeightBasedClaims]];
-  const noOfWeightBasedClaimsEncoded = web3.eth.abi.encodeParameters(
-    ["tuple(uint256,uint256)[]"],
-    [noOfWeightBasedClaimsAndId]
-  );
+  const noOfWeightBasedClaimsEncoded = coder.encode(["tuple(uint256,uint256)[]"], [noOfWeightBasedClaimsAndId]);
   // const noOfWeightBasedClaimsEncoded1 =
   //   "0x" +
   //   "0000000000000000000000000000000000000000000000000000000000000020" +
@@ -153,29 +158,29 @@ async function sendMerkleRoot(
   //   rewardManagerId.toString(16).padStart(64, "0") +
   //   noOfWeightBasedClaims.toString(16).padStart(64, "0");
 
-  const noOfWeightBasedClaimsHash = web3.utils.keccak256(noOfWeightBasedClaimsEncoded);
+  const noOfWeightBasedClaimsHash = keccak256(noOfWeightBasedClaimsEncoded);
   const message =
     "0x" +
     rewardEpochId.toString(16).padStart(64, "0") +
     noOfWeightBasedClaimsHash.slice(2) +
     rewardsHash.slice(2);
-  const messageHash = web3.utils.keccak256(message);
+  const messageHash = keccak256(message);
   const signature = await ECDSASignature.signMessageHash(messageHash, signingPrivateKey);
-  let gasPrice = await web3.eth.getGasPrice();
-  const nonce = await web3.eth.getTransactionCount(wallet.address);
-  gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
-  const tx = {
-    from: wallet.address,
+  const gasPrice = await bumpedGasPrice();
+  const nonce = await provider.getTransactionCount(wallet.address);
+  const tx = await wallet.sendTransaction({
     to: CONTRACTS.FlareSystemsManager.address,
-    data: flareSystemsManager.methods
-      .signRewards(rewardEpochId, noOfWeightBasedClaimsAndId, rewardsHash, signature)
-      .encodeABI(),
-    gas: "500000",
+    data: flareSystemsManager.interface.encodeFunctionData("signRewards", [
+      rewardEpochId,
+      noOfWeightBasedClaimsAndId,
+      rewardsHash,
+      signature,
+    ]),
+    gasLimit: 500000n,
     gasPrice,
-    nonce: Number(nonce).toString(),
-  };
-  const signed = await wallet.signTransaction(tx);
-  const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+    nonce,
+  });
+  await tx.wait();
   console.log(`Merkle root for epoch ${rewardEpochId} from ${wallet.address} sent`);
 }
 
@@ -190,7 +195,7 @@ async function sendUpTimeVotes(rewardEpochId: number) {
     try {
       await sendFakeUptimeVote(rewardEpochId, privateKey);
     } catch (e) {
-      const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+      const wallet = new Wallet(privateKey);
       console.error(`Error sending uptime vote for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
       console.dir(e);
       break;
@@ -209,7 +214,7 @@ async function sendNewSigningPolicyVotes(rewardEpochId: number) {
     try {
       await sendNewSigningPolicy(rewardEpochId, privateKey);
     } catch (e) {
-      const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+      const wallet = new Wallet(privateKey);
       console.error(`Error sending new signing policy vote for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
       console.dir(e);
       break;
@@ -234,7 +239,7 @@ async function sendMerkleProofs(rewardEpochId: number) {
         privateKey
       );
     } catch (e) {
-      const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+      const wallet = new Wallet(privateKey);
       console.error(`Error sending merkle root for epoch ${rewardEpochId} from ${wallet.address}: ${e}`);
       console.dir(e);
       break;
@@ -243,7 +248,7 @@ async function sendMerkleProofs(rewardEpochId: number) {
 }
 
 async function checkTotalRewardDataFromContract(rewardEpochId: number) {
-  const totals = await rewardManager.methods.getRewardEpochTotals(rewardEpochId).call();
+  const totals = await rewardManager.getRewardEpochTotals(rewardEpochId);
   const contractTotal = (totals as any)._totalRewardsWei;
   const distributionData = deserializeRewardDistributionData(rewardEpochId);
   let claimedTotal = 0n;
@@ -342,8 +347,8 @@ export async function main() {
       currentRewardEpochId <= endRewardEpochId;
       currentRewardEpochId++
     ) {
-      const uptimeVoteHash = await flareSystemsManager.methods.uptimeVoteHash(currentRewardEpochId).call();
-      const rewardsHash = await flareSystemsManager.methods.rewardsHash(currentRewardEpochId).call();
+      const uptimeVoteHash = await flareSystemsManager.uptimeVoteHash(currentRewardEpochId);
+      const rewardsHash = await flareSystemsManager.rewardsHash(currentRewardEpochId);
       const isUptimeHash = uptimeVoteHash && (uptimeVoteHash as any as string) !== ZERO_BYTES32;
       const isRewardsHash = rewardsHash && (rewardsHash as any as string) !== ZERO_BYTES32;
       console.log(
@@ -381,24 +386,21 @@ export async function main() {
     if (privateKeys.length === 0) {
       throw new Error("No private keys found in PRIVATE_KEYS env variable");
     }
-    const wallet = web3.eth.accounts.privateKeyToAccount(privateKeys[0]);
+    const wallet = new Wallet(privateKeys[0], provider);
 
     async function sendBatch(batch: IRewardClaimWithProof[]) {
-      const data = rewardManager.methods.initialiseWeightBasedClaims(batch).encodeABI();
-      let gasPrice = await web3.eth.getGasPrice();
-      const nonce = await web3.eth.getTransactionCount(wallet.address);
-      gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
-      const tx = {
-        from: wallet.address,
+      const data = rewardManager.interface.encodeFunctionData("initialiseWeightBasedClaims", [batch]);
+      const gasPrice = await bumpedGasPrice();
+      const nonce = await provider.getTransactionCount(wallet.address);
+      const tx = await wallet.sendTransaction({
         to: CONTRACTS.RewardManager.address,
         data,
-        value: "0",
-        gas: "2000000",
+        value: 0,
+        gasLimit: 2000000n,
         gasPrice,
-        nonce: Number(nonce).toString(),
-      };
-      const signed = await wallet.signTransaction(tx);
-      const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+        nonce,
+      });
+      await tx.wait();
     }
 
     const weightBasedClaims = distributionData.rewardClaims.filter(
@@ -418,21 +420,7 @@ export async function main() {
       }
       const batch = weightBasedClaims.slice(start, start + batchSize);
       try {
-        const data = rewardManager.methods.initialiseWeightBasedClaims(batch).encodeABI();
-        let gasPrice = await web3.eth.getGasPrice();
-        const nonce = await web3.eth.getTransactionCount(wallet.address);
-        gasPrice = (gasPrice * 120n) / 100n; // bump gas price by 20%
-        const tx = {
-          from: wallet.address,
-          to: CONTRACTS.RewardManager.address,
-          data,
-          value: "0",
-          gas: "2000000",
-          gasPrice,
-          nonce: Number(nonce).toString(),
-        };
-        const signed = await wallet.signTransaction(tx);
-        const receipt = await web3.eth.sendSignedTransaction(signed.rawTransaction);
+        await sendBatch(batch);
       } catch (e) {
         console.log(`Batch ${start} to ${start + batchSize} failed`);
         console.error(`Error sending merkle proofs for epoch ${rewardEpochId}: ${e}`);
@@ -457,9 +445,11 @@ export async function main() {
     let uninitializedCount = 0;
     for (const claimWithProof of weightBasedClaims) {
       const claim = claimWithProof.body;
-      const state = (await rewardManager.methods
-        .getUnclaimedRewardState(claim.beneficiary, claim.rewardEpochId, claim.claimType)
-        .call()) as any;
+      const state = (await rewardManager.getUnclaimedRewardState(
+        claim.beneficiary,
+        claim.rewardEpochId,
+        claim.claimType
+      )) as any;
       if (!state.initialised) {
         uninitializedCount++;
         console.dir(claim);

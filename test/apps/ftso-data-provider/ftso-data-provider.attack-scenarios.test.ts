@@ -354,7 +354,9 @@ describe(`ftso-data-provider.service attack scenarios (${getTestFile(__filename)
   // Honest service must catch this per-voter (no DoS) and bench voter 0.
   it("A7 non_8_multiple_reveal: malformed-length feedValues", async () => {
     const voters = generateVoters(10);
-    const malformedEnc = "0x" + "ffffffff".repeat(testFeeds.length) + "abc";
+    // Even-length (byte-representable, as real calldata always is) but not a multiple of
+    // 8 hex chars, so FeedValueEncoder.decode rejects it as a non-whole number of feeds.
+    const malformedEnc = "0x" + "ffffffff".repeat(testFeeds.length) + "abcd";
     const results = await runAttackRound(
       voters,
       (round, b, ts) => [buildCommitTx(voters[0], round, NONZERO_RANDOM, malformedEnc, b, ts)],

@@ -1,7 +1,8 @@
 import { Address } from "../voting-types";
-import { encodeParameters } from "web3-eth-abi";
-import { soliditySha3 } from "web3-utils";
+import { AbiCoder, keccak256 } from "ethers";
 import { IPayloadMessage } from "../fsp-utils/PayloadMessage";
+
+const coder = AbiCoder.defaultAbiCoder();
 
 export interface ICommitData {
   commitHash: string;
@@ -34,8 +35,8 @@ export namespace CommitData {
   export function hashForCommit(voter: Address, votingRoundId: number, random: string, feedValues: string): string {
     const types = ["address", "uint32", "uint256", "bytes"];
     const values = [voter.toLowerCase(), votingRoundId, random, feedValues];
-    const encoded = encodeParameters(types, values);
-    const hash = soliditySha3(encoded);
+    const encoded = coder.encode(types, values);
+    const hash = keccak256(encoded);
     if (hash === undefined) throw new Error(`Unable to compute commit hash for ${votingRoundId}`);
     return hash;
   }

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import Web3 from "web3";
+import { hexlify, randomBytes } from "ethers";
 import { IPayloadMessage, PayloadMessage } from "../../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
 import { getTestFile } from "../../../utils/getTestFile";
 
@@ -12,7 +12,7 @@ describe(`PayloadMessage (${getTestFile(__filename)})`, () => {
       const payload = {
         protocolId: i,
         votingRoundId: 10 * i,
-        payload: Web3.utils.randomHex(2 * (N - i)),
+        payload: hexlify(randomBytes(2 * (N - i))),
       } as IPayloadMessage<string>;
       payloads.push(payload);
       encoded += PayloadMessage.encode(payload).slice(2);
@@ -40,7 +40,7 @@ describe(`PayloadMessage (${getTestFile(__filename)})`, () => {
     let payload = {
       protocolId: -1,
       votingRoundId: 1000,
-      payload: Web3.utils.randomHex(20),
+      payload: hexlify(randomBytes(20)),
     } as IPayloadMessage<string>;
     expect(() => PayloadMessage.encode(payload)).to.throw("Protocol id out of range");
     payload = { ...payload, protocolId: 256 };
@@ -51,7 +51,7 @@ describe(`PayloadMessage (${getTestFile(__filename)})`, () => {
     let payload = {
       protocolId: 15,
       votingRoundId: -10,
-      payload: Web3.utils.randomHex(20),
+      payload: hexlify(randomBytes(20)),
     } as IPayloadMessage<string>;
     expect(() => PayloadMessage.encode(payload)).to.throw("Voting round id out of range");
     payload = { ...payload, votingRoundId: 2 ** 32 };

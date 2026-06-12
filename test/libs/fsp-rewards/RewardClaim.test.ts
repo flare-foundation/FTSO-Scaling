@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { getTestFile } from "../../utils/getTestFile";
 import { IPartialRewardClaim, IRewardClaim, RewardClaim } from "../../../libs/fsp-rewards/src/utils/RewardClaim";
-import Web3 from "web3";
+import { id } from "ethers";
 import { generateAddress } from "../../utils/generators";
 
 describe(`RewardClaim (${getTestFile(__filename)})`, () => {
@@ -9,7 +9,7 @@ describe(`RewardClaim (${getTestFile(__filename)})`, () => {
 
   for (let j = 0; j < 10; j++) {
     const partialRewardClaim: IPartialRewardClaim = {
-      beneficiary: Web3.utils.keccak256(`beneficiary${j}`).slice(0, 42),
+      beneficiary: id(`beneficiary${j}`).slice(0, 42),
       amount: 10n + BigInt(j),
       claimType: 0,
     };
@@ -19,7 +19,7 @@ describe(`RewardClaim (${getTestFile(__filename)})`, () => {
 
   for (let j = 0; j < 10; j++) {
     const partialRewardClaim: IPartialRewardClaim = {
-      beneficiary: Web3.utils.keccak256(`beneficiary${j}`).slice(0, 42),
+      beneficiary: id(`beneficiary${j}`).slice(0, 42),
       amount: 10n + BigInt(j),
       claimType: 1,
     };
@@ -29,7 +29,7 @@ describe(`RewardClaim (${getTestFile(__filename)})`, () => {
 
   for (let j = 0; j < 10; j++) {
     const partialRewardClaim: IPartialRewardClaim = {
-      beneficiary: Web3.utils.keccak256(`beneficiary${j}`).slice(0, 42),
+      beneficiary: id(`beneficiary${j}`).slice(0, 42),
       amount: 1n,
       claimType: 0,
     };

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
 import { RandomVoterSelector } from "../../../libs/fsp-rewards/src/reward-calculation/RandomVoterSelector";
-import Web3 from "web3";
+import { hexlify, randomBytes } from "ethers";
 import { getTestFile } from "../../utils/getTestFile";
 
 const coder = ethers.AbiCoder.defaultAbiCoder();
@@ -20,7 +20,7 @@ describe(`RandomVoterSelector (${getTestFile(__filename)})`, () => {
   it("produces the same initial seed hash as ethers ABI-encoding", () => {
     const protocolId = 1;
     const votingRoundId = 2;
-    const rewardEpochSeed = Web3.utils.randomHex(32);
+    const rewardEpochSeed = hexlify(randomBytes(32));
 
     const selectorHash = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     const abiEncoded = coder.encode(["bytes32", "uint256", "uint256"], [rewardEpochSeed, protocolId, votingRoundId]);
@@ -71,7 +71,7 @@ describe(`RandomVoterSelector (${getTestFile(__filename)})`, () => {
   });
 
   it("returns a valid voter index for any (protocolId, votingRoundId) seed", () => {
-    const rewardEpochSeed = Web3.utils.randomHex(32);
+    const rewardEpochSeed = hexlify(randomBytes(32));
     const randomVoterSelector = new RandomVoterSelector(voters, weights, DEFAULT_THRESHOLD_BIPS);
     for (let protocolId = 1; protocolId <= 5; protocolId++) {
       for (let votingRoundId = 0; votingRoundId <= 10; votingRoundId++) {
@@ -111,7 +111,7 @@ describe(`RandomVoterSelector (${getTestFile(__filename)})`, () => {
     }
     const protocolId = 1;
     const votingRoundId = 1;
-    const rewardEpochSeed = Web3.utils.randomHex(32);
+    const rewardEpochSeed = hexlify(randomBytes(32));
     const seed = RandomVoterSelector.initialHashSeed(rewardEpochSeed, protocolId, votingRoundId);
     const result = randomVoterSelector.randomSelectThresholdWeightVoters(seed);
     let sum = 0n;

@@ -1,4 +1,6 @@
-import Web3 from "web3";
+import { AbiCoder, keccak256, toBeHex, zeroPadValue } from "ethers";
+
+const coder = AbiCoder.defaultAbiCoder();
 
 /**
  * There are several variants for hashing sequences in Merkle trees in cases when there is odd number of hashes on some level.
@@ -23,8 +25,6 @@ import Web3 from "web3";
  * Importants: all input strings should represent bytes32, hence should be 32-byte padded hex strings.
  */
 
-const web3 = new Web3("https://dummy");
-
 /**
  * Conversion function to Hex value with left padding
  * @param x input value
@@ -32,7 +32,7 @@ const web3 = new Web3("https://dummy");
  * @returns padded hex value
  */
 function toHex(x: string | number | bigint, padToBytes: number) {
-  return Web3.utils.leftPad(Web3.utils.toHex(x), padToBytes * 2);
+  return zeroPadValue(toBeHex(x), padToBytes);
 }
 
 /**
@@ -42,7 +42,7 @@ function toHex(x: string | number | bigint, padToBytes: number) {
  * @returns hash of the input value
  */
 export function singleHash(val: string) {
-  return web3.utils.soliditySha3(val);
+  return keccak256(val);
 }
 
 /**
@@ -53,9 +53,7 @@ export function singleHash(val: string) {
  * @returns `0x`-prefixed 32-byte hex string (hash)
  */
 export function commitHash(merkleRoot: string, randomNumber: string, address: string): string {
-  return web3.utils.soliditySha3(
-    web3.eth.abi.encodeParameters(["bytes32", "bytes32", "address"], [merkleRoot, randomNumber, address])
-  );
+  return keccak256(coder.encode(["bytes32", "bytes32", "address"], [merkleRoot, randomNumber, address]));
 }
 
 /**
@@ -66,9 +64,9 @@ export function commitHash(merkleRoot: string, randomNumber: string, address: st
  */
 export function sortedHashPair(x: string, y: string) {
   if (x <= y) {
-    return web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes32", "bytes32"], [x, y]));
+    return keccak256(coder.encode(["bytes32", "bytes32"], [x, y]));
   }
-  return web3.utils.soliditySha3(web3.eth.abi.encodeParameters(["bytes32", "bytes32"], [y, x]));
+  return keccak256(coder.encode(["bytes32", "bytes32"], [y, x]));
 }
 
 /**
@@ -95,7 +93,7 @@ export class MerkleTree {
    */
   get rootBigint() {
     const rt = this.root;
-    return rt ? web3.utils.toBigInt(rt) : web3.utils.toBigInt(0);
+    return rt ? BigInt(rt) : 0n;
   }
 
   /**
