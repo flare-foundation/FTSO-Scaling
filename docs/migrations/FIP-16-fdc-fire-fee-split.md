@@ -4,9 +4,9 @@ This document records the implementation of the FDC-fee clause of
 [FIP.16](https://proposals.flare.network/FIP/FIP_16.html) (§4.1, "FDC data request fees") in this repository. The
 vote-power clause is covered separately in [FIP-16-signing-weight-unification.md](FIP-16-signing-weight-unification.md).
 
-> **Status:** implemented behind the shared FIP.16 activation reward epoch (`FIP16_ACTIVATION_REWARD_EPOCH`, currently
-> the `FIP16_NOT_ACTIVATED` sentinel). Until the real activation epochs are filled in, the code reproduces the
-> pre-FIP.16 behaviour byte-for-byte.
+> **Status:** implemented behind the shared FIP.16 activation reward epoch (`FIP16_ACTIVATION_REWARD_EPOCH`). On
+> Flare the split activates at reward epoch 416 (expected start 2026-07-16 19:00:00 UTC); other networks remain at
+> the `FIP16_NOT_ACTIVATED` sentinel and reproduce the pre-FIP.16 behaviour byte-for-byte.
 
 ## 1. What FIP.16 changes
 
