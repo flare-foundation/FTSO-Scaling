@@ -45,8 +45,11 @@ export interface IPartialRewardOfferForRound {
   // Reward offer index - link to the initial reward offer
   offerIndex?: number;
   shouldBeBurned?: boolean;
+  // indicates that the offer amount goes to the FIRE pool as a direct claim (FIP.16 FDC fee split)
+  shouldGoToFirePool?: boolean;
   feeAmount?: bigint;
   feeBurnAmount?: bigint;
+  fireFeeAmount?: bigint;
 }
 
 export interface IFUPartialRewardOfferForRound {

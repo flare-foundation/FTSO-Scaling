@@ -10,8 +10,9 @@ this repository.
 
 ## 1. What FIP.16 changes (the part that affects this repo)
 
-FIP.16 is broad (inflation, FIRE, fees, …) but only one clause touches FTSO Scaling reward calculation and the data
-provider:
+FIP.16 is broad (inflation, FIRE, fees, …). Besides the FDC fee split to FIRE — also realized in the reward
+calculator, see [FIP-16-fdc-fire-fee-split.md](FIP-16-fdc-fire-fee-split.md) — only one clause touches FTSO Scaling
+reward calculation and the data provider:
 
 > *"The current voting power calculation gives equal importance to P-chain staked tokens and C-chain (WFLR)
 > delegations, **with the exception of FTSO anchor feeds, which rely solely on C-chain delegations**."*

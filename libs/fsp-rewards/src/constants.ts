@@ -234,6 +234,69 @@ export const FINALIZATION_BIPS = () => 1000n;
 export const TOTAL_BIPS = 10000n;
 export const TOTAL_PPM = 1000000n;
 /**
+ * FIP.16 — FDC data request fee split to FIRE (Flare Income Reinvestment Entity).
+ * Once FIP.16 is active for a reward epoch (see isFip16Active in libs/ftso-core/src/constants.ts), this share
+ * (in BIPS) of the fees of confirmed attestation requests is directed to the FIRE pool as a DIRECT claim, while
+ * the remainder is distributed with the FDC reward offers as before. Fees of unconfirmed requests keep being
+ * burned in full.
+ */
+const firePoolAddress = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+    case "local-test":
+    case "coston":
+    case "coston2":
+    case "songbird":
+      return "0x000000000000000000000000000000000000dEaD";
+    case "flare":
+      return "0x0ce6831DF00A6018c4d316009980DbAa6c44E525";
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+export const FIRE_POOL_ADDRESS = firePoolAddress();
+
+function fdcFireFeeSplitBipsFromEnv(): bigint {
+  const rawValue = process.env.FDC_FIRE_FEE_SPLIT_BIPS;
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return 0n;
+  }
+  const value = rawValue.trim();
+  if (!/^\d+$/.test(value) || BigInt(value) > TOTAL_BIPS) {
+    throw new Error("FDC_FIRE_FEE_SPLIT_BIPS must be an integer number of bips between 0 and 10000");
+  }
+  return BigInt(value);
+}
+
+const fdcFireFeeSplitBips = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+      return fdcFireFeeSplitBipsFromEnv();
+    case "coston":
+    case "coston2":
+    case "songbird":
+    case "local-test":
+      return 0n;
+    case "flare":
+      return 9000n;
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+const constantFdcFireFeeSplitBips = fdcFireFeeSplitBips();
+export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
+  if (process.env.NETWORK === "from-env") {
+    return fdcFireFeeSplitBips();
+  }
+  return constantFdcFireFeeSplitBips;
+};
+/**
  * In case less then certain percentage of the total weight of the voting weight deposits signatures for a single hash,
  * in the signature rewarding window, the signatures are not rewarded.
  * In case that exactly the same weight is deposited in the signature rewarding window, for multiple hashes (e.g. 2 hashes),
