@@ -21,7 +21,7 @@ function freshConstants(network: string): typeof import("../../../libs/fsp-rewar
   process.env.NETWORK = network;
   delete require.cache[modulePath];
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-return
     return require("../../../libs/fsp-rewards/src/constants");
   } finally {
     delete require.cache[modulePath];
