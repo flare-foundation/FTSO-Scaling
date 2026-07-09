@@ -428,6 +428,8 @@ export function granulatedPartialOfferMapForFDC(
 
     const offersForVotingRound = [offerForVotingRound, burnOfferForVotingRound];
     if (fireFeeAmount > 0n) {
+      // Informational metadata only (like feeAmount/feeBurnAmount) — never read by claim calculation.
+      // Set conditionally so that serialized offers stay byte-identical while the FIRE split is inactive.
       offerForVotingRound.fireFeeAmount = fireFeeAmount;
       offersForVotingRound.push({
         votingRoundId,
