@@ -1,6 +1,7 @@
 import { DataForCalculations } from "../data/DataForCalculations";
 import { FeedValueEncoder, ValueWithDecimals } from "../data/FeedValueEncoder";
 import { Address, Feed, MedianCalculationResult, MedianCalculationSummary } from "../voting-types";
+import { isFip16Active } from "../constants";
 
 /**
  * Data for a single vote.
@@ -18,6 +19,7 @@ export interface VoteData {
 export function calculateMedianResults(data: DataForCalculations): MedianCalculationResult[] {
   const votersSubmitAddresses = data.orderedVotersSubmitAddresses;
   const weights = votersSubmitAddresses.map((voter) => data.voterMedianVotingWeights.get(voter.toLowerCase()));
+  const excludeZeroWeightVotes = isFip16Active(data.rewardEpoch.rewardEpochId);
 
   // "mapping": feedIndex => array of submissions by voters (in signing policy order)
   const feedValues = new Map<number, ValueWithDecimals[]>();
@@ -47,7 +49,8 @@ export function calculateMedianResults(data: DataForCalculations): MedianCalcula
       feedValues.get(feedIndex),
       weights,
       feed,
-      totalVotingWeight
+      totalVotingWeight,
+      excludeZeroWeightVotes
     )
   );
 }
@@ -61,9 +64,16 @@ export function calculateResultForFeed(
   feedValues: ValueWithDecimals[],
   weights: bigint[],
   feed: Feed,
-  totalVotingWeight: bigint
+  totalVotingWeight: bigint,
+  excludeZeroWeightVotes = false
 ): MedianCalculationResult {
-  const medianSummary = calculateMedian(votersSubmitAddresses, feedValues, weights, feed.decimals);
+  const medianSummary = calculateMedian(
+    votersSubmitAddresses,
+    feedValues,
+    weights,
+    feed.decimals,
+    excludeZeroWeightVotes
+  );
   const result: MedianCalculationResult = {
     votingRoundId,
     feed: feed,
@@ -83,13 +93,17 @@ export function calculateResultForFeed(
  * @param feedValues Array of feed value votes as ValueWithDecimals[] for each voter
  * @param weights Array of weights for each voter in voters array
  * @param decimals Feed decimal values
+ * @param excludeZeroWeightVotes Whether zero-weight votes should be excluded from median and quartile calculation.
+ *   This is enabled with the FIP.16 signing-weight median and kept disabled for legacy reward epochs so historical
+ *   results remain reproducible.
  * @returns
  */
 export function calculateMedian(
   voters: Address[],
   feedValues: ValueWithDecimals[],
   weights: bigint[],
-  decimals: number
+  decimals: number,
+  excludeZeroWeightVotes = false
 ): MedianCalculationSummary {
   if (voters.length !== feedValues.length || voters.length !== weights.length) {
     throw new Error("voters, feed values and weights must have the same length");
@@ -111,7 +125,9 @@ export function calculateMedian(
     }
   }
 
-  const voteData = repack(voters, feedValues, weights).filter((voteDataItem) => !voteDataItem.feedValue.isEmpty);
+  const voteData = repack(voters, feedValues, weights).filter(
+    (voteDataItem) => !voteDataItem.feedValue.isEmpty && (!excludeZeroWeightVotes || voteDataItem.weight !== 0n)
+  );
   if (voteData.length === 0) {
     return emptyResult;
   }
