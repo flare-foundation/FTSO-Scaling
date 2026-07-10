@@ -14,7 +14,15 @@ import {
 } from "../utils/stat-info/granulated-partial-offers-map";
 import { deserializeDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
 import { RewardEpochInfo } from "../utils/stat-info/reward-epoch-info";
-import { BURN_ADDRESS, FEEDS_RENAMING_FILE, FINALIZATION_BIPS, SIGNING_BIPS, TOTAL_BIPS } from "../constants";
+import { isFip16Active } from "../../../ftso-core/src/constants";
+import {
+  BURN_ADDRESS,
+  FDC_FIRE_FEE_SPLIT_BIPS,
+  FEEDS_RENAMING_FILE,
+  FINALIZATION_BIPS,
+  SIGNING_BIPS,
+  TOTAL_BIPS,
+} from "../constants";
 import { existsSync, readFileSync } from "fs";
 
 /**
@@ -401,9 +409,13 @@ export function granulatedPartialOfferMapForFDC(
         feeBurnAmount += attestationRequest.fee;
       }
     }
+    // FIP.16: a share of confirmed request fees goes to the FIRE pool; the rounding remainder stays distributable
+    const fireFeeAmount = isFip16Active(rewardEpochInfo.rewardEpochId)
+      ? (feeAmount * FDC_FIRE_FEE_SPLIT_BIPS()) / TOTAL_BIPS
+      : 0n;
     const offerForVotingRound: IPartialRewardOfferForRound = {
       votingRoundId,
-      amount: amount + feeAmount,
+      amount: amount + feeAmount - fireFeeAmount,
       feeAmount,
       feeBurnAmount,
     };
@@ -414,7 +426,18 @@ export function granulatedPartialOfferMapForFDC(
       shouldBeBurned: true,
     };
 
-    rewardOfferMap.set(votingRoundId, [offerForVotingRound, burnOfferForVotingRound]);
+    const offersForVotingRound = [offerForVotingRound, burnOfferForVotingRound];
+    if (fireFeeAmount > 0n) {
+      // Informational metadata only (like feeAmount/feeBurnAmount) — never read by claim calculation.
+      // Set conditionally so that serialized offers stay byte-identical while the FIRE split is inactive.
+      offerForVotingRound.fireFeeAmount = fireFeeAmount;
+      offersForVotingRound.push({
+        votingRoundId,
+        amount: fireFeeAmount,
+        shouldGoToFirePool: true,
+      });
+    }
+    rewardOfferMap.set(votingRoundId, offersForVotingRound);
   }
   return rewardOfferMap;
 }

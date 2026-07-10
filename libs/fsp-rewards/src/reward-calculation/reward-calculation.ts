@@ -25,6 +25,7 @@ import {
   FDC_PROTOCOL_ID,
   FEEDS_RENAMING_FILE,
   FINALIZATION_VOTER_SELECTION_THRESHOLD_WEIGHT_BIPS,
+  FIRE_POOL_ADDRESS,
   FTSO2_FAST_UPDATES_PROTOCOL_ID,
   PENALTY_FACTOR,
 } from "../constants";
@@ -368,6 +369,20 @@ export async function partialRewardClaimsForVotingRound(
     // read offers
     const offers = deserializeOffersForFDC(rewardEpochId, votingRoundId, calculationFolder);
     for (const offer of offers) {
+      // FIP.16: the FIRE share of confirmed request fees goes to the FIRE pool as a direct claim
+      if (offer.shouldGoToFirePool) {
+        const fireClaim: IPartialRewardClaim = {
+          votingRoundId,
+          beneficiary: FIRE_POOL_ADDRESS.toLowerCase(),
+          amount: offer.amount,
+          claimType: ClaimType.DIRECT,
+          protocolTag: "" + FDC_PROTOCOL_ID,
+          rewardTypeTag: RewardTypePrefix.PARTIAL_FDC_OFFER_FIRE,
+          rewardDetailTag: "", // no additional tag
+        };
+        allRewardClaims.push(fireClaim);
+        continue;
+      }
       // We set the claim back address to burn address by default
       offer.claimBackAddress = BURN_ADDRESS.toLowerCase();
       if (offer.shouldBeBurned) {

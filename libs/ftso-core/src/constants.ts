@@ -218,9 +218,11 @@ const fip16ActivationRewardEpoch = (): number => {
     case "from-env": {
       return activationRewardEpochFromEnv();
     }
-    // TODO(FIP.16): set the activation reward epoch ids once the on-chain deployment epochs are known.
     case "flare":
-      return FIP16_NOT_ACTIVATED;
+      // FIP.16 activates on Flare with reward epoch 416 (expected start 2026-07-16 19:00:00 UTC). Must match the
+      // reward epoch whose on-chain signing policy is the first computed with the 5x stake weight.
+      return 416;
+    // TODO(FIP.16): set the activation reward epoch ids once the on-chain deployment epochs are known.
     case "songbird":
       return FIP16_NOT_ACTIVATED;
     case "coston":
