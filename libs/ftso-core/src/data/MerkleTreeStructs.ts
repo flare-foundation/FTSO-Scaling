@@ -53,9 +53,12 @@ export namespace MerkleTreeStructs {
         ? medianCalculationResult.feed.id
         : "0x" + medianCalculationResult.feed.id,
       value: medianCalculationResult.data.finalMedian.value,
-      turnoutBIPS: Number(
-        (medianCalculationResult.data.participatingWeight * 10000n) / medianCalculationResult.totalVotingWeight
-      ),
+      turnoutBIPS:
+        medianCalculationResult.totalVotingWeight === 0n
+          ? 0
+          : Number(
+              (medianCalculationResult.data.participatingWeight * 10000n) / medianCalculationResult.totalVotingWeight
+            ),
       decimals: medianCalculationResult.feed.decimals,
     };
   }
