@@ -402,7 +402,7 @@ export class DataManager {
     commitSubmissions: SubmissionData[],
     revealSubmissions: SubmissionData[],
     feedOrder: Feed[],
-    allowRandomOnlyReveal = true
+    allowRandomOnlyReveal: boolean
   ): CommitsAndReveals {
     const commits = this.getVoterToLastCommitMap(commitSubmissions);
     const reveals = this.getVoterToLastRevealMap(revealSubmissions, feedOrder, allowRandomOnlyReveal);
@@ -458,7 +458,7 @@ export class DataManager {
   protected getVoterToLastRevealMap(
     submissionDataArray: SubmissionData[],
     feedOrder: Feed[],
-    allowRandomOnlyReveal = true
+    allowRandomOnlyReveal: boolean
   ): Map<Address, IRevealData> {
     const voterToLastReveal = new Map<Address, IRevealData>();
     for (const submission of submissionDataArray) {
