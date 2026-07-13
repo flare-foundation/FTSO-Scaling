@@ -12,7 +12,7 @@ function withFip16Activation(fn: () => void): void {
   const originalNetwork = process.env.NETWORK;
   const originalActivation = process.env.FIP16_ACTIVATION_REWARD_EPOCH;
   process.env.NETWORK = "from-env";
-  process.env.FIP16_ACTIVATION_REWARD_EPOCH = "416";
+  process.env.FIP16_ACTIVATION_REWARD_EPOCH = "417";
   try {
     fn();
   } finally {
@@ -64,13 +64,13 @@ describe(`FIP.16 zero-weight median handling (${getTestFile(__filename)})`, () =
     };
   }
 
-  it("preserves the legacy result through epoch 415 and excludes zero-weight votes from epoch 416", () => {
+  it("preserves the legacy result through epoch 416 and excludes zero-weight votes from epoch 417", () => {
     withFip16Activation(() => {
       const values = [10, 100, 200];
       const weights = [5n, 0n, 5n];
 
-      const legacyResult = calculateMedianResults(dataForRewardEpoch(415, values, weights))[0];
-      const fip16Result = calculateMedianResults(dataForRewardEpoch(416, values, weights))[0];
+      const legacyResult = calculateMedianResults(dataForRewardEpoch(416, values, weights))[0];
+      const fip16Result = calculateMedianResults(dataForRewardEpoch(417, values, weights))[0];
 
       expect(legacyResult.data.finalMedian.value).to.equal(55);
       expect(fip16Result.data.finalMedian.value).to.equal(105);
@@ -84,7 +84,7 @@ describe(`FIP.16 zero-weight median handling (${getTestFile(__filename)})`, () =
 
   it("returns an empty median and zero turnout when all FIP.16 voting weight is zero", () => {
     withFip16Activation(() => {
-      const result = calculateMedianResults(dataForRewardEpoch(416, [100], [0n]))[0];
+      const result = calculateMedianResults(dataForRewardEpoch(417, [100], [0n]))[0];
 
       expect(result.data.finalMedian.isEmpty).to.equal(true);
       expect(result.data.quartile1.isEmpty).to.equal(true);
@@ -97,7 +97,7 @@ describe(`FIP.16 zero-weight median handling (${getTestFile(__filename)})`, () =
 
   it("does not let a zero-weight value replace an empty positive-weight vote", () => {
     withFip16Activation(() => {
-      const result = calculateMedianResults(dataForRewardEpoch(416, [100, undefined], [0n, 5n]))[0];
+      const result = calculateMedianResults(dataForRewardEpoch(417, [100, undefined], [0n, 5n]))[0];
       const feedResult = MerkleTreeStructs.fromMedianCalculationResult(result);
 
       expect(result.data.finalMedian.isEmpty).to.equal(true);

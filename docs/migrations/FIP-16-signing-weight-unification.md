@@ -4,7 +4,7 @@ This document records the analysis behind, and the implementation of, the FTSO-r
 [FIP.16](https://proposals.flare.network/FIP/FIP_16.html) ("FLR Tokenomics Restructuring", accepted 2026-04-24) in
 this repository.
 
-> **Status:** implemented behind a per-network activation reward epoch. **Flare activates at reward epoch 416**
+> **Status:** implemented behind a per-network activation reward epoch. **Flare activates at reward epoch 417**
 > (expected start 2026-07-16 19:00:00 UTC). All other networks remain at the `FIP16_NOT_ACTIVATED` sentinel and
 > reproduce the pre-FIP.16 behaviour byte-for-byte. See [Activation](#activation).
 
@@ -99,7 +99,7 @@ When active, the Median and Fast-updates accuracy rewards are split with the sig
 `libs/ftso-core/src/constants.ts`:
 
 - `FIP16_ACTIVATION_REWARD_EPOCH()` — per-network first reward epoch (inclusive) at which FIP.16 applies. **Flare is
-  set to `416`** (expected start 2026-07-16 19:00:00 UTC); **all other networks remain `FIP16_NOT_ACTIVATED`
+  set to `417`** (expected start 2026-07-23 19:00:00 UTC); **all other networks remain `FIP16_NOT_ACTIVATED`
   (`Number.MAX_SAFE_INTEGER`)**. Fill in the remaining epoch ids once the matching on-chain `FlareSystemsCalculator`
   deployment epoch is known for each network. For `from-env`, the value is read from the
   `FIP16_ACTIVATION_REWARD_EPOCH` environment variable and must be a non-negative safe integer.
@@ -119,7 +119,7 @@ the published ones.
 ## 5. Open items
 
 - Fill in `FIP16_ACTIVATION_REWARD_EPOCH` for `songbird`, `coston`, `coston2` once the on-chain activation epochs
-  are known (`flare` is set to `416`). Confirm whether the FTSO weight clause applies to Songbird, and with what
+  are known (`flare` is set to `417`). Confirm whether the FTSO weight clause applies to Songbird, and with what
   multiplier.
 - Add activation-on end-to-end/golden tests once the real epochs are set. Unit coverage already exercises strict
   activation parsing, median computed on signing weight, accuracy/fast-update rewards split to stakers (MIRROR claims),
