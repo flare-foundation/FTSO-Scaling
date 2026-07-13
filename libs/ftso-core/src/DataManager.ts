@@ -122,7 +122,7 @@ export class DataManager {
       randomGenerationBenchingWindow,
       (votingRoundId: number) =>
         this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId, rewardEpoch.rewardEpochId + 1),
-      true // apply FIP.16 release gating on the live data-provider path (not on reward calculation)
+      true // apply FIP.16 release gating to each round in the benching window
     );
 
     this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
