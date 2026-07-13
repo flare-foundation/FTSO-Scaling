@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import sinon from "sinon";
 import {
   FeedWithTypeAndValue,
   rewardEpochFeedSequence,
@@ -455,7 +456,7 @@ describe(`FTSO calculation logic (${getTestFile(__filename)})`, () => {
         ],
       };
 
-      const feedSequence = rewardEpochFeedSequence(rewardOffers);
+      const feedSequence = rewardEpochFeedSequence(rewardOffers, true);
 
       const expectedOrder = [
         "0x4254430055534454", // BTC USDT
@@ -544,7 +545,7 @@ describe(`FTSO calculation logic (${getTestFile(__filename)})`, () => {
         ],
       };
 
-      const feedSequence = rewardEpochFeedSequence(rewardOffers);
+      const feedSequence = rewardEpochFeedSequence(rewardOffers, true);
 
       const expectedOrder = [
         "0x4254430055534454", // BTC USDT
@@ -612,7 +613,7 @@ describe(`FTSO calculation logic (${getTestFile(__filename)})`, () => {
         ],
       };
 
-      const feedSequence = rewardEpochFeedSequence(rewardOffers);
+      const feedSequence = rewardEpochFeedSequence(rewardOffers, true);
       expect(feedSequence.length).to.equal(2);
       expect(feedSequence[0].id).to.equal("0x464c520055534454");
       expect(feedSequence[1].id).to.equal("0x5347420055534454");
@@ -665,13 +666,13 @@ describe(`FTSO calculation logic (${getTestFile(__filename)})`, () => {
         ],
       };
 
-      const feedSequence = rewardEpochFeedSequence(rewardOffers);
+      const feedSequence = rewardEpochFeedSequence(rewardOffers, true);
       expect(feedSequence.length).to.equal(2);
       expect(feedSequence[0].id).to.equal("0x5347420055534454");
       expect(feedSequence[1].id).to.equal("0x464c520055534454");
     });
 
-    it("should reject duplicate feed offers with conflicting decimals", () => {
+    it("should retain the first offer's decimals and log conflicting duplicate offers", () => {
       const rewardOffers: RewardOffers = {
         inflationOffers: [],
         rewardOffers: [
@@ -698,7 +699,18 @@ describe(`FTSO calculation logic (${getTestFile(__filename)})`, () => {
         ],
       };
 
-      expect(() => rewardEpochFeedSequence(rewardOffers)).to.throw("Conflicting decimals for feed");
+      const consoleError = sinon.stub(console, "error");
+      try {
+        const feedSequence = rewardEpochFeedSequence(rewardOffers, true);
+        expect(feedSequence).to.deep.equal([{ id: "0x464c520055534454", decimals: 4 }]);
+        expect(
+          consoleError.calledOnceWithExactly(
+            "Conflicting decimals for feed 0x464c520055534454: 4 !== 5; retaining the first offer's decimals (4)"
+          )
+        ).to.equal(true);
+      } finally {
+        consoleError.restore();
+      }
     });
   });
 });

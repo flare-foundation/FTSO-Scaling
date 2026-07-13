@@ -9,7 +9,7 @@ import {
 } from "../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../ftso-core/src/constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, isFip16Active } from "../../ftso-core/src/constants";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
@@ -182,7 +182,8 @@ export class DataManagerForRewarding extends DataManager {
         votingRoundId,
         commits,
         reveals,
-        rewardEpoch.canonicalFeedOrder
+        rewardEpoch.canonicalFeedOrder,
+        isFip16Active(rewardEpoch.rewardEpochId)
       );
       const partialData = this.getDataForCalculationsPartial(votersToCommitsAndReveals, rewardEpoch);
       const benchingWindowRevealOffenders = await this.getBenchingWindowRevealOffenders(

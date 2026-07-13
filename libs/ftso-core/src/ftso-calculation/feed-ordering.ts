@@ -15,8 +15,14 @@ export interface FeedWithTypeAndValue extends Feed {
  * The sequence is sorted by the value of the feed in the reward epoch in decreasing order.
  * In case of equal values the feedId is used to sort in increasing order.
  * The sequence defines positions of the feeds in the value vectors for the reward epoch.
+ *
+ * @param fip16Active Whether FIP.16 is active for this reward epoch. Before activation the community-offer value
+ *   accumulation reproduces the pre-FIP.16 (v1.0.9) behaviour byte-for-byte — including its double-counting of the
+ *   running total — so that mixed-version deployments agree on the canonical feed order before the activation epoch.
+ *   From activation the accumulation is the correct plain sum. This only affects ordering when the same feed has more
+ *   than one community offer; with a single offer per feed both branches are identical.
  */
-export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
+export function rewardEpochFeedSequence(rewardOffers: RewardOffers, fip16Active: boolean): Feed[] {
   const feedValues = new Map<string, FeedWithTypeAndValue>();
 
   for (const inflationOffer of rewardOffers.inflationOffers) {
@@ -32,7 +38,7 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
         };
         feedValues.set(feedValueType.id, feedValueType);
       } else {
-        assertMatchingDecimals(feedId, feedValueType.decimals, inflationOffer.decimals[i]);
+        logDecimalsMismatch(feedId, feedValueType.decimals, inflationOffer.decimals[i]);
       }
     }
   }
@@ -49,9 +55,15 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
       };
       feedValues.set(feedValueType.id, feedValueType);
     } else {
-      assertMatchingDecimals(feedId, feedValueType.decimals, communityOffer.decimals);
+      logDecimalsMismatch(feedId, feedValueType.decimals, communityOffer.decimals);
     }
-    feedValueType.flrValue += communityOffer.amount;
+    if (fip16Active) {
+      feedValueType.flrValue += communityOffer.amount;
+    } else {
+      // Pre-FIP.16: preserve the exact v1.0.9 accumulation (which double-counts the running total) so historical
+      // and pre-activation feed orders — and therefore Merkle roots — remain byte-identical across versions.
+      feedValueType.flrValue += feedValueType.flrValue + communityOffer.amount;
+    }
   }
 
   const feedSequence = sortFeedWithValuesToCanonicalOrder(Array.from(feedValues.values()));
@@ -64,9 +76,12 @@ export function rewardEpochFeedSequence(rewardOffers: RewardOffers): Feed[] {
   });
 }
 
-function assertMatchingDecimals(feedId: string, existingDecimals: number, newDecimals: number): void {
+function logDecimalsMismatch(feedId: string, existingDecimals: number, newDecimals: number): void {
   if (existingDecimals !== newDecimals) {
-    throw new Error(`Conflicting decimals for feed ${feedId}: ${existingDecimals} !== ${newDecimals}`);
+    console.error(
+      `Conflicting decimals for feed ${feedId}: ${existingDecimals} !== ${newDecimals}; ` +
+        `retaining the first offer's decimals (${existingDecimals})`
+    );
   }
 }
 

@@ -219,12 +219,16 @@ const fip16ActivationRewardEpoch = (): number => {
       return activationRewardEpochFromEnv();
     }
     case "flare":
-      // FIP.16 activates on Flare with reward epoch 416 (expected start 2026-07-16 19:00:00 UTC). Must match the
+      // FIP.16 activates on Flare with reward epoch 417 (starts 2026-07-20 07:00:00 UTC). Must match the
       // reward epoch whose on-chain signing policy is the first computed with the 5x stake weight.
-      return 416;
-    // TODO(FIP.16): set the activation reward epoch ids once the on-chain deployment epochs are known.
+      return 417;
     case "songbird":
-      return FIP16_NOT_ACTIVATED;
+      // FIP.16 activates on Songbird with reward epoch 417. Songbird has no P-chain staking, so the stake-weighting
+      // (5x) is inert (staked weight is always 0) and no FDC->FIRE split applies (0 bips); this epoch is purely the
+      // client-side rollout coordination point at which the FTSO median switches to the normalized signing weight.
+      // All Songbird providers must upgrade before this epoch.
+      return 417;
+    // TODO(FIP.16): set the activation reward epoch ids once the on-chain deployment epochs are known.
     case "coston":
       return FIP16_NOT_ACTIVATED;
     case "coston2":

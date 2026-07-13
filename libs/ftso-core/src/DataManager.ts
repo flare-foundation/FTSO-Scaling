@@ -2,7 +2,7 @@ import { BlockAssuranceResult, GenericSubmissionData, IndexerClient, SubmissionD
 import { RewardEpoch } from "./RewardEpoch";
 import { RewardEpochManager } from "./RewardEpochManager";
 import { ContractMethodNames } from "../../contracts/src/definitions";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, GENESIS_REWARD_EPOCH_START_EVENT } from "./constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, GENESIS_REWARD_EPOCH_START_EVENT, isFip16Active } from "./constants";
 import { DataForCalculations, DataForCalculationsPartial } from "./data/DataForCalculations";
 import { CommitData, ICommitData } from "./data/CommitData";
 import { ILogger } from "./utils/ILogger";
@@ -109,7 +109,8 @@ export class DataManager {
       votingRoundId,
       commits,
       reveals,
-      rewardEpoch.canonicalFeedOrder
+      rewardEpoch.canonicalFeedOrder,
+      isFip16Active(rewardEpoch.rewardEpochId)
     );
     const partialData = this.getDataForCalculationsPartial(votersToCommitsAndReveals, rewardEpoch);
     const benchingWindowRevealOffenders = await this.getBenchingWindowRevealOffenders(
@@ -357,8 +358,16 @@ export class DataManager {
       if (!commits || commits.length === 0) {
         continue;
       }
-      const feedOrder = (await rewardEpochFromVotingEpochId(i)).canonicalFeedOrder;
-      const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(i, commits, reveals, feedOrder);
+      const roundRewardEpoch = await rewardEpochFromVotingEpochId(i);
+      const feedOrder = roundRewardEpoch.canonicalFeedOrder;
+      const allowRandomOnlyReveal = isFip16Active(roundRewardEpoch.rewardEpochId);
+      const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(
+        i,
+        commits,
+        reveals,
+        feedOrder,
+        allowRandomOnlyReveal
+      );
       const revealOffenders = this.getRevealOffenders(
         commitsAndReveals.votingRoundId,
         commitsAndReveals.commits,
@@ -392,10 +401,11 @@ export class DataManager {
     votingRoundId: number,
     commitSubmissions: SubmissionData[],
     revealSubmissions: SubmissionData[],
-    feedOrder: Feed[]
+    feedOrder: Feed[],
+    allowRandomOnlyReveal: boolean
   ): CommitsAndReveals {
     const commits = this.getVoterToLastCommitMap(commitSubmissions);
-    const reveals = this.getVoterToLastRevealMap(revealSubmissions, feedOrder);
+    const reveals = this.getVoterToLastRevealMap(revealSubmissions, feedOrder, allowRandomOnlyReveal);
     return {
       votingRoundId,
       commits,
@@ -447,7 +457,8 @@ export class DataManager {
    */
   protected getVoterToLastRevealMap(
     submissionDataArray: SubmissionData[],
-    feedOrder: Feed[]
+    feedOrder: Feed[],
+    allowRandomOnlyReveal: boolean
   ): Map<Address, IRevealData> {
     const voterToLastReveal = new Map<Address, IRevealData>();
     for (const submission of submissionDataArray) {
@@ -457,7 +468,7 @@ export class DataManager {
           message.votingRoundId + 1 === submission.votingEpochIdFromTimestamp
         ) {
           try {
-            const reveal = RevealData.decode(message.payload, feedOrder);
+            const reveal = RevealData.decode(message.payload, feedOrder, allowRandomOnlyReveal);
             voterToLastReveal.set(submission.submitAddress, reveal);
           } catch (e) {
             this.logger.debug(

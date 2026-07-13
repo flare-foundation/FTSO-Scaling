@@ -107,7 +107,7 @@ export class RewardEpoch {
     this.votePowerBlock = votePowerBlockSelectedEvent.votePowerBlock;
     this.votePowerBlockTimestamp = votePowerBlockSelectedEvent.timestamp;
     this.rewardOffers = rewardOffers;
-    this._canonicalFeedOrder = rewardEpochFeedSequence(rewardOffers);
+    this._canonicalFeedOrder = rewardEpochFeedSequence(rewardOffers, isFip16Active(this.rewardEpochId));
     const tmpSigningAddressToVoter = new Map<Address, Address>();
     for (const voterRegistration of fullVotersRegistrationInfo) {
       this.voterToRegistrationInfo.set(voterRegistration.voterRegistered.voter.toLowerCase(), voterRegistration);

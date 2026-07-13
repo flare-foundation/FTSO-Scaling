@@ -54,7 +54,7 @@ function freshConstants(network: string): typeof import("../../../libs/ftso-core
 
 // These tests lock in the safety property that FIP.16 is OFF by default on networks where the activation reward epoch
 // is not yet filled in — there the calculator and data provider must reproduce the pre-FIP.16 behaviour
-// byte-for-byte. On Flare the activation epoch is pinned to 416.
+// byte-for-byte. On Flare the activation epoch is pinned to 417.
 // See docs/migrations/FIP-16-signing-weight-unification.md.
 describe(`FIP.16 constants (${getTestFile(__filename)})`, () => {
   it("is not activated by default on the current network", () => {
@@ -83,14 +83,16 @@ describe(`FIP.16 constants (${getTestFile(__filename)})`, () => {
     expect(FIP16_STAKE_WEIGHT_MULTIPLIER).to.eq(5n);
   });
 
-  it("activates on Flare at reward epoch 416", () => {
-    const constants = freshConstants("flare");
-    expect(constants.FIP16_ACTIVATION_REWARD_EPOCH()).to.eq(416);
-    expect(constants.isFip16Active(415)).to.eq(false);
-    expect(constants.isFip16Active(416)).to.eq(true);
-  });
+  for (const network of ["flare", "songbird"]) {
+    it(`activates on ${network} at reward epoch 417`, () => {
+      const constants = freshConstants(network);
+      expect(constants.FIP16_ACTIVATION_REWARD_EPOCH()).to.eq(417);
+      expect(constants.isFip16Active(416)).to.eq(false);
+      expect(constants.isFip16Active(417)).to.eq(true);
+    });
+  }
 
-  for (const network of ["songbird", "coston", "coston2", "local-test"]) {
+  for (const network of ["coston", "coston2", "local-test"]) {
     it(`is not activated on ${network}`, () => {
       const constants = freshConstants(network);
       expect(constants.FIP16_ACTIVATION_REWARD_EPOCH()).to.eq(FIP16_NOT_ACTIVATED);
