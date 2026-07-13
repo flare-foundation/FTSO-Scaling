@@ -193,8 +193,7 @@ export class DataManagerForRewarding extends DataManager {
         mappingsResponse.data.votingRoundIdToCommits,
         mappingsResponse.data.votingRoundIdToReveals,
         randomGenerationBenchingWindow,
-        (votingRoundId: number) => Promise.resolve(rewardEpochForVotingRoundId(votingRoundId)),
-        true // preserve the pre-FIP.16 valid-reveal set when reproducing historical reward roots
+        (votingRoundId: number) => Promise.resolve(rewardEpochForVotingRoundId(votingRoundId))
       );
       if (!process.env.REMOVE_ANNOYING_MESSAGES) {
         this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);

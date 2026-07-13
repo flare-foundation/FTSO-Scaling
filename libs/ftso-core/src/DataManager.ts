@@ -121,8 +121,7 @@ export class DataManager {
       mappingsResponse.data.votingRoundIdToReveals,
       randomGenerationBenchingWindow,
       (votingRoundId: number) =>
-        this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId, rewardEpoch.rewardEpochId + 1),
-      true // apply FIP.16 release gating to each round in the benching window
+        this.rewardEpochManager.getRewardEpochForVotingEpochId(votingRoundId, rewardEpoch.rewardEpochId + 1)
     );
 
     this.logger.debug(`Valid reveals from: ${JSON.stringify(Array.from(partialData.validEligibleReveals.keys()))}`);
@@ -340,8 +339,7 @@ export class DataManager {
     votingRoundIdToCommits: Map<number, SubmissionData[]>,
     votingRoundIdToReveals: Map<number, SubmissionData[]>,
     randomGenerationBenchingWindow: number,
-    rewardEpochFromVotingEpochId: (votingEpochId: number) => Promise<RewardEpoch>,
-    applyReleaseGating = false
+    rewardEpochFromVotingEpochId: (votingEpochId: number) => Promise<RewardEpoch>
   ) {
     const randomOffenders = new Set<Address>();
     const genesisRewardEpoch = GENESIS_REWARD_EPOCH_START_EVENT();
@@ -362,7 +360,7 @@ export class DataManager {
       }
       const roundRewardEpoch = await rewardEpochFromVotingEpochId(i);
       const feedOrder = roundRewardEpoch.canonicalFeedOrder;
-      const allowRandomOnlyReveal = applyReleaseGating ? isFip16Active(roundRewardEpoch.rewardEpochId) : true;
+      const allowRandomOnlyReveal = isFip16Active(roundRewardEpoch.rewardEpochId);
       const commitsAndReveals = this.getVoterToLastCommitAndRevealMapsForVotingRound(
         i,
         commits,
