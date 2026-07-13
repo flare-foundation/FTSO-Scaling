@@ -5,7 +5,7 @@ This document records the implementation of the FDC-fee clause of
 vote-power clause is covered separately in [FIP-16-signing-weight-unification.md](FIP-16-signing-weight-unification.md).
 
 > **Status:** implemented behind the shared FIP.16 activation reward epoch (`FIP16_ACTIVATION_REWARD_EPOCH`). On
-> Flare the split activates at reward epoch 417 (expected start 2026-07-23 19:00:00 UTC). FIP.16 technically applies
+> Flare the split activates at reward epoch 417 (starts 2026-07-20 07:00:00 UTC). FIP.16 technically applies
 > only to Flare; Songbird also activates at epoch 417 for code parity (vote-power clause), but the FDC→FIRE split
 > stays inert there: `FDC_FIRE_FEE_SPLIT_BIPS` is `0` and `FIRE_POOL_ADDRESS` is the dead address for Songbird, so no
 > FIRE offer or claim is produced. `coston`, `coston2` and `local-test` remain at the `FIP16_NOT_ACTIVATED` sentinel.

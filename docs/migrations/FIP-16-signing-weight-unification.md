@@ -6,7 +6,7 @@ this repository.
 
 > **Status:** implemented behind a per-network activation reward epoch. **FIP.16 is a Flare-only proposal** (it
 > restructures Flare tokenomics/staking); it does not change Songbird tokenomics. **Flare and Songbird both activate
-> at reward epoch 417** (Flare expected start 2026-07-23 19:00:00 UTC) — Songbird is switched on **for code parity**,
+> at reward epoch 417** (Flare starts 2026-07-20 07:00:00 UTC) — Songbird is switched on **for code parity**,
 > so both networks run the same median/rewarding path rather than maintaining a Songbird-only legacy branch. Because
 > Songbird has no P-chain staking the stake-weighting is inert there (staked weight is always 0); the switch only
 > re-bases the FTSO median onto the normalized signing weight, and the FDC→FIRE split also stays inert (0 bips).
@@ -104,7 +104,7 @@ When active, the Median and Fast-updates accuracy rewards are split with the sig
 `libs/ftso-core/src/constants.ts`:
 
 - `FIP16_ACTIVATION_REWARD_EPOCH()` — per-network first reward epoch (inclusive) at which FIP.16 applies. **Flare and
-  Songbird are set to `417`** (Flare expected start 2026-07-23 19:00:00 UTC); **`coston`, `coston2` and `local-test`
+  Songbird are set to `417`** (Flare starts 2026-07-20 07:00:00 UTC); **`coston`, `coston2` and `local-test`
   remain `FIP16_NOT_ACTIVATED` (`Number.MAX_SAFE_INTEGER`)**. Fill in the remaining epoch ids once the matching
   on-chain deployment epoch is known for each. For `from-env`, the value is read from the
   `FIP16_ACTIVATION_REWARD_EPOCH` environment variable and must be a non-negative safe integer.

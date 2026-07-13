@@ -219,7 +219,7 @@ const fip16ActivationRewardEpoch = (): number => {
       return activationRewardEpochFromEnv();
     }
     case "flare":
-      // FIP.16 activates on Flare with reward epoch 417 (expected start 2026-07-23 19:00:00 UTC). Must match the
+      // FIP.16 activates on Flare with reward epoch 417 (starts 2026-07-20 07:00:00 UTC). Must match the
       // reward epoch whose on-chain signing policy is the first computed with the 5x stake weight.
       return 417;
     case "songbird":
