@@ -509,6 +509,28 @@ export class IndexerClient {
       // @ts-expect-error workaround
       flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
     }
+    if (network === "songbird") {
+      if (rewardEpochId < 417) {
+        voterRegistryContract.address = "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D";
+        flareSystemsCalculatorContract.address = "0x126FAeEc75601dA3354c0b5Cc0b60C85fCbC3A5e";
+      } else {
+        // @ts-expect-error workaround
+        voterRegistryContract.name = "VoterRegistryNext";
+        // @ts-expect-error workaround
+        flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
+      }
+    }
+    if (network === "flare") {
+      if (rewardEpochId < 417) {
+        voterRegistryContract.address = "0x2580101692366e2f331e891180d9ffdF861Fce83";
+        flareSystemsCalculatorContract.address = "0x67c4B11c710D35a279A41cff5eb089Fe72748CF8";
+      } else {
+        // @ts-expect-error workaround
+        voterRegistryContract.name = "VoterRegistryNext";
+        // @ts-expect-error workaround
+        flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
+      }
+    }
 
     const voterRegisteredResults = await this.queryEvents(
       voterRegistryContract,
