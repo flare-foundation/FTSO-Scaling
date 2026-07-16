@@ -1,6 +1,13 @@
 import { expect } from "chai";
 import { EntityManager } from "typeorm";
-import { FLARE_CONTRACTS, SONGBIRD_CONTRACTS, CONTRACTS, networks } from "../../../libs/contracts/src/constants";
+import {
+  COSTON2_CONTRACTS,
+  COSTON_CONTRACTS,
+  FLARE_CONTRACTS,
+  SONGBIRD_CONTRACTS,
+  CONTRACTS,
+  networks,
+} from "../../../libs/contracts/src/constants";
 import { ContractDefinitions } from "../../../libs/contracts/src/definitions";
 import { BlockAssuranceResult, IndexerClient } from "../../../libs/ftso-core/src/IndexerClient";
 import { TLPEvents } from "../../../libs/ftso-core/src/orm/entities";
@@ -71,6 +78,31 @@ describe(`reward epoch 417 contract upgrade (${getTestFile(__filename)})`, () =>
         { name: "VoterRegistryNext", address: currentContracts.VoterRegistry.address },
         { name: "FlareSystemsCalculatorNext", address: currentContracts.FlareSystemsCalculator.address },
       ]);
+    });
+  }
+
+  for (const [network, currentContracts, previousCalculatorAddress] of [
+    ["coston", COSTON_CONTRACTS, "0x3787dcbd770202f856ed9204c19d6f9022ff3bf2"],
+    ["coston2", COSTON2_CONTRACTS, "0x93F4C0b43A221Cf0a57faa882Df5E3F6CAa5Aca8"],
+  ] as const) {
+    it(`switches ${network} FlareSystemsCalculator at reward epoch 5824`, async () => {
+      process.env.NETWORK = network satisfies networks;
+      Object.assign(CONTRACTS.VoterRegistry, currentContracts.VoterRegistry);
+      Object.assign(CONTRACTS.FlareSystemsCalculator, currentContracts.FlareSystemsCalculator);
+
+      const before = new RecordingIndexerClient();
+      await before.getFullVoterRegistrationInfoEvents(5823, 1, 2);
+      expect(before.queriedContracts[1]).to.deep.equal({
+        name: "FlareSystemsCalculatorNext",
+        address: previousCalculatorAddress,
+      });
+
+      const after = new RecordingIndexerClient();
+      await after.getFullVoterRegistrationInfoEvents(5824, 1, 2);
+      expect(after.queriedContracts[1]).to.deep.equal({
+        name: "FlareSystemsCalculatorNext",
+        address: currentContracts.FlareSystemsCalculator.address,
+      });
     });
   }
 });
