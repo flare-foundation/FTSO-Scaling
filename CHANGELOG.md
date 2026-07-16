@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-16
+
+### Changed
+
+- Coston and Coston2 switch to the new FlareSystemsCalculator addresses at reward epoch 5824, while
+  retaining the previous contracts for historical reward epochs.
+
 ## [1.1.0] - 2026-07-14
 
 ### Reward epoch 417 activation
