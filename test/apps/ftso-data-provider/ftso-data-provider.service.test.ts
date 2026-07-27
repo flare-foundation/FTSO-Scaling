@@ -23,6 +23,11 @@ import { getTestFile } from "../../utils/getTestFile";
 import { generateRandomAddress } from "../../utils/testRandom";
 import { AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
 import { CONTRACTS } from "../../../libs/contracts/src/constants";
+import { EpochResultDiskCache } from "../../../apps/ftso-data-provider/src/utils/EpochResultDiskCache";
+import { prepareResultsForVotingRound } from "../../../libs/ftso-core/src/ftso-calculation/ftso-calculation-logic";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 
 export const testFeeds: Feed[] = [
   { id: toFeedId("BTC/USD", true), decimals: 2 }, // BTC USDT 38,573.26
@@ -54,6 +59,10 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
     db_pass: "",
     db_port: -1,
     api_keys: [],
+    // Round ids repeat across tests, so a shared on-disk cache would leak
+    // results between them; tests that exercise it use a per-test temp dir.
+    epoch_result_disk_cache_size: 0,
+    fdc_result_cache_size: 0,
   };
 
   const configService = new ConfigService(configValues);
@@ -311,6 +320,113 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
         expect(result.isSecureRandom).to.be.equal(expectedLastSecureRandom);
       }
     }
+  });
+
+  describe("disk cache", () => {
+    let cacheDir: string;
+
+    beforeEach(() => {
+      cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "epoch-result-cache-"));
+    });
+
+    afterEach(() => {
+      fs.rmSync(cacheDir, { recursive: true, force: true });
+    });
+
+    function diskCacheConfig(size: number): ConfigService {
+      return new ConfigService({
+        ...configValues,
+        epoch_result_disk_cache_dir: cacheDir,
+        epoch_result_disk_cache_size: size,
+      });
+    }
+
+    it("serves results from disk after a restart, without access to round data", async () => {
+      const voters: TestVoter[] = generateVoters(3);
+      const rewardEpochId = 1;
+      await setUpRewardEpoch(rewardEpochId, voters);
+
+      mock.onPost(/feed-values/).reply(200, {
+        votingRoundId: 1,
+        data: testFeeds.map((_, id) => ({ value: sampleValues[id] })),
+      });
+
+      const service = new FtsoDataProviderService(db.em, diskCacheConfig(10));
+      const votingRound = EPOCH_SETTINGS().expectedFirstVotingRoundForRewardEpoch(rewardEpochId);
+
+      clock.tick(1000);
+
+      for (const voter of voters) {
+        const encodedCommit = encodeCommitPayloadMessage(await service.getCommitData(votingRound, voter.submitAddress));
+        const commitPayload = sigCommit + unPrefix0x(encodedCommit);
+        await db.addTransaction([
+          generateTx(voter.submitAddress, CONTRACTS.Submission.address, sigCommit, 1, currentTimeSec(), commitPayload),
+        ]);
+      }
+
+      clock.tick(EPOCH_SETTINGS().votingEpochDurationSeconds * 1000);
+
+      for (const voter of voters) {
+        const encodedReveal = encodeRevealPayloadMessage(service.getRevealData(votingRound, voter.submitAddress));
+        const revealPayload = sigReveal + unPrefix0x(encodedReveal);
+        await db.addTransaction([
+          generateTx(voter.submitAddress, CONTRACTS.Submission.address, sigReveal, 2, currentTimeSec(), revealPayload),
+        ]);
+      }
+
+      clock.tick(EPOCH_SETTINGS().revealDeadlineSeconds * 1000 + 1);
+
+      await db.syncTimeToNow();
+
+      const result = await service.getResultData(votingRound);
+      expect(result).to.not.be.undefined;
+      expect(fs.existsSync(path.join(cacheDir, `${votingRound}.json`))).to.be.true;
+
+      // "Restart": a fresh service on an empty indexer DB cannot recompute,
+      // so a matching result proves it was restored from disk.
+      const emptyDb = await MockIndexerDB.create();
+      try {
+        const restarted = new FtsoDataProviderService(emptyDb.em, diskCacheConfig(10));
+        const restoredResult = await restarted.getResultData(votingRound);
+        expect(restoredResult.merkleRoot).to.be.equal(result.merkleRoot);
+
+        // The rebuilt merkle tree must produce valid proofs.
+        const medianData = await restarted.getFullMedianData(votingRound);
+        expect(medianData.length).to.be.equal(testFeeds.length);
+        const feedWithProof = await restarted.getFeedWithProof(votingRound, medianData[0].feed.id);
+        expect(feedWithProof.proof.length).to.be.greaterThan(0);
+      } finally {
+        await emptyDb.close();
+      }
+    });
+
+    it("evicts the oldest rounds beyond capacity", async () => {
+      const cache = new EpochResultDiskCache(cacheDir, 2, new Logger("test"));
+      cache.init();
+      for (const id of [1, 2, 3]) {
+        await cache.set(
+          prepareResultsForVotingRound(id, [], { votingRoundId: id, random: BigInt(id), isSecure: true })
+        );
+      }
+      expect(fs.readdirSync(cacheDir).sort()).to.deep.equal(["2.json", "3.json"]);
+      expect(await cache.get(1)).to.be.undefined;
+      expect((await cache.get(2)).randomData.random).to.be.equal(2n);
+
+      // A new instance over the same directory trims to its own capacity on init.
+      const smaller = new EpochResultDiskCache(cacheDir, 1, new Logger("test"));
+      smaller.init();
+      expect(fs.readdirSync(cacheDir)).to.deep.equal(["3.json"]);
+    });
+
+    it("discards unreadable cache entries and falls back to recompute path", async () => {
+      const cache = new EpochResultDiskCache(cacheDir, 10, new Logger("test"));
+      cache.init();
+      await cache.set(prepareResultsForVotingRound(7, [], { votingRoundId: 7, random: 7n, isSecure: true }));
+      fs.writeFileSync(path.join(cacheDir, "7.json"), "not json");
+
+      expect(await cache.get(7)).to.be.undefined;
+      expect(fs.existsSync(path.join(cacheDir, "7.json"))).to.be.false;
+    });
   });
 
   async function setUpRewardEpoch(rewardEpochId: number, voters: TestVoter[]) {

@@ -21,6 +21,8 @@ import {
   PDPResponse,
   PDPResponseStatusEnum,
 } from "./dto/data-provider-responses.dto";
+import { FdcRoundReportResponse } from "./dto/fdc-round-report-response.dto";
+import { FdcRoundReportService } from "./fdc/fdc-round-report.service";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { encodeCommitPayloadMessage, encodeRevealPayloadMessage } from "./response-encoders";
 import { sleepFor } from "../../../libs/ftso-core/src/utils/retry";
@@ -35,7 +37,10 @@ enum ApiTagsEnum {
 @ApiSecurity("X-API-KEY")
 export class FtsoDataProviderController implements BeforeApplicationShutdown {
   private readonly logger = new Logger(FtsoDataProviderController.name);
-  constructor(private readonly ftsoDataProviderService: FtsoDataProviderService) {}
+  constructor(
+    private readonly ftsoDataProviderService: FtsoDataProviderService,
+    private readonly fdcRoundReportService: FdcRoundReportService
+  ) {}
   private pendingReveals = new Set<number>();
   private shutdownInitiated = false;
 
@@ -174,6 +179,26 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
       status: data ? ExternalResponseStatusEnum.OK : ExternalResponseStatusEnum.NOT_AVAILABLE,
       votingRoundId,
       medianData: data,
+    };
+  }
+
+  @ApiTags(ApiTagsEnum.EXTERNAL)
+  @Get("fdcRoundResults/:votingRoundId")
+  async fdcRoundReport(@Param("votingRoundId", ParseIntPipe) votingRoundId: number): Promise<FdcRoundReportResponse> {
+    if (isBeforeDeadline(votingRoundId)) {
+      return {
+        status: ExternalResponseStatusEnum.TOO_EARLY,
+      };
+    }
+    const data = await this.fdcRoundReportService.getFdcRoundReport(votingRoundId);
+    if (data === undefined) {
+      return {
+        status: ExternalResponseStatusEnum.NOT_AVAILABLE,
+      };
+    }
+    return {
+      status: ExternalResponseStatusEnum.OK,
+      ...data,
     };
   }
 

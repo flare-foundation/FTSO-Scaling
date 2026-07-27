@@ -19,6 +19,15 @@ export interface IConfig {
   value_provider_url: string;
   feed_value_provider_timeout_ms?: number;
   feed_value_provider_max_response_bytes?: number;
+  // Finalized round result caches, opt-in: unset or 0 disables (backwards
+  // compatible with v1.1.1). In-memory LRU rounds (EPOCH_RESULT_CACHE_SIZE)
+  // and restart-surviving disk cache (EPOCH_RESULT_DISK_CACHE_SIZE rounds,
+  // EPOCH_RESULT_DISK_CACHE_DIR, default ./cache/median/)
+  epoch_result_cache_size?: number;
+  epoch_result_disk_cache_size?: number;
+  epoch_result_disk_cache_dir?: string;
+  // FDC round report LRU cache size in rounds, opt-in: unset or 0 disables (FDC_RESULT_CACHE_SIZE)
+  fdc_result_cache_size?: number;
 }
 
 export default () => {
@@ -46,6 +55,10 @@ export default () => {
     indexer_top_timeout: parseInt(
       process.env.INDEXER_TOP_TIMEOUT ?? throwError("INDEXER_TOP_TIMEOUT env variable not set")
     ),
+    epoch_result_cache_size: parseInt(process.env.EPOCH_RESULT_CACHE_SIZE ?? "0"),
+    epoch_result_disk_cache_size: parseInt(process.env.EPOCH_RESULT_DISK_CACHE_SIZE ?? "0"),
+    epoch_result_disk_cache_dir: process.env.EPOCH_RESULT_DISK_CACHE_DIR ?? "./cache/median/",
+    fdc_result_cache_size: parseInt(process.env.FDC_RESULT_CACHE_SIZE ?? "0"),
   };
   return config;
 };
