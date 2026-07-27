@@ -24,6 +24,7 @@ import { EpochResult, Feed, MedianCalculationResult } from "../../../libs/ftso-c
 import { JSONAbiDefinition } from "./dto/data-provider-responses.dto";
 import { Api, FeedId, FeedValuesResponse } from "./feed-value-provider-api/generated/provider-api";
 
+import { EpochResultDiskCache } from "./utils/EpochResultDiskCache";
 import { RewardEpoch } from "../../../libs/ftso-core/src/RewardEpoch";
 import { AbiCache } from "../../../libs/contracts/src/abi/AbiCache";
 import { CONTRACTS } from "../../../libs/contracts/src/constants";
@@ -39,6 +40,36 @@ export class FtsoDataProviderService {
   private readonly indexerClient: IndexerClient;
   private readonly feedValueProviderClient: Api<unknown>;
   private readonly votingRoundData: LRUCache<RoundAndAddress, IRevealData>;
+
+  /**
+   * LRU cache of finalized round results. Recomputing an EpochResult is
+   * expensive (queries and parses RANDOM_GENERATION_BENCHING_WINDOW + 1
+   * rounds of submit1/submit2 calldata, then medians for every feed), and
+   * results are immutable once the reveal deadline passes — so external
+   * median/proof queries can be served from memory. Warmed every round by
+   * the regular signing flow (getResultData). Opt-in: undefined = caching
+   * disabled (EPOCH_RESULT_CACHE_SIZE unset or 0), the v1.1.1-compatible
+   * default.
+   */
+  private readonly epochResultCache: LRUCache<number, EpochResult> | undefined;
+
+  /**
+   * Disk-backed second cache level for finalized round results, checked on a
+   * memory-cache miss before recomputing. Unlike the LRU above it survives
+   * restarts, so a redeploy doesn't expose the provider to a recompute storm
+   * from clients backfilling history. Opt-in: undefined = disabled
+   * (EPOCH_RESULT_DISK_CACHE_SIZE unset or 0, the v1.1.1-compatible default)
+   * or the cache directory is unusable.
+   */
+  private readonly epochResultDiskCache: EpochResultDiskCache | undefined;
+
+  /**
+   * In-flight coalescing for result computation: N concurrent requests for
+   * the same round share one computation instead of N. Prevents request
+   * floods from multiplying indexer load and heap usage (observed cause of
+   * an 8GB OOM under repeated external medianCalculationResults queries).
+   */
+  private readonly epochResultInFlight = new Map<number, Promise<EpochResult | undefined>>();
 
   private readonly rewardEpochManager: RewardEpochManager;
   private readonly dataManager: DataManager;
@@ -65,6 +96,19 @@ export class FtsoDataProviderService {
     this.votingRoundData = new LRUCache({
       max: configService.get<number>("voting_round_history_size"),
     });
+    const epochResultCacheSize = configService.get<number>("epoch_result_cache_size") ?? 0;
+    this.epochResultCache = epochResultCacheSize > 0 ? new LRUCache({ max: epochResultCacheSize }) : undefined;
+    const diskCacheSize = configService.get<number>("epoch_result_disk_cache_size") ?? 0;
+    if (diskCacheSize > 0) {
+      const diskCacheDir = configService.get<string>("epoch_result_disk_cache_dir") ?? "./cache/median/";
+      const diskCache = new EpochResultDiskCache(diskCacheDir, diskCacheSize, this.logger);
+      try {
+        diskCache.init();
+        this.epochResultDiskCache = diskCache;
+      } catch (e) {
+        this.logger.error(`Epoch result disk cache disabled, failed to initialize ${diskCacheDir}: ${errorString(e)}`);
+      }
+    }
   }
 
   // Entry point methods for the protocol data provider
@@ -191,6 +235,37 @@ export class FtsoDataProviderService {
   }
 
   private async prepareCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
+    const cached = this.epochResultCache?.get(votingRoundId);
+    if (cached !== undefined) {
+      this.logger.debug(`Epoch result for round ${votingRoundId} served from memory cache`);
+      return cached;
+    }
+
+    const inFlight = this.epochResultInFlight.get(votingRoundId);
+    if (inFlight !== undefined) {
+      return inFlight;
+    }
+
+    const computation = this.loadOrComputeCalculationResultData(votingRoundId);
+    this.epochResultInFlight.set(votingRoundId, computation);
+    try {
+      return await computation;
+    } finally {
+      this.epochResultInFlight.delete(votingRoundId);
+    }
+  }
+
+  private async loadOrComputeCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
+    const fromDisk = await this.epochResultDiskCache?.get(votingRoundId);
+    if (fromDisk !== undefined) {
+      this.logger.log(`Epoch result for round ${votingRoundId} read from disk cache`);
+      this.epochResultCache?.set(votingRoundId, fromDisk);
+      return fromDisk;
+    }
+    return this.computeCalculationResultData(votingRoundId);
+  }
+
+  private async computeCalculationResultData(votingRoundId: number): Promise<EpochResult | undefined> {
     const dataResponse = await this.dataManager.getDataForCalculations(
       votingRoundId,
       RANDOM_GENERATION_BENCHING_WINDOW(),
@@ -204,7 +279,14 @@ export class FtsoDataProviderService {
       return undefined;
     }
     try {
-      return calculateResultsForVotingRound(dataResponse.data);
+      const result = calculateResultsForVotingRound(dataResponse.data);
+      // Cache only results computed from complete indexer data. A TIMEOUT_OK
+      // result may be built from partial data and must stay recomputable.
+      if (dataResponse.status === DataAvailabilityStatus.OK) {
+        this.epochResultCache?.set(votingRoundId, result);
+        await this.epochResultDiskCache?.set(result);
+      }
+      return result;
     } catch (e) {
       this.logger.error(`Error calculating result: ${errorString(e)}`);
       throw new InternalServerErrorException(`Unable to calculate result for epoch ${votingRoundId}`, { cause: e });
