@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { TLPEvents, TLPState, TLPTransaction } from "../../../libs/ftso-core/src/orm/entities";
 import configuration, { IConfig } from "./config/configuration";
+import { FdcRoundReportService } from "./fdc/fdc-round-report.service";
 import { FtsoDataProviderController } from "./ftso-data-provider.controller";
 import { FtsoDataProviderService } from "./ftso-data-provider.service";
 import { AuthService } from "./auth/auth.service";
@@ -35,6 +36,6 @@ const IMPORTS_ARRAY = [
 @Module({
   imports: IMPORTS_ARRAY,
   controllers: [FtsoDataProviderController],
-  providers: [ApiKeyStrategy, AuthService, FtsoDataProviderService],
+  providers: [ApiKeyStrategy, AuthService, FtsoDataProviderService, FdcRoundReportService],
 })
 export class FtsoDataProviderModule {}
