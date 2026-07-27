@@ -9,7 +9,8 @@ export class BigIntInterceptor implements NestInterceptor {
   }
 
   private convertBigIntToString(data: any): any {
-    if (typeof data !== "object") {
+    // typeof null === "object", but Object.keys(null) throws
+    if (data === null || typeof data !== "object") {
       if (typeof data === "bigint") {
         data = data.toString();
       }
