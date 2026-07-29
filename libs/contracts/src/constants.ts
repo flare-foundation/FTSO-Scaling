@@ -55,6 +55,9 @@ export const SONGBIRD_CONTRACTS: NetworkContractAddresses = {
     address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006",
   },
   FdcHub: { name: "FdcHub", address: "0xCfD4669a505A70c2cE85db8A1c1d14BcDE5a1a06" },
+  // FCC contracts (Flare Confidential Compute), deployed on Songbird only.
+  FlareTeeManager: { name: "FlareTeeManager", address: "0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767" },
+  Fdc2Hub: { name: "Fdc2Hub", address: "0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8" },
 };
 
 export const FLARE_CONTRACTS: NetworkContractAddresses = {
@@ -173,6 +176,40 @@ const contracts = () => {
   }
 };
 export const CONTRACTS = contracts();
+
+/**
+ * Public RPC endpoint per network.
+ *
+ * Used only by out-of-band verification that needs contract state which is not observable from the
+ * indexer database (e.g. `RewardManager.getRewardEpochTotals`, whose `receiveRewards` credits emit no
+ * event and arrive via internal calls that the indexer's `transactions` table does not record).
+ * The reward calculation itself stays indexer-only — do not introduce RPC calls into it.
+ *
+ * Override with the `RPC` environment variable, e.g. to point at a private or archive node.
+ */
+const rpcUrl = () => {
+  if (process.env.RPC) {
+    return process.env.RPC;
+  }
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "flare":
+      return "https://flare-api.flare.network/ext/bc/C/rpc";
+    case "songbird":
+      return "https://songbird-api.flare.network/ext/bc/C/rpc";
+    case "coston2":
+    case "local-test":
+    case "from-env":
+      return "https://coston2-api.flare.network/ext/bc/C/rpc";
+    case "coston":
+      return "https://coston-api.flare.network/ext/bc/C/rpc";
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+export const RPC_URL = () => rpcUrl();
 
 function isValidHexString(str: string): boolean {
   return /^0x[0-9a-f]*$/i.test(str);

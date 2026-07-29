@@ -296,6 +296,108 @@ export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
   }
   return constantFdcFireFeeSplitBips;
 };
+
+/**
+ * Flare Confidential Compute (FCC) fee accounting.
+ *
+ * FCC funds reach `RewardManager` through exactly two `receiveRewards` call sites, each paired 1:1 with an event:
+ * - `FlareTeeManager.TeeInstructionsSent.fee` — the full `msg.value` of a TEE instruction dispatch
+ * - `Fdc2Hub.AttestationRequested.fee`        — the configured FDC2 type/source fee
+ *
+ * The two are disjoint: an FDC2 request paying P credits the configured fee F through `Fdc2Hub` and forwards
+ * `P - F` into `FlareTeeManager`, so the two events sum to exactly P with no overlap and no gap.
+ *
+ * Until the TEE/FCC rewarding logic exists, the summed fees are redirected in full to `FCC_FEES_ADDRESS`
+ * as a DIRECT claim, so that all claims keep summing to the funds available on `RewardManager`.
+ *
+ * Unrelated to the legacy FDC fee handling (`FdcHub.AttestationRequest`) and to the FIP.16 FIRE split above;
+ * those keep their existing behaviour untouched.
+ */
+const fccFeesAddress = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+    case "local-test":
+    case "coston":
+    case "coston2":
+      return "0x000000000000000000000000000000000000dEaD";
+    case "songbird":
+      return "0x3390E1aDf46568cCC95c3571424937b042094ac2";
+    case "flare":
+      return "0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041";
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+export const FCC_FEES_ADDRESS = fccFeesAddress();
+
+// Sentinel meaning "not activated yet". Any realistic reward epoch id is far below this value.
+export const FCC_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
+
+function fccActivationRewardEpochFromEnv(): number {
+  const rawValue = process.env.FCC_ACTIVATION_REWARD_EPOCH;
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return FCC_NOT_ACTIVATED;
+  }
+  const value = rawValue.trim();
+  if (!/^\d+$/.test(value)) {
+    throw new Error("FCC_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error("FCC_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+  }
+  return parsed;
+}
+
+const fccActivationRewardEpoch = (): number => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+      return fccActivationRewardEpochFromEnv();
+    case "songbird":
+      // The FCC contracts were deployed on Songbird part-way through reward epoch 419. A mid-epoch deployment is
+      // safe for reconciliation: before the deployment transaction there are neither FCC events nor `receiveRewards`
+      // credits, so both sides of the accounting start from the same point and epoch 419 still balances.
+      return 419;
+    // The FCC contracts are not deployed on these networks yet.
+    case "flare":
+      return FCC_NOT_ACTIVATED;
+    case "coston":
+      return FCC_NOT_ACTIVATED;
+    case "coston2":
+      return FCC_NOT_ACTIVATED;
+    case "local-test":
+      return FCC_NOT_ACTIVATED;
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+
+const constantFccActivationRewardEpoch = fccActivationRewardEpoch();
+
+/**
+ * The first reward epoch id (inclusive) for which FCC fees are accounted for on the current network.
+ */
+export const FCC_ACTIVATION_REWARD_EPOCH = (): number => {
+  if (process.env.NETWORK === "from-env") {
+    return fccActivationRewardEpoch();
+  }
+  return constantFccActivationRewardEpoch;
+};
+
+/**
+ * Whether FCC fee accounting (TEE instruction fees and FDC2 attestation request fees redirected to
+ * `FCC_FEES_ADDRESS`) applies to the given reward epoch.
+ */
+export const isFccActive = (rewardEpochId: number): boolean => {
+  return rewardEpochId >= FCC_ACTIVATION_REWARD_EPOCH();
+};
+
 /**
  * In case less then certain percentage of the total weight of the voting weight deposits signatures for a single hash,
  * in the signature rewarding window, the signatures are not rewarded.

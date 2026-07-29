@@ -50,6 +50,21 @@ interface FdcHubDefinition {
   address: ContractAddress;
 }
 
+/**
+ * Flare Confidential Compute (FCC) contracts. Deployed on Songbird only, see FCC_ACTIVATION_REWARD_EPOCH.
+ * Note: `Fdc2Hub` is the FDC2 hub and is unrelated to the legacy `FdcHub` above — the two emit
+ * different events (`AttestationRequested` vs `AttestationRequest`) and feed different reward paths.
+ */
+interface FlareTeeManagerDefinition {
+  name: "FlareTeeManager";
+  address: ContractAddress;
+}
+
+interface Fdc2HubDefinition {
+  name: "Fdc2Hub";
+  address: ContractAddress;
+}
+
 export type ContractDefinitions =
   | FlareSystemsManagerDefinition
   | FtsoRewardOffersManagerDefinition
@@ -62,7 +77,9 @@ export type ContractDefinitions =
   | FtsoMerkleStructsDefinition
   | FastUpdaterDefinition
   | FastUpdateIncentiveManagerDefinition
-  | FdcHubDefinition;
+  | FdcHubDefinition
+  | FlareTeeManagerDefinition
+  | Fdc2HubDefinition;
 
 export type ContractDefinitionsNames =
   | FlareSystemsManagerDefinition["name"]
@@ -76,7 +93,9 @@ export type ContractDefinitionsNames =
   | FtsoMerkleStructsDefinition["name"]
   | FastUpdaterDefinition["name"]
   | FastUpdateIncentiveManagerDefinition["name"]
-  | FdcHubDefinition["name"];
+  | FdcHubDefinition["name"]
+  | FlareTeeManagerDefinition["name"]
+  | Fdc2HubDefinition["name"];
 
 export enum ContractMethodNames {
   submit1 = "submit1",
@@ -111,4 +130,7 @@ export interface NetworkContractAddresses {
   FastUpdater: FastUpdaterDefinition;
   FastUpdateIncentiveManager: FastUpdateIncentiveManagerDefinition;
   FdcHub: FdcHubDefinition;
+  // FCC contracts, optional: only present on networks where they are deployed (currently Songbird only).
+  FlareTeeManager?: FlareTeeManagerDefinition;
+  Fdc2Hub?: Fdc2HubDefinition;
 }
