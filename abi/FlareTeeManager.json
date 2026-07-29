@@ -1,0 +1,97 @@
+{
+  "_comment": "FlareTeeManager is an EIP-2535 diamond: TeeInstructionsSent is declared in IInstructions.sol and emitted from a library inlined into InstructionsFacet, so it is absent from the FlareTeeManager.sol artifact. This file carries only the event the reward calculation decodes; regenerate via sync-v2.sh.",
+  "contractName": "FlareTeeManager",
+  "sourceName": "contracts/tee/facets/InstructionsFacet.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "extensionId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "instructionId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint32",
+          "name": "rewardEpochId",
+          "type": "uint32"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "teeId",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "teeProxyId",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "url",
+              "type": "string"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct IMachineManager.TeeMachine[]",
+          "name": "teeMachines",
+          "type": "tuple[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "opType",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "opCommand",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "message",
+          "type": "bytes"
+        },
+        {
+          "indexed": false,
+          "internalType": "address[]",
+          "name": "cosigners",
+          "type": "address[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "cosignersThreshold",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "claimBackAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "fee",
+          "type": "uint256"
+        }
+      ],
+      "name": "TeeInstructionsSent",
+      "type": "event"
+    }
+  ]
+}

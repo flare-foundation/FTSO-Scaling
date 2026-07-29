@@ -1,0 +1,50 @@
+{
+  "_comment": "FDC2 hub, unrelated to the legacy FdcHub. Emits AttestationRequested (not AttestationRequest). This file carries only the event the reward calculation decodes; regenerate via sync-v2.sh.",
+  "contractName": "Fdc2Hub",
+  "sourceName": "contracts/fdc2/implementation/Fdc2Hub.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "instructionId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "attestationType",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "sourceId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "proofOwner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "claimBackAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "fee",
+          "type": "uint256"
+        }
+      ],
+      "name": "AttestationRequested",
+      "type": "event"
+    }
+  ]
+}
