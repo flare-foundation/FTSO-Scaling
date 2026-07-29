@@ -14,4 +14,8 @@ export enum RewardTypePrefix {
   FDC_SIGNING = "FDC signing",
   FDC_FINALIZATION = "FDC finalization",
   FDC_OFFENDERS = "FDC offenders",
+  // FCC fees redirected to FCC_FEES_ADDRESS. Kept as two tags so the sources stay separable once the TEE
+  // rewarding logic replaces the redirection; they merge into a single DIRECT claim in the final claims.
+  FCC_TEE_FEES = "FCC TEE fees",
+  FCC_FDC2_FEES = "FCC FDC2 fees",
 }

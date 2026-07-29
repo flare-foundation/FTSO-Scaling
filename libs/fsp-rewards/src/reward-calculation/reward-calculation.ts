@@ -31,6 +31,7 @@ import {
   isFccActive,
 } from "../constants";
 import { FUFeedValue } from "../data-calculation-interfaces";
+import { fccFeeClaims } from "./fcc/fcc-fee-claims";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import {
   aggregatedClaimsForVotingRoundIdExist,
@@ -435,6 +436,16 @@ export async function partialRewardClaimsForVotingRound(
       if (merge) {
         allRewardClaims = RewardClaim.merge(allRewardClaims);
       }
+    }
+  }
+
+  // FCC fees. Independent of the FDC handling above: different contracts, different events, different path.
+  // Both fee sources are credited to RewardManager when paid, so every wei must land in a claim; until the TEE
+  // rewarding logic exists they are redirected in full to FCC_FEES_ADDRESS.
+  if (isFccActive(rewardEpochId) && data.fccData) {
+    allRewardClaims.push(...fccFeeClaims(votingRoundId, data.fccData));
+    if (merge) {
+      allRewardClaims = RewardClaim.merge(allRewardClaims);
     }
   }
 
