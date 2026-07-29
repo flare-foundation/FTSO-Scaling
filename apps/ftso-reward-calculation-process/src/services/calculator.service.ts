@@ -59,6 +59,7 @@ import {
 } from "../libs/incremental-calculation-utils";
 import { fullRoundOfferCalculation, initializeTemplateOffers } from "../libs/offer-utils";
 import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
+import { runFccReconciliation } from "../../../../libs/fsp-rewards/src/reward-calculation/fcc/fcc-reconciliation";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
 
@@ -222,6 +223,7 @@ export class CalculatorService {
     serializeFinalRewardClaims(rewardEpochId, lastClaims);
     const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
     serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+    await runFccReconciliation(rewardEpochId, state.startVotingRoundId, state.endVotingRoundId, logger);
     return finalRewardEpochDuration;
   }
 
@@ -271,7 +273,7 @@ export class CalculatorService {
     await runCalculateRewardClaimsTopJob(adaptedOptions);
   }
 
-  fullRoundAggregateClaims(options: OptionalCommandOptions): void {
+  async fullRoundAggregateClaims(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     const rewardEpochId = options.rewardEpochId;
     const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
@@ -294,6 +296,7 @@ export class CalculatorService {
     serializeFinalRewardClaims(rewardEpochId, lastClaims);
     const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
     serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+    await runFccReconciliation(rewardEpochId, startVotingRoundId, endVotingRoundId, logger);
   }
 
   async processOneRewardEpoch(options: OptionalCommandOptions): Promise<void> {
@@ -317,7 +320,7 @@ export class CalculatorService {
     }
 
     if (options.aggregateClaims) {
-      this.fullRoundAggregateClaims(options);
+      await this.fullRoundAggregateClaims(options);
     }
   }
 
