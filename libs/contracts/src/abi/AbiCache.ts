@@ -18,6 +18,8 @@ import { FUInflationRewardsOffered } from "../events/FUInflationRewardsOffered";
 import { IncentiveOffered } from "../events/IncentiveOffered";
 import { AttestationRequest } from "../events/AttestationRequest";
 import { FDCInflationRewardsOffered } from "../events/FDCInflationRewardsOffered";
+import { TeeInstructionsSent } from "../events/TeeInstructionsSent";
+import { Fdc2AttestationRequested } from "../events/Fdc2AttestationRequested";
 
 type AbiItem = JsonFragment;
 
@@ -67,6 +69,10 @@ export class AbiCache {
       ["FastUpdateIncentiveManager", undefined, IncentiveOffered.eventName],
       ["FdcHub", undefined, AttestationRequest.eventName],
       ["FdcHub", undefined, FDCInflationRewardsOffered.eventName],
+      // FCC. Preloaded on every network: the ABI files ship with the repo, so this does not depend on whether the
+      // FCC contracts are deployed on the current network (see FCC_ACTIVATION_REWARD_EPOCH for that gate).
+      [TeeInstructionsSent.contractName, undefined, TeeInstructionsSent.eventName],
+      [Fdc2AttestationRequested.contractName, undefined, Fdc2AttestationRequested.eventName],
     ];
 
     for (const [contractName, functionName, eventName] of cachedABIs) {
