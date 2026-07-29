@@ -19,6 +19,7 @@ import { CALCULATIONS_FOLDER } from "../../constants";
 import {
   DataForRewardCalculation,
   FastUpdatesDataForVotingRound,
+  FCCDataForVotingRound,
   SFDCDataForVotingRound,
 } from "../../data-calculation-interfaces";
 
@@ -101,6 +102,9 @@ export interface SDataForRewardCalculation {
   randomResult: SimplifiedRandomCalculationResult;
   fastUpdatesData?: FastUpdatesDataForVotingRound;
   fdcData?: SFDCDataForVotingRound;
+  // FCC fee events. Left undefined while FCC accounting is inactive, so that serialized data for earlier
+  // reward epochs stays byte-identical (JSON.stringify omits undefined properties).
+  fccData?: FCCDataForVotingRound;
   // usually added after results of the next voting round are known
   nextVotingRoundRandomResult?: string;
   // eligible finalizers for FTSO Scaling
@@ -195,6 +199,8 @@ export function serializeDataForRewardCalculation(
     eligibleFinalizersFdc: eligibleFinalizationRewardVotersInGracePeriodFdc,
     fastUpdatesData: rewardCalculationData.fastUpdatesData,
     fdcData,
+    // Plain data (no Maps), so it round-trips through bigIntReplacer/bigIntReviver as is.
+    fccData: rewardCalculationData.fccData,
   };
   writeFileSync(rewardCalculationsDataPath, JSON.stringify(data, bigIntReplacer));
 }

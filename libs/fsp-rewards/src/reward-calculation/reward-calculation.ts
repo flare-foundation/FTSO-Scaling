@@ -28,6 +28,7 @@ import {
   FIRE_POOL_ADDRESS,
   FTSO2_FAST_UPDATES_PROTOCOL_ID,
   PENALTY_FACTOR,
+  isFccActive,
 } from "../constants";
 import { FUFeedValue } from "../data-calculation-interfaces";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
@@ -524,7 +525,10 @@ export async function prepareDataForRewardCalculationsForRange(
     lastVotingRoundId,
     randomGenerationBenchingWindow,
     useFastUpdatesData,
-    useFDCData
+    useFDCData,
+    // Derived from the reward epoch rather than taken as a command option, so that FCC accounting cannot be
+    // forgotten on a run: it switches on exactly for the epochs it is activated for.
+    isFccActive(rewardEpochId)
   );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);

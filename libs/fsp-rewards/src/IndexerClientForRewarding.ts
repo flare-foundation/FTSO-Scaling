@@ -13,6 +13,8 @@ import { IncentiveOffered } from "../../contracts/src/events/IncentiveOffered";
 import { FUInflationRewardsOffered } from "../../contracts/src/events/FUInflationRewardsOffered";
 import { FDCInflationRewardsOffered } from "../../contracts/src/events/FDCInflationRewardsOffered";
 import { AttestationRequest } from "../../contracts/src/events/AttestationRequest";
+import { TeeInstructionsSent } from "../../contracts/src/events/TeeInstructionsSent";
+import { Fdc2AttestationRequested } from "../../contracts/src/events/Fdc2AttestationRequested";
 
 import { TLPEvents, TLPTransaction } from "../../ftso-core/src/orm/entities";
 import { COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID } from "./constants";
@@ -418,6 +420,83 @@ export class IndexerClientForRewarding extends IndexerClient {
       status,
       data,
     };
+  }
+
+  /**
+   * Extracts FCC fee events from the indexer, bucketed per voting round, for the given range.
+   *
+   * Shared by the two FCC fee sources. They are bucketed by voting round, consistently with every other
+   * reward calculation input; each TeeInstructionsSent additionally carries the reward epoch id that
+   * RewardManager credited, which the reconciliation cross-checks against the bucketing.
+   */
+  private async getFccEventsByVotingRound<T extends { timestamp: number }>(
+    contract: ContractDefinitions | undefined,
+    eventName: string,
+    fromRawEvent: (event: TLPEvents) => T,
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<T[][]>> {
+    if (contract === undefined) {
+      // Reached only if FCC accounting is activated for a network where the contracts are not configured.
+      throw new Error(`FCC contract for event ${eventName} is not configured for this network`);
+    }
+    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
+    // strictly containing in the range
+    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+    const status = await this.ensureBlockRange(startTime, endTime);
+    if (status !== BlockAssuranceResult.OK) {
+      return { status };
+    }
+    const result = await this.queryEvents(contract, eventName, startTime, endTime);
+    const allEvents = result.map((event) => fromRawEvent(event));
+    const data: T[][] = [];
+    let i = 0;
+    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
+      const eventsInVotingRound: T[] = [];
+      const votingEpochEndTime = EPOCH_SETTINGS().votingEpochStartSec(votingRoundId + 1) - 1;
+      while (i < allEvents.length && allEvents[i].timestamp <= votingEpochEndTime) {
+        eventsInVotingRound.push(allEvents[i]);
+        i++;
+      }
+      data.push(eventsInVotingRound);
+    }
+    return {
+      status,
+      data,
+    };
+  }
+
+  /**
+   * Extract TeeInstructionsSent events (FlareTeeManager) from the indexer that match the range of voting rounds.
+   */
+  public async getTeeInstructionsSentEvents(
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<TeeInstructionsSent[][]>> {
+    return this.getFccEventsByVotingRound(
+      CONTRACTS.FlareTeeManager,
+      TeeInstructionsSent.eventName,
+      (event) => TeeInstructionsSent.fromRawEvent(event),
+      startVotingRoundId,
+      endVotingRoundId
+    );
+  }
+
+  /**
+   * Extract AttestationRequested events (Fdc2Hub) from the indexer that match the range of voting rounds.
+   * Note: this is the FDC2 event, distinct from the legacy FdcHub AttestationRequest event handled above.
+   */
+  public async getFdc2AttestationRequestedEvents(
+    startVotingRoundId: number,
+    endVotingRoundId: number
+  ): Promise<IndexerResponse<Fdc2AttestationRequested[][]>> {
+    return this.getFccEventsByVotingRound(
+      CONTRACTS.Fdc2Hub,
+      Fdc2AttestationRequested.eventName,
+      (event) => Fdc2AttestationRequested.fromRawEvent(event),
+      startVotingRoundId,
+      endVotingRoundId
+    );
   }
 
   /**

@@ -2,6 +2,8 @@ import { MessageHash } from "../../ftso-core/src/voting-types";
 import { GenericSubmissionData, ParsedFinalizationData, SubmissionData } from "../../ftso-core/src/IndexerClient";
 import { ISignaturePayload } from "../../ftso-core/src/fsp-utils/SignaturePayload";
 import { AttestationRequest } from "../../contracts/src/events/AttestationRequest";
+import { TeeInstructionsSent } from "../../contracts/src/events/TeeInstructionsSent";
+import { Fdc2AttestationRequested } from "../../contracts/src/events/Fdc2AttestationRequested";
 import { HashSignatures } from "./utils/stat-info/reward-calculation-data";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 
@@ -16,6 +18,8 @@ export interface DataForRewardCalculation {
   fastUpdatesData?: FastUpdatesDataForVotingRound;
   // FDC
   fdcData?: FDCDataForVotingRound;
+  // FCC (TEE + FDC2 fees). Present once FCC accounting is active for the reward epoch.
+  fccData?: FCCDataForVotingRound;
 }
 
 export interface FastUpdatesDataForVotingRound {
@@ -23,6 +27,20 @@ export interface FastUpdatesDataForVotingRound {
   feedValues: bigint[];
   feedDecimals: number[];
   signingPolicyAddressesSubmitted: string[];
+}
+
+/**
+ * FCC (Flare Confidential Compute) fee data for a single voting round.
+ *
+ * Holds the two disjoint FCC fee sources credited to RewardManager. They are kept separate from the FDC data
+ * above: different contracts, different events, different reward path.
+ */
+export interface FCCDataForVotingRound {
+  votingRoundId: number;
+  // TEE instruction dispatch fees (FlareTeeManager.TeeInstructionsSent)
+  teeInstructions: TeeInstructionsSent[];
+  // FDC2 attestation request fees (Fdc2Hub.AttestationRequested)
+  fdc2AttestationRequests: Fdc2AttestationRequested[];
 }
 
 export interface PartialFDCDataForVotingRound {

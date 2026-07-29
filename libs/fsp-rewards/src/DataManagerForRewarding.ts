@@ -30,6 +30,7 @@ import {
   FDCDataForVotingRound,
   FDCRewardData,
   FastUpdatesDataForVotingRound,
+  FCCDataForVotingRound,
   PartialFDCDataForVotingRound,
 } from "./data-calculation-interfaces";
 import { bitVoteIndicesNum, extractFDCRewardData, uniqueRequestsIndices } from "./reward-calculation/fdc/fdc-utils";
@@ -356,7 +357,8 @@ export class DataManagerForRewarding extends DataManager {
     lastVotingRoundId: number,
     randomGenerationBenchingWindow: number,
     useFastUpdatesData: boolean,
-    useFDCData: boolean
+    useFDCData: boolean,
+    useFCCData = false
   ): Promise<DataMangerResponse<DataForRewardCalculation[]>> {
     const dataForCalculationsResponse = await this.getDataForCalculationsForVotingRoundRange(
       firstVotingRoundId,
@@ -379,6 +381,7 @@ export class DataManagerForRewarding extends DataManager {
     }
     let fastUpdatesData: FastUpdatesDataForVotingRound[] = [];
     let partialFdcData: PartialFDCDataForVotingRound[] = [];
+    let fccData: FCCDataForVotingRound[] = [];
 
     if (useFastUpdatesData) {
       const fastUpdatesDataResponse = await this.getFastUpdatesDataForVotingRoundRange(
@@ -400,6 +403,15 @@ export class DataManagerForRewarding extends DataManager {
         };
       }
       partialFdcData = partialFdcDataResponse.data;
+    }
+    if (useFCCData) {
+      const fccDataResponse = await this.getFCCDataForVotingRoundRange(firstVotingRoundId, lastVotingRoundId);
+      if (fccDataResponse.status !== DataAvailabilityStatus.OK) {
+        return {
+          status: fccDataResponse.status,
+        };
+      }
+      fccData = fccDataResponse.data;
     }
 
     const result: DataForRewardCalculation[] = [];
@@ -549,6 +561,7 @@ export class DataManagerForRewarding extends DataManager {
         firstSuccessfulFinalization,
         fastUpdatesData: fastUpdatesData[votingRoundId - firstVotingRoundId],
         fdcData,
+        fccData: useFCCData ? fccData[votingRoundId - firstVotingRoundId] : undefined,
       };
       result.push(dataForRound);
     }
@@ -773,6 +786,49 @@ export class DataManagerForRewarding extends DataManager {
         signingPolicyAddressesSubmitted: fastUpdateSubmissions.map((submission) => submission.signingPolicyAddress),
       };
       result.push(value);
+    }
+    return {
+      status: DataAvailabilityStatus.OK,
+      data: result,
+    };
+  }
+
+  /**
+   * Collects the FCC fee events for the voting round range.
+   *
+   * The two sources are disjoint by construction on chain: an FDC2 request paying P credits the configured fee F
+   * through Fdc2Hub (AttestationRequested) and forwards P - F into FlareTeeManager (TeeInstructionsSent), so
+   * summing both yields exactly the funds added to RewardManager, with no double counting.
+   */
+  public async getFCCDataForVotingRoundRange(
+    firstVotingRoundId: number,
+    lastVotingRoundId: number
+  ): Promise<DataMangerResponse<FCCDataForVotingRound[]>> {
+    const teeInstructionsResponse = await this.indexerClient.getTeeInstructionsSentEvents(
+      firstVotingRoundId,
+      lastVotingRoundId
+    );
+    if (teeInstructionsResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const fdc2RequestsResponse = await this.indexerClient.getFdc2AttestationRequestedEvents(
+      firstVotingRoundId,
+      lastVotingRoundId
+    );
+    if (fdc2RequestsResponse.status !== BlockAssuranceResult.OK) {
+      return {
+        status: DataAvailabilityStatus.NOT_OK,
+      };
+    }
+    const result: FCCDataForVotingRound[] = [];
+    for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+      result.push({
+        votingRoundId,
+        teeInstructions: teeInstructionsResponse.data[votingRoundId - firstVotingRoundId],
+        fdc2AttestationRequests: fdc2RequestsResponse.data[votingRoundId - firstVotingRoundId],
+      });
     }
     return {
       status: DataAvailabilityStatus.OK,
