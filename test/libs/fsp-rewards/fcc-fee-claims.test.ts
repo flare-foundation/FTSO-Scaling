@@ -99,10 +99,8 @@ describe(`FCC event ABIs (${getTestFile(__filename)})`, () => {
       ["Fdc2Hub", "AttestationRequested", "AttestationRequested(bytes32,bytes32,bytes32,address,address,uint256)"],
     ];
     for (const [contractName, eventName, signature] of cases) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const abi = JSON.parse(readFileSync(`abi/${contractName}.json`).toString()).abi;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      const fragment = EventFragment.from(abi.find((x: { name: string }) => x.name === eventName));
+      const abi = (JSON.parse(readFileSync(`abi/${contractName}.json`).toString()) as { abi: { name: string }[] }).abi;
+      const fragment = EventFragment.from(abi.find((x) => x.name === eventName));
       expect(fragment.format("sighash")).to.eq(signature);
     }
   });
@@ -162,8 +160,8 @@ describe(`FCC fee claims (${getTestFile(__filename)})`, () => {
     const claims = fccFeeClaims(1000, fccData([10n, 20n], [5n, 7n]));
     expect(claims.length).to.eq(2);
 
-    const tee = claims.find((c) => c.rewardTypeTag === RewardTypePrefix.FCC_TEE_FEES);
-    const fdc2 = claims.find((c) => c.rewardTypeTag === RewardTypePrefix.FCC_FDC2_FEES);
+    const tee = claims.find((c) => c.rewardTypeTag === String(RewardTypePrefix.FCC_TEE_FEES));
+    const fdc2 = claims.find((c) => c.rewardTypeTag === String(RewardTypePrefix.FCC_FDC2_FEES));
     expect(tee.amount).to.eq(30n);
     expect(fdc2.amount).to.eq(12n);
     for (const claim of claims) {
