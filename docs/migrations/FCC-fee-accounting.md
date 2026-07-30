@@ -100,7 +100,35 @@ the FDC tag (`"200"`) by consumers that filter on it, such as the minimal condit
 
 ## 3. Reconciliation
 
-Written to `<rewardEpochId>/fcc-reconciliation.json` at epoch finalization.
+Written to `<rewardEpochId>/fcc-reconciliation.json` at epoch finalization, and summarised on screen as the **last
+thing the reward calculation prints for the epoch**, so whoever runs it sees the outcome without opening the report
+or scrolling back through the per-voting-round log:
+
+```
+================================================================================================================
+FCC FEE ACCOUNTING - reward epoch 5877 - ALL CHECKS PASSED
+================================================================================================================
+  TEE instruction fees             900000000000000000 wei  0.9
+  FDC2 request fees                                 0 wei  0
+  observed FCC fees                900000000000000000 wei  0.9
+  claimed as FCC fees              900000000000000000 wei  0.9
+  voting rounds with FCC activity: 15
+  beneficiary: 0x000000000000000000000000000000000000dEaD
+----------------------------------------------------------------------------------------------------------------
+  [PASS] observed FCC fees are fully claimed: residual 0 wei
+  [PASS] final distribution carries at least the FCC fees: ...
+  [PASS] every FDC2 request is paired with a TEE instruction: 0 unpaired
+  [PASS] reward epoch attribution: 0 TeeInstructionsSent event(s) credited on chain to another reward epoch
+  [INFO] all claims vs RewardManager: ... Spans every reward source and excludes staking claims ...
+  report: calculations/coston2/5877/fcc-reconciliation.json
+================================================================================================================
+```
+
+The header reads `ALL CHECKS PASSED` or `N CHECK(S) FAILED`, and on failure every line is emitted through the
+logger's error channel with the failing check marked `[FAIL]`. The summary is printed **before** the run throws, so
+a failure shows which check failed rather than only a stack trace.
+
+`[PASS]`/`[FAIL]` lines are the hard checks; `[WARN]`/`[INFO]` lines are reported only, for the reasons below.
 
 **Hard failures.** Exact by construction, since the fee events map one to one onto the `receiveRewards` credits and
 there is no legitimate rounding source:

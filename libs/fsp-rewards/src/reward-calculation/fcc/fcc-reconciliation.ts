@@ -152,46 +152,82 @@ function isFccFeesAddressExclusive(): boolean {
 }
 
 /**
- * Throws when the FCC accounting of a reward epoch does not balance.
- *
- * No tolerance: the FCC fee events map one to one onto the `receiveRewards` credits, so there is nothing that can
- * legitimately round away. A mismatch means funds on RewardManager are not covered by the claims.
+ * Outcome of one reconciliation check, for the end-of-run summary.
  */
-export function assertFccReconciliation(reconciliation: FccReconciliation): void {
-  if (reconciliation.residualWei !== 0n) {
-    throw new Error(
-      `FCC reconciliation failed for reward epoch ${reconciliation.rewardEpochId}: observed fees ` +
-        `${reconciliation.observedFeesWei} wei but claims total ${reconciliation.claimedFeesWei} wei ` +
-        `(residual ${reconciliation.residualWei} wei). Funds on RewardManager would not be fully claimed.`
-    );
-  }
+export interface FccCheck {
+  /** Short label naming what was checked. */
+  name: string;
+  passed: boolean;
+  /** Why it failed, or what the passing value was. */
+  detail: string;
+}
+
+/**
+ * Evaluates the hard FCC checks and returns one entry per check, passing or failing.
+ *
+ * No tolerance on any of them: the FCC fee events map one to one onto the `receiveRewards` credits, so there is
+ * nothing that can legitimately round away. A failure means funds on RewardManager are not covered by the claims.
+ */
+export function fccReconciliationChecks(reconciliation: FccReconciliation): FccCheck[] {
+  const checks: FccCheck[] = [];
+
+  checks.push({
+    name: "observed FCC fees are fully claimed",
+    passed: reconciliation.residualWei === 0n,
+    detail:
+      reconciliation.residualWei === 0n
+        ? `residual 0 wei`
+        : `observed fees ${reconciliation.observedFeesWei} wei but claims total ${reconciliation.claimedFeesWei} ` +
+          `wei (residual ${reconciliation.residualWei} wei). Funds on RewardManager would not be fully claimed.`,
+  });
+
   // The FCC fees must survive into the final distribution. Only a lower bound can be asserted when FCC_FEES_ADDRESS
   // is shared with the burn or FIRE pool address, as it is on the test networks: the merged DIRECT claim for that
   // address then also carries every burned reward, so equality would never hold. Where the address is exclusive to
   // FCC, which is the case on the production networks, the amount must match exactly.
-  if (reconciliation.finalDirectClaimToFccAddressWei < reconciliation.observedFeesWei) {
-    throw new Error(
-      `FCC reconciliation failed for reward epoch ${reconciliation.rewardEpochId}: the final reward distribution ` +
-        `assigns only ${reconciliation.finalDirectClaimToFccAddressWei} wei to ${FCC_FEES_ADDRESS}, less than the ` +
-        `${reconciliation.observedFeesWei} wei of FCC fees observed on chain, so FCC fees were lost before the ` +
-        `Merkle tree was built.`
-    );
-  }
-  if (
-    isFccFeesAddressExclusive() &&
-    reconciliation.finalDirectClaimToFccAddressWei !== reconciliation.observedFeesWei
-  ) {
-    throw new Error(
-      `FCC reconciliation failed for reward epoch ${reconciliation.rewardEpochId}: the final reward distribution ` +
-        `assigns ${reconciliation.finalDirectClaimToFccAddressWei} wei to ${FCC_FEES_ADDRESS}, which is used only ` +
-        `for FCC fees, but ${reconciliation.observedFeesWei} wei of FCC fees were observed on chain.`
-    );
-  }
-  if (reconciliation.unpairedFdc2Requests > 0) {
+  const exclusive = isFccFeesAddressExclusive();
+  const finalClaimShort = reconciliation.finalDirectClaimToFccAddressWei < reconciliation.observedFeesWei;
+  const finalClaimMismatched =
+    exclusive && reconciliation.finalDirectClaimToFccAddressWei !== reconciliation.observedFeesWei;
+  checks.push({
+    name: exclusive
+      ? "final distribution assigns exactly the FCC fees"
+      : "final distribution carries at least the FCC fees",
+    passed: !finalClaimShort && !finalClaimMismatched,
+    detail: finalClaimShort
+      ? `the final reward distribution assigns only ${reconciliation.finalDirectClaimToFccAddressWei} wei to ` +
+        `${FCC_FEES_ADDRESS}, less than the ${reconciliation.observedFeesWei} wei of FCC fees observed on chain, ` +
+        `so FCC fees were lost before the Merkle tree was built.`
+      : finalClaimMismatched
+        ? `the final reward distribution assigns ${reconciliation.finalDirectClaimToFccAddressWei} wei to ` +
+          `${FCC_FEES_ADDRESS}, which is used only for FCC fees, but ${reconciliation.observedFeesWei} wei of ` +
+          `FCC fees were observed on chain.`
+        : `${reconciliation.finalDirectClaimToFccAddressWei} wei assigned to ${FCC_FEES_ADDRESS}` +
+          (exclusive ? "" : " (shared with the burn and FIRE pool address, so a lower bound)"),
+  });
+
+  checks.push({
+    name: "every FDC2 request is paired with a TEE instruction",
+    passed: reconciliation.unpairedFdc2Requests === 0,
+    detail:
+      reconciliation.unpairedFdc2Requests === 0
+        ? `0 unpaired`
+        : `${reconciliation.unpairedFdc2Requests} FDC2 attestation requests have no paired TeeInstructionsSent ` +
+          `event. Every FDC2 request emits both in the same transaction, so events are missing from the indexer.`,
+  });
+
+  return checks;
+}
+
+/**
+ * Throws when any hard FCC check fails.
+ */
+export function assertFccReconciliation(reconciliation: FccReconciliation): void {
+  const failures = fccReconciliationChecks(reconciliation).filter((check) => !check.passed);
+  if (failures.length > 0) {
     throw new Error(
       `FCC reconciliation failed for reward epoch ${reconciliation.rewardEpochId}: ` +
-        `${reconciliation.unpairedFdc2Requests} FDC2 attestation requests have no paired TeeInstructionsSent event. ` +
-        `Every FDC2 request emits both in the same transaction, so events are missing from the indexer.`
+        failures.map((failure) => failure.detail).join(" ")
     );
   }
 }
@@ -253,42 +289,93 @@ export async function runFccReconciliation(
 
   const report: FccReconciliationReport = { ...reconciliation, totalClaimsWei };
 
+  // Both outcomes are surfaced by the summary below, so nothing is logged here.
   const totals = await getRewardEpochTotals(rewardEpochId);
-  if (totals === undefined) {
-    logger.error(
-      `FCC reconciliation for reward epoch ${rewardEpochId}: could not read RewardManager totals over RPC, ` +
-        `the claims could not be checked against the funds actually held. The FCC checks still ran.`
-    );
-  } else {
+  if (totals !== undefined) {
     report.rewardManagerTotalRewardsWei = totals.totalRewardsWei;
     report.rewardManagerResidualWei = totalClaimsWei - totals.totalRewardsWei;
-    if (report.rewardManagerResidualWei !== 0n) {
-      logger.error(
-        `Reward epoch ${rewardEpochId}: claims total ${totalClaimsWei} wei but RewardManager holds ` +
-          `${totals.totalRewardsWei} wei for the epoch (residual ${report.rewardManagerResidualWei} wei). ` +
-          `This spans all reward sources, not only FCC.`
-      );
-    }
   }
 
-  writeFileSync(
-    path.join(calculationFolder, `${rewardEpochId}`, FCC_RECONCILIATION_FILE),
-    JSON.stringify(report, bigIntReplacer, 2)
-  );
+  const reportPath = path.join(calculationFolder, `${rewardEpochId}`, FCC_RECONCILIATION_FILE);
+  writeFileSync(reportPath, JSON.stringify(report, bigIntReplacer, 2));
 
-  // Fails hard: these are exact, so a mismatch means funds on RewardManager are not fully covered by claims.
+  logFccReconciliationSummary(report, reportPath, logger);
+
+  // Fails hard: these are exact, so a mismatch means funds on RewardManager are not fully covered by claims. Thrown
+  // after the summary so that whoever ran the calculation sees which check failed, not just a stack trace.
   assertFccReconciliation(reconciliation);
 
-  if (reconciliation.eventsWithForeignRewardEpochId > 0) {
-    logger.error(
-      `Reward epoch ${rewardEpochId}: ${reconciliation.eventsWithForeignRewardEpochId} TeeInstructionsSent events ` +
-        `carry a different reward epoch id than the epoch they were bucketed into. Funds credited on chain to one ` +
-        `epoch are being claimed in another.`
+  return report;
+}
+
+/** Renders wei as a whole-token decimal, purely for readability alongside the exact wei value. */
+function formatWeiAsTokens(wei: bigint): string {
+  const negative = wei < 0n;
+  const absolute = negative ? -wei : wei;
+  const whole = (absolute / 10n ** 18n).toString();
+  const fraction = (absolute % 10n ** 18n).toString().padStart(18, "0").replace(/0+$/, "");
+  return `${negative ? "-" : ""}${whole}${fraction ? "." + fraction : ""}`;
+}
+
+/**
+ * Prints the end-of-run FCC accounting summary.
+ *
+ * This is the last thing the reward calculation prints for a reward epoch, and it is printed whether the checks
+ * pass or fail, so that whoever runs the calculation can see the outcome without reading the report file or
+ * scrolling back through the per-voting-round log. Failures are printed via `error` so they stand out.
+ */
+export function logFccReconciliationSummary(
+  report: FccReconciliationReport,
+  reportPath: string,
+  logger: ILogger = console
+): void {
+  const checks = fccReconciliationChecks(report);
+  const failed = checks.filter((check) => !check.passed);
+  const rule = "=".repeat(112);
+  const emit = (line: string) => (failed.length > 0 ? logger.error(line) : logger.log(line));
+
+  emit(rule);
+  emit(
+    `FCC FEE ACCOUNTING - reward epoch ${report.rewardEpochId} - ` +
+      (failed.length === 0 ? "ALL CHECKS PASSED" : `${failed.length} CHECK(S) FAILED`)
+  );
+  emit(rule);
+  emit(
+    `  TEE instruction fees   ${report.teeFeesWei.toString().padStart(28)} wei  ${formatWeiAsTokens(report.teeFeesWei)}`
+  );
+  emit(
+    `  FDC2 request fees      ${report.fdc2FeesWei.toString().padStart(28)} wei  ${formatWeiAsTokens(report.fdc2FeesWei)}`
+  );
+  emit(
+    `  observed FCC fees      ${report.observedFeesWei.toString().padStart(28)} wei  ${formatWeiAsTokens(report.observedFeesWei)}`
+  );
+  emit(
+    `  claimed as FCC fees    ${report.claimedFeesWei.toString().padStart(28)} wei  ${formatWeiAsTokens(report.claimedFeesWei)}`
+  );
+  emit(`  voting rounds with FCC activity: ${report.votingRoundsWithFccActivity}`);
+  emit(`  beneficiary: ${FCC_FEES_ADDRESS}`);
+  emit("-".repeat(112));
+  for (const check of checks) {
+    emit(`  [${check.passed ? "PASS" : "FAIL"}] ${check.name}: ${check.detail}`);
+  }
+
+  // Reported rather than asserted, so shown separately from the pass/fail checks above.
+  const attributionOk = report.eventsWithForeignRewardEpochId === 0;
+  emit(
+    `  [${attributionOk ? "PASS" : "WARN"}] reward epoch attribution: ${report.eventsWithForeignRewardEpochId} ` +
+      `TeeInstructionsSent event(s) credited on chain to another reward epoch` +
+      (attributionOk ? "" : " - funds credited to one epoch are being claimed in another")
+  );
+  if (report.rewardManagerTotalRewardsWei === undefined) {
+    emit(`  [WARN] RewardManager totals unavailable: RPC unreachable, claims not checked against funds held`);
+  } else {
+    emit(
+      `  [INFO] all claims vs RewardManager: ${formatWeiAsTokens(report.totalClaimsWei)} claimed of ` +
+        `${formatWeiAsTokens(report.rewardManagerTotalRewardsWei)} held, residual ` +
+        `${formatWeiAsTokens(report.rewardManagerResidualWei ?? 0n)}. Spans every reward source and excludes ` +
+        `staking claims, which another process produces, so a shortfall here is expected.`
     );
   }
-  logger.log(
-    `FCC reconciliation for reward epoch ${rewardEpochId}: ${reconciliation.observedFeesWei} wei of FCC fees ` +
-      `across ${reconciliation.votingRoundsWithFccActivity} voting rounds, fully claimed to ${FCC_FEES_ADDRESS}.`
-  );
-  return report;
+  emit(`  report: ${reportPath}`);
+  emit(rule);
 }

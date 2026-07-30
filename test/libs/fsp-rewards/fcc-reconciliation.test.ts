@@ -3,9 +3,12 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { bigIntReplacer } from "../../../libs/ftso-core/src/utils/big-number-serialization";
 import { BURN_ADDRESS, CALCULATIONS_FOLDER, FCC_FEES_ADDRESS } from "../../../libs/fsp-rewards/src/constants";
+import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import {
   assertFccReconciliation,
   computeFccReconciliation,
+  FccReconciliation,
+  logFccReconciliationSummary,
 } from "../../../libs/fsp-rewards/src/reward-calculation/fcc/fcc-reconciliation";
 import { RewardTypePrefix } from "../../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
 import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../../libs/fsp-rewards/src/utils/RewardClaim";
@@ -254,6 +257,61 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     expect(reconciliation.eventsWithForeignRewardEpochId).to.eq(1);
     // reported, not fatal
     expect(() => assertFccReconciliation(reconciliation)).to.not.throw();
+  });
+
+  // Whoever runs the calculation must be able to see the outcome without opening the report file, so the summary is
+  // printed for both outcomes and is the last thing the reward epoch emits.
+  describe("end of run summary", () => {
+    function capture(reconciliation: FccReconciliation): { lines: string[]; errors: string[] } {
+      const lines: string[] = [];
+      const errors: string[] = [];
+      const logger: ILogger = {
+        log: (m: string) => lines.push(m),
+        error: (m: string) => {
+          lines.push(m);
+          errors.push(m);
+        },
+        warn: (m: string) => lines.push(m),
+      };
+      logFccReconciliationSummary({ ...reconciliation, totalClaimsWei: 0n }, "report.json", logger);
+      return { lines, errors };
+    }
+
+    it("reports every check as passed when the accounting balances", () => {
+      const calculationFolder = writeFixture({
+        [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }], fdc2: [{ fee: 400n }] },
+      });
+      const { lines, errors } = capture(
+        computeFccReconciliation(REWARD_EPOCH_ID, START_VOTING_ROUND_ID, END_VOTING_ROUND_ID, calculationFolder)
+      );
+      const summary = lines.join("\n");
+      expect(summary).to.contain("ALL CHECKS PASSED");
+      expect(summary).to.contain("[PASS] observed FCC fees are fully claimed");
+      expect(summary).to.contain("[PASS] every FDC2 request is paired with a TEE instruction");
+      expect(summary).to.contain("[PASS] reward epoch attribution");
+      expect(summary).to.not.contain("[FAIL]");
+      // a clean run must not be reported through the error channel
+      expect(errors).to.deep.eq([]);
+    });
+
+    it("names the failing check and reports it through the error channel", () => {
+      const calculationFolder = writeFixture({
+        [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }], claimedTee: 500n },
+      });
+      const reconciliation = computeFccReconciliation(
+        REWARD_EPOCH_ID,
+        START_VOTING_ROUND_ID,
+        END_VOTING_ROUND_ID,
+        calculationFolder
+      );
+      const { lines, errors } = capture(reconciliation);
+      const summary = lines.join("\n");
+      expect(summary).to.contain("1 CHECK(S) FAILED");
+      expect(summary).to.contain("[FAIL] observed FCC fees are fully claimed");
+      expect(errors.length).to.be.greaterThan(0);
+      // the summary is printed, and only then does the run fail
+      expect(() => assertFccReconciliation(reconciliation)).to.throw("FCC reconciliation failed");
+    });
   });
 
   it("balances trivially for a reward epoch with no FCC activity", () => {
