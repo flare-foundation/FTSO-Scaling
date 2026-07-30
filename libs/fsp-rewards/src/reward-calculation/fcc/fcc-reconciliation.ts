@@ -207,7 +207,18 @@ export interface FccReconciliationReport extends FccReconciliation {
    * Undefined when the node could not be reached, which is reported but not treated as an accounting failure.
    */
   rewardManagerTotalRewardsWei?: bigint;
-  /** totalClaimsWei - rewardManagerTotalRewardsWei, when the on-chain total is available. */
+  /**
+   * totalClaimsWei - rewardManagerTotalRewardsWei, when the on-chain total is available.
+   *
+   * Expected to be negative on networks with P-chain staking, and it is reported rather than asserted for that
+   * reason. `ValidatorRewardOffersManager` resolves the same `RewardManager` through the address updater and credits
+   * the staking inflation to it, but the matching staking claims are produced by a different process, not by this
+   * one. On Coston2 reward epoch 5877 this calculation therefore covered exactly 70% of the epoch's inflation
+   * (35% FTSO scaling and fast updates, 35% FDC), leaving the 30% staking share uncovered.
+   *
+   * So this figure can only become an equality check once staking claims are accounted for alongside these.
+   * The FCC-specific checks above are unaffected: they are exact and do fail hard.
+   */
   rewardManagerResidualWei?: bigint;
 }
 

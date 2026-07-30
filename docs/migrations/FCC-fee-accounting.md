@@ -106,19 +106,28 @@ Written to `<rewardEpochId>/fcc-reconciliation.json` at epoch finalization.
 there is no legitimate rounding source:
 
 - observed FCC fees must equal the FCC claims produced;
-- the final reward distribution must assign exactly that amount to `FCC_FEES_ADDRESS`;
+- the final reward distribution must assign **at least** that amount to `FCC_FEES_ADDRESS`, tightened to exact
+  equality only where that address is used for nothing but FCC fees. On the test networks it is the dead address,
+  which is also the burn and FIRE pool address, so the merged `DIRECT` claim for it legitimately carries every
+  burned reward too and only a lower bound is assertable. On Songbird and Flare the address is dedicated, so
+  equality is required. Either way this catches FCC fees being dropped before the Merkle tree;
 - every `AttestationRequested` must have a `TeeInstructionsSent` with the same `instructionId` in the same voting
   round. Both are emitted in the same transaction, so a missing counterpart means events were lost between the
   chain and the indexer. This is the check that catches indexer gaps, which a pure sum cannot.
 
 **Reported, not fatal:**
 
-- the sum of all claims against `RewardManager.getRewardEpochTotals`. This spans every reward source, not just FCC,
-  so a pre-existing discrepancy in a legacy source must not block an epoch. Promote to fatal once observed clean.
+- the sum of all claims against `RewardManager.getRewardEpochTotals`. **This is expected not to balance on networks
+  with P-chain staking, and cannot be made an equality check as it stands.** `ValidatorRewardOffersManager` resolves
+  the same `RewardManager` through the address updater and credits the staking inflation to it, but the matching
+  staking claims are produced by a different process, not by this one. Measured on Coston2 reward epoch 5877: this
+  calculation covered exactly 70% of the epoch's inflation — 35% FTSO scaling and fast updates, 35% FDC — leaving
+  the 30% staking share uncovered. It becomes an equality check only once staking claims are accounted for
+  alongside these.
 - `TeeInstructionsSent` events whose own `rewardEpochId` differs from the epoch they were bucketed into. The event
   carries the very epoch id `RewardManager` credited, so a non-zero count means funds credited on chain to one
-  epoch are claimed in another. Voting round boundaries and the on-chain epoch switch are expected to coincide;
-  this counter proves it on real data before the check is promoted to a hard failure.
+  epoch are claimed in another. Measured 0 on Coston2 reward epoch 5877, so voting round boundaries and the
+  on-chain epoch switch do coincide; the check can be promoted to a hard failure on that evidence.
 
 ### Why the on-chain total needs RPC
 
@@ -152,3 +161,36 @@ and reads only `.abi`.
 Do not "correct" the source path to `contracts/tee/diamond/FlareTeeManager.sol`: the resulting ABI would contain no
 matching event. `test/libs/fsp-rewards/fcc-fee-claims.test.ts` pins both `topic0` values, so that mistake fails the
 test suite rather than silently producing an event filter that matches nothing.
+
+## 5. Verified against Coston2 reward epoch 5877
+
+Run with a local FSP-mode indexer (`scripts/rewards/docker-compose.coston2.yaml`, then
+`scripts/rewards/coston2-db.sh`), which is also how to reproduce it. `fcc-reconciliation.json` for that epoch:
+
+| Field | Value |
+|---|---|
+| `observedFeesWei` | `900000000000000000` (0.9 C2FLR, all TEE; the FDC2 requests fell in epoch 5876) |
+| `claimedFeesWei` | `900000000000000000` |
+| `residualWei` | `0` |
+| `eventsWithForeignRewardEpochId` | `0` |
+| `unpairedFdc2Requests` | `0` |
+| `votingRoundsWithFccActivity` | `15` |
+
+The independent confirmation is that `RewardManager.getRewardEpochTotals(5877)` reports a total of
+`3472225.122222` and an inflation of `3472222.222222`, so the epoch's **non-inflation** funds are exactly
+**2.9 C2FLR**. The legacy FDC fees account for 2.0 of that and this FCC accounting for the other 0.9 — matching to
+the wei, from a source independent of the events being decoded.
+
+Two things this run established that fixtures could not:
+
+- The FCC fees must not be required to *equal* the final `DIRECT` claim for `FCC_FEES_ADDRESS`. On every test network
+  that address is the dead address, which is also the burn and FIRE pool address, so the merged claim legitimately
+  carried 349255.82 C2FLR against 0.9 C2FLR of fees. The check is now a lower bound, tightened to equality only
+  where the address is exclusive to FCC. See §3.
+- The `eventsWithForeignRewardEpochId` counter reads 0, so voting-round bucketing agrees with on-chain epoch
+  attribution.
+
+The indexer must be configured for the FCC events before the epoch being accounted for: FSP mode's contract list is
+hardcoded and excludes both FCC contracts, so the compose files add them as `[[indexer.collect_logs]]` entries by
+address and topic. Missing events are indistinguishable from no activity, so without them the reconciliation
+balances at zero and reports success while the fees sit unclaimed on the `RewardManager`.
