@@ -116,19 +116,31 @@ describe(`FCC constants (${getTestFile(__filename)})`, () => {
     expect(constants.isFccActive(420)).to.eq(true);
   });
 
-  it("has the FCC fees address ready on Flare but keeps FCC inactive there", () => {
-    const constants = freshConstants("flare");
-    expect(constants.FCC_FEES_ADDRESS).to.eq(FCC_FEES_ADDRESS_FLARE);
-    expect(constants.isFccActive(419)).to.eq(false);
-  });
-
-  for (const network of ["coston", "coston2", "local-test"]) {
-    it(`keeps FCC inactive on ${network}`, () => {
+  for (const network of ["coston", "coston2"]) {
+    it(`activates at reward epoch 5877 on ${network}`, () => {
       const constants = freshConstants(network);
+      expect(constants.FCC_ACTIVATION_REWARD_EPOCH()).to.eq(5877);
+      expect(constants.isFccActive(5876)).to.eq(false);
+      expect(constants.isFccActive(5877)).to.eq(true);
+      // no FCC fee recipient on the test networks, so the fees are claimed to the dead address
       expect(constants.FCC_FEES_ADDRESS).to.eq(DEAD_ADDRESS);
-      expect(constants.isFccActive(419)).to.eq(false);
     });
   }
+
+  // Flare gets a far-future activation epoch rather than a sentinel, so isFccActive needs no special case.
+  it("has the FCC fees address ready on Flare but keeps FCC far from active there", () => {
+    const constants = freshConstants("flare");
+    expect(constants.FCC_FEES_ADDRESS).to.eq(FCC_FEES_ADDRESS_FLARE);
+    expect(constants.FCC_ACTIVATION_REWARD_EPOCH()).to.eq(constants.FCC_NOT_YET_DEPLOYED_REWARD_EPOCH);
+    expect(constants.isFccActive(419)).to.eq(false);
+    expect(constants.isFccActive(100000)).to.eq(false);
+  });
+
+  it("keeps FCC inactive on local-test", () => {
+    const constants = freshConstants("local-test");
+    expect(constants.FCC_FEES_ADDRESS).to.eq(DEAD_ADDRESS);
+    expect(constants.isFccActive(419)).to.eq(false);
+  });
 
   // The FCC redirection must not disturb the FIP.16 FDC->FIRE split, which is a different pool and path.
   it("keeps the FCC fees address separate from the FIRE pool and burn addresses", () => {
@@ -138,6 +150,73 @@ describe(`FCC constants (${getTestFile(__filename)})`, () => {
     const flare = freshConstants("flare");
     expect(flare.FCC_FEES_ADDRESS).to.not.eq(flare.FIRE_POOL_ADDRESS);
     expect(flare.FCC_FEES_ADDRESS).to.not.eq(flare.BURN_ADDRESS);
+  });
+});
+
+// Re-evaluates libs/contracts/src/constants under the given NETWORK to observe per-network contract addresses.
+function freshContracts(network: string): typeof import("../../../libs/contracts/src/constants") {
+  const modulePath = require.resolve("../../../libs/contracts/src/constants");
+  const originalNetwork = process.env.NETWORK;
+  process.env.NETWORK = network;
+  delete require.cache[modulePath];
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-return
+    return require("../../../libs/contracts/src/constants");
+  } finally {
+    delete require.cache[modulePath];
+    if (originalNetwork === undefined) {
+      delete process.env.NETWORK;
+    } else {
+      process.env.NETWORK = originalNetwork;
+    }
+  }
+}
+
+describe(`FCC contract configuration (${getTestFile(__filename)})`, () => {
+  const NETWORKS = ["coston", "coston2", "songbird", "flare", "local-test"];
+
+  it("configures both FCC contracts on every network", () => {
+    for (const network of NETWORKS) {
+      const { CONTRACTS } = freshContracts(network);
+      for (const contract of [CONTRACTS.FlareTeeManager, CONTRACTS.Fdc2Hub]) {
+        expect(contract, `${network} contract missing`).to.not.eq(undefined);
+        expect(contract.address, `${network} ${contract.name}`).to.match(/^0x[0-9a-fA-F]{40}$/);
+      }
+    }
+  });
+
+  // The address and the activation epoch must be set together. If a network is activated while its addresses are
+  // still zero, the event queries would silently return nothing and the reconciliation would balance at zero.
+  it("never activates FCC on a network whose addresses are still zero", () => {
+    for (const network of NETWORKS) {
+      const { CONTRACTS, ZERO_ADDRESS } = freshContracts(network);
+      const { FCC_ACTIVATION_REWARD_EPOCH, FCC_NOT_YET_DEPLOYED_REWARD_EPOCH } = freshConstants(network);
+      if (FCC_ACTIVATION_REWARD_EPOCH() === FCC_NOT_YET_DEPLOYED_REWARD_EPOCH) {
+        continue;
+      }
+      for (const contract of [CONTRACTS.FlareTeeManager, CONTRACTS.Fdc2Hub]) {
+        expect(contract.address, `${network} ${contract.name} activated with zero address`).to.not.eq(ZERO_ADDRESS);
+      }
+    }
+  });
+
+  it("uses the deployed FCC addresses on Coston, Coston2 and Songbird", () => {
+    const expected: Record<string, [string, string]> = {
+      coston: ["0xc4885998f5D792ed88C5Af7a3AaCBe333f017658", "0x064C7B68B0e2BC87e7bE34e89741485Fcb48FA2F"],
+      coston2: ["0x1a9C4A0f9D76c0b1D91d22E24E573a9b377618aE", "0x04dd3Ba33aC798d400bEc42A26F82f9812A421dc"],
+      songbird: ["0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767", "0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8"],
+    };
+    for (const [network, [tee, hub]] of Object.entries(expected)) {
+      const { CONTRACTS } = freshContracts(network);
+      expect(CONTRACTS.FlareTeeManager.address, network).to.eq(tee);
+      expect(CONTRACTS.Fdc2Hub.address, network).to.eq(hub);
+    }
+  });
+
+  it("leaves the FCC addresses zero on Flare, where the contracts are not deployed", () => {
+    const { CONTRACTS, ZERO_ADDRESS } = freshContracts("flare");
+    expect(CONTRACTS.FlareTeeManager.address).to.eq(ZERO_ADDRESS);
+    expect(CONTRACTS.Fdc2Hub.address).to.eq(ZERO_ADDRESS);
   });
 });
 

@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { RawEventConstructible } from "./RawEventConstructible";
 import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
  * Represents an event emitted when TEE instructions are dispatched on the FlareTeeManager smart contract.
@@ -13,9 +14,6 @@ import { decodeEvent } from "../abi/AbiCache";
  */
 export class TeeInstructionsSent extends RawEventConstructible {
   static eventName = "TeeInstructionsSent";
-  // The ABI is registered under the diamond's name. Resolved as a literal rather than through CONTRACTS, because
-  // CONTRACTS.FlareTeeManager is undefined on networks where the FCC contracts are not deployed.
-  static contractName = "FlareTeeManager" as const;
 
   constructor(data: any, timestamp: number) {
     super();
@@ -34,7 +32,7 @@ export class TeeInstructionsSent extends RawEventConstructible {
 
   static fromRawEvent(event: any): TeeInstructionsSent {
     return decodeEvent<TeeInstructionsSent>(
-      TeeInstructionsSent.contractName,
+      CONTRACTS.FlareTeeManager.name,
       TeeInstructionsSent.eventName,
       event,
       (data: any, entity: any) => new TeeInstructionsSent(data, entity.timestamp)

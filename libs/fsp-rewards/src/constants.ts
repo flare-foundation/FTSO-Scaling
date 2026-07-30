@@ -316,6 +316,8 @@ export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
 const fccFeesAddress = () => {
   const network = process.env.NETWORK as networks;
   switch (network) {
+    // Test networks have no FCC fee recipient of their own. FCC is active on Coston and Coston2, so their fees do
+    // get claimed, to the dead address — the same treatment the FIRE pool gets on these networks.
     case "from-env":
     case "local-test":
     case "coston":
@@ -333,13 +335,19 @@ const fccFeesAddress = () => {
 };
 export const FCC_FEES_ADDRESS = fccFeesAddress();
 
-// Sentinel meaning "not activated yet". Any realistic reward epoch id is far below this value.
-export const FCC_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
+/**
+ * Activation reward epoch used for networks where the FCC contracts are not deployed yet.
+ *
+ * A plain far-future reward epoch rather than a sentinel: reward epochs last 3.5 days on Flare and Songbird, so
+ * this is roughly 9500 years out. Keeping it an ordinary epoch id means `isFccActive` stays a single comparison and
+ * no code path needs a special case for "not deployed".
+ */
+export const FCC_NOT_YET_DEPLOYED_REWARD_EPOCH = 1_000_000;
 
 function fccActivationRewardEpochFromEnv(): number {
   const rawValue = process.env.FCC_ACTIVATION_REWARD_EPOCH;
   if (rawValue === undefined || rawValue.trim() === "") {
-    return FCC_NOT_ACTIVATED;
+    return FCC_NOT_YET_DEPLOYED_REWARD_EPOCH;
   }
   const value = rawValue.trim();
   if (!/^\d+$/.test(value)) {
@@ -362,15 +370,17 @@ const fccActivationRewardEpoch = (): number => {
       // safe for reconciliation: before the deployment transaction there are neither FCC events nor `receiveRewards`
       // credits, so both sides of the accounting start from the same point and epoch 419 still balances.
       return 419;
-    // The FCC contracts are not deployed on these networks yet.
-    case "flare":
-      return FCC_NOT_ACTIVATED;
     case "coston":
-      return FCC_NOT_ACTIVATED;
+      // Reward epoch in progress when the FCC contracts were deployed on Coston; see the Songbird note above.
+      return 5877;
     case "coston2":
-      return FCC_NOT_ACTIVATED;
+      // Reward epoch in progress when the FCC contracts were deployed on Coston2; see the Songbird note above.
+      return 5877;
+    // FCC is not deployed on Flare yet, and local-test has no FCC contracts at all.
+    case "flare":
+      return FCC_NOT_YET_DEPLOYED_REWARD_EPOCH;
     case "local-test":
-      return FCC_NOT_ACTIVATED;
+      return FCC_NOT_YET_DEPLOYED_REWARD_EPOCH;
     default:
       // Ensure exhaustive checking
 

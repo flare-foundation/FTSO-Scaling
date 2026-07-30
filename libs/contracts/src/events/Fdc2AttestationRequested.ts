@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { RawEventConstructible } from "./RawEventConstructible";
 import { decodeEvent } from "../abi/AbiCache";
+import { CONTRACTS } from "../constants";
 
 /**
  * Represents the `AttestationRequested` event emitted on submission of an FDC2 attestation request on the
@@ -17,9 +18,6 @@ import { decodeEvent } from "../abi/AbiCache";
  */
 export class Fdc2AttestationRequested extends RawEventConstructible {
   static eventName = "AttestationRequested";
-  // Resolved as a literal rather than through CONTRACTS, because CONTRACTS.Fdc2Hub is undefined on networks
-  // where the FCC contracts are not deployed.
-  static contractName = "Fdc2Hub" as const;
 
   constructor(data: any, timestamp: number) {
     super();
@@ -37,7 +35,7 @@ export class Fdc2AttestationRequested extends RawEventConstructible {
 
   static fromRawEvent(event: any): Fdc2AttestationRequested {
     return decodeEvent<Fdc2AttestationRequested>(
-      Fdc2AttestationRequested.contractName,
+      CONTRACTS.Fdc2Hub.name,
       Fdc2AttestationRequested.eventName,
       event,
       (data: any, entity: any) => new Fdc2AttestationRequested(data, entity.timestamp)

@@ -1,3 +1,4 @@
+import { CONTRACTS, ZERO_ADDRESS } from "../../contracts/src/constants";
 import { ContractMethodNames } from "../../contracts/src/definitions";
 import { DataAvailabilityStatus, DataManager, DataMangerResponse } from "../../ftso-core/src/DataManager";
 import {
@@ -804,6 +805,17 @@ export class DataManagerForRewarding extends DataManager {
     firstVotingRoundId: number,
     lastVotingRoundId: number
   ): Promise<DataMangerResponse<FCCDataForVotingRound[]>> {
+    // Reached only if FCC accounting was activated for a network whose FCC addresses were left unset. Querying the
+    // zero address would silently yield no events, so the reconciliation would balance at zero and hide the real
+    // fees credited to RewardManager. Fail instead.
+    for (const contract of [CONTRACTS.FlareTeeManager, CONTRACTS.Fdc2Hub]) {
+      if (contract.address === ZERO_ADDRESS) {
+        throw new Error(
+          `FCC accounting is active but ${contract.name} has no address configured for this network. ` +
+            `Set the address together with FCC_ACTIVATION_REWARD_EPOCH.`
+        );
+      }
+    }
     const teeInstructionsResponse = await this.indexerClient.getTeeInstructionsSentEvents(
       firstVotingRoundId,
       lastVotingRoundId

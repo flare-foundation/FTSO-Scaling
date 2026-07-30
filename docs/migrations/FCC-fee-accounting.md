@@ -3,19 +3,28 @@
 This document records how the fees of the Flare Confidential Compute (FCC) contracts are accounted for in the
 reward calculation.
 
-> **Status:** implemented behind `FCC_ACTIVATION_REWARD_EPOCH`. Activates on Songbird at reward epoch **419**.
-> The FCC contracts are deployed on Songbird only; `flare`, `coston`, `coston2` and `local-test` stay at the
-> `FCC_NOT_ACTIVATED` sentinel. `FCC_FEES_ADDRESS` is already configured for Flare so no constant change is needed
-> when the contracts are deployed there.
+> **Status:** implemented behind `FCC_ACTIVATION_REWARD_EPOCH`. Active on Songbird from reward epoch **419**, and on
+> Coston and Coston2 from reward epoch **5877**. Flare is the only network where the FCC contracts are not deployed
+> yet: its addresses are the zero address and its activation epoch is `FCC_NOT_YET_DEPLOYED_REWARD_EPOCH`.
+> `FCC_FEES_ADDRESS` is already configured for Flare, so only the two addresses and the activation epoch change when
+> the contracts are deployed there.
 
 ## 1. Where the funds come from
 
-Two contracts were added on Songbird by the `tee_deploy` branch of `flare-smart-contracts-v2`:
+Two contracts were added by the `tee_deploy` branch of `flare-smart-contracts-v2`:
 
-| Contract | Songbird address |
-|---|---|
-| `FlareTeeManager` | `0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767` |
-| `Fdc2Hub` | `0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8` |
+| Network | `FlareTeeManager` | `Fdc2Hub` |
+|---|---|---|
+| Songbird | `0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767` | `0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8` |
+| Coston | `0xc4885998f5D792ed88C5Af7a3AaCBe333f017658` | `0x064C7B68B0e2BC87e7bE34e89741485Fcb48FA2F` |
+| Coston2 | `0x1a9C4A0f9D76c0b1D91d22E24E573a9b377618aE` | `0x04dd3Ba33aC798d400bEc42A26F82f9812A421dc` |
+| Flare | not deployed (zero address) | not deployed (zero address) |
+
+Both contracts are declared for **every** network in `NetworkContractAddresses`, non-optional, so no code path needs
+to handle a missing FCC contract. Where they are not deployed the address is the zero address, always paired with a
+far-future activation epoch so the address is never used in a query. `DataManagerForRewarding` asserts that pairing
+once, when FCC data collection starts: activating a network while its addresses are still zero fails loudly instead
+of silently returning no events and letting the reconciliation balance at zero.
 
 Both credit `RewardManager` through `receiveRewards`, and each `receiveRewards` call site is paired one to one with
 an event emitted in the same function:
@@ -66,8 +75,8 @@ so that every wei credited to `RewardManager` is covered by a claim.
 | Area | File | Behaviour |
 |---|---|---|
 | ABIs | `abi/FlareTeeManager.json`, `abi/Fdc2Hub.json` | Contract artifacts, copied as-is like every other ABI in `abi/`. See §4 for the diamond caveat. |
-| Contracts | `libs/contracts/src/constants.ts`, `definitions.ts` | Songbird addresses; both optional in `NetworkContractAddresses` since FCC is Songbird-only |
-| Constants | `libs/fsp-rewards/src/constants.ts` | `FCC_FEES_ADDRESS` (Songbird `0x3390E1aDf46568cCC95c3571424937b042094ac2`, Flare `0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041`, other networks `0x…dEaD`), `FCC_ACTIVATION_REWARD_EPOCH`, `isFccActive` |
+| Contracts | `libs/contracts/src/constants.ts`, `definitions.ts` | Per-network addresses, non-optional on every network; `ZERO_ADDRESS` where not deployed |
+| Constants | `libs/fsp-rewards/src/constants.ts` | `FCC_FEES_ADDRESS` (Songbird `0x3390E1aDf46568cCC95c3571424937b042094ac2`, Flare `0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041`, test networks `0x…dEaD`), `FCC_ACTIVATION_REWARD_EPOCH`, `FCC_NOT_YET_DEPLOYED_REWARD_EPOCH`, `isFccActive` |
 | Events | `libs/contracts/src/events/TeeInstructionsSent.ts`, `Fdc2AttestationRequested.ts` | Decoding |
 | Indexing | `libs/fsp-rewards/src/IndexerClientForRewarding.ts` | `getTeeInstructionsSentEvents`, `getFdc2AttestationRequestedEvents`, bucketed per voting round |
 | Data | `libs/fsp-rewards/src/DataManagerForRewarding.ts` | `getFCCDataForVotingRoundRange`, persisted as `fccData` on the reward calculation data |

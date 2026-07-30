@@ -1,5 +1,11 @@
 import { NetworkContractAddresses } from "./definitions";
 
+/**
+ * Placeholder address for a contract that is not deployed on the current network. Always paired with a far-future
+ * activation reward epoch, so the address is never actually used in a query.
+ */
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 export const COSTON_CONTRACTS: NetworkContractAddresses = {
   FlareSystemsManager: { name: "FlareSystemsManager", address: "0x85680Dd93755Fe5d0789773fd0896cEE51F9e358" },
   FtsoRewardOffersManager: { name: "FtsoRewardOffersManager", address: "0xC9534cB913150aD3e98D792857689B55e2404212" },
@@ -16,6 +22,8 @@ export const COSTON_CONTRACTS: NetworkContractAddresses = {
     address: "0x8c45666369B174806E1AB78D989ddd79a3267F3b",
   },
   FdcHub: { name: "FdcHub", address: "0x1c78A073E3BD2aCa4cc327d55FB0cD4f0549B55b" },
+  FlareTeeManager: { name: "FlareTeeManager", address: "0xc4885998f5D792ed88C5Af7a3AaCBe333f017658" },
+  Fdc2Hub: { name: "Fdc2Hub", address: "0x064C7B68B0e2BC87e7bE34e89741485Fcb48FA2F" },
 };
 
 export const COSTON2_CONTRACTS: NetworkContractAddresses = {
@@ -34,6 +42,8 @@ export const COSTON2_CONTRACTS: NetworkContractAddresses = {
     address: "0xC71C1C6E6FB31eF6D948B2C074fA0d38a07D4f68",
   },
   FdcHub: { name: "FdcHub", address: "0x48aC463d7975828989331F4De43341627b9c5f1D" },
+  FlareTeeManager: { name: "FlareTeeManager", address: "0x1a9C4A0f9D76c0b1D91d22E24E573a9b377618aE" },
+  Fdc2Hub: { name: "Fdc2Hub", address: "0x04dd3Ba33aC798d400bEc42A26F82f9812A421dc" },
 };
 
 export const SONGBIRD_CONTRACTS: NetworkContractAddresses = {
@@ -79,6 +89,10 @@ export const FLARE_CONTRACTS: NetworkContractAddresses = {
     address: "0xd648e8ACA486Ce876D641A0F53ED1F2E9eF4885D",
   },
   FdcHub: { name: "FdcHub", address: "0xc25c749DC27Efb1864Cb3DADa8845B7687eB2d44" },
+  // FCC is not deployed on Flare yet. Zero addresses, paired with a far-future FCC_ACTIVATION_REWARD_EPOCH so the
+  // events are never queried; replace both together when the contracts are deployed.
+  FlareTeeManager: { name: "FlareTeeManager", address: ZERO_ADDRESS },
+  Fdc2Hub: { name: "Fdc2Hub", address: ZERO_ADDRESS },
 };
 
 export type networks = "local-test" | "from-env" | "coston2" | "coston" | "songbird" | "flare";
@@ -166,6 +180,13 @@ const contracts = () => {
           address: process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS,
         },
         FdcHub: { name: "FdcHub", address: process.env.FTSO_CA_FDC_HUB_ADDRESS },
+        // FCC contracts are optional in the environment: absent means not deployed for this configuration, which
+        // pairs with the far-future default of FCC_ACTIVATION_REWARD_EPOCH. Validated when provided.
+        FlareTeeManager: {
+          name: "FlareTeeManager",
+          address: optionalContractAddressFromEnv("FTSO_CA_FLARE_TEE_MANAGER_ADDRESS"),
+        },
+        Fdc2Hub: { name: "Fdc2Hub", address: optionalContractAddressFromEnv("FTSO_CA_FDC2_HUB_ADDRESS") },
       };
       return CONTRACT_CONFIG;
     }
@@ -217,4 +238,20 @@ function isValidHexString(str: string): boolean {
 
 function isValidContractAddress(address: string): boolean {
   return isValidHexString(address) && address.length === 42;
+}
+
+/**
+ * Reads a contract address that the environment need not define, returning {@link ZERO_ADDRESS} when it is absent.
+ * A provided value is still validated, so a typo fails loudly rather than silently becoming the zero address.
+ */
+function optionalContractAddressFromEnv(envVar: string): string {
+  const rawValue = process.env[envVar];
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return ZERO_ADDRESS;
+  }
+  const value = rawValue.trim();
+  if (!isValidContractAddress(value)) {
+    throw new Error(`${envVar} value is not valid contract address`);
+  }
+  return value;
 }

@@ -51,7 +51,8 @@ interface FdcHubDefinition {
 }
 
 /**
- * Flare Confidential Compute (FCC) contracts. Deployed on Songbird only, see FCC_ACTIVATION_REWARD_EPOCH.
+ * Flare Confidential Compute (FCC) contracts. Configured for every network; where they are not deployed yet the
+ * address is the zero address and `FCC_ACTIVATION_REWARD_EPOCH` is a far-future reward epoch.
  * Note: `Fdc2Hub` is the FDC2 hub and is unrelated to the legacy `FdcHub` above — the two emit
  * different events (`AttestationRequested` vs `AttestationRequest`) and feed different reward paths.
  */
@@ -130,7 +131,6 @@ export interface NetworkContractAddresses {
   FastUpdater: FastUpdaterDefinition;
   FastUpdateIncentiveManager: FastUpdateIncentiveManagerDefinition;
   FdcHub: FdcHubDefinition;
-  // FCC contracts, optional: only present on networks where they are deployed (currently Songbird only).
-  FlareTeeManager?: FlareTeeManagerDefinition;
-  Fdc2Hub?: Fdc2HubDefinition;
+  FlareTeeManager: FlareTeeManagerDefinition;
+  Fdc2Hub: Fdc2HubDefinition;
 }

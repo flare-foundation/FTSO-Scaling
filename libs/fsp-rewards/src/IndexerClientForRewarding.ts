@@ -430,16 +430,12 @@ export class IndexerClientForRewarding extends IndexerClient {
    * RewardManager credited, which the reconciliation cross-checks against the bucketing.
    */
   private async getFccEventsByVotingRound<T extends { timestamp: number }>(
-    contract: ContractDefinitions | undefined,
+    contract: ContractDefinitions,
     eventName: string,
     fromRawEvent: (event: TLPEvents) => T,
     startVotingRoundId: number,
     endVotingRoundId: number
   ): Promise<IndexerResponse<T[][]>> {
-    if (contract === undefined) {
-      // Reached only if FCC accounting is activated for a network where the contracts are not configured.
-      throw new Error(`FCC contract for event ${eventName} is not configured for this network`);
-    }
     const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
     // strictly containing in the range
     const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
