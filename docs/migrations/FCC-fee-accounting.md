@@ -65,7 +65,7 @@ so that every wei credited to `RewardManager` is covered by a claim.
 
 | Area | File | Behaviour |
 |---|---|---|
-| ABIs | `abi/FlareTeeManager.json`, `abi/Fdc2Hub.json` | The two consumed event fragments. See §4 for the diamond caveat. |
+| ABIs | `abi/FlareTeeManager.json`, `abi/Fdc2Hub.json` | Contract artifacts, copied as-is like every other ABI in `abi/`. See §4 for the diamond caveat. |
 | Contracts | `libs/contracts/src/constants.ts`, `definitions.ts` | Songbird addresses; both optional in `NetworkContractAddresses` since FCC is Songbird-only |
 | Constants | `libs/fsp-rewards/src/constants.ts` | `FCC_FEES_ADDRESS` (Songbird `0x3390E1aDf46568cCC95c3571424937b042094ac2`, Flare `0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041`, other networks `0x…dEaD`), `FCC_ACTIVATION_REWARD_EPOCH`, `isFccActive` |
 | Events | `libs/contracts/src/events/TeeInstructionsSent.ts`, `Fdc2AttestationRequested.ts` | Decoding |
@@ -126,8 +126,16 @@ confused with a real mismatch.
 
 ## 4. Regenerating the ABIs
 
-`FlareTeeManager` is an EIP-2535 diamond. `TeeInstructionsSent` is declared in `IInstructions.sol` and emitted from
-a library inlined into `InstructionsFacet`, so it is **absent from the `FlareTeeManager.sol` artifact** — the ABI
-must come from the facet artifact and is stored under the diamond's name. `sync-v2.sh` carries an `extract_event`
-helper that does this. `test/libs/fsp-rewards/fcc-fee-claims.test.ts` pins both `topic0` values, so copying the
-wrong artifact fails the test suite rather than silently producing an event filter that matches nothing.
+Both files are plain copies of the compiled contract artifacts, the same way every other ABI in `abi/` is produced;
+`sync-v2.sh` has the two `cp` lines.
+
+The one wrinkle is that `FlareTeeManager` is an EIP-2535 diamond. `TeeInstructionsSent` is declared in
+`IInstructions.sol` and emitted from a library inlined into `InstructionsFacet`, so it is **absent from the
+`FlareTeeManager.sol` artifact**, which carries only `DiamondCut`. The **facet** artifact is therefore copied to
+`abi/FlareTeeManager.json` — the diamond's name, which is the name the indexer queries by. As a result the file
+internally reports `contractName: "InstructionsFacet"`; nothing reads that field, `AbiCache` keys off the filename
+and reads only `.abi`.
+
+Do not "correct" the source path to `contracts/tee/diamond/FlareTeeManager.sol`: the resulting ABI would contain no
+matching event. `test/libs/fsp-rewards/fcc-fee-claims.test.ts` pins both `topic0` values, so that mistake fails the
+test suite rather than silently producing an event filter that matches nothing.
