@@ -1,5 +1,6 @@
 import { writeFileSync } from "fs";
 import path from "path/posix";
+import type { networks } from "../../../../contracts/src/constants";
 import { bigIntReplacer } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { ILogger } from "../../../../ftso-core/src/utils/ILogger";
 import { BURN_ADDRESS, CALCULATIONS_FOLDER, FCC_FEES_ADDRESS, FIRE_POOL_ADDRESS, isFccActive } from "../../constants";
@@ -8,8 +9,70 @@ import { FCC_RECONCILIATION_FILE } from "../../utils/stat-info/constants";
 import { deserializePartialClaimsForVotingRoundId } from "../../utils/stat-info/partial-claims";
 import { deserializeDataForRewardCalculation } from "../../utils/stat-info/reward-calculation-data";
 import { deserializeRewardDistributionData } from "../../utils/stat-info/reward-distribution-data";
+import { deserializeRewardEpochInfo, RewardEpochInfo } from "../../utils/stat-info/reward-epoch-info";
 import { RewardTypePrefix } from "../RewardTypePrefix";
 import { getRewardEpochTotals } from "./reward-manager-totals";
+
+/**
+ * Exact inflation represented by claims this calculator produces: FTSO scaling, Fast Updates, and FDC.
+ *
+ * All three inputs are required for the Coston2 exception. Treating an absent collector as zero would enlarge the
+ * exclusion and hide the very missing-claims failure the independent RewardManager check is meant to catch.
+ */
+export function calculatorCoveredInflationRewardsWei(rewardEpochInfo: RewardEpochInfo): bigint {
+  const ftsoInflationOffers = rewardEpochInfo.rewardOffers?.inflationOffers;
+  if (ftsoInflationOffers === undefined || ftsoInflationOffers.length === 0) {
+    throw new Error("Coston2 reconciliation requires the FTSO inflation reward offers");
+  }
+  if (rewardEpochInfo.fuInflationRewardsOffered === undefined) {
+    throw new Error("Coston2 reconciliation requires the Fast Updates inflation reward offer");
+  }
+  if (rewardEpochInfo.fdcInflationRewardsOffered === undefined) {
+    throw new Error("Coston2 reconciliation requires the FDC inflation reward offer");
+  }
+  return (
+    ftsoInflationOffers.reduce((total, offer) => total + offer.amount, 0n) +
+    rewardEpochInfo.fuInflationRewardsOffered.amount +
+    rewardEpochInfo.fdcInflationRewardsOffered.amount
+  );
+}
+
+/**
+ * Coston2's exact inflation allocation for which this calculator produces no staking claims.
+ *
+ * Coston2 configures ValidatorRewardOffersManager for 3000 BIPS, but each receiver rounds its own offer before the
+ * RewardManager aggregates them. Multiplying the aggregate total by 30% can therefore be wrong by one wei. The
+ * exact validator remainder is the on-chain inflation total minus the three serialized, required inflation offers
+ * whose claims this calculator does produce.
+ */
+export function coston2ValidatorInflationRewardsWei(
+  totalInflationRewardsWei: bigint,
+  calculatorCoveredInflationWei: bigint
+): bigint {
+  if (calculatorCoveredInflationWei > totalInflationRewardsWei) {
+    throw new Error(
+      `Coston2 calculator-covered inflation ${calculatorCoveredInflationWei} wei exceeds the on-chain total ` +
+        `${totalInflationRewardsWei} wei`
+    );
+  }
+  const validatorInflationWei = totalInflationRewardsWei - calculatorCoveredInflationWei;
+  return validatorInflationWei;
+}
+
+/** Returns the only network-specific RewardManager exclusion supported by this calculator. */
+export function rewardManagerExcludedRewardsWei(
+  network: networks,
+  totalInflationRewardsWei: bigint,
+  calculatorCoveredInflationWei?: bigint
+): bigint {
+  if (network !== "coston2") {
+    return 0n;
+  }
+  if (calculatorCoveredInflationWei === undefined) {
+    throw new Error("Coston2 reconciliation requires the calculator-covered inflation total");
+  }
+  return coston2ValidatorInflationRewardsWei(totalInflationRewardsWei, calculatorCoveredInflationWei);
+}
 
 /**
  * Result of reconciling the FCC fees of a reward epoch.
@@ -119,10 +182,10 @@ export function computeFccReconciliation(
     }
 
     for (const claim of deserializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, calculationFolder)) {
-      if (claim.rewardTypeTag === RewardTypePrefix.FCC_TEE_FEES) {
+      if (claim.rewardTypeTag === String(RewardTypePrefix.FCC_TEE_FEES)) {
         claimedTeeFeesWei += claim.amount;
       }
-      if (claim.rewardTypeTag === RewardTypePrefix.FCC_FDC2_FEES) {
+      if (claim.rewardTypeTag === String(RewardTypePrefix.FCC_FDC2_FEES)) {
         claimedFdc2FeesWei += claim.amount;
       }
       // RewardClaim.merge rebuilds claims as {beneficiary, amount, claimType} and drops every tag, so merged claims
@@ -270,32 +333,46 @@ export function fccReconciliationChecks(reconciliation: FccReconciliation): FccC
 }
 
 /**
- * The invariant the whole reconciliation exists for: every wei the RewardManager holds for a reward epoch is
- * covered by a claim.
+ * The independent invariant the whole reconciliation exists for: every wei this calculator is responsible for in
+ * RewardManager is covered by a claim.
  *
  * `epochTotalRewards` is the sum of every `receiveRewards` credit for the epoch, inflation and fees alike, and the
  * final reward distribution is what will be claimed against it. Anything the calculation fails to account for
  * simply stays on the contract, unclaimable and unnoticed, which is exactly the failure no other check can see.
  *
- * Holds exactly on both production networks — Flare and Songbird reward epoch 418 each reconcile to the wei.
- * Returns undefined when the RewardManager totals could not be read, since an unreachable node is an environment
- * problem rather than an accounting one.
+ * Holds exactly on both production networks — Flare and Songbird reward epoch 418 each reconcile to the wei. On
+ * Coston2, the known 30% ValidatorRewardOffersManager allocation is excluded explicitly because that network does
+ * not produce its staking claims; every other reward source remains strict.
+ * Returns undefined when a transport failure prevented the RewardManager totals from being read, since an
+ * unreachable node is an environment problem rather than an accounting one.
  */
 export function fundsFullyClaimedCheck(report: FccReconciliationReport): FccCheck | undefined {
   if (report.rewardManagerTotalRewardsWei === undefined) {
     return undefined;
   }
-  const residual = report.totalClaimsWei - report.rewardManagerTotalRewardsWei;
+  const excludedRewardsWei = report.rewardManagerExcludedRewardsWei ?? 0n;
+  const claimableRewardsWei = report.rewardManagerTotalRewardsWei - excludedRewardsWei;
+  const residual = report.totalClaimsWei - claimableRewardsWei;
+  const exclusionDetail =
+    excludedRewardsWei === 0n
+      ? ""
+      : ` after excluding ${excludedRewardsWei} wei of exact Coston2 validator inflation that has no staking claims`;
   return {
-    name: "all RewardManager funds are covered by claims",
-    passed: residual === 0n,
+    name: "all claimable RewardManager funds are covered by claims",
+    passed: claimableRewardsWei >= 0n && residual === 0n,
     detail:
-      residual === 0n
-        ? `${report.totalClaimsWei} wei claimed, matching the funds held`
-        : `${report.totalClaimsWei} wei claimed of ${report.rewardManagerTotalRewardsWei} wei held for the epoch, ` +
-          `leaving ${-residual} wei unclaimed. This spans every reward source, so the cause need not be FCC: a ` +
-          `reward source whose claims this process does not produce, such as validator rewards where staking data ` +
-          `is not configured, shows up here.`,
+      claimableRewardsWei < 0n
+        ? `the configured exclusion ${excludedRewardsWei} wei exceeds the ${report.rewardManagerTotalRewardsWei} ` +
+          `wei held for the epoch`
+        : residual === 0n
+          ? `${report.totalClaimsWei} wei claimed, matching ${claimableRewardsWei} wei of claimable funds${exclusionDetail}`
+          : residual < 0n
+            ? `${report.totalClaimsWei} wei claimed of ${claimableRewardsWei} wei claimable from ` +
+              `${report.rewardManagerTotalRewardsWei} wei held${exclusionDetail}, leaving ${-residual} wei unclaimed. ` +
+              `This spans every reward source, so the cause need not be FCC.`
+            : `${report.totalClaimsWei} wei claimed but only ${claimableRewardsWei} wei is claimable from ` +
+              `${report.rewardManagerTotalRewardsWei} wei held${exclusionDetail}; claims exceed claimable funds by ` +
+              `${residual} wei.`,
   };
 }
 
@@ -333,30 +410,32 @@ export interface FccReconciliationReport extends FccReconciliation {
   totalClaimsWei: bigint;
   /**
    * `RewardManager.getRewardEpochTotals(rewardEpochId).totalRewardsWei`, read over RPC.
-   * Undefined when the node could not be reached, which is reported but not treated as an accounting failure.
+   * Undefined when an RPC transport failure prevented the read, which is reported but not treated as an accounting
+   * failure. Configuration, ABI, decoding, and contract-call errors fail finalization instead.
    */
   rewardManagerTotalRewardsWei?: bigint;
+  /** `RewardManager.getRewardEpochTotals(rewardEpochId).totalInflationRewardsWei`, read by the same RPC call. */
+  rewardManagerTotalInflationRewardsWei?: bigint;
+  /** Exact sum of the serialized FTSO, Fast Updates, and FDC inflation offers, present only on Coston2. */
+  calculatorCoveredInflationRewardsWei?: bigint;
   /**
-   * totalClaimsWei - rewardManagerTotalRewardsWei, when the on-chain total is available.
+   * Rewards deliberately outside this calculator's scope.
    *
-   * Expected to be negative on networks with P-chain staking, and it is reported rather than asserted for that
-   * reason. `ValidatorRewardOffersManager` resolves the same `RewardManager` through the address updater and credits
-   * the staking inflation to it, but the matching staking claims are produced by a different process, not by this
-   * one. On Coston2 reward epoch 5877 this calculation therefore covered exactly 70% of the epoch's inflation
-   * (35% FTSO scaling and fast updates, 35% FDC), leaving the 30% staking share uncovered.
-   *
-   * So this figure can only become an equality check once staking claims are accounted for alongside these.
-   * The FCC-specific checks above are unaffected: they are exact and do fail hard.
+   * Present only on Coston2, where ValidatorRewardOffersManager receives 30% of inflation but the network does not
+   * produce staking claims. This is the on-chain inflation total minus the exact covered inflation offers, preserving
+   * the contracts' per-receiver rounding; it is not inferred from the claims discrepancy.
    */
+  rewardManagerExcludedRewardsWei?: bigint;
+  /** totalClaimsWei - (rewardManagerTotalRewardsWei - rewardManagerExcludedRewardsWei). */
   rewardManagerResidualWei?: bigint;
 }
 
 /**
  * Reconciles the FCC fees of a reward epoch, writes the report and fails hard if the FCC accounting does not balance.
  *
- * Also compares the sum of all claims against the funds RewardManager holds for the epoch. That comparison spans
- * every reward source, not just FCC, so it is reported rather than fatal: a pre-existing discrepancy in a legacy
- * source must not block the epoch. The FCC-specific checks above are exact and do fail hard.
+ * Also compares the sum of all claims against the claimable funds RewardManager holds for the epoch. The comparison
+ * is fatal whenever the RPC total is available. Coston2's known validator-inflation allocation is excluded
+ * explicitly; no generic tolerance is applied to any network.
  *
  * No-op for reward epochs where FCC accounting is not active.
  */
@@ -386,7 +465,23 @@ export async function runFccReconciliation(
   const totals = await getRewardEpochTotals(rewardEpochId);
   if (totals !== undefined) {
     report.rewardManagerTotalRewardsWei = totals.totalRewardsWei;
-    report.rewardManagerResidualWei = totalClaimsWei - totals.totalRewardsWei;
+    report.rewardManagerTotalInflationRewardsWei = totals.totalInflationRewardsWei;
+    const network = process.env.NETWORK as networks;
+    if (network === "coston2") {
+      report.calculatorCoveredInflationRewardsWei = calculatorCoveredInflationRewardsWei(
+        deserializeRewardEpochInfo(rewardEpochId, false, calculationFolder)
+      );
+    }
+    const excludedRewardsWei = rewardManagerExcludedRewardsWei(
+      network,
+      totals.totalInflationRewardsWei,
+      report.calculatorCoveredInflationRewardsWei
+    );
+    if (excludedRewardsWei > 0n) {
+      report.rewardManagerExcludedRewardsWei = excludedRewardsWei;
+    }
+    report.rewardManagerResidualWei =
+      totalClaimsWei - (totals.totalRewardsWei - (report.rewardManagerExcludedRewardsWei ?? 0n));
   }
 
   const reportPath = path.join(calculationFolder, `${rewardEpochId}`, FCC_RECONCILIATION_FILE);
@@ -430,13 +525,24 @@ export function logFccReconciliationSummary(
   checks: FccCheck[] = allReconciliationChecks(report)
 ): void {
   const failed = checks.filter((check) => !check.passed);
+  const onChainCheckSkipped = report.rewardManagerTotalRewardsWei === undefined;
   const rule = "=".repeat(112);
-  const emit = (line: string) => (failed.length > 0 ? logger.error(line) : logger.log(line));
+  const emit = (line: string): void => {
+    if (failed.length > 0) {
+      logger.error(line);
+    } else {
+      logger.log(line);
+    }
+  };
 
   emit(rule);
   emit(
     `FCC FEE ACCOUNTING - reward epoch ${report.rewardEpochId} - ` +
-      (failed.length === 0 ? "ALL CHECKS PASSED" : `${failed.length} CHECK(S) FAILED`)
+      (failed.length > 0
+        ? `${failed.length} CHECK(S) FAILED`
+        : onChainCheckSkipped
+          ? "ARTIFACT CHECKS PASSED - ON-CHAIN CHECK SKIPPED"
+          : "ALL CHECKS PASSED")
   );
   emit(rule);
   emit(
@@ -465,7 +571,7 @@ export function logFccReconciliationSummary(
       `window carried a neighbouring reward epoch id and were attributed there instead`
   );
   if (report.rewardManagerTotalRewardsWei === undefined) {
-    emit(`  [WARN] RewardManager totals unavailable: RPC unreachable, claims not checked against funds held`);
+    emit(`  [WARN] RewardManager totals unavailable: on-chain comparison not run (RPC transport error)`);
   }
   emit(`  report: ${reportPath}`);
   emit(rule);

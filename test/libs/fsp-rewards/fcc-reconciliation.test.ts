@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { makeError } from "ethers";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { bigIntReplacer } from "../../../libs/ftso-core/src/utils/big-number-serialization";
@@ -7,16 +8,21 @@ import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import {
   allReconciliationChecks,
   assertFccReconciliation,
+  calculatorCoveredInflationRewardsWei,
   computeFccReconciliation,
+  coston2ValidatorInflationRewardsWei,
   FccReconciliation,
   FccReconciliationReport,
   fundsFullyClaimedCheck,
   logFccReconciliationSummary,
+  rewardManagerExcludedRewardsWei,
 } from "../../../libs/fsp-rewards/src/reward-calculation/fcc/fcc-reconciliation";
+import { isRewardManagerTransportError } from "../../../libs/fsp-rewards/src/reward-calculation/fcc/reward-manager-totals";
 import { RewardTypePrefix } from "../../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
 import { ClaimType, IPartialRewardClaim, IRewardClaim } from "../../../libs/fsp-rewards/src/utils/RewardClaim";
 import { CLAIMS_FILE, REWARD_CALCULATION_DATA_FILE } from "../../../libs/fsp-rewards/src/utils/stat-info/constants";
 import { serializeRewardDistributionData } from "../../../libs/fsp-rewards/src/utils/stat-info/reward-distribution-data";
+import { RewardEpochInfo } from "../../../libs/fsp-rewards/src/utils/stat-info/reward-epoch-info";
 import { getTestFile } from "../../utils/getTestFile";
 
 const REWARD_EPOCH_ID = 997755;
@@ -47,6 +53,14 @@ interface RoundFixture {
   claimedFdc2?: bigint;
   // write the claims as RewardClaim.merge would leave them: correct amounts, no tags
   serializeMerged?: boolean;
+}
+
+function rewardEpochInflationInfo(ftsoWei: bigint, fastUpdatesWei: bigint, fdcWei: bigint): RewardEpochInfo {
+  return {
+    rewardOffers: { inflationOffers: [{ amount: ftsoWei }] },
+    fuInflationRewardsOffered: { amount: fastUpdatesWei },
+    fdcInflationRewardsOffered: { amount: fdcWei },
+  } as unknown as RewardEpochInfo;
 }
 
 /**
@@ -347,7 +361,94 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     });
 
     it("fails when more is claimed than the RewardManager holds", () => {
-      expect(fundsFullyClaimedCheck(report(1_200n, 1_000n))?.passed).to.eq(false);
+      const check = fundsFullyClaimedCheck(report(1_200n, 1_000n));
+      expect(check?.passed).to.eq(false);
+      expect(check?.detail).to.contain("claims exceed claimable funds by 200 wei");
+      expect(check?.detail).to.not.contain("-200 wei unclaimed");
+    });
+
+    it("excludes Coston2's exact validator allocation across per-receiver rounding", () => {
+      const epochs = [
+        {
+          rewardEpochId: 5877,
+          ftsoWei: 850_694_444_444_444_444_444_445n,
+          fastUpdatesWei: 364_583_333_333_333_333_333_334n,
+          fdcWei: 1_215_277_777_777_777_777_777_778n,
+          totalInflationRewardsWei: 3_472_222_222_222_222_222_222_224n,
+          validatorWei: 1_041_666_666_666_666_666_666_667n,
+        },
+        {
+          rewardEpochId: 5878,
+          ftsoWei: 850_694_444_444_444_444_444_444n,
+          fastUpdatesWei: 364_583_333_333_333_333_333_333n,
+          fdcWei: 1_215_277_777_777_777_777_777_777n,
+          totalInflationRewardsWei: 3_472_222_222_222_222_222_222_221n,
+          validatorWei: 1_041_666_666_666_666_666_666_667n,
+        },
+      ];
+
+      for (const epoch of epochs) {
+        const coveredWei = calculatorCoveredInflationRewardsWei(
+          rewardEpochInflationInfo(epoch.ftsoWei, epoch.fastUpdatesWei, epoch.fdcWei)
+        );
+        const excludedWei = coston2ValidatorInflationRewardsWei(epoch.totalInflationRewardsWei, coveredWei);
+        expect(excludedWei, `reward epoch ${epoch.rewardEpochId}`).to.eq(epoch.validatorWei);
+        expect(
+          rewardManagerExcludedRewardsWei("coston2", epoch.totalInflationRewardsWei, coveredWei),
+          `reward epoch ${epoch.rewardEpochId}`
+        ).to.eq(epoch.validatorWei);
+      }
+
+      // Epoch 5878 is the rounding counterexample: 30% of the aggregate is one wei below the exact validator offer.
+      expect((epochs[1].totalInflationRewardsWei * 3_000n) / 10_000n).to.eq(epochs[1].validatorWei - 1n);
+
+      const totalInflationRewardsWei = epochs[1].totalInflationRewardsWei;
+      const excludedValidatorRewardsWei = epochs[1].validatorWei;
+      const heldWei = totalInflationRewardsWei + 2_900_000_000_000_000_000n;
+      const claimsWei = heldWei - excludedValidatorRewardsWei;
+      const coston2Report = report(claimsWei, heldWei);
+      coston2Report.rewardManagerTotalInflationRewardsWei = totalInflationRewardsWei;
+      coston2Report.calculatorCoveredInflationRewardsWei = totalInflationRewardsWei - excludedValidatorRewardsWei;
+      coston2Report.rewardManagerExcludedRewardsWei = excludedValidatorRewardsWei;
+      coston2Report.rewardManagerResidualWei = 0n;
+
+      const check = fundsFullyClaimedCheck(coston2Report);
+      expect(check?.passed).to.eq(true);
+      expect(check?.detail).to.contain(`${excludedValidatorRewardsWei} wei of exact Coston2 validator inflation`);
+    });
+
+    it("fails closed when Coston2 covered-inflation inputs are absent or inconsistent", () => {
+      const missingFastUpdates = {
+        rewardOffers: { inflationOffers: [{ amount: 700n }] },
+        fdcInflationRewardsOffered: { amount: 100n },
+      } as unknown as RewardEpochInfo;
+      expect(() => calculatorCoveredInflationRewardsWei(missingFastUpdates)).to.throw(
+        "requires the Fast Updates inflation reward offer"
+      );
+      expect(() => rewardManagerExcludedRewardsWei("coston2", 1_000n)).to.throw(
+        "requires the calculator-covered inflation total"
+      );
+      expect(() => coston2ValidatorInflationRewardsWei(999n, 1_000n)).to.throw("exceeds the on-chain total");
+    });
+
+    it("still fails Coston2 for any discrepancy beyond the explicit validator allocation", () => {
+      const coston2Report = report(699n, 1_000n);
+      coston2Report.rewardManagerTotalInflationRewardsWei = 1_000n;
+      coston2Report.rewardManagerExcludedRewardsWei = 300n;
+      coston2Report.rewardManagerResidualWei = -1n;
+
+      const check = fundsFullyClaimedCheck(coston2Report);
+      expect(check?.passed).to.eq(false);
+      expect(check?.detail).to.contain("leaving 1 wei unclaimed");
+    });
+
+    it("does not apply the Coston2 exclusion to an ordinary report", () => {
+      for (const network of ["flare", "songbird", "coston", "local-test", "from-env"] as const) {
+        expect(rewardManagerExcludedRewardsWei(network, 1_000n), network).to.eq(0n);
+      }
+      const check = fundsFullyClaimedCheck(report(700n, 1_000n));
+      expect(check?.passed).to.eq(false);
+      expect(check?.detail).to.contain("leaving 300 wei unclaimed");
     });
 
     // An unreachable node is an environment problem, not an accounting one, so it must not fail the epoch.
@@ -364,10 +465,49 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     });
   });
 
+  describe("RewardManager RPC failure classification", () => {
+    it("skips only recognized transport failures", () => {
+      const timeout = makeError("request timed out", "TIMEOUT", {
+        operation: "request",
+        reason: "timeout",
+      });
+      const refused = Object.assign(new Error("connection refused"), { code: "ECONNREFUSED", syscall: "connect" });
+      const discoveryFailure = makeError("network discovery failed", "NETWORK_ERROR", {
+        event: "initial-network-discovery",
+        info: { error: refused },
+      });
+
+      expect(isRewardManagerTransportError(timeout)).to.eq(true);
+      expect(isRewardManagerTransportError(refused)).to.eq(true);
+      expect(isRewardManagerTransportError(discoveryFailure)).to.eq(true);
+      expect(isRewardManagerTransportError({ code: "UNKNOWN_ERROR", cause: { code: "ENOTFOUND" } })).to.eq(true);
+      expect(isRewardManagerTransportError({ code: "EPERM", syscall: "connect" })).to.eq(true);
+    });
+
+    it("fails closed for configuration, ABI, decoding, and contract-call errors", () => {
+      const changedNetwork = makeError("network changed", "NETWORK_ERROR", { event: "changed" });
+      const httpError = makeError("HTTP 404", "SERVER_ERROR", { request: "https://wrong-rpc.example" });
+      for (const error of [
+        new SyntaxError("invalid RewardManager artifact"),
+        changedNetwork,
+        httpError,
+        { code: "INVALID_ARGUMENT" },
+        { code: "BAD_DATA" },
+        { code: "CALL_EXCEPTION" },
+        { code: "EPERM", syscall: "open" },
+      ]) {
+        expect(isRewardManagerTransportError(error)).to.eq(false);
+      }
+    });
+  });
+
   // Whoever runs the calculation must be able to see the outcome without opening the report file, so the summary is
   // printed for both outcomes and is the last thing the reward epoch emits.
   describe("end of run summary", () => {
-    function capture(reconciliation: FccReconciliation): { lines: string[]; errors: string[] } {
+    function capture(
+      reconciliation: FccReconciliation,
+      includeOnChainTotal = true
+    ): { lines: string[]; errors: string[] } {
       const lines: string[] = [];
       const errors: string[] = [];
       const logger: ILogger = {
@@ -378,7 +518,16 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
         },
         warn: (m: string) => lines.push(m),
       };
-      logFccReconciliationSummary({ ...reconciliation, totalClaimsWei: 0n }, "report.json", logger);
+      logFccReconciliationSummary(
+        {
+          ...reconciliation,
+          totalClaimsWei: 0n,
+          rewardManagerTotalRewardsWei: includeOnChainTotal ? 0n : undefined,
+          rewardManagerTotalInflationRewardsWei: includeOnChainTotal ? 0n : undefined,
+        },
+        "report.json",
+        logger
+      );
       return { lines, errors };
     }
 
@@ -398,6 +547,20 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
       expect(summary).to.contain("[INFO] boundary events excluded");
       expect(summary).to.not.contain("[FAIL]");
       // a clean run must not be reported through the error channel
+      expect(errors).to.deep.eq([]);
+    });
+
+    it("does not claim that every check passed when the on-chain comparison was skipped", () => {
+      const calculationFolder = writeFixture({});
+      const { lines, errors } = capture(
+        computeFccReconciliation(REWARD_EPOCH_ID, START_VOTING_ROUND_ID, END_VOTING_ROUND_ID, calculationFolder),
+        false
+      );
+      const summary = lines.join("\n");
+      expect(summary).to.contain("ARTIFACT CHECKS PASSED - ON-CHAIN CHECK SKIPPED");
+      expect(summary).to.not.contain("ALL CHECKS PASSED");
+      expect(summary).to.contain("[WARN] RewardManager totals unavailable");
+      expect(summary).to.contain("RPC transport error");
       expect(errors).to.deep.eq([]);
     });
 

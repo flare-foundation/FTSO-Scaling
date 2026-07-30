@@ -29,6 +29,10 @@ exist everywhere and reads their events as soon as the reward epoch reaches the 
 "contract missing" branch anywhere. Flare is not an exception in the code — only in its configuration, where the
 activation epoch is far enough out that the events are never read and the addresses are still placeholders.
 
+`from-env` is a local/unit-test harness, not a production network configuration. Its FCC activation, addresses,
+beneficiary and RPC defaults are intentionally suitable only for controlled local tests; production deployments
+must use one of the explicit network configurations above.
+
 Enabling FCC on a network therefore means two edits that belong together: fill in the two addresses in
 `libs/contracts/src/constants.ts` and lower `FCC_ACTIVATION_REWARD_EPOCH` in `libs/fsp-rewards/src/constants.ts`.
 Because the runtime trusts the configuration, that pairing is enforced by a test rather than a runtime check:
@@ -124,15 +128,17 @@ FCC FEE ACCOUNTING - reward epoch 5877 - ALL CHECKS PASSED
   [PASS] observed FCC fees are fully claimed: residual 0 wei
   [PASS] final distribution carries at least the FCC fees: ...
   [PASS] every FDC2 request is paired with a TEE instruction: 0 unpaired
-  [PASS] reward epoch attribution: 0 TeeInstructionsSent event(s) credited on chain to another reward epoch
-  [INFO] all claims vs RewardManager: ... Spans every reward source and excludes staking claims ...
+  [PASS] every voting round carries FCC data: all rounds present
+  [PASS] all claimable RewardManager funds are covered by claims: ... after excluding the explicit Coston2 validator allocation
+  [INFO] boundary events excluded: ... attributed to the neighbouring reward epoch instead
   report: calculations/coston2/5877/fcc-reconciliation.json
 ================================================================================================================
 ```
 
-The header reads `ALL CHECKS PASSED` or `N CHECK(S) FAILED`, and on failure every line is emitted through the
-logger's error channel with the failing check marked `[FAIL]`. The summary is printed **before** the run throws, so
-a failure shows which check failed rather than only a stack trace.
+The header reads `ALL CHECKS PASSED`, `N CHECK(S) FAILED`, or
+`ARTIFACT CHECKS PASSED - ON-CHAIN CHECK SKIPPED` when RewardManager totals are unavailable. On failure every line
+is emitted through the logger's error channel with the failing check marked `[FAIL]`. The summary is printed
+**before** the run throws, so a failure shows which check failed rather than only a stack trace.
 
 `[PASS]`/`[FAIL]` lines are the hard checks; `[WARN]`/`[INFO]` lines are reported only, for the reasons below.
 
@@ -148,17 +154,22 @@ there is no legitimate rounding source:
 - every `AttestationRequested` must have a `TeeInstructionsSent` with the same `instructionId` in the same voting
   round. Both are emitted in the same transaction, so a missing counterpart means events were lost between the
   chain and the indexer. This is the check that catches indexer gaps, which a pure sum cannot.
+- every voting round must carry `fccData`; this rejects artifacts created before FCC collection was enabled.
 
-**The overall invariant.** `sum(all claims) == RewardManager.epochTotalRewards`, a hard failure. Every wei the
-contract holds for a reward epoch must be covered by a claim; anything unaccounted simply stays there, unclaimable
-and otherwise unnoticed. This holds exactly on both production networks — Flare and Songbird reward epoch 418 each
-reconcile to the wei.
+**The overall invariant.** `sum(all claims) == claimable RewardManager rewards`, a hard failure whenever the RPC
+total is available. Every wei this calculator is responsible for must be covered by a claim; anything unaccounted
+simply stays on the contract, unclaimable and otherwise unnoticed. This holds exactly on both production networks —
+Flare and Songbird reward epoch 418 each reconcile to the wei.
 
-It does **not** hold on Coston2, which offers validator inflation but does not distribute staking rewards, leaving
-1041666666666666666666667 wei per epoch unclaimed. The check reports that truthfully rather than tolerating it. The
-summary is printed before the failure is raised, so an FCC verification run on Coston2 still shows its FCC results
-in full. `ValidatorRewardOffersManager` emits `InflationRewardsOffered` immediately before its `receiveRewards`, so
-this share could be netted out exactly; it is not in the FSP indexer defaults, so that would need its own collector.
+Coston2 is the one explicit exception: `ValidatorRewardOffersManager` receives 3000 BIPS (30%) of inflation, but
+Coston2 does not produce the corresponding staking claims. The exact exclusion is
+`on-chain totalInflationRewardsWei - (FTSO + Fast Updates + FDC inflation offers)`. All three covered offer inputs
+are required, so an entirely absent covered source fails closed instead of silently enlarging the exclusion. This
+preserves the contracts' independent per-receiver allocation and epoch-offer rounding: in epoch 5878, multiplying
+the aggregate total by 30% is one wei too small, while the exact remainder is
+1041666666666666666666667 wei. Epoch 5877 has the same exact remainder. This is a named network rule, not a claims
+residual tolerance: missing FCC or downstream claims for any present FTSO, FDC, or Fast Updates offer still fail,
+and every other network compares against the full RewardManager total.
 
 **Reported, not fatal:**
 
@@ -183,12 +194,15 @@ this share could be netted out exactly; it is not in the FSP indexer defaults, s
    call** from `Fdc2Hub`/`FlareTeeManager` to `RewardManager`, so it never appears in `transactions`.
 
 It is therefore read with a single `eth_call` to `RewardManager.getRewardEpochTotals` over the per-network public
-RPC (`RPC_URL()` in `libs/contracts/src/constants.ts`, overridable with the `RPC` env var). This is the only part
+RPC (`RPC_URL()` in `libs/fsp-rewards/src/constants.ts`, overridable with the `RPC` env var). This is the only part
 of the calculation that touches a node; everything else stays indexer-only. Note that the public nodes cap
 `eth_getLogs` at 30 blocks, so they are not a viable source for the events themselves — only for contract state.
 
-An unreachable node is logged rather than treated as an accounting failure, so an environment problem cannot be
-confused with a real mismatch.
+If an RPC transport failure prevents the totals call, the artifact-level FCC checks still run, but the header
+explicitly states that the on-chain check was skipped. Configuration, ABI, decoding, and contract-call errors fail
+finalization instead of silently weakening it. Consequently, a missing FCC collector is independently detected
+only when the on-chain comparison is available; operators must treat the transport warning as incomplete
+verification, not as an all-checks-passed result.
 
 ## 4. Regenerating the ABIs
 

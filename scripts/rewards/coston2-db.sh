@@ -35,7 +35,7 @@ export REWARD_EPOCH_ID=5877
 node dist/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 40 -w 10 -r $REWARD_EPOCH_ID -m 10000
 
 # ---------------------------------------------------------------------------------------------------------------------------
-# Calculating all reward data from a starting reward epoch id instead, switching to incremental for the ongoing epoch.
+# Calculating all reward data from a starting reward epoch id through the latest completed epoch.
 # Only reaches back as far as the indexer's history_epochs window.
 # export FROM_REWARD_EPOCH_ID=5877
 # node dist/apps/ftso-reward-calculation-process/src/main.js ftso-reward-calculation-process -g -o -c -a -y -z -b 40 -w 10 -d $FROM_REWARD_EPOCH_ID -m 10000

@@ -300,10 +300,10 @@ export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
 /**
  * Public RPC endpoint per network.
  *
- * Used only by out-of-band verification that needs contract state which is not observable from the
- * indexer database (e.g. `RewardManager.getRewardEpochTotals`, whose `receiveRewards` credits emit no
- * event and arrive via internal calls that the indexer's `transactions` table does not record).
- * The reward calculation itself stays indexer-only — do not introduce RPC calls into it.
+ * Used by final reward reconciliation for contract state which is not observable from the indexer database:
+ * `RewardManager.getRewardEpochTotals`, whose `receiveRewards` credits emit no event and arrive via internal calls
+ * that the indexer's `transactions` table does not record. All data collection and claim calculation before that
+ * final independent check stays indexer-only.
  *
  * Override with the `RPC` environment variable, e.g. to point at a private or archive node.
  */

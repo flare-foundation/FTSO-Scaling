@@ -175,10 +175,13 @@ function freshContracts(network: string): typeof import("../../../libs/contracts
 }
 
 describe(`FCC contract configuration (${getTestFile(__filename)})`, () => {
-  const NETWORKS = ["coston", "coston2", "songbird", "flare", "local-test"];
+  // `from-env` is intentionally absent: it is a local/unit-test harness whose caller supplies whichever subset of
+  // contracts that test needs, not a deployable network configuration. These are the fixed configurations shipped
+  // by the calculator and therefore subject to the activation/address invariant below.
+  const FIXED_NETWORKS = ["coston", "coston2", "songbird", "flare", "local-test"];
 
-  it("configures both FCC contracts on every network", () => {
-    for (const network of NETWORKS) {
+  it("configures both FCC contracts on every fixed network", () => {
+    for (const network of FIXED_NETWORKS) {
       const { CONTRACTS } = freshContracts(network);
       for (const contract of [CONTRACTS.FlareTeeManager, CONTRACTS.Fdc2Hub]) {
         expect(contract, `${network} contract missing`).to.not.eq(undefined);
@@ -193,7 +196,7 @@ describe(`FCC contract configuration (${getTestFile(__filename)})`, () => {
   // query the placeholder, return no events, and let the reconciliation balance at zero while real fees sat on
   // RewardManager. This test is the safeguard, so the runtime needs no special case.
   it("never activates FCC on a network whose addresses are still placeholders", () => {
-    for (const network of NETWORKS) {
+    for (const network of FIXED_NETWORKS) {
       const { CONTRACTS, ZERO_ADDRESS } = freshContracts(network);
       const { FCC_ACTIVATION_REWARD_EPOCH, FCC_FAR_FUTURE_REWARD_EPOCH } = freshConstants(network);
       if (FCC_ACTIVATION_REWARD_EPOCH() === FCC_FAR_FUTURE_REWARD_EPOCH) {

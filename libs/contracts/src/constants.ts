@@ -179,8 +179,8 @@ const contracts = () => {
           address: process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS,
         },
         FdcHub: { name: "FdcHub", address: process.env.FTSO_CA_FDC_HUB_ADDRESS },
-        // Needed only when FCC_ACTIVATION_REWARD_EPOCH is set for this configuration, so they are read from the
-        // environment when present and validated then; otherwise they stay at the placeholder.
+        // `from-env` is a local/unit-test harness, never a production deployment configuration. FCC addresses are
+        // therefore optional and stay at the placeholder unless that particular test supplies them.
         FlareTeeManager: {
           name: "FlareTeeManager",
           address: optionalContractAddressFromEnv("FTSO_CA_FLARE_TEE_MANAGER_ADDRESS"),

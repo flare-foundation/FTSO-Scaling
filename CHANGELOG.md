@@ -24,7 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fees are not fully covered by claims, or if an FDC2 request is missing its paired TEE instruction event. It also
   compares the sum of all claims against `RewardManager.getRewardEpochTotals`, read over the newly configured
   per-network public RPC (`RPC_URL`, overridable with the `RPC` env var); that comparison spans every reward
-  source and is reported rather than fatal.
+  source and is fatal when available. Coston2 explicitly excludes its exact validator-inflation allocation, derived
+  as the on-chain inflation total minus the required FTSO, Fast Updates, and FDC inflation offers so per-receiver
+  rounding is preserved; no generic residual tolerance is used. If an RPC transport failure prevents the on-chain
+  total from being read, the summary reports that the check was skipped instead of claiming that all checks passed;
+  configuration, ABI, decoding, and contract-call failures remain fatal.
+
+### Changed
+
+- Legacy incremental reward calculation is no longer supported. The `-l` option and direct service entry point now
+  reject the request; reward ranges run only through the latest completed epoch.
 
 ## [1.1.1] - 2026-07-16
 
