@@ -344,21 +344,30 @@ export class IndexerClientForRewarding extends IndexerClient {
   /**
    * Extract IncentiveOffered events from the indexer that match the range of voting rounds.
    */
-  public async getIncentiveOfferedEvents(
-    startVotingRoundId: number,
-    endVotingRoundId: number
-  ): Promise<IndexerResponse<IncentiveOffered[]>> {
-    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
-    // strictly containing in the range
-    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+  public async getIncentiveOfferedEvents(rewardEpochId: number): Promise<IndexerResponse<IncentiveOffered[]>> {
+    // `FastUpdateIncentiveManager.offerIncentive` credits `getCurrentRewardEpochId()` with no compensation for the
+    // epoch boundary, exactly as the FCC contracts do and unlike `FdcHub`, which rolls forward near the epoch end.
+    // So an incentive is attributed the same way FCC fees are: collected over the epoch's funding window, whose
+    // inclusive edges guarantee a superset, then narrowed by the reward epoch id the event carries itself.
+    //
+    // Before this, incentives were collected over the epoch's voting round schedule and never filtered, so one
+    // offered across a boundary funded one epoch on chain while being counted towards another's fast updates pool.
+    const window = await this.getRewardEpochFundingWindow(rewardEpochId);
     const eventName = IncentiveOffered.eventName;
-    const status = await this.ensureBlockRange(startTime, endTime);
+    const status = await this.ensureBlockRange(window.startTimeSec, window.endTimeSec);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
 
-    const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
-    const data = result.map((event) => IncentiveOffered.fromRawEvent(event));
+    const result = await this.queryEvents(
+      CONTRACTS.FastUpdateIncentiveManager,
+      eventName,
+      window.startTimeSec,
+      window.endTimeSec
+    );
+    const data = result
+      .map((event) => IncentiveOffered.fromRawEvent(event))
+      .filter((event) => event.rewardEpochId === rewardEpochId);
     return {
       status,
       data,

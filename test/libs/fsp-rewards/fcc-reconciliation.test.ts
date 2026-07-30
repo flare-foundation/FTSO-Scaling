@@ -5,9 +5,12 @@ import { bigIntReplacer } from "../../../libs/ftso-core/src/utils/big-number-ser
 import { BURN_ADDRESS, CALCULATIONS_FOLDER, FCC_FEES_ADDRESS } from "../../../libs/fsp-rewards/src/constants";
 import { ILogger } from "../../../libs/ftso-core/src/utils/ILogger";
 import {
+  allReconciliationChecks,
   assertFccReconciliation,
   computeFccReconciliation,
   FccReconciliation,
+  FccReconciliationReport,
+  fundsFullyClaimedCheck,
   logFccReconciliationSummary,
 } from "../../../libs/fsp-rewards/src/reward-calculation/fcc/fcc-reconciliation";
 import { RewardTypePrefix } from "../../../libs/fsp-rewards/src/reward-calculation/RewardTypePrefix";
@@ -42,6 +45,8 @@ interface RoundFixture {
   // FCC claim amounts written to claims.json; defaults to the observed sums
   claimedTee?: bigint;
   claimedFdc2?: bigint;
+  // write the claims as RewardClaim.merge would leave them: correct amounts, no tags
+  serializeMerged?: boolean;
 }
 
 /**
@@ -120,7 +125,16 @@ function writeFixture(rounds: Record<number, RoundFixture>, finalFccClaimAmount?
         rewardTypeTag: RewardTypePrefix.FCC_FDC2_FEES,
       });
     }
-    writeFileSync(path.join(votingRoundFolder, CLAIMS_FILE), JSON.stringify(claims, bigIntReplacer));
+    const serialized = fixture.serializeMerged
+      ? [
+          {
+            beneficiary: FCC_FEES_ADDRESS.toLowerCase(),
+            amount: claimedTee + claimedFdc2,
+            claimType: ClaimType.DIRECT,
+          } as IPartialRewardClaim,
+        ]
+      : claims;
+    writeFileSync(path.join(votingRoundFolder, CLAIMS_FILE), JSON.stringify(serialized, bigIntReplacer));
   }
 
   const finalClaims: IRewardClaim[] = [
@@ -283,6 +297,71 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     expect(reconciliation.roundsWithoutFccData).to.eq(1);
     expect(reconciliation.residualWei).to.eq(0n);
     expect(() => assertFccReconciliation(reconciliation)).to.throw("have no fccData");
+  });
+
+  // RewardClaim.merge drops rewardTypeTag. If merged claims reach disk the tag sums read zero, which looks
+  // identical to the fees having been lost. The message must tell the two apart.
+  it("diagnoses erased tags rather than reporting lost funds", () => {
+    const calculationFolder = writeFixture({
+      [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }], fdc2: [{ fee: 400n }], serializeMerged: true },
+    });
+    const reconciliation = computeFccReconciliation(
+      REWARD_EPOCH_ID,
+      START_VOTING_ROUND_ID,
+      END_VOTING_ROUND_ID,
+      calculationFolder
+    );
+    expect(reconciliation.claimedFeesWei).to.eq(0n);
+    expect(reconciliation.untaggedDirectClaimsToFccAddress).to.eq(1);
+    expect(() => assertFccReconciliation(reconciliation)).to.throw("The fees are not lost, the tags");
+  });
+
+  // The invariant the whole feature exists for: every wei the RewardManager holds is covered by a claim. Verified
+  // to hold exactly on both production networks at reward epoch 418.
+  describe("all funds are covered by claims", () => {
+    function report(totalClaimsWei: bigint, heldWei?: bigint): FccReconciliationReport {
+      const calculationFolder = writeFixture({ [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }] } });
+      const base = computeFccReconciliation(
+        REWARD_EPOCH_ID,
+        START_VOTING_ROUND_ID,
+        END_VOTING_ROUND_ID,
+        calculationFolder
+      );
+      return {
+        ...base,
+        totalClaimsWei,
+        rewardManagerTotalRewardsWei: heldWei,
+        rewardManagerResidualWei: heldWei === undefined ? undefined : totalClaimsWei - heldWei,
+      };
+    }
+
+    it("passes when the claims exactly cover the funds held", () => {
+      const check = fundsFullyClaimedCheck(report(1_000n, 1_000n));
+      expect(check?.passed).to.eq(true);
+    });
+
+    it("fails when funds are left unclaimed, naming the amount", () => {
+      const check = fundsFullyClaimedCheck(report(700n, 1_000n));
+      expect(check?.passed).to.eq(false);
+      expect(check?.detail).to.contain("300 wei unclaimed");
+    });
+
+    it("fails when more is claimed than the RewardManager holds", () => {
+      expect(fundsFullyClaimedCheck(report(1_200n, 1_000n))?.passed).to.eq(false);
+    });
+
+    // An unreachable node is an environment problem, not an accounting one, so it must not fail the epoch.
+    it("is skipped when the RewardManager totals could not be read", () => {
+      expect(fundsFullyClaimedCheck(report(700n, undefined))).to.eq(undefined);
+      const checks = allReconciliationChecks(report(700n, undefined));
+      expect(checks.some((c) => c.name.includes("RewardManager funds"))).to.eq(false);
+    });
+
+    it("is included among the checks when the totals are available", () => {
+      const checks = allReconciliationChecks(report(700n, 1_000n));
+      const funds = checks.find((c) => c.name.includes("RewardManager funds"));
+      expect(funds?.passed).to.eq(false);
+    });
   });
 
   // Whoever runs the calculation must be able to see the outcome without opening the report file, so the summary is

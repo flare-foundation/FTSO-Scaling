@@ -149,15 +149,19 @@ there is no legitimate rounding source:
   round. Both are emitted in the same transaction, so a missing counterpart means events were lost between the
   chain and the indexer. This is the check that catches indexer gaps, which a pure sum cannot.
 
+**The overall invariant.** `sum(all claims) == RewardManager.epochTotalRewards`, a hard failure. Every wei the
+contract holds for a reward epoch must be covered by a claim; anything unaccounted simply stays there, unclaimable
+and otherwise unnoticed. This holds exactly on both production networks — Flare and Songbird reward epoch 418 each
+reconcile to the wei.
+
+It does **not** hold on Coston2, which offers validator inflation but does not distribute staking rewards, leaving
+1041666666666666666666667 wei per epoch unclaimed. The check reports that truthfully rather than tolerating it. The
+summary is printed before the failure is raised, so an FCC verification run on Coston2 still shows its FCC results
+in full. `ValidatorRewardOffersManager` emits `InflationRewardsOffered` immediately before its `receiveRewards`, so
+this share could be netted out exactly; it is not in the FSP indexer defaults, so that would need its own collector.
+
 **Reported, not fatal:**
 
-- the sum of all claims against `RewardManager.getRewardEpochTotals`. **This is expected not to balance on networks
-  with P-chain staking, and cannot be made an equality check as it stands.** `ValidatorRewardOffersManager` resolves
-  the same `RewardManager` through the address updater and credits the staking inflation to it, but the matching
-  staking claims are produced by a different process, not by this one. Measured on Coston2 reward epoch 5877: this
-  calculation covered exactly 70% of the epoch's inflation — 35% FTSO scaling and fast updates, 35% FDC — leaving
-  the 30% staking share uncovered. It becomes an equality check only once staking claims are accounted for
-  alongside these.
 - `eventsExcludedByRewardEpochId`: events inside the collection window whose own `rewardEpochId` belongs to a
   neighbouring epoch. These are **expected**, not anomalies — the window deliberately overshoots both boundaries so
   nothing is missed, and the filter removes what belongs elsewhere. The count is reported so boundary activity is

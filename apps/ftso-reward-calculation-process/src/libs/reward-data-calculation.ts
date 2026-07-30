@@ -57,10 +57,7 @@ export async function runCalculateRewardCalculationTopJob(
     if (fuInflationRewardsOffered === undefined) {
       throw new Error(`No FUInflationRewardsOffered event found for reward epoch ${rewardEpochId}`);
     }
-    const fuIncentivesOfferedResponse = await indexerClient.getIncentiveOfferedEvents(
-      rewardEpoch.signingPolicy.startVotingRoundId,
-      rewardEpochDuration.endVotingRoundId
-    );
+    const fuIncentivesOfferedResponse = await indexerClient.getIncentiveOfferedEvents(rewardEpochId);
     if (fuIncentivesOfferedResponse.status !== BlockAssuranceResult.OK) {
       throw new Error(`Error while fetching IncentiveOffered events for reward epoch ${rewardEpochId}`);
     }

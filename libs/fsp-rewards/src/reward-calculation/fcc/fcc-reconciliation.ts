@@ -65,6 +65,15 @@ export interface FccReconciliation {
    * appear to reconcile while fees sat unclaimed. A hard failure.
    */
   roundsWithoutFccData: number;
+
+  /**
+   * Untagged DIRECT claims to FCC_FEES_ADDRESS found in the serialized partial claims.
+   *
+   * `RewardClaim.merge` rebuilds claims as `{beneficiary, amount, claimType}` only, dropping `rewardTypeTag`. If
+   * merged claims are serialized, the FCC tag sums read zero and the epoch looks as though its fees were lost. The
+   * production path serializes unmerged, but `merge` defaults to true, so this distinguishes the two.
+   */
+  untaggedDirectClaimsToFccAddress: number;
 }
 
 /**
@@ -86,6 +95,7 @@ export function computeFccReconciliation(
   let unpairedFdc2Requests = 0;
   let votingRoundsWithFccActivity = 0;
   let roundsWithoutFccData = 0;
+  let untaggedDirectClaimsToFccAddress = 0;
 
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
     const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId, false, calculationFolder);
@@ -114,6 +124,15 @@ export function computeFccReconciliation(
       }
       if (claim.rewardTypeTag === RewardTypePrefix.FCC_FDC2_FEES) {
         claimedFdc2FeesWei += claim.amount;
+      }
+      // RewardClaim.merge rebuilds claims as {beneficiary, amount, claimType} and drops every tag, so merged claims
+      // reaching disk make both sums above read zero. Counted so that tag erasure is not misreported as lost funds.
+      if (
+        claim.rewardTypeTag === undefined &&
+        claim.claimType === ClaimType.DIRECT &&
+        claim.beneficiary.toLowerCase() === FCC_FEES_ADDRESS.toLowerCase()
+      ) {
+        untaggedDirectClaimsToFccAddress++;
       }
     }
   }
@@ -146,6 +165,7 @@ export function computeFccReconciliation(
     eventsExcludedByRewardEpochId,
     unpairedFdc2Requests,
     roundsWithoutFccData,
+    untaggedDirectClaimsToFccAddress,
   };
 }
 
@@ -187,7 +207,13 @@ export function fccReconciliationChecks(reconciliation: FccReconciliation): FccC
       reconciliation.residualWei === 0n
         ? `residual 0 wei`
         : `observed fees ${reconciliation.observedFeesWei} wei but claims total ${reconciliation.claimedFeesWei} ` +
-          `wei (residual ${reconciliation.residualWei} wei). Funds on RewardManager would not be fully claimed.`,
+          `wei (residual ${reconciliation.residualWei} wei). ` +
+          (reconciliation.claimedFeesWei === 0n && reconciliation.untaggedDirectClaimsToFccAddress > 0
+            ? `The claims were serialized after RewardClaim.merge, which drops rewardTypeTag: ` +
+              `${reconciliation.untaggedDirectClaimsToFccAddress} untagged DIRECT claims to ${FCC_FEES_ADDRESS} ` +
+              `are present. The fees are not lost, the tags the reconciliation counts by are. Serialize partial ` +
+              `claims unmerged.`
+            : `Funds on RewardManager would not be fully claimed.`),
   });
 
   // The FCC fees must survive into the final distribution. Only a lower bound can be asserted when FCC_FEES_ADDRESS
@@ -240,6 +266,49 @@ export function fccReconciliationChecks(reconciliation: FccReconciliation): FccC
           `serialized by the previous version behind.`,
   });
 
+  return checks;
+}
+
+/**
+ * The invariant the whole reconciliation exists for: every wei the RewardManager holds for a reward epoch is
+ * covered by a claim.
+ *
+ * `epochTotalRewards` is the sum of every `receiveRewards` credit for the epoch, inflation and fees alike, and the
+ * final reward distribution is what will be claimed against it. Anything the calculation fails to account for
+ * simply stays on the contract, unclaimable and unnoticed, which is exactly the failure no other check can see.
+ *
+ * Holds exactly on both production networks — Flare and Songbird reward epoch 418 each reconcile to the wei.
+ * Returns undefined when the RewardManager totals could not be read, since an unreachable node is an environment
+ * problem rather than an accounting one.
+ */
+export function fundsFullyClaimedCheck(report: FccReconciliationReport): FccCheck | undefined {
+  if (report.rewardManagerTotalRewardsWei === undefined) {
+    return undefined;
+  }
+  const residual = report.totalClaimsWei - report.rewardManagerTotalRewardsWei;
+  return {
+    name: "all RewardManager funds are covered by claims",
+    passed: residual === 0n,
+    detail:
+      residual === 0n
+        ? `${report.totalClaimsWei} wei claimed, matching the funds held`
+        : `${report.totalClaimsWei} wei claimed of ${report.rewardManagerTotalRewardsWei} wei held for the epoch, ` +
+          `leaving ${-residual} wei unclaimed. This spans every reward source, so the cause need not be FCC: a ` +
+          `reward source whose claims this process does not produce, such as validator rewards where staking data ` +
+          `is not configured, shows up here.`,
+  };
+}
+
+/**
+ * Every check for the epoch, FCC specific and overall, evaluated once so the printed summary and the thrown error
+ * cannot disagree.
+ */
+export function allReconciliationChecks(report: FccReconciliationReport): FccCheck[] {
+  const checks = fccReconciliationChecks(report);
+  const funds = fundsFullyClaimedCheck(report);
+  if (funds !== undefined) {
+    checks.push(funds);
+  }
   return checks;
 }
 
@@ -323,11 +392,17 @@ export async function runFccReconciliation(
   const reportPath = path.join(calculationFolder, `${rewardEpochId}`, FCC_RECONCILIATION_FILE);
   writeFileSync(reportPath, JSON.stringify(report, bigIntReplacer, 2));
 
-  logFccReconciliationSummary(report, reportPath, logger);
+  // Evaluated once and shared, so the printed summary and the thrown error are the same verdict.
+  const checks = allReconciliationChecks(report);
+  logFccReconciliationSummary(report, reportPath, logger, checks);
 
-  // Fails hard: these are exact, so a mismatch means funds on RewardManager are not fully covered by claims. Thrown
-  // after the summary so that whoever ran the calculation sees which check failed, not just a stack trace.
-  assertFccReconciliation(reconciliation);
+  // Thrown after the summary, so that whoever ran the calculation sees which check failed rather than a stack trace.
+  const failures = checks.filter((check) => !check.passed);
+  if (failures.length > 0) {
+    throw new Error(
+      `Reward epoch ${rewardEpochId} reconciliation failed: ` + failures.map((failure) => failure.detail).join(" ")
+    );
+  }
 
   return report;
 }
@@ -351,9 +426,9 @@ function formatWeiAsTokens(wei: bigint): string {
 export function logFccReconciliationSummary(
   report: FccReconciliationReport,
   reportPath: string,
-  logger: ILogger = console
+  logger: ILogger = console,
+  checks: FccCheck[] = allReconciliationChecks(report)
 ): void {
-  const checks = fccReconciliationChecks(report);
   const failed = checks.filter((check) => !check.passed);
   const rule = "=".repeat(112);
   const emit = (line: string) => (failed.length > 0 ? logger.error(line) : logger.log(line));
@@ -391,13 +466,6 @@ export function logFccReconciliationSummary(
   );
   if (report.rewardManagerTotalRewardsWei === undefined) {
     emit(`  [WARN] RewardManager totals unavailable: RPC unreachable, claims not checked against funds held`);
-  } else {
-    emit(
-      `  [INFO] all claims vs RewardManager: ${formatWeiAsTokens(report.totalClaimsWei)} claimed of ` +
-        `${formatWeiAsTokens(report.rewardManagerTotalRewardsWei)} held, residual ` +
-        `${formatWeiAsTokens(report.rewardManagerResidualWei ?? 0n)}. Spans every reward source and excludes ` +
-        `staking claims, which another process produces, so a shortfall here is expected.`
-    );
   }
   emit(`  report: ${reportPath}`);
   emit(rule);
