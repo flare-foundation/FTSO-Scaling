@@ -131,7 +131,7 @@ describe(`FCC constants (${getTestFile(__filename)})`, () => {
   it("has the FCC fees address ready on Flare but keeps FCC far from active there", () => {
     const constants = freshConstants("flare");
     expect(constants.FCC_FEES_ADDRESS).to.eq(FCC_FEES_ADDRESS_FLARE);
-    expect(constants.FCC_ACTIVATION_REWARD_EPOCH()).to.eq(constants.FCC_NOT_YET_DEPLOYED_REWARD_EPOCH);
+    expect(constants.FCC_ACTIVATION_REWARD_EPOCH()).to.eq(constants.FCC_FAR_FUTURE_REWARD_EPOCH);
     expect(constants.isFccActive(419)).to.eq(false);
     expect(constants.isFccActive(100000)).to.eq(false);
   });
@@ -185,17 +185,22 @@ describe(`FCC contract configuration (${getTestFile(__filename)})`, () => {
     }
   });
 
-  // The address and the activation epoch must be set together. If a network is activated while its addresses are
-  // still zero, the event queries would silently return nothing and the reconciliation would balance at zero.
-  it("never activates FCC on a network whose addresses are still zero", () => {
+  // The runtime code assumes the FCC contracts exist on every network and reads their events whenever the reward
+  // epoch has reached the activation epoch. Keeping the address and the activation epoch consistent is therefore a
+  // configuration invariant, enforced here: lowering an activation epoch without filling in the addresses would
+  // query the placeholder, return no events, and let the reconciliation balance at zero while real fees sat on
+  // RewardManager. This test is the safeguard, so the runtime needs no special case.
+  it("never activates FCC on a network whose addresses are still placeholders", () => {
     for (const network of NETWORKS) {
       const { CONTRACTS, ZERO_ADDRESS } = freshContracts(network);
-      const { FCC_ACTIVATION_REWARD_EPOCH, FCC_NOT_YET_DEPLOYED_REWARD_EPOCH } = freshConstants(network);
-      if (FCC_ACTIVATION_REWARD_EPOCH() === FCC_NOT_YET_DEPLOYED_REWARD_EPOCH) {
+      const { FCC_ACTIVATION_REWARD_EPOCH, FCC_FAR_FUTURE_REWARD_EPOCH } = freshConstants(network);
+      if (FCC_ACTIVATION_REWARD_EPOCH() === FCC_FAR_FUTURE_REWARD_EPOCH) {
         continue;
       }
       for (const contract of [CONTRACTS.FlareTeeManager, CONTRACTS.Fdc2Hub]) {
-        expect(contract.address, `${network} ${contract.name} activated with zero address`).to.not.eq(ZERO_ADDRESS);
+        expect(contract.address, `${network} ${contract.name} activated with a placeholder address`).to.not.eq(
+          ZERO_ADDRESS
+        );
       }
     }
   });
@@ -213,7 +218,7 @@ describe(`FCC contract configuration (${getTestFile(__filename)})`, () => {
     }
   });
 
-  it("leaves the FCC addresses zero on Flare, where the contracts are not deployed", () => {
+  it("still has placeholder FCC addresses on Flare, where the activation epoch keeps them unused", () => {
     const { CONTRACTS, ZERO_ADDRESS } = freshContracts("flare");
     expect(CONTRACTS.FlareTeeManager.address).to.eq(ZERO_ADDRESS);
     expect(CONTRACTS.Fdc2Hub.address).to.eq(ZERO_ADDRESS);

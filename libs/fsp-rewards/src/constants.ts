@@ -316,8 +316,8 @@ export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
 const fccFeesAddress = () => {
   const network = process.env.NETWORK as networks;
   switch (network) {
-    // Test networks have no FCC fee recipient of their own. FCC is active on Coston and Coston2, so their fees do
-    // get claimed, to the dead address — the same treatment the FIRE pool gets on these networks.
+    // Test networks have no FCC fee recipient of their own, so their FCC fees are claimed to the dead address —
+    // the same treatment the FIRE pool gets on these networks.
     case "from-env":
     case "local-test":
     case "coston":
@@ -336,18 +336,17 @@ const fccFeesAddress = () => {
 export const FCC_FEES_ADDRESS = fccFeesAddress();
 
 /**
- * Activation reward epoch used for networks where the FCC contracts are not deployed yet.
+ * A reward epoch far beyond any that will be reached in practice — roughly 9500 years out at 3.5 days per epoch.
  *
- * A plain far-future reward epoch rather than a sentinel: reward epochs last 3.5 days on Flare and Songbird, so
- * this is roughly 9500 years out. Keeping it an ordinary epoch id means `isFccActive` stays a single comparison and
- * no code path needs a special case for "not deployed".
+ * Used as the activation epoch to gate FCC off on a network. It is an ordinary reward epoch id rather than a
+ * sentinel, so `isFccActive` remains a single comparison and every network follows the same code path.
  */
-export const FCC_NOT_YET_DEPLOYED_REWARD_EPOCH = 1_000_000;
+export const FCC_FAR_FUTURE_REWARD_EPOCH = 1_000_000;
 
 function fccActivationRewardEpochFromEnv(): number {
   const rawValue = process.env.FCC_ACTIVATION_REWARD_EPOCH;
   if (rawValue === undefined || rawValue.trim() === "") {
-    return FCC_NOT_YET_DEPLOYED_REWARD_EPOCH;
+    return FCC_FAR_FUTURE_REWARD_EPOCH;
   }
   const value = rawValue.trim();
   if (!/^\d+$/.test(value)) {
@@ -376,11 +375,12 @@ const fccActivationRewardEpoch = (): number => {
     case "coston2":
       // Reward epoch in progress when the FCC contracts were deployed on Coston2; see the Songbird note above.
       return 5877;
-    // FCC is not deployed on Flare yet, and local-test has no FCC contracts at all.
+    // FCC accounting is gated off on these networks purely by the activation epoch. Lower it to the epoch from
+    // which the fees should be accounted for, together with the addresses in libs/contracts/src/constants.ts.
     case "flare":
-      return FCC_NOT_YET_DEPLOYED_REWARD_EPOCH;
+      return FCC_FAR_FUTURE_REWARD_EPOCH;
     case "local-test":
-      return FCC_NOT_YET_DEPLOYED_REWARD_EPOCH;
+      return FCC_FAR_FUTURE_REWARD_EPOCH;
     default:
       // Ensure exhaustive checking
 

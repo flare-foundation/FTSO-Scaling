@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - FCC (Flare Confidential Compute) fee accounting, activating on Songbird at reward epoch 419 and on Coston and
-  Coston2 at reward epoch 5877. Flare is the only network where the FCC contracts are not deployed yet; its
-  addresses are the zero address and its activation epoch is far in the future. The fees of TEE
+  Coston2 at reward epoch 5877. The FCC contracts are configured for every network and the accounting is gated by
+  the activation reward epoch alone; on Flare that epoch is far in the future, so FCC fees are not accounted for
+  there yet. The fees of TEE
   instruction dispatches (`FlareTeeManager.TeeInstructionsSent`) and FDC2 attestation requests
   (`Fdc2Hub.AttestationRequested`) are credited to the `RewardManager` when paid; until the TEE rewarding logic
   exists they are redirected in full to `FCC_FEES_ADDRESS` as a direct reward claim, so that all claims keep

@@ -1,8 +1,7 @@
 import { NetworkContractAddresses } from "./definitions";
 
 /**
- * Placeholder address for a contract that is not deployed on the current network. Always paired with a far-future
- * activation reward epoch, so the address is never actually used in a query.
+ * Placeholder for a contract address that is not known yet. Fill it in when the contract is deployed.
  */
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -65,7 +64,7 @@ export const SONGBIRD_CONTRACTS: NetworkContractAddresses = {
     address: "0x596C70Ad6fFFdb9b6158F1Dfd0bc32cc72B82006",
   },
   FdcHub: { name: "FdcHub", address: "0xCfD4669a505A70c2cE85db8A1c1d14BcDE5a1a06" },
-  // FCC contracts (Flare Confidential Compute), deployed on Songbird only.
+  // FCC contracts (Flare Confidential Compute).
   FlareTeeManager: { name: "FlareTeeManager", address: "0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767" },
   Fdc2Hub: { name: "Fdc2Hub", address: "0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8" },
 };
@@ -89,8 +88,8 @@ export const FLARE_CONTRACTS: NetworkContractAddresses = {
     address: "0xd648e8ACA486Ce876D641A0F53ED1F2E9eF4885D",
   },
   FdcHub: { name: "FdcHub", address: "0xc25c749DC27Efb1864Cb3DADa8845B7687eB2d44" },
-  // FCC is not deployed on Flare yet. Zero addresses, paired with a far-future FCC_ACTIVATION_REWARD_EPOCH so the
-  // events are never queried; replace both together when the contracts are deployed.
+  // FCC accounting on Flare is gated off by FCC_ACTIVATION_REWARD_EPOCH, so these addresses are not read yet.
+  // Fill both in together with lowering that activation epoch.
   FlareTeeManager: { name: "FlareTeeManager", address: ZERO_ADDRESS },
   Fdc2Hub: { name: "Fdc2Hub", address: ZERO_ADDRESS },
 };
@@ -180,8 +179,8 @@ const contracts = () => {
           address: process.env.FTSO_CA_FAST_UPDATE_INCENTIVE_MANAGER_ADDRESS,
         },
         FdcHub: { name: "FdcHub", address: process.env.FTSO_CA_FDC_HUB_ADDRESS },
-        // FCC contracts are optional in the environment: absent means not deployed for this configuration, which
-        // pairs with the far-future default of FCC_ACTIVATION_REWARD_EPOCH. Validated when provided.
+        // Needed only when FCC_ACTIVATION_REWARD_EPOCH is set for this configuration, so they are read from the
+        // environment when present and validated then; otherwise they stay at the placeholder.
         FlareTeeManager: {
           name: "FlareTeeManager",
           address: optionalContractAddressFromEnv("FTSO_CA_FLARE_TEE_MANAGER_ADDRESS"),
@@ -242,7 +241,7 @@ function isValidContractAddress(address: string): boolean {
 
 /**
  * Reads a contract address that the environment need not define, returning {@link ZERO_ADDRESS} when it is absent.
- * A provided value is still validated, so a typo fails loudly rather than silently becoming the zero address.
+ * A provided value is validated, so a typo fails loudly rather than silently becoming the placeholder.
  */
 function optionalContractAddressFromEnv(envVar: string): string {
   const rawValue = process.env[envVar];

@@ -3,28 +3,32 @@
 This document records how the fees of the Flare Confidential Compute (FCC) contracts are accounted for in the
 reward calculation.
 
-> **Status:** implemented behind `FCC_ACTIVATION_REWARD_EPOCH`. Active on Songbird from reward epoch **419**, and on
-> Coston and Coston2 from reward epoch **5877**. Flare is the only network where the FCC contracts are not deployed
-> yet: its addresses are the zero address and its activation epoch is `FCC_NOT_YET_DEPLOYED_REWARD_EPOCH`.
-> `FCC_FEES_ADDRESS` is already configured for Flare, so only the two addresses and the activation epoch change when
-> the contracts are deployed there.
+> **Status:** implemented, gated by `FCC_ACTIVATION_REWARD_EPOCH` alone. Active on Songbird from reward epoch
+> **419**, and on Coston and Coston2 from reward epoch **5877**. On Flare the activation epoch is
+> `FCC_FAR_FUTURE_REWARD_EPOCH`, so FCC fees are not accounted for there yet.
 
 ## 1. Where the funds come from
 
 Two contracts were added by the `tee_deploy` branch of `flare-smart-contracts-v2`:
 
-| Network | `FlareTeeManager` | `Fdc2Hub` |
-|---|---|---|
-| Songbird | `0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767` | `0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8` |
-| Coston | `0xc4885998f5D792ed88C5Af7a3AaCBe333f017658` | `0x064C7B68B0e2BC87e7bE34e89741485Fcb48FA2F` |
-| Coston2 | `0x1a9C4A0f9D76c0b1D91d22E24E573a9b377618aE` | `0x04dd3Ba33aC798d400bEc42A26F82f9812A421dc` |
-| Flare | not deployed (zero address) | not deployed (zero address) |
+| Network | `FlareTeeManager` | `Fdc2Hub` | Activation epoch |
+|---|---|---|---|
+| Songbird | `0x5C2dE0DeFC3FDBbF8e12c12bD0b1629Ed37DC767` | `0x4234a8f5D255d91d56df53d0cc78c0Cc2B67ACD8` | 419 |
+| Coston | `0xc4885998f5D792ed88C5Af7a3AaCBe333f017658` | `0x064C7B68B0e2BC87e7bE34e89741485Fcb48FA2F` | 5877 |
+| Coston2 | `0x1a9C4A0f9D76c0b1D91d22E24E573a9b377618aE` | `0x04dd3Ba33aC798d400bEc42A26F82f9812A421dc` | 5877 |
+| Flare | placeholder | placeholder | `FCC_FAR_FUTURE_REWARD_EPOCH` |
 
-Both contracts are declared for **every** network in `NetworkContractAddresses`, non-optional, so no code path needs
-to handle a missing FCC contract. Where they are not deployed the address is the zero address, always paired with a
-far-future activation epoch so the address is never used in a query. `DataManagerForRewarding` asserts that pairing
-once, when FCC data collection starts: activating a network while its addresses are still zero fails loudly instead
-of silently returning no events and letting the reconciliation balance at zero.
+Both contracts are declared for **every** network in `NetworkContractAddresses`, non-optional. The code assumes they
+exist everywhere and reads their events as soon as the reward epoch reaches the activation epoch; there is no
+"contract missing" branch anywhere. Flare is not an exception in the code — only in its configuration, where the
+activation epoch is far enough out that the events are never read and the addresses are still placeholders.
+
+Enabling FCC on a network therefore means two edits that belong together: fill in the two addresses in
+`libs/contracts/src/constants.ts` and lower `FCC_ACTIVATION_REWARD_EPOCH` in `libs/fsp-rewards/src/constants.ts`.
+Because the runtime trusts the configuration, that pairing is enforced by a test rather than a runtime check:
+`fcc-fee-claims.test.ts` fails if any network has an activation epoch set while its addresses are still
+placeholders. Without it, the event queries would return nothing and the reconciliation would balance at zero while
+real fees sat on the `RewardManager`.
 
 Both credit `RewardManager` through `receiveRewards`, and each `receiveRewards` call site is paired one to one with
 an event emitted in the same function:
@@ -75,8 +79,8 @@ so that every wei credited to `RewardManager` is covered by a claim.
 | Area | File | Behaviour |
 |---|---|---|
 | ABIs | `abi/FlareTeeManager.json`, `abi/Fdc2Hub.json` | Contract artifacts, copied as-is like every other ABI in `abi/`. See §4 for the diamond caveat. |
-| Contracts | `libs/contracts/src/constants.ts`, `definitions.ts` | Per-network addresses, non-optional on every network; `ZERO_ADDRESS` where not deployed |
-| Constants | `libs/fsp-rewards/src/constants.ts` | `FCC_FEES_ADDRESS` (Songbird `0x3390E1aDf46568cCC95c3571424937b042094ac2`, Flare `0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041`, test networks `0x…dEaD`), `FCC_ACTIVATION_REWARD_EPOCH`, `FCC_NOT_YET_DEPLOYED_REWARD_EPOCH`, `isFccActive` |
+| Contracts | `libs/contracts/src/constants.ts`, `definitions.ts` | Addresses for every network, non-optional; `ZERO_ADDRESS` as the placeholder on Flare |
+| Constants | `libs/fsp-rewards/src/constants.ts` | `FCC_FEES_ADDRESS` (Songbird `0x3390E1aDf46568cCC95c3571424937b042094ac2`, Flare `0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041`, test networks `0x…dEaD`), `FCC_ACTIVATION_REWARD_EPOCH`, `FCC_FAR_FUTURE_REWARD_EPOCH`, `isFccActive` |
 | Events | `libs/contracts/src/events/TeeInstructionsSent.ts`, `Fdc2AttestationRequested.ts` | Decoding |
 | Indexing | `libs/fsp-rewards/src/IndexerClientForRewarding.ts` | `getTeeInstructionsSentEvents`, `getFdc2AttestationRequestedEvents`, bucketed per voting round |
 | Data | `libs/fsp-rewards/src/DataManagerForRewarding.ts` | `getFCCDataForVotingRoundRange`, persisted as `fccData` on the reward calculation data |
