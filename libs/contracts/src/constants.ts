@@ -197,40 +197,6 @@ const contracts = () => {
 };
 export const CONTRACTS = contracts();
 
-/**
- * Public RPC endpoint per network.
- *
- * Used only by out-of-band verification that needs contract state which is not observable from the
- * indexer database (e.g. `RewardManager.getRewardEpochTotals`, whose `receiveRewards` credits emit no
- * event and arrive via internal calls that the indexer's `transactions` table does not record).
- * The reward calculation itself stays indexer-only — do not introduce RPC calls into it.
- *
- * Override with the `RPC` environment variable, e.g. to point at a private or archive node.
- */
-const rpcUrl = () => {
-  if (process.env.RPC) {
-    return process.env.RPC;
-  }
-  const network = process.env.NETWORK as networks;
-  switch (network) {
-    case "flare":
-      return "https://flare-api.flare.network/ext/bc/C/rpc";
-    case "songbird":
-      return "https://songbird-api.flare.network/ext/bc/C/rpc";
-    case "coston2":
-    case "local-test":
-    case "from-env":
-      return "https://coston2-api.flare.network/ext/bc/C/rpc";
-    case "coston":
-      return "https://coston-api.flare.network/ext/bc/C/rpc";
-    default:
-      // Ensure exhaustive checking
-
-      ((_: never): void => {})(network);
-  }
-};
-export const RPC_URL = () => rpcUrl();
-
 function isValidHexString(str: string): boolean {
   return /^0x[0-9a-f]*$/i.test(str);
 }

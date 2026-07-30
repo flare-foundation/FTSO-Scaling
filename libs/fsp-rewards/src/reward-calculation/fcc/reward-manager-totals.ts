@@ -1,6 +1,7 @@
 import { Contract, JsonRpcProvider } from "ethers";
 import { readFileSync } from "fs";
-import { CONTRACTS, RPC_URL } from "../../../../contracts/src/constants";
+import { CONTRACTS } from "../../../../contracts/src/constants";
+import { RPC_URL } from "../../constants";
 
 /**
  * Totals RewardManager holds for a reward epoch.

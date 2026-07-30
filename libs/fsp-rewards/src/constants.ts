@@ -298,6 +298,40 @@ export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
 };
 
 /**
+ * Public RPC endpoint per network.
+ *
+ * Used only by out-of-band verification that needs contract state which is not observable from the
+ * indexer database (e.g. `RewardManager.getRewardEpochTotals`, whose `receiveRewards` credits emit no
+ * event and arrive via internal calls that the indexer's `transactions` table does not record).
+ * The reward calculation itself stays indexer-only — do not introduce RPC calls into it.
+ *
+ * Override with the `RPC` environment variable, e.g. to point at a private or archive node.
+ */
+const rpcUrl = () => {
+  if (process.env.RPC) {
+    return process.env.RPC;
+  }
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "flare":
+      return "https://flare-api.flare.network/ext/bc/C/rpc";
+    case "songbird":
+      return "https://songbird-api.flare.network/ext/bc/C/rpc";
+    case "coston2":
+    case "local-test":
+    case "from-env":
+      return "https://coston2-api.flare.network/ext/bc/C/rpc";
+    case "coston":
+      return "https://coston-api.flare.network/ext/bc/C/rpc";
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+export const RPC_URL = () => rpcUrl();
+
+/**
  * Flare Confidential Compute (FCC) fee accounting.
  *
  * FCC funds reach `RewardManager` through exactly two `receiveRewards` call sites, each paired 1:1 with an event:
@@ -369,11 +403,16 @@ const fccActivationRewardEpoch = (): number => {
       // safe for reconciliation: before the deployment transaction there are neither FCC events nor `receiveRewards`
       // credits, so both sides of the accounting start from the same point and epoch 419 still balances.
       return 419;
+    // NOTE: unlike Songbird, these are NOT the deployment epochs. The FCC contracts went live on Coston in reward
+    // epoch 5730 and on Coston2 in 5826; 5877 is simply the epoch from which accounting was switched on. Fees paid
+    // between deployment and 5877 were credited to RewardManager but are not claimed by any epoch: ~5.7 C2FLR on
+    // Coston2, nothing on Coston. That is accepted on test networks, where the funds are unclaimable in practice.
+    //
+    // Do not copy this shape to a production network. There, the activation epoch must be the deployment epoch, or
+    // the fees of every epoch in between go unclaimed for real value.
     case "coston":
-      // Reward epoch in progress when the FCC contracts were deployed on Coston; see the Songbird note above.
       return 5877;
     case "coston2":
-      // Reward epoch in progress when the FCC contracts were deployed on Coston2; see the Songbird note above.
       return 5877;
     // FCC accounting is gated off on these networks purely by the activation epoch. Lower it to the epoch from
     // which the fees should be accounted for, together with the addresses in libs/contracts/src/constants.ts.

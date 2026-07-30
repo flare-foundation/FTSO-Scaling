@@ -34,6 +34,11 @@ interface Fdc2Fixture {
 interface RoundFixture {
   tee?: TeeFixture[];
   fdc2?: Fdc2Fixture[];
+  // counters the collection stage records; the reconciliation reads them rather than recomputing
+  excludedByEpoch?: number;
+  unpaired?: number;
+  // omit fccData entirely, as a round serialized before FCC accounting existed would be
+  omitFccData?: boolean;
   // FCC claim amounts written to claims.json; defaults to the observed sums
   claimedTee?: bigint;
   claimedFdc2?: bigint;
@@ -57,35 +62,35 @@ function writeFixture(rounds: Record<number, RoundFixture>, finalFccClaimAmount?
     const votingRoundFolder = path.join(rewardEpochFolder, `${votingRoundId}`);
     mkdirSync(votingRoundFolder, { recursive: true });
 
+    const fccData = fixture.omitFccData
+      ? undefined
+      : {
+          votingRoundId,
+          teeInstructions: tee.map((event) => ({
+            extensionId: 0n,
+            instructionId: event.instructionId ?? INSTRUCTION_ID_A,
+            rewardEpochId: event.rewardEpochId ?? REWARD_EPOCH_ID,
+            opType: "0x" + "00".repeat(32),
+            opCommand: "0x" + "00".repeat(32),
+            claimBackAddress: FCC_FEES_ADDRESS,
+            fee: event.fee,
+            timestamp: 0,
+          })),
+          fdc2AttestationRequests: fdc2.map((event) => ({
+            instructionId: event.instructionId ?? INSTRUCTION_ID_A,
+            attestationType: "0x" + "61".repeat(32),
+            sourceId: "0x" + "62".repeat(32),
+            proofOwner: FCC_FEES_ADDRESS,
+            claimBackAddress: FCC_FEES_ADDRESS,
+            fee: event.fee,
+            timestamp: 0,
+          })),
+          eventsExcludedByRewardEpochId: fixture.excludedByEpoch ?? 0,
+          unpairedFdc2Requests: fixture.unpaired ?? 0,
+        };
     writeFileSync(
       path.join(votingRoundFolder, REWARD_CALCULATION_DATA_FILE),
-      JSON.stringify(
-        {
-          fccData: {
-            votingRoundId,
-            teeInstructions: tee.map((event) => ({
-              extensionId: 0n,
-              instructionId: event.instructionId ?? INSTRUCTION_ID_A,
-              rewardEpochId: event.rewardEpochId ?? REWARD_EPOCH_ID,
-              opType: "0x" + "00".repeat(32),
-              opCommand: "0x" + "00".repeat(32),
-              claimBackAddress: FCC_FEES_ADDRESS,
-              fee: event.fee,
-              timestamp: 0,
-            })),
-            fdc2AttestationRequests: fdc2.map((event) => ({
-              instructionId: event.instructionId ?? INSTRUCTION_ID_A,
-              attestationType: "0x" + "61".repeat(32),
-              sourceId: "0x" + "62".repeat(32),
-              proofOwner: FCC_FEES_ADDRESS,
-              claimBackAddress: FCC_FEES_ADDRESS,
-              fee: event.fee,
-              timestamp: 0,
-            })),
-          },
-        },
-        bigIntReplacer
-      )
+      JSON.stringify({ fccData }, bigIntReplacer)
     );
 
     const teeSum = tee.reduce((total, event) => total + event.fee, 0n);
@@ -157,7 +162,8 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     expect(reconciliation.finalDirectClaimToFccAddressWei).to.eq(1250n);
     expect(reconciliation.votingRoundsWithFccActivity).to.eq(2);
     expect(reconciliation.unpairedFdc2Requests).to.eq(0);
-    expect(reconciliation.eventsWithForeignRewardEpochId).to.eq(0);
+    expect(reconciliation.eventsExcludedByRewardEpochId).to.eq(0);
+    expect(reconciliation.roundsWithoutFccData).to.eq(0);
     expect(() => assertFccReconciliation(reconciliation)).to.not.throw();
   });
 
@@ -225,12 +231,14 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     expect(() => assertFccReconciliation(reconciliation)).to.not.throw();
   });
 
-  // Every FDC2 request emits both events in one transaction, so a missing counterpart means lost events.
+  // Every FDC2 request emits both events in one transaction, and the FDC2 event carries no reward epoch id of its
+  // own, so an unpaired one cannot be attributed to any epoch at all.
   it("fails hard when an FDC2 request has no paired TeeInstructionsSent event", () => {
     const calculationFolder = writeFixture({
       [START_VOTING_ROUND_ID]: {
         tee: [{ fee: 600n, instructionId: INSTRUCTION_ID_A }],
         fdc2: [{ fee: 400n, instructionId: INSTRUCTION_ID_B }],
+        unpaired: 1,
       },
     });
     const reconciliation = computeFccReconciliation(
@@ -243,10 +251,11 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     expect(() => assertFccReconciliation(reconciliation)).to.throw("no paired TeeInstructionsSent");
   });
 
-  // Counted so a boundary attribution split can be observed on real data before the check is made fatal.
-  it("counts events whose own reward epoch id differs from the epoch they were bucketed into", () => {
+  // Events belonging to a neighbouring epoch are filtered out at collection, because the funding window
+  // deliberately overshoots both boundaries. Their count is informational and must never fail the epoch.
+  it("reports boundary exclusions without failing", () => {
     const calculationFolder = writeFixture({
-      [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n, rewardEpochId: REWARD_EPOCH_ID - 1 }] },
+      [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }], excludedByEpoch: 2 },
     });
     const reconciliation = computeFccReconciliation(
       REWARD_EPOCH_ID,
@@ -254,9 +263,26 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
       END_VOTING_ROUND_ID,
       calculationFolder
     );
-    expect(reconciliation.eventsWithForeignRewardEpochId).to.eq(1);
-    // reported, not fatal
+    expect(reconciliation.eventsExcludedByRewardEpochId).to.eq(2);
     expect(() => assertFccReconciliation(reconciliation)).to.not.throw();
+  });
+
+  // The failure the observed-versus-claimed comparison structurally cannot see: both of its sides read these same
+  // artifacts, so a round with no fccData contributes zero to each and the epoch appears to balance.
+  it("fails hard when a voting round carries no FCC data at all", () => {
+    const calculationFolder = writeFixture({
+      [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }] },
+      [END_VOTING_ROUND_ID]: { omitFccData: true },
+    });
+    const reconciliation = computeFccReconciliation(
+      REWARD_EPOCH_ID,
+      START_VOTING_ROUND_ID,
+      END_VOTING_ROUND_ID,
+      calculationFolder
+    );
+    expect(reconciliation.roundsWithoutFccData).to.eq(1);
+    expect(reconciliation.residualWei).to.eq(0n);
+    expect(() => assertFccReconciliation(reconciliation)).to.throw("have no fccData");
   });
 
   // Whoever runs the calculation must be able to see the outcome without opening the report file, so the summary is
@@ -288,7 +314,9 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
       expect(summary).to.contain("ALL CHECKS PASSED");
       expect(summary).to.contain("[PASS] observed FCC fees are fully claimed");
       expect(summary).to.contain("[PASS] every FDC2 request is paired with a TEE instruction");
-      expect(summary).to.contain("[PASS] reward epoch attribution");
+      expect(summary).to.contain("[PASS] every voting round carries FCC data");
+      // boundary exclusions are informational, never a pass/fail check
+      expect(summary).to.contain("[INFO] boundary events excluded");
       expect(summary).to.not.contain("[FAIL]");
       // a clean run must not be reported through the error channel
       expect(errors).to.deep.eq([]);

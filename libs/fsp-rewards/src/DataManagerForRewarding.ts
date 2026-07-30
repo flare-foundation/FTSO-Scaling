@@ -1,4 +1,5 @@
 import { ContractMethodNames } from "../../contracts/src/definitions";
+import { Fdc2AttestationRequested } from "../../contracts/src/events/Fdc2AttestationRequested";
 import { DataAvailabilityStatus, DataManager, DataMangerResponse } from "../../ftso-core/src/DataManager";
 import {
   BlockAssuranceResult,
@@ -358,7 +359,11 @@ export class DataManagerForRewarding extends DataManager {
     randomGenerationBenchingWindow: number,
     useFastUpdatesData: boolean,
     useFDCData: boolean,
-    useFCCData = false
+    // Which reward epoch to attribute FCC fees to and that epoch's full voting round range, or undefined when FCC
+    // accounting is not active for it. Carrying this rather than a boolean makes it impossible to collect FCC data
+    // without saying which epoch it funded, and the epoch range is what keeps a batched run from counting the same
+    // fee once per batch.
+    fccAttribution?: { rewardEpochId: number; firstVotingRoundId: number; lastVotingRoundId: number }
   ): Promise<DataMangerResponse<DataForRewardCalculation[]>> {
     const dataForCalculationsResponse = await this.getDataForCalculationsForVotingRoundRange(
       firstVotingRoundId,
@@ -404,8 +409,12 @@ export class DataManagerForRewarding extends DataManager {
       }
       partialFdcData = partialFdcDataResponse.data;
     }
-    if (useFCCData) {
-      const fccDataResponse = await this.getFCCDataForVotingRoundRange(firstVotingRoundId, lastVotingRoundId);
+    if (fccAttribution !== undefined) {
+      const fccDataResponse = await this.getFCCDataForVotingRoundRange(
+        firstVotingRoundId,
+        lastVotingRoundId,
+        fccAttribution
+      );
       if (fccDataResponse.status !== DataAvailabilityStatus.OK) {
         return {
           status: fccDataResponse.status,
@@ -561,7 +570,7 @@ export class DataManagerForRewarding extends DataManager {
         firstSuccessfulFinalization,
         fastUpdatesData: fastUpdatesData[votingRoundId - firstVotingRoundId],
         fdcData,
-        fccData: useFCCData ? fccData[votingRoundId - firstVotingRoundId] : undefined,
+        fccData: fccAttribution !== undefined ? fccData[votingRoundId - firstVotingRoundId] : undefined,
       };
       result.push(dataForRound);
     }
@@ -802,9 +811,17 @@ export class DataManagerForRewarding extends DataManager {
    */
   public async getFCCDataForVotingRoundRange(
     firstVotingRoundId: number,
-    lastVotingRoundId: number
+    lastVotingRoundId: number,
+    attribution: { rewardEpochId: number; firstVotingRoundId: number; lastVotingRoundId: number }
   ): Promise<DataMangerResponse<FCCDataForVotingRound[]>> {
+    const { rewardEpochId } = attribution;
+    // Bounded by the RewardEpochStarted events rather than the voting round schedule, because that is where
+    // getCurrentRewardEpochId() flips and therefore which epoch receiveRewards credited. See the method docs.
+    const window = await this.indexerClient.getRewardEpochFundingWindow(rewardEpochId);
+
     const teeInstructionsResponse = await this.indexerClient.getTeeInstructionsSentEvents(
+      window,
+      attribution,
       firstVotingRoundId,
       lastVotingRoundId
     );
@@ -814,6 +831,8 @@ export class DataManagerForRewarding extends DataManager {
       };
     }
     const fdc2RequestsResponse = await this.indexerClient.getFdc2AttestationRequestedEvents(
+      window,
+      attribution,
       firstVotingRoundId,
       lastVotingRoundId
     );
@@ -822,12 +841,44 @@ export class DataManagerForRewarding extends DataManager {
         status: DataAvailabilityStatus.NOT_OK,
       };
     }
+
+    // An FDC2 request carries no reward epoch id of its own. It is always emitted in the same transaction as the
+    // TeeInstructionsSent that shares its instructionId, so that event's reward epoch id is its own. The map is
+    // built over the whole window, before any filtering, so a pair straddling a voting round bucket still resolves.
+    const rewardEpochIdByInstructionId = new Map<string, number>();
+    for (const eventsInRound of teeInstructionsResponse.data) {
+      for (const event of eventsInRound) {
+        rewardEpochIdByInstructionId.set(event.instructionId, event.rewardEpochId);
+      }
+    }
+
     const result: FCCDataForVotingRound[] = [];
     for (let votingRoundId = firstVotingRoundId; votingRoundId <= lastVotingRoundId; votingRoundId++) {
+      const index = votingRoundId - firstVotingRoundId;
+      const teeInRound = teeInstructionsResponse.data[index];
+      const fdc2InRound = fdc2RequestsResponse.data[index];
+
+      const teeInstructions = teeInRound.filter((event) => event.rewardEpochId === rewardEpochId);
+      let eventsExcludedByRewardEpochId = teeInRound.length - teeInstructions.length;
+      let unpairedFdc2Requests = 0;
+      const fdc2AttestationRequests: Fdc2AttestationRequested[] = [];
+      for (const event of fdc2InRound) {
+        const pairedRewardEpochId = rewardEpochIdByInstructionId.get(event.instructionId);
+        if (pairedRewardEpochId === undefined) {
+          unpairedFdc2Requests++;
+        } else if (pairedRewardEpochId === rewardEpochId) {
+          fdc2AttestationRequests.push(event);
+        } else {
+          eventsExcludedByRewardEpochId++;
+        }
+      }
+
       result.push({
         votingRoundId,
-        teeInstructions: teeInstructionsResponse.data[votingRoundId - firstVotingRoundId],
-        fdc2AttestationRequests: fdc2RequestsResponse.data[votingRoundId - firstVotingRoundId],
+        teeInstructions,
+        fdc2AttestationRequests,
+        eventsExcludedByRewardEpochId,
+        unpairedFdc2Requests,
       });
     }
     return {

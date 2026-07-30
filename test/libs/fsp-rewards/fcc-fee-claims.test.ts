@@ -63,6 +63,8 @@ function fccData(tee: bigint[], fdc2: bigint[], votingRoundId = 1000): FCCDataFo
     votingRoundId,
     teeInstructions: tee.map((fee) => teeEvent(fee)),
     fdc2AttestationRequests: fdc2.map((fee) => fdc2Event(fee)),
+    eventsExcludedByRewardEpochId: 0,
+    unpairedFdc2Requests: 0,
   };
 }
 

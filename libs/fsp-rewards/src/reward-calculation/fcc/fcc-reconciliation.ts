@@ -41,22 +41,30 @@ export interface FccReconciliation {
   finalDirectClaimToFccAddressWei: bigint;
 
   /**
-   * TeeInstructionsSent events whose own rewardEpochId differs from the epoch they were bucketed into.
+   * Events seen in the funding window but credited to a neighbouring reward epoch, and so excluded.
    *
-   * The event carries the very reward epoch id that RewardManager credited, so a non-zero count means funds were
-   * credited to one epoch while being claimed in another. Reported rather than fatal for now: the voting round
-   * boundaries and the on-chain epoch switch are expected to coincide, and this counter is what proves it on real
-   * data before the check is promoted to a hard failure.
+   * Expected, not anomalous: the window is bounded by the RewardEpochStarted events and deliberately overshoots at
+   * both ends so nothing is missed, and the reward epoch id each event carries is what narrows it. Reported so that
+   * boundary activity is visible; never a failure condition.
    */
-  eventsWithForeignRewardEpochId: number;
+  eventsExcludedByRewardEpochId: number;
 
   /**
-   * FDC2 requests with no TeeInstructionsSent carrying the same instructionId in the same voting round.
+   * FDC2 requests with no TeeInstructionsSent carrying the same instructionId anywhere in the funding window.
    *
    * Every FDC2 request forwards its remainder into FlareTeeManager in the same transaction, so the pair is always
-   * emitted together. A missing counterpart means events were lost between the chain and the indexer.
+   * emitted together. The FDC2 event carries no reward epoch id of its own, so without its pair the fee cannot be
+   * attributed to any epoch at all: this is a hard failure, not merely an integrity signal.
    */
   unpairedFdc2Requests: number;
+
+  /**
+   * Voting rounds inside this epoch whose serialized data carries no fccData at all.
+   *
+   * Their claims were computed without FCC, so both sides of the balance read zero for them and the epoch would
+   * appear to reconcile while fees sat unclaimed. A hard failure.
+   */
+  roundsWithoutFccData: number;
 }
 
 /**
@@ -74,27 +82,27 @@ export function computeFccReconciliation(
   let fdc2FeesWei = 0n;
   let claimedTeeFeesWei = 0n;
   let claimedFdc2FeesWei = 0n;
-  let eventsWithForeignRewardEpochId = 0;
+  let eventsExcludedByRewardEpochId = 0;
   let unpairedFdc2Requests = 0;
   let votingRoundsWithFccActivity = 0;
+  let roundsWithoutFccData = 0;
 
   for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
     const data = deserializeDataForRewardCalculation(rewardEpochId, votingRoundId, false, calculationFolder);
-    const fccData = data?.fccData;
-    if (fccData) {
-      const teeInstructionIds = new Set(fccData.teeInstructions.map((event) => event.instructionId));
+    const fccData = data.fccData;
+    if (fccData === undefined) {
+      // The round was serialized before FCC accounting existed, or by a run that had it inactive. Its claims were
+      // computed without FCC, so the epoch cannot be reconciled from these artifacts.
+      roundsWithoutFccData++;
+    } else {
       for (const event of fccData.teeInstructions) {
         teeFeesWei += event.fee;
-        if (event.rewardEpochId !== rewardEpochId) {
-          eventsWithForeignRewardEpochId++;
-        }
       }
       for (const event of fccData.fdc2AttestationRequests) {
         fdc2FeesWei += event.fee;
-        if (!teeInstructionIds.has(event.instructionId)) {
-          unpairedFdc2Requests++;
-        }
       }
+      eventsExcludedByRewardEpochId += fccData.eventsExcludedByRewardEpochId;
+      unpairedFdc2Requests += fccData.unpairedFdc2Requests;
       if (fccData.teeInstructions.length > 0 || fccData.fdc2AttestationRequests.length > 0) {
         votingRoundsWithFccActivity++;
       }
@@ -135,8 +143,9 @@ export function computeFccReconciliation(
     claimedFeesWei,
     residualWei: observedFeesWei - claimedFeesWei,
     finalDirectClaimToFccAddressWei,
-    eventsWithForeignRewardEpochId,
+    eventsExcludedByRewardEpochId,
     unpairedFdc2Requests,
+    roundsWithoutFccData,
   };
 }
 
@@ -213,7 +222,22 @@ export function fccReconciliationChecks(reconciliation: FccReconciliation): FccC
       reconciliation.unpairedFdc2Requests === 0
         ? `0 unpaired`
         : `${reconciliation.unpairedFdc2Requests} FDC2 attestation requests have no paired TeeInstructionsSent ` +
-          `event. Every FDC2 request emits both in the same transaction, so events are missing from the indexer.`,
+          `event. Every FDC2 request emits both in the same transaction, and the FDC2 event carries no reward ` +
+          `epoch id of its own, so without its pair the fee cannot be attributed to any epoch. Events are missing ` +
+          `from the indexer.`,
+  });
+
+  // Without this the epoch would balance at zero for those rounds while their fees sat unclaimed, which is the one
+  // failure the observed-versus-claimed comparison cannot see: both of its sides come from these same artifacts.
+  checks.push({
+    name: "every voting round carries FCC data",
+    passed: reconciliation.roundsWithoutFccData === 0,
+    detail:
+      reconciliation.roundsWithoutFccData === 0
+        ? `all rounds present`
+        : `${reconciliation.roundsWithoutFccData} voting rounds have no fccData, so their claims were computed ` +
+          `without FCC. Recalculate the epoch in full rather than incrementally: a mid-epoch deploy leaves rounds ` +
+          `serialized by the previous version behind.`,
   });
 
   return checks;
@@ -359,12 +383,11 @@ export function logFccReconciliationSummary(
     emit(`  [${check.passed ? "PASS" : "FAIL"}] ${check.name}: ${check.detail}`);
   }
 
-  // Reported rather than asserted, so shown separately from the pass/fail checks above.
-  const attributionOk = report.eventsWithForeignRewardEpochId === 0;
+  // Informational: the funding window is bounded by the RewardEpochStarted events and overshoots both ends on
+  // purpose, so events belonging to a neighbouring epoch are expected here and are simply filtered out.
   emit(
-    `  [${attributionOk ? "PASS" : "WARN"}] reward epoch attribution: ${report.eventsWithForeignRewardEpochId} ` +
-      `TeeInstructionsSent event(s) credited on chain to another reward epoch` +
-      (attributionOk ? "" : " - funds credited to one epoch are being claimed in another")
+    `  [INFO] boundary events excluded: ${report.eventsExcludedByRewardEpochId} event(s) inside the funding ` +
+      `window carried a neighbouring reward epoch id and were attributed there instead`
   );
   if (report.rewardManagerTotalRewardsWei === undefined) {
     emit(`  [WARN] RewardManager totals unavailable: RPC unreachable, claims not checked against funds held`);

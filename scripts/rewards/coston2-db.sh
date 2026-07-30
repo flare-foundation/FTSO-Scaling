@@ -1,7 +1,10 @@
 # Reward calculation for Coston2 network
-# Bring up the local indexer first, then run this script, e.g.
+# Bring up a local indexer, then run this script:
 # docker compose -f scripts/rewards/docker-compose.coston2.yaml up -d
 # ./scripts/rewards/coston2-db.sh
+#
+# The indexer must be collecting the FCC events; FSP mode does not do so by default. The compose file above is
+# configured for it -- see docs/migrations/FCC-fee-accounting.md, "Indexer requirements", for what it encodes.
 
 export NETWORK=coston2
 
@@ -9,7 +12,6 @@ export DB_REQUIRED_INDEXER_HISTORY_TIME_SEC=86400
 export VOTING_ROUND_HISTORY_SIZE=10000
 export INDEXER_TOP_TIMEOUT=1000
 export DB_HOST=127.0.0.1
-# Defaults of scripts/rewards/docker-compose.coston2.yaml
 export DB_PORT=3307
 export DB_USERNAME=root
 export DB_PASSWORD=root

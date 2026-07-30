@@ -15,6 +15,7 @@ import { FDCInflationRewardsOffered } from "../../contracts/src/events/FDCInflat
 import { AttestationRequest } from "../../contracts/src/events/AttestationRequest";
 import { TeeInstructionsSent } from "../../contracts/src/events/TeeInstructionsSent";
 import { Fdc2AttestationRequested } from "../../contracts/src/events/Fdc2AttestationRequested";
+import { fccEventVotingRound } from "./reward-calculation/fcc/fcc-event-placement";
 
 import { TLPEvents, TLPTransaction } from "../../ftso-core/src/orm/entities";
 import { COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID } from "./constants";
@@ -423,38 +424,74 @@ export class IndexerClientForRewarding extends IndexerClient {
   }
 
   /**
-   * Extracts FCC fee events from the indexer, bucketed per voting round, for the given range.
+   * The window during which fees are credited to a reward epoch on chain.
    *
-   * Shared by the two FCC fee sources. They are bucketed by voting round, consistently with every other
-   * reward calculation input; each TeeInstructionsSent additionally carries the reward epoch id that
-   * RewardManager credited, which the reconciliation cross-checks against the bucketing.
+   * `RewardManager.receiveRewards` is called with `getCurrentRewardEpochId()`, which flips exactly when
+   * `RewardEpochStarted` is emitted. That moment lags the voting round schedule by an unbounded amount, so the
+   * schedule cannot be used to decide which epoch a fee funded. The window is bounded by the two `RewardEpochStarted`
+   * events instead, and **both edges are inclusive**: timestamps have one second granularity and are shared by every
+   * event in a block, so an inclusive window is a superset that cannot miss an event. Callers then narrow it exactly
+   * by the reward epoch id the events carry themselves.
+   *
+   * Throws if the next epoch has not started, since its start is what closes the window; the funding of a reward
+   * epoch is not final until then.
    */
-  private async getFccEventsByVotingRound<T extends { timestamp: number }>(
+  public async getRewardEpochFundingWindow(
+    rewardEpochId: number
+  ): Promise<{ startTimeSec: number; endTimeSec: number }> {
+    const start = await this.getStartOfRewardEpochEvent(rewardEpochId);
+    const next = await this.getStartOfRewardEpochEvent(rewardEpochId + 1);
+    if (start.data === undefined) {
+      throw new Error(`No RewardEpochStarted event for reward epoch ${rewardEpochId}, cannot attribute fees to it`);
+    }
+    if (next.data === undefined) {
+      throw new Error(
+        `No RewardEpochStarted event for reward epoch ${rewardEpochId + 1}: reward epoch ${rewardEpochId} is not ` +
+          `closed yet, so the fees credited to it are not final`
+      );
+    }
+    return { startTimeSec: start.data.timestamp, endTimeSec: next.data.timestamp };
+  }
+
+  /**
+   * Extracts FCC fee events over a reward epoch's funding window, bucketed per voting round.
+   *
+   * The window overshoots the epoch's voting rounds at both ends, so an event is bucketed into the voting round of
+   * its timestamp **clamped** into the epoch's range: a fee paid after the last scheduled round but still credited to
+   * this epoch belongs to its final round. Filtering to the events this epoch actually funded is the caller's job,
+   * using the reward epoch id the events carry.
+   */
+  private async getFccEventsInFundingWindow<T extends { timestamp: number }>(
     contract: ContractDefinitions,
     eventName: string,
     fromRawEvent: (event: TLPEvents) => T,
-    startVotingRoundId: number,
-    endVotingRoundId: number
+    window: { startTimeSec: number; endTimeSec: number },
+    epoch: { firstVotingRoundId: number; lastVotingRoundId: number },
+    batchFirstVotingRoundId: number,
+    batchLastVotingRoundId: number
   ): Promise<IndexerResponse<T[][]>> {
-    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
-    // strictly containing in the range
-    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
-    const status = await this.ensureBlockRange(startTime, endTime);
+    const status = await this.ensureBlockRange(window.startTimeSec, window.endTimeSec);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
-    const result = await this.queryEvents(contract, eventName, startTime, endTime);
-    const allEvents = result.map((event) => fromRawEvent(event));
+    const result = await this.queryEvents(contract, eventName, window.startTimeSec, window.endTimeSec);
     const data: T[][] = [];
-    let i = 0;
-    for (let votingRoundId = startVotingRoundId; votingRoundId <= endVotingRoundId; votingRoundId++) {
-      const eventsInVotingRound: T[] = [];
-      const votingEpochEndTime = EPOCH_SETTINGS().votingEpochStartSec(votingRoundId + 1) - 1;
-      while (i < allEvents.length && allEvents[i].timestamp <= votingEpochEndTime) {
-        eventsInVotingRound.push(allEvents[i]);
-        i++;
+    for (let votingRoundId = batchFirstVotingRoundId; votingRoundId <= batchLastVotingRoundId; votingRoundId++) {
+      data.push([]);
+    }
+    for (const raw of result) {
+      const event = fromRawEvent(raw);
+      const votingRoundId = fccEventVotingRound(
+        event.timestamp,
+        epoch.firstVotingRoundId,
+        epoch.lastVotingRoundId,
+        batchFirstVotingRoundId,
+        batchLastVotingRoundId
+      );
+      if (votingRoundId === undefined) {
+        continue;
       }
-      data.push(eventsInVotingRound);
+      data[votingRoundId - batchFirstVotingRoundId].push(event);
     }
     return {
       status,
@@ -463,35 +500,43 @@ export class IndexerClientForRewarding extends IndexerClient {
   }
 
   /**
-   * Extract TeeInstructionsSent events (FlareTeeManager) from the indexer that match the range of voting rounds.
+   * Extract TeeInstructionsSent events (FlareTeeManager) over a reward epoch's funding window.
    */
   public async getTeeInstructionsSentEvents(
-    startVotingRoundId: number,
-    endVotingRoundId: number
+    window: { startTimeSec: number; endTimeSec: number },
+    epoch: { firstVotingRoundId: number; lastVotingRoundId: number },
+    batchFirstVotingRoundId: number,
+    batchLastVotingRoundId: number
   ): Promise<IndexerResponse<TeeInstructionsSent[][]>> {
-    return this.getFccEventsByVotingRound(
+    return this.getFccEventsInFundingWindow(
       CONTRACTS.FlareTeeManager,
       TeeInstructionsSent.eventName,
       (event) => TeeInstructionsSent.fromRawEvent(event),
-      startVotingRoundId,
-      endVotingRoundId
+      window,
+      epoch,
+      batchFirstVotingRoundId,
+      batchLastVotingRoundId
     );
   }
 
   /**
-   * Extract AttestationRequested events (Fdc2Hub) from the indexer that match the range of voting rounds.
+   * Extract AttestationRequested events (Fdc2Hub) over a reward epoch's funding window.
    * Note: this is the FDC2 event, distinct from the legacy FdcHub AttestationRequest event handled above.
    */
   public async getFdc2AttestationRequestedEvents(
-    startVotingRoundId: number,
-    endVotingRoundId: number
+    window: { startTimeSec: number; endTimeSec: number },
+    epoch: { firstVotingRoundId: number; lastVotingRoundId: number },
+    batchFirstVotingRoundId: number,
+    batchLastVotingRoundId: number
   ): Promise<IndexerResponse<Fdc2AttestationRequested[][]>> {
-    return this.getFccEventsByVotingRound(
+    return this.getFccEventsInFundingWindow(
       CONTRACTS.Fdc2Hub,
       Fdc2AttestationRequested.eventName,
       (event) => Fdc2AttestationRequested.fromRawEvent(event),
-      startVotingRoundId,
-      endVotingRoundId
+      window,
+      epoch,
+      batchFirstVotingRoundId,
+      batchLastVotingRoundId
     );
   }
 
