@@ -1,0 +1,111 @@
+# Local FSP-mode C-chain indexer for coston, for reward calculation.
+#
+#   docker compose -f scripts/rewards/docker-compose.coston.yaml up -d
+#   curl -s localhost:8080/health          # 503 until the initial catchup finishes, 200 after
+#   docker compose -f scripts/rewards/docker-compose.coston.yaml logs -f c-chain-indexer
+#
+# Then point the reward calculation at it with DB_PORT=3306 and DB_NAME=flare_ftso_indexer_coston
+# (see coston-db.sh where one exists).
+#
+# One file per network, each with its own `name:` project, MySQL instance, volume and host ports, so several
+# networks can run side by side without colliding. Everything (indexer TOML config, DB bootstrap SQL) is inlined
+# via top-level `configs`, so this file is all you need. Requires Docker Compose v2.23+ for `configs: content:`
+# (check with `docker compose version`).
+
+name: ftso-indexer-coston
+
+volumes:
+  indexer_data:
+
+configs:
+  init_sql:
+    content: |
+      CREATE DATABASE IF NOT EXISTS `flare_ftso_indexer_coston`;
+
+  indexer_config:
+    content: |
+      [indexer]
+      mode = "fsp"                 # built-in FSP tx/log collectors, contracts resolved by name via ContractRegistry
+      history_epochs = 2           # fully index this many reward epochs, back-indexing the FSP events they need.
+                                   # 2 is the minimum for calculating rewards for the previous (just-completed)
+                                   # reward epoch; 0 keeps only ~15 min of full blocks, enough to run a provider
+                                   # but not to calculate an epoch. Raising it lengthens the first sync.
+      rpc_concurrency = 10         # keep low against the shared public API; raise for a dedicated node
+      log_range = 30               # max blocks per eth_getLogs. MUST NOT exceed the node's cap: the public
+                                   # Flare APIs reject anything above 30 blocks, and every log request then
+                                   # fails into a silent backoff retry loop that looks like a stalled sync.
+                                   # Raise this substantially (1000+) on a dedicated node -- at 30 the first
+                                   # sync needs one request per 30 blocks per log filter, which is slow.
+      new_block_check_millis = 500
+      confirmations = 1
+
+      [db]
+      drop_table_at_start = false  # never wipe existing data on restart
+
+      [logger]
+      level = "INFO"               # DEBUG while bringing it up
+      console = true               # no `file` -> container logs only, use `docker compose logs`
+
+      # FCC (Flare Confidential Compute) fee events. The FSP mode contract list is hardcoded and does NOT include
+      # FlareTeeManager or Fdc2Hub, so without these the reward calculation sees no FCC fees at all -- and because
+      # missing events look exactly like no activity, its reconciliation would balance at zero while real fees sat
+      # on the RewardManager. The topics are event signature hashes, identical on every network.
+      [[indexer.collect_logs]]
+      contract_address = "0xc4885998f5D792ed88C5Af7a3AaCBe333f017658" # FlareTeeManager (diamond)
+      topic = "0xf770e69a9fc05b7180797556ec4cedb6108ce2c56ffa76c84aa087efeb5e6963" # TeeInstructionsSent
+
+      [[indexer.collect_logs]]
+      contract_address = "0x064C7B68B0e2BC87e7bE34e89741485Fcb48FA2F" # Fdc2Hub (proxy)
+      topic = "0x57c4413905bb1b444f93a5eab5a942fae34c0fcaa1c25cc595ce0b990310f5de" # AttestationRequested
+
+services:
+  c-chain-indexer-db:
+    restart: unless-stopped
+    image: "mysql:9.5.0"
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+    ports:
+      - "${DB_HOST_PORT:-3306}:3306"
+    volumes:
+      - indexer_data:/var/lib/mysql
+    configs:
+      - source: init_sql
+        target: /docker-entrypoint-initdb.d/db_init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--silent", "--host", "localhost", "-proot"]
+      timeout: 20s
+      retries: 10
+
+  c-chain-indexer:
+    restart: unless-stopped
+    # Canonical repo: gitlab.com/flarenetwork/FSP/flare-system-c-chain-indexer.
+    # ghcr is the public mirror's build of the same commit. FSP mode is not in a tagged release yet, hence :main --
+    # pin to registry.gitlab.com/flarenetwork/fsp/flare-system-c-chain-indexer:<sha> for an immutable image (needs
+    # docker login), or to v2.0.0 once released.
+    image: ghcr.io/flare-foundation/flare-system-c-chain-indexer:main
+    ports:
+      - "${HEALTH_HOST_PORT:-8080}:8080"
+    environment:
+      DB_HOST: "c-chain-indexer-db"
+      DB_PORT: 3306
+      DB_DATABASE: "flare_ftso_indexer_coston"
+      DB_USERNAME: "root"
+      DB_PASSWORD: "root"
+      # Public API by default; point at your own node if you have one. A dedicated node also lets you raise
+      # rpc_concurrency and log_range above. NODE_API_KEY is appended as ?x-apikey=..., leave empty if not needed.
+      NODE_URL: ${NODE_RPC_URL:-https://coston-api.flare.network/ext/bc/C/rpc}
+      NODE_API_KEY: ${NODE_API_KEY:-}
+    configs:
+      - source: indexer_config
+        target: /app/config.toml
+    # /health returns 503 until the initial catchup finishes, 200 afterwards. With history_epochs = 2 the first
+    # backfill takes a while; raise start_period if you bump history_epochs and it runs longer.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30m
+    depends_on:
+      c-chain-indexer-db:
+        condition: service_healthy
