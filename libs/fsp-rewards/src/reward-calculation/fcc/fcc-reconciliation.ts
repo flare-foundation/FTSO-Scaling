@@ -2,7 +2,7 @@ import { writeFileSync } from "fs";
 import path from "path/posix";
 import { bigIntReplacer } from "../../../../ftso-core/src/utils/big-number-serialization";
 import { ILogger } from "../../../../ftso-core/src/utils/ILogger";
-import { CALCULATIONS_FOLDER, FCC_FEES_ADDRESS, isFccActive } from "../../constants";
+import { BURN_ADDRESS, CALCULATIONS_FOLDER, FCC_FEES_ADDRESS, FIRE_POOL_ADDRESS, isFccActive } from "../../constants";
 import { ClaimType } from "../../utils/RewardClaim";
 import { FCC_RECONCILIATION_FILE } from "../../utils/stat-info/constants";
 import { deserializePartialClaimsForVotingRoundId } from "../../utils/stat-info/partial-claims";
@@ -141,6 +141,17 @@ export function computeFccReconciliation(
 }
 
 /**
+ * Whether `FCC_FEES_ADDRESS` receives FCC fees and nothing else.
+ *
+ * On the test networks it is the dead address, which is also the burn and FIRE pool address, so the merged DIRECT
+ * claim for it aggregates far more than FCC fees. On the production networks it is a dedicated address.
+ */
+function isFccFeesAddressExclusive(): boolean {
+  const fccFeesAddress = FCC_FEES_ADDRESS.toLowerCase();
+  return fccFeesAddress !== BURN_ADDRESS.toLowerCase() && fccFeesAddress !== FIRE_POOL_ADDRESS.toLowerCase();
+}
+
+/**
  * Throws when the FCC accounting of a reward epoch does not balance.
  *
  * No tolerance: the FCC fee events map one to one onto the `receiveRewards` credits, so there is nothing that can
@@ -154,11 +165,26 @@ export function assertFccReconciliation(reconciliation: FccReconciliation): void
         `(residual ${reconciliation.residualWei} wei). Funds on RewardManager would not be fully claimed.`
     );
   }
-  if (reconciliation.finalDirectClaimToFccAddressWei !== reconciliation.observedFeesWei) {
+  // The FCC fees must survive into the final distribution. Only a lower bound can be asserted when FCC_FEES_ADDRESS
+  // is shared with the burn or FIRE pool address, as it is on the test networks: the merged DIRECT claim for that
+  // address then also carries every burned reward, so equality would never hold. Where the address is exclusive to
+  // FCC, which is the case on the production networks, the amount must match exactly.
+  if (reconciliation.finalDirectClaimToFccAddressWei < reconciliation.observedFeesWei) {
     throw new Error(
       `FCC reconciliation failed for reward epoch ${reconciliation.rewardEpochId}: the final reward distribution ` +
-        `assigns ${reconciliation.finalDirectClaimToFccAddressWei} wei to ${FCC_FEES_ADDRESS} but ` +
-        `${reconciliation.observedFeesWei} wei of FCC fees were observed on chain.`
+        `assigns only ${reconciliation.finalDirectClaimToFccAddressWei} wei to ${FCC_FEES_ADDRESS}, less than the ` +
+        `${reconciliation.observedFeesWei} wei of FCC fees observed on chain, so FCC fees were lost before the ` +
+        `Merkle tree was built.`
+    );
+  }
+  if (
+    isFccFeesAddressExclusive() &&
+    reconciliation.finalDirectClaimToFccAddressWei !== reconciliation.observedFeesWei
+  ) {
+    throw new Error(
+      `FCC reconciliation failed for reward epoch ${reconciliation.rewardEpochId}: the final reward distribution ` +
+        `assigns ${reconciliation.finalDirectClaimToFccAddressWei} wei to ${FCC_FEES_ADDRESS}, which is used only ` +
+        `for FCC fees, but ${reconciliation.observedFeesWei} wei of FCC fees were observed on chain.`
     );
   }
   if (reconciliation.unpairedFdc2Requests > 0) {

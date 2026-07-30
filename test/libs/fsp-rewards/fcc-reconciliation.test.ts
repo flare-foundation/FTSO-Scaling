@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import path from "path/posix";
 import { bigIntReplacer } from "../../../libs/ftso-core/src/utils/big-number-serialization";
-import { CALCULATIONS_FOLDER, FCC_FEES_ADDRESS } from "../../../libs/fsp-rewards/src/constants";
+import { BURN_ADDRESS, CALCULATIONS_FOLDER, FCC_FEES_ADDRESS } from "../../../libs/fsp-rewards/src/constants";
 import {
   assertFccReconciliation,
   computeFccReconciliation,
@@ -187,10 +187,10 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
     expect(() => assertFccReconciliation(reconciliation)).to.throw("FCC reconciliation failed");
   });
 
-  it("fails hard when the final distribution does not carry the FCC fees", () => {
+  it("fails hard when the final distribution carries less than the observed FCC fees", () => {
     const calculationFolder = writeFixture(
       { [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }], fdc2: [{ fee: 400n }] } },
-      999n // final distribution disagrees with the observed 1000n
+      999n // final distribution is one wei short of the observed 1000n
     );
     const reconciliation = computeFccReconciliation(
       REWARD_EPOCH_ID,
@@ -199,7 +199,27 @@ describe(`FCC reconciliation (${getTestFile(__filename)})`, () => {
       calculationFolder
     );
     expect(reconciliation.residualWei).to.eq(0n);
-    expect(() => assertFccReconciliation(reconciliation)).to.throw("final reward distribution");
+    expect(() => assertFccReconciliation(reconciliation)).to.throw("FCC fees were lost");
+  });
+
+  // On the test networks FCC_FEES_ADDRESS is the dead address, which is also the burn and FIRE pool address, so the
+  // merged DIRECT claim for it carries every burned reward too and is legitimately far larger than the FCC fees.
+  // Asserting equality here would fail every epoch on those networks.
+  it("tolerates a final claim larger than the FCC fees when the address is shared with the burn address", () => {
+    expect(FCC_FEES_ADDRESS.toLowerCase()).to.eq(BURN_ADDRESS.toLowerCase());
+
+    const calculationFolder = writeFixture(
+      { [START_VOTING_ROUND_ID]: { tee: [{ fee: 600n }], fdc2: [{ fee: 400n }] } },
+      1000n + 349_255_817_897_276_966_360_606n // FCC fees plus unrelated burned rewards
+    );
+    const reconciliation = computeFccReconciliation(
+      REWARD_EPOCH_ID,
+      START_VOTING_ROUND_ID,
+      END_VOTING_ROUND_ID,
+      calculationFolder
+    );
+    expect(reconciliation.residualWei).to.eq(0n);
+    expect(() => assertFccReconciliation(reconciliation)).to.not.throw();
   });
 
   // Every FDC2 request emits both events in one transaction, so a missing counterpart means lost events.
