@@ -10,6 +10,15 @@ cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/Re
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/ftso/implementation/FtsoRewardOffersManager.sol/FtsoRewardOffersManager.json abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/protocol/implementation/FlareSystemsCalculator.sol/FlareSystemsCalculator.json abi
 
+# FCC (Flare Confidential Compute) contracts.
+# NOTE: FlareTeeManager is an EIP-2535 diamond. TeeInstructionsSent is declared in IInstructions.sol and emitted
+# from a library inlined into InstructionsFacet, so it is NOT in the FlareTeeManager.sol artifact (which carries
+# only DiamondCut). The facet artifact is therefore copied to the diamond's name, which is the name the indexer
+# queries by. Do not "correct" this to contracts/tee/diamond/FlareTeeManager.sol: the resulting ABI would have no
+# matching event. The topic0 assertions in test/libs/fsp-rewards/fcc-fee-claims.test.ts guard against that.
+cp -r ../flare-smart-contracts-v2/artifacts/contracts/tee/facets/InstructionsFacet.sol/InstructionsFacet.json abi/FlareTeeManager.json
+cp -r ../flare-smart-contracts-v2/artifacts/contracts/fdc2/implementation/Fdc2Hub.sol/Fdc2Hub.json abi
+
 # COPY_HEADER="
 # ////////////////////////////////////////////////////////////////////////////////////////////////////////
 # // This file is copied from the Flare Smart Contract V2 repository.

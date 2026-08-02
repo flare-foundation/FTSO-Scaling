@@ -59,6 +59,7 @@ import {
 } from "../libs/incremental-calculation-utils";
 import { fullRoundOfferCalculation, initializeTemplateOffers } from "../libs/offer-utils";
 import { runRandomNumberFixing } from "../libs/random-number-fixing-utils";
+import { runFccReconciliation } from "../../../../libs/fsp-rewards/src/reward-calculation/fcc/fcc-reconciliation";
 import { runCalculateRewardClaimsTopJob } from "../libs/reward-claims-calculation";
 import { runCalculateRewardCalculationTopJob } from "../libs/reward-data-calculation";
 
@@ -89,10 +90,11 @@ export class CalculatorService {
   }
 
   /**
-   * Performs incremental calculation of reward calculation data for the ongoing reward epoch.
-   * It tries to detect current reward epoch from the system time.
+   * Retained legacy service entry point. Incremental calculation is unsupported and this always rejects before
+   * reading or changing calculation state.
    */
   async runRewardCalculationIncremental(options: OptionalCommandOptions): Promise<RewardEpochDuration> {
+    this.rejectUnsupportedIncrementalCalculation();
     const logger = new Logger();
     const rewardEpochId = await latestRewardEpochStart(this.indexerClient);
     logger.log(`Incremental calculation for reward epoch ${rewardEpochId}`);
@@ -216,12 +218,13 @@ export class CalculatorService {
       }
     }
     const finalRewardEpochDuration = await cleanupAndReturnFinalEpochDuration(this.rewardEpochManager, state);
-    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
-    recordProgress(rewardEpochId);
     const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, state.endVotingRoundId);
     serializeFinalRewardClaims(rewardEpochId, lastClaims);
     const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
     serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+    await runFccReconciliation(rewardEpochId, state.startVotingRoundId, state.endVotingRoundId, logger);
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
+    recordProgress(rewardEpochId);
     return finalRewardEpochDuration;
   }
 
@@ -271,7 +274,7 @@ export class CalculatorService {
     await runCalculateRewardClaimsTopJob(adaptedOptions);
   }
 
-  fullRoundAggregateClaims(options: OptionalCommandOptions): void {
+  async fullRoundAggregateClaims(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     const rewardEpochId = options.rewardEpochId;
     const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId);
@@ -288,12 +291,13 @@ export class CalculatorService {
       claimAggregation(rewardEpochDuration, votingRoundId, logger);
     }
 
-    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
-    recordProgress(rewardEpochId);
     const lastClaims = deserializeAggregatedClaimsForVotingRoundId(rewardEpochId, endVotingRoundId);
     serializeFinalRewardClaims(rewardEpochId, lastClaims);
     const finalClaimsWithBurnsApplied = RewardClaim.mergeWithBurnClaims(lastClaims, BURN_ADDRESS);
     serializeRewardDistributionData(rewardEpochId, finalClaimsWithBurnsApplied);
+    await runFccReconciliation(rewardEpochId, startVotingRoundId, endVotingRoundId, logger);
+    setRewardCalculationStatus(rewardEpochId, RewardCalculationStatus.DONE);
+    recordProgress(rewardEpochId);
   }
 
   async processOneRewardEpoch(options: OptionalCommandOptions): Promise<void> {
@@ -317,7 +321,7 @@ export class CalculatorService {
     }
 
     if (options.aggregateClaims) {
-      this.fullRoundAggregateClaims(options);
+      await this.fullRoundAggregateClaims(options);
     }
   }
 
@@ -333,6 +337,10 @@ export class CalculatorService {
     updateClaimsForMinimalConditions(options.rewardEpochId, result);
   }
 
+  private rejectUnsupportedIncrementalCalculation(): void {
+    throw new Error("Incremental reward calculation is not supported");
+  }
+
   /**
    * Returns a list of all (merged) reward claims for the given reward epoch.
    * Calculation can be quite intensive.
@@ -340,6 +348,9 @@ export class CalculatorService {
   async run(options: OptionalCommandOptions): Promise<void> {
     const logger = new Logger();
     logger.log(options);
+    if (options.incrementalCalculation) {
+      this.rejectUnsupportedIncrementalCalculation();
+    }
     if (options.minimalConditions) {
       this.processMinimalConditions(options);
       return;
@@ -369,12 +380,6 @@ export class CalculatorService {
         logger.log(`End processing reward epoch ${rewardEpochId}`);
       }
       return;
-    }
-    if (options.incrementalCalculation) {
-      while (true) {
-        // Ends when the rewards for reward epoch are fully processed.
-        await this.runRewardCalculationIncremental(options);
-      }
     }
   }
 }

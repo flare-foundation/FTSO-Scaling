@@ -296,6 +296,157 @@ export const FDC_FIRE_FEE_SPLIT_BIPS = () => {
   }
   return constantFdcFireFeeSplitBips;
 };
+
+/**
+ * Public RPC endpoint per network.
+ *
+ * Used by final reward reconciliation for contract state which is not observable from the indexer database:
+ * `RewardManager.getRewardEpochTotals`, whose `receiveRewards` credits emit no event and arrive via internal calls
+ * that the indexer's `transactions` table does not record. All data collection and claim calculation before that
+ * final independent check stays indexer-only.
+ *
+ * Override with the `RPC` environment variable, e.g. to point at a private or archive node.
+ */
+const rpcUrl = () => {
+  if (process.env.RPC) {
+    return process.env.RPC;
+  }
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "flare":
+      return "https://flare-api.flare.network/ext/bc/C/rpc";
+    case "songbird":
+      return "https://songbird-api.flare.network/ext/bc/C/rpc";
+    case "coston2":
+    case "local-test":
+    case "from-env":
+      return "https://coston2-api.flare.network/ext/bc/C/rpc";
+    case "coston":
+      return "https://coston-api.flare.network/ext/bc/C/rpc";
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+export const RPC_URL = () => rpcUrl();
+
+/**
+ * Flare Confidential Compute (FCC) fee accounting.
+ *
+ * FCC funds reach `RewardManager` through exactly two `receiveRewards` call sites, each paired 1:1 with an event:
+ * - `FlareTeeManager.TeeInstructionsSent.fee` — the full `msg.value` of a TEE instruction dispatch
+ * - `Fdc2Hub.AttestationRequested.fee`        — the configured FDC2 type/source fee
+ *
+ * The two are disjoint: an FDC2 request paying P credits the configured fee F through `Fdc2Hub` and forwards
+ * `P - F` into `FlareTeeManager`, so the two events sum to exactly P with no overlap and no gap.
+ *
+ * Until the TEE/FCC rewarding logic exists, the summed fees are redirected in full to `FCC_FEES_ADDRESS`
+ * as a DIRECT claim, so that all claims keep summing to the funds available on `RewardManager`.
+ *
+ * Unrelated to the legacy FDC fee handling (`FdcHub.AttestationRequest`) and to the FIP.16 FIRE split above;
+ * those keep their existing behaviour untouched.
+ */
+const fccFeesAddress = () => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    // Test networks have no FCC fee recipient of their own, so their FCC fees are claimed to the dead address —
+    // the same treatment the FIRE pool gets on these networks.
+    case "from-env":
+    case "local-test":
+    case "coston":
+    case "coston2":
+      return "0x000000000000000000000000000000000000dEaD";
+    case "songbird":
+      return "0x3390E1aDf46568cCC95c3571424937b042094ac2";
+    case "flare":
+      return "0x2168DB7275C49Af8dBEb11c1298d9e3C0e2a3041";
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+export const FCC_FEES_ADDRESS = fccFeesAddress();
+
+/**
+ * A reward epoch far beyond any that will be reached in practice — roughly 9500 years out at 3.5 days per epoch.
+ *
+ * Used as the activation epoch to gate FCC off on a network. It is an ordinary reward epoch id rather than a
+ * sentinel, so `isFccActive` remains a single comparison and every network follows the same code path.
+ */
+export const FCC_FAR_FUTURE_REWARD_EPOCH = 1_000_000;
+
+function fccActivationRewardEpochFromEnv(): number {
+  const rawValue = process.env.FCC_ACTIVATION_REWARD_EPOCH;
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return FCC_FAR_FUTURE_REWARD_EPOCH;
+  }
+  const value = rawValue.trim();
+  if (!/^\d+$/.test(value)) {
+    throw new Error("FCC_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error("FCC_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+  }
+  return parsed;
+}
+
+const fccActivationRewardEpoch = (): number => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "from-env":
+      return fccActivationRewardEpochFromEnv();
+    case "songbird":
+      // The FCC contracts were deployed on Songbird part-way through reward epoch 419. A mid-epoch deployment is
+      // safe for reconciliation: before the deployment transaction there are neither FCC events nor `receiveRewards`
+      // credits, so both sides of the accounting start from the same point and epoch 419 still balances.
+      return 419;
+    // NOTE: unlike Songbird, these are NOT the deployment epochs. The FCC contracts went live on Coston in reward
+    // epoch 5730 and on Coston2 in 5826; 5877 is simply the epoch from which accounting was switched on. Fees paid
+    // between deployment and 5877 were credited to RewardManager but are not claimed by any epoch: ~5.7 C2FLR on
+    // Coston2, nothing on Coston. That is accepted on test networks, where the funds are unclaimable in practice.
+    //
+    // Do not copy this shape to a production network. There, the activation epoch must be the deployment epoch, or
+    // the fees of every epoch in between go unclaimed for real value.
+    case "coston":
+      return 5877;
+    case "coston2":
+      return 5877;
+    // FCC accounting is gated off on these networks purely by the activation epoch. Lower it to the epoch from
+    // which the fees should be accounted for, together with the addresses in libs/contracts/src/constants.ts.
+    case "flare":
+      return FCC_FAR_FUTURE_REWARD_EPOCH;
+    case "local-test":
+      return FCC_FAR_FUTURE_REWARD_EPOCH;
+    default:
+      // Ensure exhaustive checking
+
+      ((_: never): void => {})(network);
+  }
+};
+
+const constantFccActivationRewardEpoch = fccActivationRewardEpoch();
+
+/**
+ * The first reward epoch id (inclusive) for which FCC fees are accounted for on the current network.
+ */
+export const FCC_ACTIVATION_REWARD_EPOCH = (): number => {
+  if (process.env.NETWORK === "from-env") {
+    return fccActivationRewardEpoch();
+  }
+  return constantFccActivationRewardEpoch;
+};
+
+/**
+ * Whether FCC fee accounting (TEE instruction fees and FDC2 attestation request fees redirected to
+ * `FCC_FEES_ADDRESS`) applies to the given reward epoch.
+ */
+export const isFccActive = (rewardEpochId: number): boolean => {
+  return rewardEpochId >= FCC_ACTIVATION_REWARD_EPOCH();
+};
+
 /**
  * In case less then certain percentage of the total weight of the voting weight deposits signatures for a single hash,
  * in the signature rewarding window, the signatures are not rewarded.

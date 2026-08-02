@@ -28,8 +28,10 @@ import {
   FIRE_POOL_ADDRESS,
   FTSO2_FAST_UPDATES_PROTOCOL_ID,
   PENALTY_FACTOR,
+  isFccActive,
 } from "../constants";
 import { FUFeedValue } from "../data-calculation-interfaces";
+import { fccFeeClaims } from "./fcc/fcc-fee-claims";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import {
   aggregatedClaimsForVotingRoundIdExist,
@@ -437,6 +439,16 @@ export async function partialRewardClaimsForVotingRound(
     }
   }
 
+  // FCC fees. Independent of the FDC handling above: different contracts, different events, different path.
+  // Both fee sources are credited to RewardManager when paid, so every wei must land in a claim; until the TEE
+  // rewarding logic exists they are redirected in full to FCC_FEES_ADDRESS.
+  if (isFccActive(rewardEpochId) && data.fccData) {
+    allRewardClaims.push(...fccFeeClaims(votingRoundId, data.fccData));
+    if (merge) {
+      allRewardClaims = RewardClaim.merge(allRewardClaims);
+    }
+  }
+
   if (serializeResults) {
     serializePartialClaimsForVotingRoundId(rewardEpochId, votingRoundId, allRewardClaims, calculationFolder);
   }
@@ -508,6 +520,27 @@ export async function prepareDataForRewardCalculations(
   );
 }
 
+/**
+ * Where FCC fees of a reward epoch are attributed to, for a single batch of voting rounds.
+ *
+ * The funding window spans the whole reward epoch, so every batch sees every event in it. The epoch's own voting
+ * round range is therefore needed as well: an event is placed in the round of its timestamp clamped into that range,
+ * and only the batch that owns the resulting round records it. Without the epoch range each batch would keep every
+ * event and the fees would be counted once per batch.
+ */
+function fccAttribution(
+  rewardEpochId: number,
+  tempRewardEpochFolder: boolean,
+  calculationFolder: string
+): { rewardEpochId: number; firstVotingRoundId: number; lastVotingRoundId: number } {
+  const rewardEpochInfo = deserializeRewardEpochInfo(rewardEpochId, tempRewardEpochFolder, calculationFolder);
+  return {
+    rewardEpochId,
+    firstVotingRoundId: rewardEpochInfo.signingPolicy.startVotingRoundId,
+    lastVotingRoundId: rewardEpochInfo.endVotingRoundId,
+  };
+}
+
 export async function prepareDataForRewardCalculationsForRange(
   rewardEpochId: number,
   firstVotingRoundId: number,
@@ -524,7 +557,16 @@ export async function prepareDataForRewardCalculationsForRange(
     lastVotingRoundId,
     randomGenerationBenchingWindow,
     useFastUpdatesData,
-    useFDCData
+    useFDCData,
+    // Derived from the reward epoch rather than taken as a command option, so that FCC accounting cannot be
+    // forgotten on a run: it switches on exactly for the epochs it is activated for.
+    //
+    // Skipped for the temporary pass over the following reward epoch, which exists only to look ahead for secure
+    // random numbers and whose data is discarded. That epoch is still in progress, so its funding window is not
+    // closed and its FCC fees are not final; fast updates and FDC data are switched off for the same pass.
+    isFccActive(rewardEpochId) && !tempRewardEpochFolder
+      ? fccAttribution(rewardEpochId, tempRewardEpochFolder, calculationFolder)
+      : undefined
   );
   if (rewardDataForCalculationResponse.status !== DataAvailabilityStatus.OK) {
     throw new Error(`Data availability status is not OK: ${rewardDataForCalculationResponse.status}`);

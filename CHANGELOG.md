@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- FCC (Flare Confidential Compute) fee accounting, activating on Songbird at reward epoch 419 and on Coston and
+  Coston2 at reward epoch 5877. The FCC contracts are configured for every network and the accounting is gated by
+  the activation reward epoch alone; on Flare that epoch is far in the future, so FCC fees are not accounted for
+  there yet. The fees of TEE
+  instruction dispatches (`FlareTeeManager.TeeInstructionsSent`) and FDC2 attestation requests
+  (`Fdc2Hub.AttestationRequested`) are credited to the `RewardManager` when paid; until the TEE rewarding logic
+  exists they are redirected in full to `FCC_FEES_ADDRESS` as a direct reward claim, so that all claims keep
+  summing to the funds available on the `RewardManager`. The two sources are tagged separately and merge into a
+  single direct claim in the final distribution. Unrelated to the legacy FDC fee handling and to the FIP.16
+  FDC→FIRE split, both of which are unchanged.
+  See `docs/migrations/FCC-fee-accounting.md`.
+- A per-reward-epoch FCC reconciliation (`fcc-reconciliation.json`) that fails the calculation if the observed FCC
+  fees are not fully covered by claims, or if an FDC2 request is missing its paired TEE instruction event. It also
+  compares the sum of all claims against `RewardManager.getRewardEpochTotals`, read over the newly configured
+  per-network public RPC (`RPC_URL`, overridable with the `RPC` env var); that comparison spans every reward
+  source and is fatal when available. Coston2 explicitly excludes its exact validator-inflation allocation, derived
+  as the on-chain inflation total minus the required FTSO, Fast Updates, and FDC inflation offers so per-receiver
+  rounding is preserved; no generic residual tolerance is used. If an RPC transport failure prevents the on-chain
+  total from being read, the summary reports that the check was skipped instead of claiming that all checks passed;
+  configuration, ABI, decoding, and contract-call failures remain fatal.
+
+### Changed
+
+- Legacy incremental reward calculation is no longer supported. The `-l` option and direct service entry point now
+  reject the request; reward ranges run only through the latest completed epoch.
+
 ## [1.1.1] - 2026-07-16
 
 ### Changed

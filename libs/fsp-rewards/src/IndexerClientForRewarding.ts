@@ -13,6 +13,9 @@ import { IncentiveOffered } from "../../contracts/src/events/IncentiveOffered";
 import { FUInflationRewardsOffered } from "../../contracts/src/events/FUInflationRewardsOffered";
 import { FDCInflationRewardsOffered } from "../../contracts/src/events/FDCInflationRewardsOffered";
 import { AttestationRequest } from "../../contracts/src/events/AttestationRequest";
+import { TeeInstructionsSent } from "../../contracts/src/events/TeeInstructionsSent";
+import { Fdc2AttestationRequested } from "../../contracts/src/events/Fdc2AttestationRequested";
+import { fccEventVotingRound } from "./reward-calculation/fcc/fcc-event-placement";
 
 import { TLPEvents, TLPTransaction } from "../../ftso-core/src/orm/entities";
 import { COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID } from "./constants";
@@ -341,21 +344,30 @@ export class IndexerClientForRewarding extends IndexerClient {
   /**
    * Extract IncentiveOffered events from the indexer that match the range of voting rounds.
    */
-  public async getIncentiveOfferedEvents(
-    startVotingRoundId: number,
-    endVotingRoundId: number
-  ): Promise<IndexerResponse<IncentiveOffered[]>> {
-    const startTime = EPOCH_SETTINGS().votingEpochStartSec(startVotingRoundId);
-    // strictly containing in the range
-    const endTime = EPOCH_SETTINGS().votingEpochStartSec(endVotingRoundId + 1) - 1;
+  public async getIncentiveOfferedEvents(rewardEpochId: number): Promise<IndexerResponse<IncentiveOffered[]>> {
+    // `FastUpdateIncentiveManager.offerIncentive` credits `getCurrentRewardEpochId()` with no compensation for the
+    // epoch boundary, exactly as the FCC contracts do and unlike `FdcHub`, which rolls forward near the epoch end.
+    // So an incentive is attributed the same way FCC fees are: collected over the epoch's funding window, whose
+    // inclusive edges guarantee a superset, then narrowed by the reward epoch id the event carries itself.
+    //
+    // Before this, incentives were collected over the epoch's voting round schedule and never filtered, so one
+    // offered across a boundary funded one epoch on chain while being counted towards another's fast updates pool.
+    const window = await this.getRewardEpochFundingWindow(rewardEpochId);
     const eventName = IncentiveOffered.eventName;
-    const status = await this.ensureBlockRange(startTime, endTime);
+    const status = await this.ensureBlockRange(window.startTimeSec, window.endTimeSec);
     if (status !== BlockAssuranceResult.OK) {
       return { status };
     }
 
-    const result = await this.queryEvents(CONTRACTS.FastUpdateIncentiveManager, eventName, startTime, endTime);
-    const data = result.map((event) => IncentiveOffered.fromRawEvent(event));
+    const result = await this.queryEvents(
+      CONTRACTS.FastUpdateIncentiveManager,
+      eventName,
+      window.startTimeSec,
+      window.endTimeSec
+    );
+    const data = result
+      .map((event) => IncentiveOffered.fromRawEvent(event))
+      .filter((event) => event.rewardEpochId === rewardEpochId);
     return {
       status,
       data,
@@ -418,6 +430,123 @@ export class IndexerClientForRewarding extends IndexerClient {
       status,
       data,
     };
+  }
+
+  /**
+   * The window during which fees are credited to a reward epoch on chain.
+   *
+   * `RewardManager.receiveRewards` is called with `getCurrentRewardEpochId()`, which flips exactly when
+   * `RewardEpochStarted` is emitted. That moment lags the voting round schedule by an unbounded amount, so the
+   * schedule cannot be used to decide which epoch a fee funded. The window is bounded by the two `RewardEpochStarted`
+   * events instead, and **both edges are inclusive**: timestamps have one second granularity and are shared by every
+   * event in a block, so an inclusive window is a superset that cannot miss an event. Callers then narrow it exactly
+   * by the reward epoch id the events carry themselves.
+   *
+   * Throws if the next epoch has not started, since its start is what closes the window; the funding of a reward
+   * epoch is not final until then.
+   */
+  public async getRewardEpochFundingWindow(
+    rewardEpochId: number
+  ): Promise<{ startTimeSec: number; endTimeSec: number }> {
+    const start = await this.getStartOfRewardEpochEvent(rewardEpochId);
+    const next = await this.getStartOfRewardEpochEvent(rewardEpochId + 1);
+    if (start.data === undefined) {
+      throw new Error(`No RewardEpochStarted event for reward epoch ${rewardEpochId}, cannot attribute fees to it`);
+    }
+    if (next.data === undefined) {
+      throw new Error(
+        `No RewardEpochStarted event for reward epoch ${rewardEpochId + 1}: reward epoch ${rewardEpochId} is not ` +
+          `closed yet, so the fees credited to it are not final`
+      );
+    }
+    return { startTimeSec: start.data.timestamp, endTimeSec: next.data.timestamp };
+  }
+
+  /**
+   * Extracts FCC fee events over a reward epoch's funding window, bucketed per voting round.
+   *
+   * The window overshoots the epoch's voting rounds at both ends, so an event is bucketed into the voting round of
+   * its timestamp **clamped** into the epoch's range: a fee paid after the last scheduled round but still credited to
+   * this epoch belongs to its final round. Filtering to the events this epoch actually funded is the caller's job,
+   * using the reward epoch id the events carry.
+   */
+  private async getFccEventsInFundingWindow<T extends { timestamp: number }>(
+    contract: ContractDefinitions,
+    eventName: string,
+    fromRawEvent: (event: TLPEvents) => T,
+    window: { startTimeSec: number; endTimeSec: number },
+    epoch: { firstVotingRoundId: number; lastVotingRoundId: number },
+    batchFirstVotingRoundId: number,
+    batchLastVotingRoundId: number
+  ): Promise<IndexerResponse<T[][]>> {
+    const status = await this.ensureBlockRange(window.startTimeSec, window.endTimeSec);
+    if (status !== BlockAssuranceResult.OK) {
+      return { status };
+    }
+    const result = await this.queryEvents(contract, eventName, window.startTimeSec, window.endTimeSec);
+    const data: T[][] = [];
+    for (let votingRoundId = batchFirstVotingRoundId; votingRoundId <= batchLastVotingRoundId; votingRoundId++) {
+      data.push([]);
+    }
+    for (const raw of result) {
+      const event = fromRawEvent(raw);
+      const votingRoundId = fccEventVotingRound(
+        event.timestamp,
+        epoch.firstVotingRoundId,
+        epoch.lastVotingRoundId,
+        batchFirstVotingRoundId,
+        batchLastVotingRoundId
+      );
+      if (votingRoundId === undefined) {
+        continue;
+      }
+      data[votingRoundId - batchFirstVotingRoundId].push(event);
+    }
+    return {
+      status,
+      data,
+    };
+  }
+
+  /**
+   * Extract TeeInstructionsSent events (FlareTeeManager) over a reward epoch's funding window.
+   */
+  public async getTeeInstructionsSentEvents(
+    window: { startTimeSec: number; endTimeSec: number },
+    epoch: { firstVotingRoundId: number; lastVotingRoundId: number },
+    batchFirstVotingRoundId: number,
+    batchLastVotingRoundId: number
+  ): Promise<IndexerResponse<TeeInstructionsSent[][]>> {
+    return this.getFccEventsInFundingWindow(
+      CONTRACTS.FlareTeeManager,
+      TeeInstructionsSent.eventName,
+      (event) => TeeInstructionsSent.fromRawEvent(event),
+      window,
+      epoch,
+      batchFirstVotingRoundId,
+      batchLastVotingRoundId
+    );
+  }
+
+  /**
+   * Extract AttestationRequested events (Fdc2Hub) over a reward epoch's funding window.
+   * Note: this is the FDC2 event, distinct from the legacy FdcHub AttestationRequest event handled above.
+   */
+  public async getFdc2AttestationRequestedEvents(
+    window: { startTimeSec: number; endTimeSec: number },
+    epoch: { firstVotingRoundId: number; lastVotingRoundId: number },
+    batchFirstVotingRoundId: number,
+    batchLastVotingRoundId: number
+  ): Promise<IndexerResponse<Fdc2AttestationRequested[][]>> {
+    return this.getFccEventsInFundingWindow(
+      CONTRACTS.Fdc2Hub,
+      Fdc2AttestationRequested.eventName,
+      (event) => Fdc2AttestationRequested.fromRawEvent(event),
+      window,
+      epoch,
+      batchFirstVotingRoundId,
+      batchLastVotingRoundId
+    );
   }
 
   /**
