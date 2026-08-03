@@ -1,57 +1,30 @@
-workflow:
-  rules:
-    - if: '$CI_OPEN_MERGE_REQUESTS != null && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "webide")'
-      when: never
-    - when: always
+stages:
+  - test
+  - sbom
 
-.node_pnpm_job:
-  image: node:24
-  cache:
-    - key:
-        files:
-          - pnpm-lock.yaml
-      paths:
-        - node_modules
-        - .pnpm-store
-      policy: pull-push
-  before_script:
-    - corepack enable
-    - corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
-    - pnpm config set store-dir .pnpm-store
-    - pnpm install --frozen-lockfile
-
-lint:
-  extends: .node_pnpm_job
-  stage: test
-  script:
-    - |
-      set +e  # don't stop on first failure
-      pnpm lint:check
-      LINT_EXIT=$?
-      pnpm format:check
-      FORMAT_EXIT=$?
-      set -e
-
-      if [ "$LINT_EXIT" -ne 0 ] || [ "$FORMAT_EXIT" -ne 0 ]; then
-        echo "lint:check exit=$LINT_EXIT, format:check exit=$FORMAT_EXIT"
-        exit 1
-      fi
-
-test-coverage:
-  extends: .node_pnpm_job
-  stage: test
-  needs: []
-  script:
-    - pnpm test:coverage
-  # GitLab parses this regex against the job stdout to show coverage on the MR.
-  coverage: '/^Lines\s*:\s*(\d+(?:\.\d+)?)%/'
+default:
+  tags:
+    - flarenetwork
   artifacts:
-    when: always
-    paths:
-      - coverage/
-    reports:
-      # GitLab renders per-line coverage in MR diffs from this cobertura report.
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage/cobertura-coverage.xml
-    expire_in: 1 week
+    expire_in: 3 days
+
+include:
+  - component: gitlab.com/flarenetwork/ci-components-private/lgtm@2
+  - component: gitlab.com/flarenetwork/ci-components-private/dependency-track@2
+  - component: gitlab.com/flarenetwork/ci-components-private/lint-dockerfile@2
+  - component: gitlab.com/flarenetwork/ci-components-private/lint-shell@2
+  - template: Jobs/Secret-Detection.latest.gitlab-ci.yml
+  - component: gitlab.com/flarenetwork/ci-components-private/lint-pnpm@2
+    inputs:
+      node_version: '24.13'
+      lint_commands: |
+        pnpm lint:check
+        pnpm format:check
+  - component: gitlab.com/flarenetwork/ci-components-private/test-pnpm@2
+    inputs:
+      node_version: '24.13'
+      tags: ["flarenetwork-md"]
+      coverage_enabled: true
+      coverage_regex: '/^Lines\s*:\s*(\d+(?:\.\d+)?)%/'
+      test_commands: |
+        pnpm test:coverage

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Reward calculation for Songbird network
 # Setup the correct DB connection and run the script, e.g.
 # ./scripts/rewards/songbird-db.sh

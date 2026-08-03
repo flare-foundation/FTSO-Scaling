@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 rm -rf abi
 mkdir -p abi
 cp -r ../flare-smart-contracts-v2/artifacts/contracts/ftso/merkle/FtsoMerkleStructs.sol/FtsoMerkleStructs.json abi

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 NETWORK=$1
 REWARD_EPOCH_ID=$2
 # check if parameters are passed
@@ -8,7 +9,7 @@ fi
 
 wget "https://raw.githubusercontent.com/flare-foundation/fsp-rewards/refs/heads/main/$NETWORK/$REWARD_EPOCH_ID/passes.json"
 mkdir -p calculations
-mkdir -p calculations/$NETWORK
-mkdir -p calculations/$NETWORK/$REWARD_EPOCH_ID
-rm -f calculations/$NETWORK/$REWARD_EPOCH_ID/passes.json
-mv passes.json calculations/$NETWORK/$REWARD_EPOCH_ID/passes.json
+mkdir -p calculations/"$NETWORK"
+mkdir -p calculations/"$NETWORK"/"$REWARD_EPOCH_ID"
+rm -f calculations/"$NETWORK"/"$REWARD_EPOCH_ID"/passes.json
+mv passes.json calculations/"$NETWORK"/"$REWARD_EPOCH_ID"/passes.json
