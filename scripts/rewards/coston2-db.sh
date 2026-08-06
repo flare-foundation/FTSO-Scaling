@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Reward calculation for Coston2 network
 # Bring up a local indexer, then run this script:
 # docker compose -f scripts/rewards/docker-compose.coston2.yaml up -d

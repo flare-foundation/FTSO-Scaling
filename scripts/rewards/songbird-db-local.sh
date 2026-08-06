@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Reward calculation for Songbird network
 # Setup the correct DB connection and run the script, e.g.
 # ./scripts/rewards/songbird-db.sh
@@ -10,7 +11,8 @@ export INDEXER_TOP_TIMEOUT=1000
 export DB_HOST=127.0.0.1
 export DB_PORT=3306
 export DB_USERNAME=ftso-indxr-sgb-rdr
-export DB_PASSWORD=$(gcloud secrets versions access latest --project flare-network-production --secret="ftso_v2_c_chain_indexer_sgb_db_reader_password")
+DB_PASSWORD=$(gcloud secrets versions access latest --project flare-network-production --secret="ftso_v2_c_chain_indexer_sgb_db_reader_password")
+export DB_PASSWORD
 export DB_NAME=flare_ftso_indexer_songbird
 
 export REMOVE_ANNOYING_MESSAGES=true

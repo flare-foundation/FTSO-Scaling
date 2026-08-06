@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Reward calculation for Coston network
 # Setup the correct DB connection and run the script, e.g.
 # ./scripts/rewards/coston-db.sh

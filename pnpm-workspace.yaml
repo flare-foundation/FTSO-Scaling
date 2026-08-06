@@ -1,0 +1,14 @@
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - 'undici-types@6.19.8'
+  - 'chokidar@4.0.3'
+  - 'semver@6.3.1'
+overrides:
+  string-width: '4.2.3'
+allowBuilds:
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  '@swc/core': false
+  better-sqlite3: true
+  sqlite3: false
