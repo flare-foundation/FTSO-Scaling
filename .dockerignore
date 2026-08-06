@@ -7,3 +7,4 @@
 !tsconfig.build.json
 !tsconfig.json
 !pnpm-lock.yaml
+!pnpm-workspace.yaml

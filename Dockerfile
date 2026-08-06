@@ -4,7 +4,7 @@ FROM node:24-slim@sha256:bf22df20270b654c4e9da59d8d4a3516cce6ba2852e159b27288d64
 WORKDIR /app
 
 RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS nodemodules
 RUN corepack prepare "$(node -p "require('./package.json').packageManager")" --activate && \
