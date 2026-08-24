@@ -6,9 +6,14 @@ import { CalculatorService } from "../services/calculator.service";
 import { runCalculateRewardClaimWorker } from "../libs/reward-claims-calculation";
 
 async function run(options: OptionalCommandOptions) {
-  const app = await NestFactory.create(FtsoRewardCalculationProcessModule);
-  const calculator = app.get(CalculatorService);
-  await runCalculateRewardClaimWorker(calculator.dataManager, options);
+  // An application context: this worker never serves HTTP.
+  const app = await NestFactory.createApplicationContext(FtsoRewardCalculationProcessModule);
+  try {
+    const calculator = app.get(CalculatorService);
+    await runCalculateRewardClaimWorker(calculator.dataManager, options);
+  } finally {
+    await app.close();
+  }
 }
 
 workerPool.worker({

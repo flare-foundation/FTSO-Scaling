@@ -11,6 +11,8 @@ export interface IConfig {
   db_user: string;
   db_pass: string;
   db_name: string;
+  // max connections per worker thread (DB_CONNECTION_LIMIT)
+  db_connection_limit: number;
 
   db_sqlite3_path?: string;
 
@@ -29,6 +31,7 @@ export default () => {
     db_user: process.env.DB_USERNAME || "root",
     db_pass: process.env.DB_PASSWORD || "root",
     db_name: process.env.DB_NAME || "flare_top_level_indexer",
+    db_connection_limit: parseInt(process.env.DB_CONNECTION_LIMIT) || 5,
     db_sqlite3_path: process.env.DB_SQLITE3_PATH,
     required_indexer_history_time_sec: parseInt(
       process.env.DB_REQUIRED_INDEXER_HISTORY_TIME_SEC ??

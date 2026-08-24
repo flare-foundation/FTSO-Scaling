@@ -35,6 +35,12 @@ const IMPORTS_ARRAY = [
         database: configService.getOrThrow("db_name"),
         entities: [TLPTransaction, TLPEvents, TLPState],
         synchronize: false,
+        // Each worker thread builds its own pool, so the connections a run can
+        // hold at once is this times the number of workers. The driver default
+        // of 10 puts a modestly parallel run over a stock server's 151.
+        extra: {
+          connectionLimit: configService.getOrThrow<number>("db_connection_limit"),
+        },
       };
     },
   }),
