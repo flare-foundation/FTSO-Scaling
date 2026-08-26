@@ -16,6 +16,7 @@ import { bigIntReplacer, bigIntReviver } from "../../../../ftso-core/src/utils/b
 import { REWARD_CALCULATION_DATA_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 import { RewardEpochInfo } from "./reward-epoch-info";
 import { CALCULATIONS_FOLDER } from "../../constants";
+import { sourceChainIdForRewardEpoch } from "../../../../ftso-core/src/constants";
 import {
   DataForRewardCalculation,
   FastUpdatesDataForVotingRound,
@@ -181,11 +182,12 @@ export function serializeDataForRewardCalculation(
     };
   }
 
+  const sourceChainId = sourceChainIdForRewardEpoch(rewardEpochId);
   for (const finalization of rewardCalculationData.finalizations) {
-    RelayMessage.augment(finalization.messages);
+    RelayMessage.augment(finalization.messages, sourceChainId);
   }
   if (rewardCalculationData.firstSuccessfulFinalization?.messages) {
-    RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages);
+    RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages, sourceChainId);
   }
 
   const data: SDataForRewardCalculation = {

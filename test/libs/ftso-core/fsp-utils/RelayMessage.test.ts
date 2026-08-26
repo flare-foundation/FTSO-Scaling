@@ -165,4 +165,26 @@ describe(`RelayMessage (${getTestFile(__filename)})`, () => {
     };
     expect(() => RelayMessage.encode(relayMessage, true)).to.throw("Invalid relay message: threshold not met");
   });
+
+  // Relay v2 requires the random number and its Merkle proof after the last signature when finalizing the
+  // random number generating protocol. Reward calculation decodes that calldata, and decodeSignatureList
+  // rejects an input that is not exactly a signature list - so the trailer has to be sliced off, or every
+  // post-cutover FTSO finalization reads as unparseable.
+  it("decodes a relay message whose calldata carries a random trailer", () => {
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const signatures = generateSignatures(accountPrivateKeys, ProtocolMessageMerkleRoot.hash(messageData), N / 2 + 1);
+    const relayMessage = { signingPolicy: signingPolicyData, signatures, protocolMessageMerkleRoot: messageData };
+
+    const withoutTrailer = RelayMessage.encode(relayMessage);
+    for (const proofNodes of [0, 1, 5]) {
+      const trailer = ethers.hexlify(ethers.randomBytes(32 * (1 + proofNodes))).slice(2);
+      const decoded = RelayMessage.decode(withoutTrailer + trailer);
+      expect(RelayMessage.equals(relayMessage, decoded)).to.be.true;
+    }
+  });
 });

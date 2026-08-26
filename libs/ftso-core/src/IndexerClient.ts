@@ -11,6 +11,8 @@ import {
   FIRST_DATABASE_LOG_INDEX_STATE,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
+  RELAY_V2_ACTIVATION_REWARD_EPOCH,
+  RELAY_V2_NOT_ACTIVATED,
 } from "./constants";
 import {
   InflationRewardsOffered,
@@ -449,10 +451,30 @@ export class IndexerClient {
   }
 
   /**
-   * Returns all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
-   * Events are sorted by timestamp, hence also by rewardEpochId.
-   * The query result is returned even if the indexer's FSP-event floor is not strictly below
+   * The Relay contracts SigningPolicyInitialized is read from, with the reward epochs each is
+   * authoritative for. Relay v2 is deployed holding the activation epoch's policy but never emits an
+   * event for it, and its first setSigningPolicy is the epoch after — so the configured Relay answers
+   * up to and including the activation epoch and Relay v2 after it. Until a cutover is scheduled
+   * there is nothing to read from Relay v2, so it is not queried.
+   */
+  private signingPolicySources(): { contract: ContractDefinitions; authoritativeFor: (id: number) => boolean }[] {
+    const activation = RELAY_V2_ACTIVATION_REWARD_EPOCH();
+    if (CONTRACTS.RelayV2 === undefined || activation === RELAY_V2_NOT_ACTIVATED) {
+      return [{ contract: CONTRACTS.Relay, authoritativeFor: () => true }];
+    }
+    return [
+      { contract: CONTRACTS.Relay, authoritativeFor: (id) => id <= activation },
+      { contract: CONTRACTS.RelayV2, authoritativeFor: (id) => id > activation },
+    ];
+  }
+
+  /**
+   * Returns all SigningPolicyInitialized events with timestamp greater than @param fromStartTime, sorted by
+   * rewardEpochId. The query result is returned even if the indexer's FSP-event floor is not strictly below
    * fromStartTime; the floor status is reflected in the response `status`.
+   *
+   * An event from a contract that is not authoritative for its reward epoch is dropped with a warning: taking it
+   * would silently replace the voter set that a voting round's result is decided with.
    */
   public async getLatestSigningPolicyInitializedEvents(
     fromStartTime: number
@@ -460,10 +482,23 @@ export class IndexerClient {
     const eventName = SigningPolicyInitialized.eventName;
     const status = await this.ensureFspEventsIndexedBefore(fromStartTime);
 
-    const result: TLPEvents[] = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
-    IndexerClient.sortEvents(result);
+    const data: SigningPolicyInitialized[] = [];
+    for (const source of this.signingPolicySources()) {
+      const result: TLPEvents[] = await this.queryEvents(source.contract, eventName, fromStartTime);
+      for (const rawEvent of IndexerClient.sortEvents(result)) {
+        const event = SigningPolicyInitialized.fromRawEvent(rawEvent);
+        if (source.authoritativeFor(event.rewardEpochId)) {
+          data.push(event);
+        } else {
+          this.logger.warn(
+            `Ignoring SigningPolicyInitialized for reward epoch ${event.rewardEpochId} from relay ${source.contract.address}`
+          );
+        }
+      }
+    }
+    // callers pair an epoch with the one after it, so the order matters
+    data.sort((a, b) => a.rewardEpochId - b.rewardEpochId);
 
-    const data = result.map((event) => SigningPolicyInitialized.fromRawEvent(event));
     return {
       status,
       data,

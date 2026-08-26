@@ -107,6 +107,20 @@ export class IndexerClientForRewarding extends IndexerClient {
       },
     ];
 
+    // From the activation on, finalizations go to Relay v2. A round is finalized on exactly one of the
+    // contracts, so the lists never overlap.
+    if (CONTRACTS.RelayV2 !== undefined) {
+      jointTransactionResults.push({
+        address: CONTRACTS.RelayV2.address,
+        transactionsResults: await this.queryTransactions(
+          CONTRACTS.RelayV2,
+          ContractMethodNames.relay,
+          startTime,
+          endTime
+        ),
+      });
+    }
+
     const finalizations: FinalizationData[] = [];
     for (const txListPair of jointTransactionResults) {
       const { address, transactionsResults } = txListPair;

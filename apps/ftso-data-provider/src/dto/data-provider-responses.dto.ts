@@ -13,6 +13,11 @@ export interface PDPResponse {
   status: PDPResponseStatusEnum;
   data: string;
   additionalData?: string;
+  /**
+   * The random number and its Merkle proof, which the finalizer appends to `relay()`. Absent when
+   * there is none. Never part of the caller's own transaction, unlike `additionalData`.
+   */
+  finalizationData?: string;
 }
 
 // External user facing response for merkle tree

@@ -10,7 +10,12 @@ import {
 } from "../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, isFip16Active } from "../../ftso-core/src/constants";
+import {
+  EPOCH_SETTINGS,
+  FTSO2_PROTOCOL_ID,
+  isFip16Active,
+  sourceChainIdForRewardEpoch,
+} from "../../ftso-core/src/constants";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
@@ -261,7 +266,12 @@ export class DataManagerForRewarding extends DataManager {
             // - Override the messageHash if provided
             // - Require
 
-            const messageHash = providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message);
+            const messageHash =
+              providedMessageHash ??
+              ProtocolMessageMerkleRoot.hash(
+                signaturePayload.message,
+                sourceChainIdForRewardEpoch(rewardEpoch.rewardEpochId)
+              );
 
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
             // submit signature address should match the signingPolicyAddress
@@ -478,7 +488,10 @@ export class DataManagerForRewarding extends DataManager {
         this.logger.warn(`No successful finalization found for voting round ${votingRoundId}`);
       }
       if (firstSuccessfulFinalization) {
-        RelayMessage.augment(firstSuccessfulFinalization.messages);
+        RelayMessage.augment(
+          firstSuccessfulFinalization.messages,
+          sourceChainIdForRewardEpoch(rewardEpoch.rewardEpochId)
+        );
         if (!firstSuccessfulFinalization.messages.protocolMessageHash) {
           throw new Error(
             `Protocol message merkle root is missing for FTSO finalization ${firstSuccessfulFinalization.messages.protocolMessageHash}`
@@ -513,7 +526,10 @@ export class DataManagerForRewarding extends DataManager {
               `Protocol message merkle root is missing for FDC finalization ${fdcFirstSuccessfulFinalization.messages.protocolMessageHash}`
             );
           }
-          RelayMessage.augment(fdcFirstSuccessfulFinalization.messages);
+          RelayMessage.augment(
+            fdcFirstSuccessfulFinalization.messages,
+            sourceChainIdForRewardEpoch(rewardEpoch.rewardEpochId)
+          );
           const consensusMessageHash = fdcFirstSuccessfulFinalization.messages.protocolMessageHash;
           fdcSignatures = DataManagerForRewarding.extractSignatures(
             votingRoundId,

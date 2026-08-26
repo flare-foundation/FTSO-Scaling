@@ -112,7 +112,18 @@ export namespace RelayMessage {
       protocolMessageMerkleRoot = ProtocolMessageMerkleRoot.decode(rest, false);
       encodedSignatures = rest.slice(protocolMessageMerkleRoot.encodedLength);
     }
-    const signatures = ECDSASignatureWithIndex.decodeSignatureList(encodedSignatures);
+    // Finalizations of the random number generating protocol on Relay v2 carry the random number and
+    // its Merkle proof after the last signature. Nothing here needs them, but the signature list has
+    // to be sliced exactly or decodeSignatureList rejects the input and the finalization is read as
+    // unparseable. 4 hex chars of count, then 134 per 67-byte record.
+    if (encodedSignatures.length < 4) {
+      throw Error("Invalid relay message: missing signature count");
+    }
+    const signatureListLength = 4 + parseInt(encodedSignatures.slice(0, 4), 16) * 134;
+    if (encodedSignatures.length < signatureListLength) {
+      throw Error("Invalid relay message: signature list truncated");
+    }
+    const signatures = ECDSASignatureWithIndex.decodeSignatureList(encodedSignatures.slice(0, signatureListLength));
     return {
       signingPolicy,
       protocolMessageMerkleRoot,
@@ -162,8 +173,8 @@ export namespace RelayMessage {
     return false;
   }
 
-  export function augment(m: IRelayMessage): IRelayMessage {
-    m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot);
+  export function augment(m: IRelayMessage, chainId?: number): IRelayMessage {
+    m.protocolMessageHash = ProtocolMessageMerkleRoot.hash(m.protocolMessageMerkleRoot, chainId);
     return m;
   }
 }

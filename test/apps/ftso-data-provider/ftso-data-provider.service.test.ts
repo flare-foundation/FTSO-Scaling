@@ -13,6 +13,8 @@ import {
   encodeRevealPayloadMessage,
 } from "../../../apps/ftso-data-provider/src/response-encoders";
 import { ContractMethodNames } from "../../../libs/contracts/src/definitions";
+import { MerkleTreeStructs } from "../../../libs/ftso-core/src/data/MerkleTreeStructs";
+import { verifyWithMerkleProof } from "../../../libs/ftso-core/src/utils/MerkleTree";
 import { CommitData } from "../../../libs/ftso-core/src/data/CommitData";
 import { unPrefix0x } from "../../../libs/ftso-core/src/utils/encoding";
 import { Feed } from "../../../libs/ftso-core/src/voting-types";
@@ -180,7 +182,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
     const mRoots = new Set<string>();
     for (let i = 0; i < voters.length; i++) {
-      const result = await services[i].getResultData(votingRound);
+      const { message: result, finalizationData } = await services[i].getResultData(votingRound);
       expect(result.votingRoundId).to.be.equal(votingRound);
       expect(result.isSecureRandom).to.be.equal(true);
       mRoots.add(result.merkleRoot);
@@ -188,6 +190,23 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       const fullMerkleTree = await services[i].getFullMerkleTree(votingRound);
       expect(fullMerkleTree.merkleRoot).to.be.equal(result.merkleRoot);
       expect(fullMerkleTree.isSecureRandom).to.be.equal(true);
+
+      // What Relay v2 does with finalizationData: split it into 32-byte words, rebuild the leaf from the
+      // first word and the voting round and secure flag of the signed message, then fold the remaining
+      // words to the signed merkle root. Getting any of that wrong reverts the finalization on chain.
+      const words = finalizationData.slice(2).match(/.{64}/g);
+      expect(finalizationData.length).to.be.equal(2 + 64 * words.length);
+      expect(
+        verifyWithMerkleProof(
+          MerkleTreeStructs.hashRandomResult({
+            votingRoundId: result.votingRoundId,
+            value: "0x" + words[0],
+            isSecure: result.isSecureRandom,
+          }),
+          words.slice(1).map((word) => "0x" + word),
+          result.merkleRoot
+        )
+      ).to.be.true;
     }
     expect(mRoots.size).to.be.equal(1);
   });
@@ -280,7 +299,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
 
       const secureRandom = missedRevealers === 0;
       for (let i = 0; i < voters.length; i++) {
-        const result = await services[i].getResultData(votingRound);
+        const { message: result } = await services[i].getResultData(votingRound);
         expect(result.isSecureRandom).to.be.equal(secureRandom);
       }
 
@@ -307,7 +326,7 @@ describe(`ftso-data-provider.service (${getTestFile(__filename)})`, () => {
       await db.syncTimeToNow();
 
       for (let i = 0; i < voters.length; i++) {
-        const result = await services[i].getResultData(votingRound + 1);
+        const { message: result } = await services[i].getResultData(votingRound + 1);
         expect(result.isSecureRandom).to.be.equal(expectedLastSecureRandom);
       }
     }

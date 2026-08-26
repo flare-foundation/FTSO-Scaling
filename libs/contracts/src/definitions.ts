@@ -124,6 +124,8 @@ export interface NetworkContractAddresses {
   RewardManager: RewardManagerDefinition;
   Submission: SubmissionDefinition;
   Relay: RelayDefinition;
+  /** The Relay that binds the source chain id into the digests it verifies; absent where none is deployed. */
+  RelayV2?: RelayDefinition;
   FlareSystemsCalculator: FlareSystemsCalculatorDefinition;
   VoterRegistry: VoterRegistryDefinition;
   FtsoMerkleStructs: FtsoMerkleStructsDefinition;

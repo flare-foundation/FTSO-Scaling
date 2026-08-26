@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
+import { ethers } from "ethers";
 import { ConfigService } from "@nestjs/config";
 import { LRUCache } from "lru-cache";
 import { EntityManager } from "typeorm";
@@ -30,6 +31,13 @@ import { CONTRACTS } from "../../../libs/contracts/src/constants";
 import { AxiosResponse } from "axios";
 
 type RoundAndAddress = string;
+
+export interface ResultData {
+  /** The protocol message the voter signs. */
+  message: IProtocolMessageMerkleRoot;
+  /** The random number and its Merkle proof, undefined when they could not be produced. */
+  finalizationData?: string;
+}
 
 @Injectable()
 export class FtsoDataProviderService {
@@ -129,20 +137,48 @@ export class FtsoDataProviderService {
     return msg;
   }
 
-  async getResultData(votingRoundId: number): Promise<IProtocolMessageMerkleRoot | undefined> {
+  /**
+   * The protocol message and the trailer Relay v2 requires after the signatures, from a single
+   * calculation of the round: this route runs against the submitSignatures deadline and
+   * `prepareCalculationResultData` caches nothing.
+   */
+  async getResultData(votingRoundId: number): Promise<ResultData | undefined> {
     const result = await this.prepareCalculationResultData(votingRoundId);
     if (result === undefined) {
       return undefined;
     }
     const merkleRoot = result.merkleTree.root;
     this.logger.log(`Computed merkle root for voting round ${votingRoundId}: ${merkleRoot}`);
-    const message: IProtocolMessageMerkleRoot = {
-      protocolId: FTSO2_PROTOCOL_ID,
-      votingRoundId,
-      isSecureRandom: result.randomData.isSecure,
-      merkleRoot,
+    return {
+      message: {
+        protocolId: FTSO2_PROTOCOL_ID,
+        votingRoundId,
+        isSecureRandom: result.randomData.isSecure,
+        merkleRoot,
+      },
+      finalizationData: this.finalizationData(votingRoundId, result),
     };
-    return message;
+  }
+
+  /**
+   * The random number as a 32-byte word followed by one word per Merkle proof node. Never throws: a round
+   * without it is still signed and submitted, only this provider's own finalization of it is lost.
+   */
+  private finalizationData(votingRoundId: number, result: EpochResult): string | undefined {
+    try {
+      const leaf = MerkleTreeStructs.hashRandomResult(MerkleTreeStructs.fromRandomCalculationResult(result.randomData));
+      const proof = result.merkleTree.getProof(leaf);
+      if (proof === null) {
+        this.logger.warn(`No random merkle proof for voting round ${votingRoundId}`);
+        return undefined;
+      }
+      // the tree hashes the value as a uint256, so it may be stored unpadded; the trailer needs whole words
+      const words = [ethers.toBeHex(result.randomData.random, 32), ...proof];
+      return "0x" + words.map((word) => word.slice(2)).join("");
+    } catch (e) {
+      this.logger.warn(`Unable to encode finalization data for voting round ${votingRoundId}: ${errorString(e)}`);
+      return undefined;
+    }
   }
 
   async getFullMerkleTree(votingRoundId: number): Promise<IProtocolMessageMerkleData | undefined> {

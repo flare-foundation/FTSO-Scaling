@@ -268,3 +268,78 @@ export const isFip16Active = (rewardEpochId: number): boolean => {
 export const stakeWeightMultiplier = (rewardEpochId: number): bigint => {
   return isFip16Active(rewardEpochId) ? FIP16_STAKE_WEIGHT_MULTIPLIER : 1n;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Relay v2 — source bound signature digests
+// ---------------------------------------------------------------------------------------------------------------------
+// The Relay contract deployed with a `sourceChainId` verifies `keccak256(chainId ‖ message)` instead of
+// `keccak256(message)`. A voter signs one digest per voting round, so a round is signed for and finalized on exactly
+// one of the two contracts and reward calculation has to grade each epoch with the digest that was in force for it.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Sentinel meaning "not activated". Any realistic reward epoch id is far below it. */
+export const RELAY_V2_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
+
+/** The chain id bound into the digests Relay v2 verifies. */
+export const CHAIN_ID = (): number => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "flare":
+      return 14;
+    case "songbird":
+      return 19;
+    case "coston":
+      return 16;
+    case "coston2":
+      return 114;
+    case "from-env":
+    case "local-test": {
+      const rawValue = process.env.CHAIN_ID?.trim();
+      if (rawValue === undefined || rawValue === "") {
+        throw new Error("CHAIN_ID value is not provided");
+      }
+      if (!/^\d+$/.test(rawValue)) {
+        throw new Error("CHAIN_ID must be a non-negative integer");
+      }
+      return Number(rawValue);
+    }
+    default:
+      // Ensure exhaustive checking
+      ((_: never): void => {})(network);
+  }
+};
+
+/** The first reward epoch whose signatures Relay v2 verifies, and whose finalizations it receives. */
+export const RELAY_V2_ACTIVATION_REWARD_EPOCH = (): number => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    // TODO(relay-v2): set once the cutover epochs are scheduled.
+    case "flare":
+    case "songbird":
+    case "coston":
+    case "coston2":
+      return RELAY_V2_NOT_ACTIVATED;
+    case "from-env":
+    case "local-test": {
+      const rawValue = process.env.RELAY_V2_ACTIVATION_REWARD_EPOCH?.trim();
+      if (rawValue === undefined || rawValue === "") {
+        return RELAY_V2_NOT_ACTIVATED;
+      }
+      if (!/^\d+$/.test(rawValue) || !Number.isSafeInteger(Number(rawValue))) {
+        throw new Error("RELAY_V2_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
+      }
+      return Number(rawValue);
+    }
+    default:
+      // Ensure exhaustive checking
+      ((_: never): void => {})(network);
+  }
+};
+
+/**
+ * The chain id to bind into the digests of the given reward epoch, or undefined for epochs signed before Relay v2,
+ * whose digests are not source bound.
+ */
+export const sourceChainIdForRewardEpoch = (rewardEpochId: number): number | undefined => {
+  return rewardEpochId >= RELAY_V2_ACTIVATION_REWARD_EPOCH() ? CHAIN_ID() : undefined;
+};
