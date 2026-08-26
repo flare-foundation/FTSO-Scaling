@@ -14,15 +14,11 @@ import { getDataSource } from "../../utils/db";
 import { getTestFile } from "../../utils/getTestFile";
 
 describe(`IndexerClient (${getTestFile(__filename)})`, () => {
-  // Relay v2 is deployed holding the activation epoch's policy but never emits an event for it, and its
-  // first setSigningPolicy is the epoch after - so a range spanning the activation comes from two
+  // Relay v2 is deployed holding the cutover epoch's policy but never emits an event for it, and its first
+  // setSigningPolicy is the epoch after - so the policies of a range spanning the cutover come from two
   // contracts. The data provider builds every voting round's voter set from these, so reading only the
-  // configured Relay means the switch looks clean and then nothing can be served an epoch later.
-  it("reads signing policies from both relays across the Relay v2 activation", async () => {
-    const activation = 101;
-    const previousActivation = process.env.RELAY_V2_ACTIVATION_REWARD_EPOCH;
-    process.env.RELAY_V2_ACTIVATION_REWARD_EPOCH = `${activation}`;
-
+  // configured Relay means nothing can be served an epoch after the switch.
+  it("merges signing policies from both relays, in reward epoch order", async () => {
     const event = (contract: { name: string; address: string }, rewardEpochId: number) =>
       generateEvent(
         contract,
@@ -40,7 +36,6 @@ describe(`IndexerClient (${getTestFile(__filename)})`, () => {
         4,
         600 + rewardEpochId
       );
-    const relayV2 = CONTRACTS.RelayV2;
 
     const dataSource = await getDataSource();
     try {
@@ -50,24 +45,21 @@ describe(`IndexerClient (${getTestFile(__filename)})`, () => {
         generateState(FIRST_DATABASE_INDEX_STATE, 1, 0, 500),
         generateState(LAST_DATABASE_INDEX_STATE, 2, 0, 1001),
       ]);
+      // the cutover epoch and everything before it on the current Relay, later ones on Relay v2
       await entityManager.save([
-        event(CONTRACTS.Relay, activation - 1),
-        event(CONTRACTS.Relay, activation),
-        event(relayV2, activation + 1),
-        // neither contract is authoritative for these, so both must be dropped
-        event(relayV2, activation),
-        event(CONTRACTS.Relay, activation + 1),
+        event(CONTRACTS.Relay, 100),
+        event(CONTRACTS.Relay, 101),
+        event(CONTRACTS.RelayV2, 102),
+        event(CONTRACTS.RelayV2, 103),
       ]);
 
       const response = await new IndexerClient(entityManager, 0, emptyLogger).getLatestSigningPolicyInitializedEvents(
         550
       );
       expect(response.status).to.equal(BlockAssuranceResult.OK);
-      expect(response.data.map((e) => e.rewardEpochId)).to.deep.equal([activation - 1, activation, activation + 1]);
+      expect(response.data.map((e) => e.rewardEpochId)).to.deep.equal([100, 101, 102, 103]);
     } finally {
       await dataSource.destroy();
-      if (previousActivation === undefined) delete process.env.RELAY_V2_ACTIVATION_REWARD_EPOCH;
-      else process.env.RELAY_V2_ACTIVATION_REWARD_EPOCH = previousActivation;
     }
   });
 

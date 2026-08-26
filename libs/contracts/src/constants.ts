@@ -135,6 +135,8 @@ const contracts = () => {
         throw new Error("FTSO_CA_SUBMISSION_ADDRESS value is not valid contract address");
       if (!process.env.FTSO_CA_RELAY_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_RELAY_ADDRESS))
         throw new Error("FTSO_CA_RELAY_ADDRESS value is not valid contract address");
+      if (!process.env.FTSO_CA_RELAY_V2_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_RELAY_V2_ADDRESS))
+        throw new Error("FTSO_CA_RELAY_V2_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS ||
         !isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS)
@@ -170,9 +172,7 @@ const contracts = () => {
         RewardManager: { name: "RewardManager", address: process.env.FTSO_CA_REWARD_MANAGER_ADDRESS },
         Submission: { name: "Submission", address: process.env.FTSO_CA_SUBMISSION_ADDRESS },
         Relay: { name: "Relay", address: process.env.FTSO_CA_RELAY_ADDRESS },
-        ...(process.env.FTSO_CA_RELAY_V2_ADDRESS
-          ? { RelayV2: { name: "Relay" as const, address: process.env.FTSO_CA_RELAY_V2_ADDRESS } }
-          : {}),
+        RelayV2: { name: "Relay", address: process.env.FTSO_CA_RELAY_V2_ADDRESS },
         FlareSystemsCalculator: {
           name: "FlareSystemsCalculator",
           address: process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS,

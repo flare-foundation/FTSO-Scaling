@@ -187,4 +187,27 @@ describe(`RelayMessage (${getTestFile(__filename)})`, () => {
       expect(RelayMessage.equals(relayMessage, decoded)).to.be.true;
     }
   });
+
+  it("verifies source bound signatures only when given the chain id", () => {
+    const chainId = 14;
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const relayMessage = {
+      signingPolicy: signingPolicyData,
+      signatures: generateSignatures(
+        accountPrivateKeys,
+        ProtocolMessageMerkleRoot.hash(messageData, chainId),
+        N / 2 + 1
+      ),
+      protocolMessageMerkleRoot: messageData,
+    };
+
+    expect(() => RelayMessage.encode(relayMessage, true, chainId)).to.not.throw();
+    expect(() => RelayMessage.encode(relayMessage, true)).to.throw();
+    expect(() => RelayMessage.encode(relayMessage, true, 19)).to.throw();
+  });
 });

@@ -143,7 +143,7 @@ export namespace SigningPolicy {
    * It is done by padding byte array with 0 bytes to a multiple of 32 and then
    * Sequentially hashing 32-byte chunks with keccak256
    */
-  export function hashEncoded(signingPolicy: string) {
+  export function hashEncoded(signingPolicy: string, chainId?: number) {
     const signingPolicyInternal = signingPolicy.startsWith("0x") ? signingPolicy.slice(2) : signingPolicy;
     // A valid encoded signing policy always contains at least the fixed header (size,
     // rewardEpochId, startVotingRoundId, threshold, seed).
@@ -151,6 +151,9 @@ export namespace SigningPolicy {
       throw new Error(
         `Invalid signing policy: encoded length ${signingPolicyInternal.length} is shorter than the ${HEADER_HEX_LENGTH}-character header`
       );
+    }
+    if (chainId !== undefined) {
+      return ethers.keccak256(ethers.solidityPacked(["uint256", "bytes"], [chainId, "0x" + signingPolicyInternal]));
     }
     const splitted = signingPolicyInternal.match(/.{1,64}/g).map((x) => x.padEnd(64, "0"));
     let hash: string = ethers.keccak256("0x" + splitted[0] + splitted[1]);
@@ -171,8 +174,8 @@ export namespace SigningPolicy {
   /**
    * Calculates signing policy hash from signing policy object
    */
-  export function hash(signingPolicy: ISigningPolicy) {
-    return SigningPolicy.hashEncoded(SigningPolicy.encode(signingPolicy));
+  export function hash(signingPolicy: ISigningPolicy, chainId?: number) {
+    return SigningPolicy.hashEncoded(SigningPolicy.encode(signingPolicy), chainId);
   }
   /**
    * Checks if two signing policies are equal as objects. Essentially checks if all properties are equal,

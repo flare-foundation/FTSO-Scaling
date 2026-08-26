@@ -7,6 +7,7 @@ import {
   GenericSubmissionData,
   ParsedFinalizationData,
   SubmissionData,
+  sourceChainIdForRelay,
 } from "../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
@@ -683,12 +684,8 @@ export class DataManagerForRewarding extends DataManager {
             continue;
           }
           // TODO: Check if the signing policy is correct
-          const rewardEpochSigningPolicyHash = SigningPolicy.hash(rewardEpoch.signingPolicy);
-          const relayingSigningPolicyHash = SigningPolicy.hash(relayMessage.signingPolicy);
-          if (rewardEpochSigningPolicyHash !== relayingSigningPolicyHash) {
-            throw new Error(
-              `Signing policy mismatch. Expected hash: ${rewardEpochSigningPolicyHash}, got ${relayingSigningPolicyHash}`
-            );
+          if (!SigningPolicy.equals(rewardEpoch.signingPolicy, relayMessage.signingPolicy)) {
+            throw new Error(`Signing policy mismatch for reward epoch ${rewardEpoch.rewardEpochId}`);
           }
           const finalization: ParsedFinalizationData = {
             ...submission,
@@ -696,7 +693,7 @@ export class DataManagerForRewarding extends DataManager {
           };
           // Verify the relay message by trying to encode it with verification.
           // If it excepts it is non-finalisable
-          RelayMessage.encode(relayMessage, true);
+          RelayMessage.encode(relayMessage, true, sourceChainIdForRelay(submission.relayAddress));
           // The message is eligible for consideration.
           finalizations.push(finalization);
         } catch (e) {

@@ -1,4 +1,3 @@
-import { ethers } from "ethers";
 import { ECDSASignatureWithIndex, IECDSASignatureWithIndex } from "./ECDSASignatureWithIndex";
 import { IProtocolMessageMerkleRoot, ProtocolMessageMerkleRoot } from "./ProtocolMessageMerkleRoot";
 import { ISigningPolicy, SigningPolicy } from "./SigningPolicy";
@@ -25,7 +24,7 @@ export namespace RelayMessage {
    * - signatures are in ascending order by index in signing policy and indices of signatures match indices in signing policy
    * - threshold is met
    */
-  export function encode(message: IRelayMessage, verify = false): string {
+  export function encode(message: IRelayMessage, verify = false, chainId?: number): string {
     if (!message) {
       throw Error("Relay message is undefined");
     }
@@ -50,14 +49,14 @@ export namespace RelayMessage {
       const encodedMessage = ProtocolMessageMerkleRoot.encode(message.protocolMessageMerkleRoot);
       encoded += encodedMessage.slice(2);
       if (verify) {
-        hashToSign = ethers.keccak256(encodedMessage);
+        hashToSign = ProtocolMessageMerkleRoot.hash(message.protocolMessageMerkleRoot, chainId);
       }
     } else {
       encoded += "00"; // protocolId == 0 indicates new signing policy
       const encodedNewSigningPolicy = SigningPolicy.encode(message.newSigningPolicy);
       encoded += encodedNewSigningPolicy.slice(2);
       if (verify) {
-        hashToSign = SigningPolicy.hashEncoded(encodedNewSigningPolicy);
+        hashToSign = SigningPolicy.hashEncoded(encodedNewSigningPolicy, chainId);
       }
     }
     let lastObservedIndex = -1;

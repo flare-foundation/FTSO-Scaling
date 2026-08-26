@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
-import { ethers } from "ethers";
 import { ConfigService } from "@nestjs/config";
+import { ethers } from "ethers";
 import { LRUCache } from "lru-cache";
 import { EntityManager } from "typeorm";
 import { IPayloadMessage } from "../../../libs/ftso-core/src/fsp-utils/PayloadMessage";
@@ -33,7 +33,6 @@ import { AxiosResponse } from "axios";
 type RoundAndAddress = string;
 
 export interface ResultData {
-  /** The protocol message the voter signs. */
   message: IProtocolMessageMerkleRoot;
   /** The random number and its Merkle proof, undefined when they could not be produced. */
   finalizationData?: string;
@@ -161,8 +160,8 @@ export class FtsoDataProviderService {
   }
 
   /**
-   * The random number as a 32-byte word followed by one word per Merkle proof node. Never throws: a round
-   * without it is still signed and submitted, only this provider's own finalization of it is lost.
+   * The random number as a 32-byte word followed by one word per proof node. Never throws: a round without
+   * it is still signed and submitted, only this provider's own finalization of it is lost.
    */
   private finalizationData(votingRoundId: number, result: EpochResult): string | undefined {
     try {

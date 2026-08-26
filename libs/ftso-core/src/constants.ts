@@ -277,6 +277,9 @@ export const stakeWeightMultiplier = (rewardEpochId: number): bigint => {
 // one of the two contracts and reward calculation has to grade each epoch with the digest that was in force for it.
 // ---------------------------------------------------------------------------------------------------------------------
 
+/** The Hardhat default, for local test runs that do not set CHAIN_ID. */
+const LOCAL_TEST_CHAIN_ID = 31337;
+
 /** Sentinel meaning "not activated". Any realistic reward epoch id is far below it. */
 export const RELAY_V2_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
 
@@ -296,6 +299,9 @@ export const CHAIN_ID = (): number => {
     case "local-test": {
       const rawValue = process.env.CHAIN_ID?.trim();
       if (rawValue === undefined || rawValue === "") {
+        if (network === "local-test") {
+          return LOCAL_TEST_CHAIN_ID;
+        }
         throw new Error("CHAIN_ID value is not provided");
       }
       if (!/^\d+$/.test(rawValue)) {

@@ -7,12 +7,11 @@ import { IPayloadMessage } from "./fsp-utils/PayloadMessage";
 import { IRelayMessage } from "./fsp-utils/RelayMessage";
 import { ContractDefinitions, ContractMethodNames } from "../../contracts/src/definitions";
 import {
+  CHAIN_ID,
   EPOCH_SETTINGS,
   FIRST_DATABASE_LOG_INDEX_STATE,
   FIRST_DATABASE_INDEX_STATE,
   LAST_DATABASE_INDEX_STATE,
-  RELAY_V2_ACTIVATION_REWARD_EPOCH,
-  RELAY_V2_NOT_ACTIVATED,
 } from "./constants";
 import {
   InflationRewardsOffered,
@@ -52,14 +51,14 @@ export type SubmissionData = GenericSubmissionData<IPayloadMessage<string>[]>;
  */
 export interface FinalizationData extends GenericSubmissionData<string> {
   successfulOnChain: boolean;
-  isOldRelay?: boolean;
+  relayAddress: string;
 }
 /**
  * Parsed finalization data from finalization calls (relay()) on Relay contract.
  */
 export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMessage> {
   successfulOnChain: boolean;
-  isOldRelay?: boolean;
+  relayAddress: string;
 }
 
 /**
@@ -101,6 +100,15 @@ export enum BlockAssuranceResult {
    * past endTime + endTimeout.
    */
   TIMEOUT_OK,
+}
+
+/**
+ * The chain id bound into the digests the given Relay verifies, undefined for the ones before the source
+ * binding. Calldata sent to the wrong Relay therefore fails signer recovery and is discarded, which is what
+ * stops it being replayed against the other to collect grace-period rewards.
+ */
+export function sourceChainIdForRelay(relayAddress: string): number | undefined {
+  return relayAddress.toLowerCase() === CONTRACTS.RelayV2.address.toLowerCase() ? CHAIN_ID() : undefined;
 }
 
 /**
@@ -451,30 +459,21 @@ export class IndexerClient {
   }
 
   /**
-   * The Relay contracts SigningPolicyInitialized is read from, with the reward epochs each is
-   * authoritative for. Relay v2 is deployed holding the activation epoch's policy but never emits an
-   * event for it, and its first setSigningPolicy is the epoch after — so the configured Relay answers
-   * up to and including the activation epoch and Relay v2 after it. Until a cutover is scheduled
-   * there is nothing to read from Relay v2, so it is not queried.
+   * SigningPolicyInitialized is read from both Relays: the current one emits the policies up to the cutover
+   * epoch and Relay v2 the later ones. The events carry their reward epoch, so nothing here needs to know
+   * when the cutover is.
    */
-  private signingPolicySources(): { contract: ContractDefinitions; authoritativeFor: (id: number) => boolean }[] {
-    const activation = RELAY_V2_ACTIVATION_REWARD_EPOCH();
-    if (CONTRACTS.RelayV2 === undefined || activation === RELAY_V2_NOT_ACTIVATED) {
-      return [{ contract: CONTRACTS.Relay, authoritativeFor: () => true }];
-    }
-    return [
-      { contract: CONTRACTS.Relay, authoritativeFor: (id) => id <= activation },
-      { contract: CONTRACTS.RelayV2, authoritativeFor: (id) => id > activation },
-    ];
+  private signingPolicySources(): ContractDefinitions[] {
+    return [CONTRACTS.Relay, CONTRACTS.RelayV2];
   }
 
   /**
    * Returns all SigningPolicyInitialized events with timestamp greater than @param fromStartTime, sorted by
-   * rewardEpochId. The query result is returned even if the indexer's FSP-event floor is not strictly below
-   * fromStartTime; the floor status is reflected in the response `status`.
+   * rewardEpochId. Returned even if the indexer's FSP-event floor is not strictly below fromStartTime; the
+   * floor status is reflected in `status`.
    *
-   * An event from a contract that is not authoritative for its reward epoch is dropped with a warning: taking it
-   * would silently replace the voter set that a voting round's result is decided with.
+   * An event from the Relay that is not authoritative for its epoch is dropped: taking it would replace the
+   * voter set a round's result is decided with.
    */
   public async getLatestSigningPolicyInitializedEvents(
     fromStartTime: number
@@ -483,20 +482,11 @@ export class IndexerClient {
     const status = await this.ensureFspEventsIndexedBefore(fromStartTime);
 
     const data: SigningPolicyInitialized[] = [];
-    for (const source of this.signingPolicySources()) {
-      const result: TLPEvents[] = await this.queryEvents(source.contract, eventName, fromStartTime);
-      for (const rawEvent of IndexerClient.sortEvents(result)) {
-        const event = SigningPolicyInitialized.fromRawEvent(rawEvent);
-        if (source.authoritativeFor(event.rewardEpochId)) {
-          data.push(event);
-        } else {
-          this.logger.warn(
-            `Ignoring SigningPolicyInitialized for reward epoch ${event.rewardEpochId} from relay ${source.contract.address}`
-          );
-        }
-      }
+    for (const contract of this.signingPolicySources()) {
+      const result: TLPEvents[] = await this.queryEvents(contract, eventName, fromStartTime);
+      data.push(...result.map((rawEvent) => SigningPolicyInitialized.fromRawEvent(rawEvent)));
     }
-    // callers pair an epoch with the one after it, so the order matters
+    // callers pair an epoch with the one after it, and merging two contracts loses chain order
     data.sort((a, b) => a.rewardEpochId - b.rewardEpochId);
 
     return {

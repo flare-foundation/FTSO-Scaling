@@ -32,4 +32,4 @@ The `submitSignatures` response carries a third field:
 }
 ```
 
-It is what the Relay contract requires after the signatures: 32 bytes of the random number followed by one 32-byte word per Merkle proof node. The finalizer receives it with the message it belongs to, so finalizing needs no request of its own, and unlike `additionalData` it never enters the caller's own transaction. It is absent when it could not be produced, in which case the message is still signed and submitted.
+It is what the Relay contract requires after the signatures: 32 bytes of the random number followed by one 32-byte word per Merkle proof node. The finalizer receives it with the message it belongs to, so finalizing needs no request of its own, and unlike `additionalData` it never enters the caller's own transaction. Absent when it could not be produced; the message is still signed and submitted.
