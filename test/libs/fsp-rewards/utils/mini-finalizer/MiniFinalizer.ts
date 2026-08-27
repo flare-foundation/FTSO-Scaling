@@ -173,6 +173,7 @@ export class MiniFinalizer {
       signatures,
       protocolId,
       undefined,
+      undefined,
       this.logger
     );
     if (!finalizationMap) {

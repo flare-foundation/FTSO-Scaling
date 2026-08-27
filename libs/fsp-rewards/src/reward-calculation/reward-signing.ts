@@ -1,7 +1,8 @@
 import { ProtocolMessageMerkleRoot } from "../../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
 import { ISignaturePayload } from "../../../ftso-core/src/fsp-utils/SignaturePayload";
 import { GenericSubmissionData } from "../../../ftso-core/src/IndexerClient";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, sourceChainIdForRewardEpoch } from "../../../ftso-core/src/constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID } from "../../../ftso-core/src/constants";
+import { sourceChainIdForRelay } from "../../../ftso-core/src/IndexerClient";
 import { IPartialRewardOfferForRound } from "../utils/PartialRewardOffer";
 import { ClaimType, IPartialRewardClaim } from "../utils/RewardClaim";
 import { SDataForRewardCalculation } from "../utils/stat-info/reward-calculation-data";
@@ -86,7 +87,7 @@ export function calculateSigningRewards(
   } else {
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
       data.firstSuccessfulFinalization.messages.protocolMessageMerkleRoot,
-      sourceChainIdForRewardEpoch(data.dataForCalculations.rewardEpochId)
+      sourceChainIdForRelay(data.firstSuccessfulFinalization.relayAddress)
     );
     let signatures = data.signaturesMap.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
     // filter out double signers

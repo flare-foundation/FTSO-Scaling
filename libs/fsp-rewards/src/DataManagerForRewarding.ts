@@ -11,12 +11,7 @@ import {
 } from "../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
-import {
-  EPOCH_SETTINGS,
-  FTSO2_PROTOCOL_ID,
-  isFip16Active,
-  sourceChainIdForRewardEpoch,
-} from "../../ftso-core/src/constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, isFip16Active } from "../../ftso-core/src/constants";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
@@ -95,14 +90,6 @@ export class DataManagerForRewarding extends DataManager {
         status: signaturesResponse.status,
       };
     }
-    const signatures = DataManagerForRewarding.extractSignatures(
-      votingRoundId,
-      dataForCalculationsResponse.data.rewardEpoch,
-      signaturesResponse.data.signatures,
-      FTSO2_PROTOCOL_ID,
-      undefined,
-      this.logger
-    );
     const finalizations = this.extractFinalizations(
       votingRoundId,
       dataForCalculationsResponse.data.rewardEpoch,
@@ -110,6 +97,15 @@ export class DataManagerForRewarding extends DataManager {
       FTSO2_PROTOCOL_ID
     );
     const firstSuccessfulFinalization = finalizations.find((finalization) => finalization.successfulOnChain);
+    const signatures = DataManagerForRewarding.extractSignatures(
+      votingRoundId,
+      dataForCalculationsResponse.data.rewardEpoch,
+      signaturesResponse.data.signatures,
+      FTSO2_PROTOCOL_ID,
+      undefined,
+      firstSuccessfulFinalization && sourceChainIdForRelay(firstSuccessfulFinalization.relayAddress),
+      this.logger
+    );
     return {
       status: DataAvailabilityStatus.OK,
       data: {
@@ -246,6 +242,7 @@ export class DataManagerForRewarding extends DataManager {
     submissions: SubmissionData[],
     protocolId = FTSO2_PROTOCOL_ID,
     providedMessageHash: MessageHash | undefined = undefined,
+    sourceChainId: number | undefined = undefined,
     logger: ILogger
   ): Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]> {
     const signatureMap = new Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>();
@@ -268,11 +265,7 @@ export class DataManagerForRewarding extends DataManager {
             // - Require
 
             const messageHash =
-              providedMessageHash ??
-              ProtocolMessageMerkleRoot.hash(
-                signaturePayload.message,
-                sourceChainIdForRewardEpoch(rewardEpoch.rewardEpochId)
-              );
+              providedMessageHash ?? ProtocolMessageMerkleRoot.hash(signaturePayload.message, sourceChainId);
 
             const signer = ECDSASignature.recoverSigner(messageHash, signaturePayload.signature).toLowerCase();
             // submit signature address should match the signingPolicyAddress
@@ -491,7 +484,7 @@ export class DataManagerForRewarding extends DataManager {
       if (firstSuccessfulFinalization) {
         RelayMessage.augment(
           firstSuccessfulFinalization.messages,
-          sourceChainIdForRewardEpoch(rewardEpoch.rewardEpochId)
+          sourceChainIdForRelay(firstSuccessfulFinalization.relayAddress)
         );
         if (!firstSuccessfulFinalization.messages.protocolMessageHash) {
           throw new Error(
@@ -505,6 +498,7 @@ export class DataManagerForRewarding extends DataManager {
           votingRoundSignatures,
           FTSO2_PROTOCOL_ID,
           consensusMessageHashFTSO,
+          undefined,
           this.logger
         );
       }
@@ -529,7 +523,7 @@ export class DataManagerForRewarding extends DataManager {
           }
           RelayMessage.augment(
             fdcFirstSuccessfulFinalization.messages,
-            sourceChainIdForRewardEpoch(rewardEpoch.rewardEpochId)
+            sourceChainIdForRelay(fdcFirstSuccessfulFinalization.relayAddress)
           );
           const consensusMessageHash = fdcFirstSuccessfulFinalization.messages.protocolMessageHash;
           fdcSignatures = DataManagerForRewarding.extractSignatures(
@@ -538,6 +532,7 @@ export class DataManagerForRewarding extends DataManager {
             votingRoundSignatures,
             FDC_PROTOCOL_ID,
             consensusMessageHash,
+            undefined,
             this.logger
           );
           fdcRewardData = extractFDCRewardData(

@@ -281,8 +281,6 @@ export const stakeWeightMultiplier = (rewardEpochId: number): bigint => {
 const LOCAL_TEST_CHAIN_ID = 31337;
 
 /** Sentinel meaning "not activated". Any realistic reward epoch id is far below it. */
-export const RELAY_V2_NOT_ACTIVATED = Number.MAX_SAFE_INTEGER;
-
 /** The chain id bound into the digests Relay v2 verifies. */
 export const CHAIN_ID = (): number => {
   const network = process.env.NETWORK as networks;
@@ -313,39 +311,4 @@ export const CHAIN_ID = (): number => {
       // Ensure exhaustive checking
       ((_: never): void => {})(network);
   }
-};
-
-/** The first reward epoch whose signatures Relay v2 verifies, and whose finalizations it receives. */
-export const RELAY_V2_ACTIVATION_REWARD_EPOCH = (): number => {
-  const network = process.env.NETWORK as networks;
-  switch (network) {
-    // TODO(relay-v2): set once the cutover epochs are scheduled.
-    case "flare":
-    case "songbird":
-    case "coston":
-    case "coston2":
-      return RELAY_V2_NOT_ACTIVATED;
-    case "from-env":
-    case "local-test": {
-      const rawValue = process.env.RELAY_V2_ACTIVATION_REWARD_EPOCH?.trim();
-      if (rawValue === undefined || rawValue === "") {
-        return RELAY_V2_NOT_ACTIVATED;
-      }
-      if (!/^\d+$/.test(rawValue) || !Number.isSafeInteger(Number(rawValue))) {
-        throw new Error("RELAY_V2_ACTIVATION_REWARD_EPOCH must be a non-negative safe integer");
-      }
-      return Number(rawValue);
-    }
-    default:
-      // Ensure exhaustive checking
-      ((_: never): void => {})(network);
-  }
-};
-
-/**
- * The chain id to bind into the digests of the given reward epoch, or undefined for epochs signed before Relay v2,
- * whose digests are not source bound.
- */
-export const sourceChainIdForRewardEpoch = (rewardEpochId: number): number | undefined => {
-  return rewardEpochId >= RELAY_V2_ACTIVATION_REWARD_EPOCH() ? CHAIN_ID() : undefined;
 };

@@ -27,32 +27,9 @@ function withConstants(
   }
 }
 
-describe(`Relay v2 constants (${getTestFile(__filename)})`, () => {
-  // The addresses ship before the cutover is scheduled, so what keeps this inert is the activation epoch
-  // alone. Until it is set, every reward epoch must grade with the legacy digest, byte for byte as before.
-  it("is inert on every network until an activation epoch is set", () => {
-    for (const network of ["flare", "songbird", "coston", "coston2"]) {
-      withConstants({ NETWORK: network }, (constants) => {
-        expect(constants.RELAY_V2_ACTIVATION_REWARD_EPOCH()).to.equal(constants.RELAY_V2_NOT_ACTIVATED);
-        for (const rewardEpochId of [0, 417, 4000, 999999]) {
-          expect(constants.sourceChainIdForRewardEpoch(rewardEpochId), `${network} epoch ${rewardEpochId}`).to.be
-            .undefined;
-        }
-      });
-    }
-  });
-
-  it("binds the chain id from the activation reward epoch on", () => {
-    withConstants(
-      { NETWORK: "local-test", CHAIN_ID: "31337", RELAY_V2_ACTIVATION_REWARD_EPOCH: "4000" },
-      (constants) => {
-        expect(constants.sourceChainIdForRewardEpoch(3999)).to.be.undefined;
-        expect(constants.sourceChainIdForRewardEpoch(4000)).to.equal(31337);
-        expect(constants.sourceChainIdForRewardEpoch(4001)).to.equal(31337);
-      }
-    );
-  });
-
+// The chain id is the only new per-network value Relay v2 needs. A wrong one silently changes every digest,
+// so it is pinned here rather than left to a deployment's environment.
+describe(`Relay v2 chain id (${getTestFile(__filename)})`, () => {
   it("knows the chain id of each network", () => {
     for (const [network, chainId] of [
       ["flare", 14],
@@ -64,11 +41,21 @@ describe(`Relay v2 constants (${getTestFile(__filename)})`, () => {
     }
   });
 
-  it("rejects a malformed activation reward epoch", () => {
-    expect(() =>
-      withConstants({ NETWORK: "local-test", RELAY_V2_ACTIVATION_REWARD_EPOCH: "-1" }, (constants) =>
-        constants.RELAY_V2_ACTIVATION_REWARD_EPOCH()
-      )
-    ).to.throw("RELAY_V2_ACTIVATION_REWARD_EPOCH");
+  // from-env is not exercised here: loading constants under it requires unrelated deployment variables.
+  it("takes the chain id from the environment where the network does not fix it", () => {
+    withConstants({ NETWORK: "local-test", CHAIN_ID: "14" }, (constants) => expect(constants.CHAIN_ID()).to.equal(14));
+    // local-test runs against Hardhat, so it needs no configuration to work out of the box
+    withConstants({ NETWORK: "local-test", CHAIN_ID: undefined }, (constants) =>
+      expect(constants.CHAIN_ID()).to.equal(31337)
+    );
+  });
+
+  it("rejects a malformed chain id", () => {
+    for (const chainId of ["-1", "0x1f", "later", "1.5"]) {
+      expect(
+        () => withConstants({ NETWORK: "local-test", CHAIN_ID: chainId }, (constants) => constants.CHAIN_ID()),
+        `CHAIN_ID=${chainId}`
+      ).to.throw("CHAIN_ID must be a non-negative integer");
+    }
   });
 });
