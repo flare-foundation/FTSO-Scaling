@@ -50,14 +50,14 @@ export type SubmissionData = GenericSubmissionData<IPayloadMessage<string>[]>;
  */
 export interface FinalizationData extends GenericSubmissionData<string> {
   successfulOnChain: boolean;
-  isOldRelay?: boolean;
+  relayAddress: string;
 }
 /**
  * Parsed finalization data from finalization calls (relay()) on Relay contract.
  */
 export interface ParsedFinalizationData extends GenericSubmissionData<IRelayMessage> {
   successfulOnChain: boolean;
-  isOldRelay?: boolean;
+  relayAddress: string;
 }
 
 /**
@@ -99,6 +99,27 @@ export enum BlockAssuranceResult {
    * past endTime + endTimeout.
    */
   TIMEOUT_OK,
+}
+
+/**
+ * Resolves the Relay each reward epoch is signed against. Relay v2 is deployed holding the cutover epoch's policy
+ * and emits no event for it, and `setSigningPolicy` only accepts `lastInitializedRewardEpoch + 1`, which
+ * deployment seeds to that same epoch. Its first event is therefore always one past the cutover, and the
+ * epoch before it is the first signed source bound — the emitting contract cannot say so itself, because
+ * that epoch's policy comes from the Relay before it.
+ *
+ * With no Relay v2 events in range every epoch keeps the Relay that emitted it: either the cutover has not
+ * happened, or it is the current epoch and the next policy Relay v2 will emit for is not initialized yet.
+ */
+function resolveSigningRelay(events: SigningPolicyInitialized[], firstRelayV2Epoch: number | undefined): void {
+  if (firstRelayV2Epoch === undefined) {
+    return;
+  }
+  for (const event of events) {
+    if (event.rewardEpochId >= firstRelayV2Epoch - 1) {
+      event.epochRelayAddress = CONTRACTS.RelayV2.address;
+    }
+  }
 }
 
 /**
@@ -449,10 +470,22 @@ export class IndexerClient {
   }
 
   /**
-   * Returns all SigningPolicyInitialized events on Relay contract with timestamp greater than @param fromStartTime.
-   * Events are sorted by timestamp, hence also by rewardEpochId.
-   * The query result is returned even if the indexer's FSP-event floor is not strictly below
-   * fromStartTime; the floor status is reflected in the response `status`.
+   * SigningPolicyInitialized is read from both Relays: the current one emits the policies up to the cutover
+   * epoch and Relay v2 the later ones. The events carry their reward epoch, so nothing here needs to know
+   * when the cutover is.
+   */
+  private policyRelays(): ContractDefinitions[] {
+    return [CONTRACTS.Relay, CONTRACTS.RelayV2];
+  }
+
+  /**
+   * Returns all SigningPolicyInitialized events with timestamp greater than @param fromStartTime, sorted by
+   * rewardEpochId. Returned even if the indexer's FSP-event floor is not strictly below fromStartTime; the
+   * floor status is reflected in `status`.
+   *
+   * One event per reward epoch, which the contracts guarantee: each emits from a single site, gated on
+   * lastInitializedRewardEpoch + 1, and Relay v2 seeds that to the epoch it holds without emitting, so its
+   * events start one past the Relay before it. Callers pair an epoch with the one after it.
    */
   public async getLatestSigningPolicyInitializedEvents(
     fromStartTime: number
@@ -460,10 +493,24 @@ export class IndexerClient {
     const eventName = SigningPolicyInitialized.eventName;
     const status = await this.ensureFspEventsIndexedBefore(fromStartTime);
 
-    const result: TLPEvents[] = await this.queryEvents(CONTRACTS.Relay, eventName, fromStartTime);
-    IndexerClient.sortEvents(result);
+    const data: SigningPolicyInitialized[] = [];
+    let firstRelayV2Epoch: number | undefined;
+    for (const contract of this.policyRelays()) {
+      const result: TLPEvents[] = await this.queryEvents(contract, eventName, fromStartTime);
+      const events = result.map((rawEvent) => {
+        const event = SigningPolicyInitialized.fromRawEvent(rawEvent);
+        event.epochRelayAddress = contract.address;
+        return event;
+      });
+      if (contract.address.toLowerCase() === CONTRACTS.RelayV2.address.toLowerCase() && events.length > 0) {
+        firstRelayV2Epoch = Math.min(...events.map((event) => event.rewardEpochId));
+      }
+      data.push(...events);
+    }
+    // callers pair an epoch with the one after it, and merging two contracts loses chain order
+    data.sort((a, b) => a.rewardEpochId - b.rewardEpochId);
+    resolveSigningRelay(data, firstRelayV2Epoch);
 
-    const data = result.map((event) => SigningPolicyInitialized.fromRawEvent(event));
     return {
       status,
       data,
