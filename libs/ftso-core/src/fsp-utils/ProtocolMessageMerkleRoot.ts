@@ -102,8 +102,16 @@ export namespace ProtocolMessageMerkleRoot {
     );
   }
 
-  export function hash(message: IProtocolMessageMerkleRoot): string {
-    return ethers.keccak256(encode(message));
+  /**
+   * The digest voters sign, before the EIP-191 prefix. With @param chainId it is source bound —
+   * `keccak256(chainId ‖ message)`, as Relay v2 verifies it. Omit it for the relays deployed before the
+   * source binding, and for the reward epochs signed under them.
+   */
+  export function hash(message: IProtocolMessageMerkleRoot, chainId?: number): string {
+    const encoded = encode(message);
+    return chainId === undefined
+      ? ethers.keccak256(encoded)
+      : ethers.keccak256(ethers.solidityPacked(["uint256", "bytes"], [chainId, encoded]));
   }
   /**
    * Provides string representation of protocol message merkle root.

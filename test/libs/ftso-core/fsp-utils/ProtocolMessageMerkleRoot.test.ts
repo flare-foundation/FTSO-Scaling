@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { ethers } from "ethers";
 import {
   IProtocolMessageMerkleRoot,
   ProtocolMessageMerkleRoot,
@@ -97,5 +98,26 @@ describe(`ProtocolMessageMerkleRoot (${getTestFile(__filename)})`, () => {
       merkleRoot: "0x1122334455667788990011223344556677889900112233445566778899001122",
     } as IProtocolMessageMerkleRoot;
     expect(() => ProtocolMessageMerkleRoot.encode(messageData).length).to.throw("Voting round id out of range");
+  });
+
+  // Relay v2 verifies keccak256(chainId ‖ message) where the relays before it verify keccak256(message).
+  // Reward calculation needs both, so the chain id is optional and its absence must reproduce the legacy digest.
+  it("binds the source chain id into the digest only when one is given", () => {
+    const message: IProtocolMessageMerkleRoot = {
+      protocolId: 100,
+      votingRoundId: 4111,
+      isSecureRandom: true,
+      merkleRoot: "0x" + "ab".repeat(32),
+    };
+    const encoded = ProtocolMessageMerkleRoot.encode(message);
+
+    expect(ProtocolMessageMerkleRoot.hash(message)).to.equal(ethers.keccak256(encoded));
+    for (const chainId of [14, 19]) {
+      expect(ProtocolMessageMerkleRoot.hash(message, chainId)).to.equal(
+        ethers.keccak256(ethers.solidityPacked(["uint256", "bytes"], [chainId, encoded]))
+      );
+    }
+    expect(ProtocolMessageMerkleRoot.hash(message, 14)).to.not.equal(ProtocolMessageMerkleRoot.hash(message, 19));
+    expect(ProtocolMessageMerkleRoot.hash(message, 14)).to.not.equal(ProtocolMessageMerkleRoot.hash(message));
   });
 });

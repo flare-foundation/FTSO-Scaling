@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { readFileSync } from "fs";
-import { computeAddress } from "ethers";
+import { computeAddress, keccak256, solidityPacked } from "ethers";
 import { ISigningPolicy, SigningPolicy } from "../../../../libs/ftso-core/src/fsp-utils/SigningPolicy";
 import { getTestFile } from "../../../utils/getTestFile";
 import { defaultTestSigningPolicy } from "./coding-helpers";
@@ -182,5 +182,23 @@ describe(`SigningPolicy (${getTestFile(__filename)})`, () => {
     const hash = SigningPolicy.hashEncoded(encoded);
     expect(hash.startsWith("0x")).to.be.true;
     expect(hash.length).to.equal(66);
+  });
+
+  // The hash Relay v2 stores: one keccak over the 32-byte source chain id followed by the raw encoded policy,
+  // unpadded - not the legacy fold of zero-padded 32-byte chunks. This is the digest governance has to reproduce
+  // off chain for initialSigningPolicyHash, and the value that fails closed and silent if it is wrong.
+  it("binds the source chain id into the policy hash only when one is given", () => {
+    const encoded = SigningPolicy.encode(signingPolicyData);
+
+    for (const chainId of [14, 19, 16, 114]) {
+      expect(SigningPolicy.hashEncoded(encoded, chainId)).to.equal(
+        keccak256(solidityPacked(["uint256", "bytes"], [chainId, encoded]))
+      );
+      expect(SigningPolicy.hash(signingPolicyData, chainId)).to.equal(SigningPolicy.hashEncoded(encoded, chainId));
+    }
+
+    // the legacy fold is a different construction, not the same hash with a prefix
+    expect(SigningPolicy.hashEncoded(encoded, 14)).to.not.equal(SigningPolicy.hashEncoded(encoded));
+    expect(SigningPolicy.hashEncoded(encoded, 14)).to.not.equal(SigningPolicy.hashEncoded(encoded, 19));
   });
 });

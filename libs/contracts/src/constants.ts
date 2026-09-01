@@ -11,6 +11,7 @@ export const COSTON_CONTRACTS: NetworkContractAddresses = {
   RewardManager: { name: "RewardManager", address: "0x2ade9972E7f27200872D378acF7a1BaD8D696FC5" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0x051f214D346Cfd97B107BECb87E2B35D1b4287E9" },
+  RelayV2: { name: "Relay", address: "0xEcD0B60Ea5E01e4D0bFd621c8920B40A32389b83" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x93FC4822406b1be653540B51e98030BfCA0775d5" },
   VoterRegistry: { name: "VoterRegistry", address: "0x42F4526BFC6f892DB515a832a52eFc9edFADf6c0" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
@@ -31,6 +32,7 @@ export const COSTON2_CONTRACTS: NetworkContractAddresses = {
   RewardManager: { name: "RewardManager", address: "0xB4f43E342c5c77e6fe060c0481Fe313Ff2503454" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0xa10B672D1c62e5457b17af63d4302add6A99d7dE" },
+  RelayV2: { name: "Relay", address: "0x5017728F117501A24EF9C3756C07f0d564598596" },
   FlareSystemsCalculator: { name: "FlareSystemsCalculator", address: "0x7faEB56E8e98B8507db618631Be65994Ae2065Df" },
   VoterRegistry: { name: "VoterRegistry", address: "0x6a0AF07b7972177B176d3D422555cbc98DfDe914" },
   FtsoMerkleStructs: { name: "FtsoMerkleStructs", address: "" },
@@ -51,6 +53,7 @@ export const SONGBIRD_CONTRACTS: NetworkContractAddresses = {
   RewardManager: { name: "RewardManager", address: "0xE26AD68b17224951b5740F33926Cc438764eB9a7" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0xCB86E8Be709001e01897Bf59847406853da8f14b" },
+  RelayV2: { name: "Relay", address: "0xc1BC89b717Af42AE27497C9FFb996002D3AC5031" },
   FlareSystemsCalculator: {
     name: "FlareSystemsCalculator",
     address: "0x31a5B8E7ca6dFC7B963f5D029F0884ef19E53A24",
@@ -75,6 +78,7 @@ export const FLARE_CONTRACTS: NetworkContractAddresses = {
   RewardManager: { name: "RewardManager", address: "0xC8f55c5aA2C752eE285Bd872855C749f4ee6239B" },
   Submission: { name: "Submission", address: "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f" },
   Relay: { name: "Relay", address: "0xCcF30790A93F15e24EB909548a2C58a9b0a7FBd4" },
+  RelayV2: { name: "Relay", address: "0x5A2Eb0cdB4Aa8253924a488A77EdfD24Bb64407f" },
   FlareSystemsCalculator: {
     name: "FlareSystemsCalculator",
     address: "0xf9cCe0Bd286bb38A9A0cD15fDDC5431F03568Db0",
@@ -131,6 +135,8 @@ const contracts = () => {
         throw new Error("FTSO_CA_SUBMISSION_ADDRESS value is not valid contract address");
       if (!process.env.FTSO_CA_RELAY_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_RELAY_ADDRESS))
         throw new Error("FTSO_CA_RELAY_ADDRESS value is not valid contract address");
+      if (!process.env.FTSO_CA_RELAY_V2_ADDRESS || !isValidContractAddress(process.env.FTSO_CA_RELAY_V2_ADDRESS))
+        throw new Error("FTSO_CA_RELAY_V2_ADDRESS value is not valid contract address");
       if (
         !process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS ||
         !isValidContractAddress(process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS)
@@ -166,6 +172,7 @@ const contracts = () => {
         RewardManager: { name: "RewardManager", address: process.env.FTSO_CA_REWARD_MANAGER_ADDRESS },
         Submission: { name: "Submission", address: process.env.FTSO_CA_SUBMISSION_ADDRESS },
         Relay: { name: "Relay", address: process.env.FTSO_CA_RELAY_ADDRESS },
+        RelayV2: { name: "Relay", address: process.env.FTSO_CA_RELAY_V2_ADDRESS },
         FlareSystemsCalculator: {
           name: "FlareSystemsCalculator",
           address: process.env.FTSO_CA_FLARE_SYSTEMS_CALCULATOR_ADDRESS,
