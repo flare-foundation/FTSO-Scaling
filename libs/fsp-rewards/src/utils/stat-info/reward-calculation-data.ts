@@ -13,6 +13,7 @@ import {
 } from "../../../../ftso-core/src/voting-types";
 import { IRevealData } from "../../../../ftso-core/src/data/RevealData";
 import { bigIntReplacer, bigIntReviver } from "../../../../ftso-core/src/utils/big-number-serialization";
+import { sourceChainIdForRelay } from "../../../../ftso-core/src/constants";
 import { REWARD_CALCULATION_DATA_FILE, TEMP_REWARD_EPOCH_FOLDER_PREFIX } from "./constants";
 import { RewardEpochInfo } from "./reward-epoch-info";
 import { CALCULATIONS_FOLDER } from "../../constants";
@@ -182,10 +183,11 @@ export function serializeDataForRewardCalculation(
   }
 
   for (const finalization of rewardCalculationData.finalizations) {
-    RelayMessage.augment(finalization.messages);
+    RelayMessage.augment(finalization.messages, sourceChainIdForRelay(finalization.relayAddress));
   }
-  if (rewardCalculationData.firstSuccessfulFinalization?.messages) {
-    RelayMessage.augment(rewardCalculationData.firstSuccessfulFinalization?.messages);
+  const firstSuccessful = rewardCalculationData.firstSuccessfulFinalization;
+  if (firstSuccessful?.messages) {
+    RelayMessage.augment(firstSuccessful.messages, sourceChainIdForRelay(firstSuccessful.relayAddress));
   }
 
   const data: SDataForRewardCalculation = {
