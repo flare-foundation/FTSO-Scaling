@@ -30,20 +30,6 @@ export class IndexerClientForRewarding extends IndexerClient {
     super(entityManager, requiredHistoryTimeSec, logger);
   }
 
-  /** The Relays finalizations may be on: the current one, the one before it, and Relay v2 once scheduled. */
-  private finalizationRelays(): ContractDefinitions[] {
-    const previous: Record<string, string> = {
-      coston: "0x92a6E1127262106611e1e129BB64B6D8654273F7",
-      coston2: "0x97702e350CaEda540935d92aAf213307e9069784",
-      songbird: "0x67a916E175a2aF01369294739AA60dDdE1Fad189",
-      flare: "0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45",
-    };
-    const previousAddress = previous[process.env.NETWORK as networks];
-    return previousAddress
-      ? [{ ...CONTRACTS.Relay, address: previousAddress }, CONTRACTS.Relay, CONTRACTS.RelayV2]
-      : [CONTRACTS.Relay, CONTRACTS.RelayV2];
-  }
-
   /**
    * Finalization transactions in the timestamp range, from every Relay they may be on. Returned only if the
    * indexer covers the range, and not necessarily in chain order.
@@ -61,7 +47,7 @@ export class IndexerClientForRewarding extends IndexerClient {
     }
 
     const finalizations: FinalizationData[] = [];
-    for (const relay of this.finalizationRelays()) {
+    for (const relay of this.relays()) {
       const transactionsResults = await this.queryTransactions(relay, ContractMethodNames.relay, startTime, endTime);
       for (const tx of transactionsResults) {
         const timestamp = tx.timestamp;

@@ -469,12 +469,8 @@ export class IndexerClient {
     };
   }
 
-  /**
-   * SigningPolicyInitialized is read from both Relays: the current one emits the policies up to the cutover
-   * epoch and Relay v2 the later ones. The events carry their reward epoch, so nothing here needs to know
-   * when the cutover is.
-   */
-  private policyRelays(): ContractDefinitions[] {
+  /** The Relays the protocol runs on: the current one, and Relay v2 once it is switched to. */
+  protected relays(): ContractDefinitions[] {
     return [CONTRACTS.Relay, CONTRACTS.RelayV2];
   }
 
@@ -495,7 +491,7 @@ export class IndexerClient {
 
     const data: SigningPolicyInitialized[] = [];
     let firstRelayV2Epoch: number | undefined;
-    for (const contract of this.policyRelays()) {
+    for (const contract of this.relays()) {
       const result: TLPEvents[] = await this.queryEvents(contract, eventName, fromStartTime);
       const events = result.map((rawEvent) => {
         const event = SigningPolicyInitialized.fromRawEvent(rawEvent);
