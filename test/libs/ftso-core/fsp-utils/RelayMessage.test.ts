@@ -165,4 +165,151 @@ describe(`RelayMessage (${getTestFile(__filename)})`, () => {
     };
     expect(() => RelayMessage.encode(relayMessage, true)).to.throw("Invalid relay message: threshold not met");
   });
+
+  // Relay v2 requires the random number and its Merkle proof after the last signature when finalizing the
+  // random number generating protocol. Reward calculation decodes that calldata, and decodeSignatureList
+  // rejects an input that is not exactly a signature list - so the trailer has to be sliced off, or every
+  // post-cutover FTSO finalization reads as unparseable.
+  it("decodes a relay message whose calldata carries a random trailer", () => {
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const signatures = generateSignatures(accountPrivateKeys, ProtocolMessageMerkleRoot.hash(messageData), N / 2 + 1);
+    const relayMessage = { signingPolicy: signingPolicyData, signatures, protocolMessageMerkleRoot: messageData };
+
+    const withoutTrailer = RelayMessage.encode(relayMessage);
+    for (const proofNodes of [0, 1, 5]) {
+      const trailer = ethers.hexlify(ethers.randomBytes(32 * (1 + proofNodes))).slice(2);
+      const decoded = RelayMessage.decode(withoutTrailer + trailer);
+      expect(RelayMessage.equals(relayMessage, decoded)).to.be.true;
+    }
+  });
+
+  // Relay v2 finalizes the moment the signatures' weight crosses the threshold and returns from inside its
+  // loop, so a record declared after that is never validated - only counted, to place the random trailer.
+  // Rejecting such a call here would lose a finalization the chain accepted.
+  it("ignores signatures declared after the threshold is crossed", () => {
+    const chainId = 14;
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const crossing = generateSignatures(
+      accountPrivateKeys,
+      ProtocolMessageMerkleRoot.hash(messageData, chainId),
+      N / 2 + 1
+    );
+    // whatever the Relay never reaches: a signature of the wrong digest, and a v it would have rejected
+    const beyond = generateSignatures(accountPrivateKeys, ProtocolMessageMerkleRoot.hash(messageData), 1).map(
+      (signature) => ({ ...signature, v: 0, index: N - 1 })
+    );
+    const relayMessage = {
+      signingPolicy: signingPolicyData,
+      signatures: [...crossing, ...beyond],
+      protocolMessageMerkleRoot: messageData,
+    };
+
+    expect(() => RelayMessage.encode(relayMessage, true, chainId)).to.not.throw();
+  });
+
+  // The Relay bounds each index it reads against the voter set, and never counts the declared records
+  // against it. More records than there are voters is therefore finalizable, as long as the prefix is.
+  it("accepts more declared signatures than there are voters", () => {
+    const chainId = 14;
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const crossing = generateSignatures(
+      accountPrivateKeys,
+      ProtocolMessageMerkleRoot.hash(messageData, chainId),
+      N / 2 + 1
+    );
+    // beyond the crossing, and beyond the voter set: indices the Relay would reject had it read them
+    const beyond = Array.from({ length: N }, (_, i) => ({ ...crossing[0], index: N + i }));
+    const relayMessage = {
+      signingPolicy: signingPolicyData,
+      signatures: [...crossing, ...beyond],
+      protocolMessageMerkleRoot: messageData,
+    };
+    expect(relayMessage.signatures.length).to.be.greaterThan(signingPolicyData.voters.length);
+
+    expect(() => RelayMessage.encode(relayMessage, true, chainId)).to.not.throw();
+    // the same index inside the prefix is rejected, as the Relay rejects it
+    expect(() =>
+      RelayMessage.encode(
+        { ...relayMessage, signatures: [{ ...crossing[0], index: N }, ...crossing.slice(1)] },
+        true,
+        chainId
+      )
+    ).to.throw("is not a voter");
+  });
+
+  it("rejects the same faults inside the prefix the Relay does validate", () => {
+    const chainId = 14;
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const signatures = generateSignatures(
+      accountPrivateKeys,
+      ProtocolMessageMerkleRoot.hash(messageData, chainId),
+      N / 2 + 1
+    );
+    const withFirst = (signature: (typeof signatures)[number]) => ({
+      signingPolicy: signingPolicyData,
+      signatures: [signature, ...signatures.slice(1)],
+      protocolMessageMerkleRoot: messageData,
+    });
+
+    expect(() => RelayMessage.encode(withFirst({ ...signatures[0], v: 0 }), true, chainId)).to.throw(
+      "neither 27 nor 28"
+    );
+    const highS = "0x" + (BigInt(signatures[0].s) + (ethers.N - 1n) / 2n).toString(16).padStart(64, "0");
+    expect(() => RelayMessage.encode(withFirst({ ...signatures[0], s: highS }), true, chainId)).to.throw("lower half");
+    // and the threshold still has to be reached at all
+    expect(() =>
+      RelayMessage.encode(
+        {
+          signingPolicy: signingPolicyData,
+          signatures: signatures.slice(0, 2),
+          protocolMessageMerkleRoot: messageData,
+        },
+        true,
+        chainId
+      )
+    ).to.throw("threshold not met");
+  });
+
+  it("verifies source bound signatures only when given the chain id", () => {
+    const chainId = 14;
+    const messageData = {
+      protocolId: 100,
+      votingRoundId,
+      isSecureRandom: true,
+      merkleRoot: ethers.hexlify(ethers.randomBytes(32)),
+    } as IProtocolMessageMerkleRoot;
+    const relayMessage = {
+      signingPolicy: signingPolicyData,
+      signatures: generateSignatures(
+        accountPrivateKeys,
+        ProtocolMessageMerkleRoot.hash(messageData, chainId),
+        N / 2 + 1
+      ),
+      protocolMessageMerkleRoot: messageData,
+    };
+
+    expect(() => RelayMessage.encode(relayMessage, true, chainId)).to.not.throw();
+    expect(() => RelayMessage.encode(relayMessage, true)).to.throw();
+    expect(() => RelayMessage.encode(relayMessage, true, 19)).to.throw();
+  });
 });
