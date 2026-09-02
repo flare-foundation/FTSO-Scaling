@@ -10,7 +10,7 @@ import {
 } from "../../ftso-core/src/IndexerClient";
 import { RewardEpoch } from "../../ftso-core/src/RewardEpoch";
 import { RewardEpochManager } from "../../ftso-core/src/RewardEpochManager";
-import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, isFip16Active, sourceChainIdForRelay } from "../../ftso-core/src/constants";
+import { EPOCH_SETTINGS, FTSO2_PROTOCOL_ID, isFip16Active } from "../../ftso-core/src/constants";
 import { DataForCalculations } from "../../ftso-core/src/data/DataForCalculations";
 import { ECDSASignature } from "../../ftso-core/src/fsp-utils/ECDSASignature";
 import { ProtocolMessageMerkleRoot } from "../../ftso-core/src/fsp-utils/ProtocolMessageMerkleRoot";
@@ -475,10 +475,7 @@ export class DataManagerForRewarding extends DataManager {
       const firstSuccessfulFinalization = finalizations.find((finalization) => finalization.successfulOnChain);
       let signatures: Map<MessageHash, GenericSubmissionData<ISignaturePayload>[]>;
       if (firstSuccessfulFinalization) {
-        RelayMessage.augment(
-          firstSuccessfulFinalization.messages,
-          sourceChainIdForRelay(firstSuccessfulFinalization.relayAddress)
-        );
+        RelayMessage.augment(firstSuccessfulFinalization.messages, rewardEpoch.sourceChainId);
         if (!firstSuccessfulFinalization.messages.protocolMessageHash) {
           throw new Error(
             `Protocol message merkle root is missing for FTSO finalization ${firstSuccessfulFinalization.messages.protocolMessageHash}`
@@ -526,10 +523,7 @@ export class DataManagerForRewarding extends DataManager {
               `Protocol message merkle root is missing for FDC finalization ${fdcFirstSuccessfulFinalization.messages.protocolMessageHash}`
             );
           }
-          RelayMessage.augment(
-            fdcFirstSuccessfulFinalization.messages,
-            sourceChainIdForRelay(fdcFirstSuccessfulFinalization.relayAddress)
-          );
+          RelayMessage.augment(fdcFirstSuccessfulFinalization.messages, rewardEpoch.sourceChainId);
           const consensusMessageHash = fdcFirstSuccessfulFinalization.messages.protocolMessageHash;
           fdcSignatures = DataManagerForRewarding.extractSignatures(
             votingRoundId,
@@ -686,22 +680,27 @@ export class DataManagerForRewarding extends DataManager {
           if (!SigningPolicy.equals(rewardEpoch.signingPolicy, relayMessage.signingPolicy)) {
             throw new Error(`Signing policy mismatch for reward epoch ${rewardEpoch.rewardEpochId}`);
           }
+          // Only the Relay the epoch is signed against can finalize it. A call to any other Relay verifies
+          // under a different digest and cannot be graded here, however the chain treated it - and a status-1
+          // call to an address with no code succeeds without executing any Relay, so the target, not the
+          // receipt, is what makes a finalization authoritative.
+          if (submission.relayAddress.toLowerCase() !== rewardEpoch.relayAddress.toLowerCase()) {
+            continue;
+          }
           const finalization: ParsedFinalizationData = {
             ...submission,
             messages: relayMessage,
           };
           // Verify the relay message by trying to encode it with verification.
           // If it excepts it is non-finalisable
-          const sourceChainId = sourceChainIdForRelay(submission.relayAddress);
+          const sourceChainId = rewardEpoch.sourceChainId;
           RelayMessage.encode(relayMessage, true, sourceChainId);
           // A signed prefix is not enough on Relay v2: it rejects a non-canonical signature encoding
-          // outright, and on the random number generating protocol the call also carries the random
-          // number and its Merkle proof and reverts without a correct one. Grace-period rewards do not
-          // require the call to have succeeded on chain, so a finalization that could never have
-          // finalized has to be rejected here or it dilutes the finalizers that did the work.
-          // Only for a call that did not succeed: one the chain accepted is proof of its own, and
-          // re-deriving that verdict here can only introduce disagreement with the contract.
-          if (sourceChainId !== undefined && protocolId === FTSO2_PROTOCOL_ID && !submission.successfulOnChain) {
+          // outright, and on the random number generating protocol the call also carries the random number
+          // and its Merkle proof and reverts without a correct one. Grace-period rewards do not require the
+          // call to have succeeded on chain, and a status-1 call to a codeless address never ran the proof
+          // check, so the trailer is re-verified here for every V2 finalization rather than trusting status.
+          if (sourceChainId !== undefined && protocolId === FTSO2_PROTOCOL_ID) {
             assertRandomProvesRoot(relayMessage);
           }
           // The message is eligible for consideration.

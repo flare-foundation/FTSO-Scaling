@@ -188,7 +188,15 @@ export class RewardEpoch {
    * neighbours.
    */
   public get sourceChainId(): number | undefined {
-    return sourceChainIdForRelay(this.signingPolicy.epochRelayAddress);
+    return sourceChainIdForRelay(this.relayAddress);
+  }
+
+  /**
+   * The Relay this epoch's policy and finalizations live on. A finalization sent to any other Relay is not
+   * authoritative for the epoch, however the chain treated it.
+   */
+  public get relayAddress(): string {
+    return this.signingPolicy.epochRelayAddress;
   }
 
   public get rewardEpochId(): RewardEpochId {

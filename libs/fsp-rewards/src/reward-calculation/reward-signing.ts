@@ -84,11 +84,14 @@ export function calculateSigningRewards(
     };
     return [backClaim];
   } else {
+    // The digest is the epoch's, the same one the signatures were keyed under - the finalization is on the
+    // epoch's Relay by the time it is graded, so this is also its target's digest.
     const finalizedHash = ProtocolMessageMerkleRoot.hash(
       data.firstSuccessfulFinalization.messages.protocolMessageMerkleRoot,
-      sourceChainIdForRelay(data.firstSuccessfulFinalization.relayAddress)
+      sourceChainIdForRelay(data.dataForCalculations.epochRelayAddress)
     );
-    let signatures = data.signaturesMap.get(finalizedHash); // already filtered by hash, votingRoundId, protocolId, eligible signers
+    // already filtered by hash, votingRoundId, protocolId, eligible signers; empty when nobody signed the finalized hash
+    let signatures = data.signaturesMap.get(finalizedHash) ?? [];
     // filter out double signers
     signatures = signatures.filter((signature) => !doubleSigners.has(signature.messages.signer.toLowerCase()));
 

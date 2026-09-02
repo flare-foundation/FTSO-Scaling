@@ -45,6 +45,8 @@ export interface SDataForCalculation {
   randomGenerationBenchingWindow: number;
   benchingWindowRevealOffenders: string[];
   feedOrder: Feed[];
+  /** The Relay this epoch is signed against, so signatures of a round nobody finalized still key on the right digest. */
+  epochRelayAddress: string;
   // Not serialized, reconstructed on augmentation
   validEligibleRevealsMap?: Map<string, IRevealData>;
   revealOffendersSet?: Set<string>;
@@ -77,6 +79,7 @@ export function prepareDataForCalculations(rewardEpochId: number, data: DataForR
     randomGenerationBenchingWindow: data.dataForCalculations.randomGenerationBenchingWindow,
     benchingWindowRevealOffenders: [...data.dataForCalculations.benchingWindowRevealOffenders],
     feedOrder: data.dataForCalculations.feedOrder,
+    epochRelayAddress: data.dataForCalculations.rewardEpoch.relayAddress,
   };
   return result;
 }
@@ -182,12 +185,13 @@ export function serializeDataForRewardCalculation(
     };
   }
 
+  const epochSourceChainId = rewardCalculationData.dataForCalculations.rewardEpoch.sourceChainId;
   for (const finalization of rewardCalculationData.finalizations) {
-    RelayMessage.augment(finalization.messages, sourceChainIdForRelay(finalization.relayAddress));
+    RelayMessage.augment(finalization.messages, epochSourceChainId);
   }
   const firstSuccessful = rewardCalculationData.firstSuccessfulFinalization;
   if (firstSuccessful?.messages) {
-    RelayMessage.augment(firstSuccessful.messages, sourceChainIdForRelay(firstSuccessful.relayAddress));
+    RelayMessage.augment(firstSuccessful.messages, epochSourceChainId);
   }
 
   const data: SDataForRewardCalculation = {
