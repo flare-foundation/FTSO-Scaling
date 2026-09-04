@@ -96,11 +96,12 @@ export class FtsoDataProviderController implements BeforeApplicationShutdown {
       `Calling GET on submitSignatures with param: votingRoundId ${votingRoundId} and query param: submitSignaturesAddress ${submitSignaturesAddress}`
     );
     const data = await this.ftsoDataProviderService.getResultData(votingRoundId);
-    const encodedData = data ? ProtocolMessageMerkleRoot.encode(data) : undefined;
+    const encodedData = data ? ProtocolMessageMerkleRoot.encode(data.message) : undefined;
     this.logger.log(`Returning result data for voting round ${votingRoundId}`);
     return {
       status: data ? PDPResponseStatusEnum.OK : PDPResponseStatusEnum.NOT_AVAILABLE,
       data: encodedData,
+      finalizationData: data?.finalizationData,
     };
   }
 

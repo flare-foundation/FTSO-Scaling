@@ -279,7 +279,7 @@ describe(`ftso-data-provider.service attack scenarios (${getTestFile(__filename)
 
     clock.tick(EPOCH_SETTINGS().revealDeadlineSeconds * 1000 + 1);
     await db.syncTimeToNow();
-    return Promise.all(services.map((s) => s.getResultData(round)));
+    return Promise.all(services.map(async (s) => (await s.getResultData(round))?.message));
   }
 
   // ──────────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ import { TeeInstructionsSent } from "../../contracts/src/events/TeeInstructionsS
 import { Fdc2AttestationRequested } from "../../contracts/src/events/Fdc2AttestationRequested";
 import { fccEventVotingRound } from "./reward-calculation/fcc/fcc-event-placement";
 
-import { TLPEvents, TLPTransaction } from "../../ftso-core/src/orm/entities";
+import { TLPEvents } from "../../ftso-core/src/orm/entities";
 import { COSTON_FAST_UPDATER_SWITCH_VOTING_ROUND_ID, SONGBIRD_FAST_UPDATER_SWITCH_VOTING_ROUND_ID } from "./constants";
 import { CONTRACTS, networks } from "../../contracts/src/constants";
 import { ContractDefinitions, ContractMethodNames } from "../../contracts/src/definitions";
@@ -31,9 +31,8 @@ export class IndexerClientForRewarding extends IndexerClient {
   }
 
   /**
-   * Queries indexer database for all finalization transactions on the Relay contract in a given timestamp range.
-   * It returns the result if the indexer database ensures the data availability in the given timestamp range.
-   * The data may not be in order as it appears on blockchain.
+   * Finalization transactions in the timestamp range, from every Relay they may be on. Returned only if the
+   * indexer covers the range, and not necessarily in chain order.
    */
   public async getFinalizationDataInRange(
     startTime: number,
@@ -46,75 +45,14 @@ export class IndexerClientForRewarding extends IndexerClient {
         data: [],
       };
     }
-    // TEMP CHANGE
-    let oldTransactionsResults: TLPTransaction[] = [];
-    let oldRelay: ContractDefinitions | undefined;
-    const network = process.env.NETWORK as networks;
-
-    // Do this for every network with change
-    if (network === "coston") {
-      oldRelay = {
-        ...CONTRACTS.Relay,
-        address: "0x92a6E1127262106611e1e129BB64B6D8654273F7",
-      };
-    }
-
-    if (network === "coston2") {
-      oldRelay = {
-        ...CONTRACTS.Relay,
-        address: "0x97702e350CaEda540935d92aAf213307e9069784",
-      };
-    }
-
-    if (network === "songbird") {
-      oldRelay = {
-        ...CONTRACTS.Relay,
-        address: "0x67a916E175a2aF01369294739AA60dDdE1Fad189",
-      };
-    }
-
-    if (network === "flare") {
-      oldRelay = {
-        ...CONTRACTS.Relay,
-        address: "0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45",
-      };
-    }
-
-    if (oldRelay !== undefined) {
-      oldTransactionsResults = await this.queryTransactions(oldRelay, ContractMethodNames.relay, startTime, endTime);
-    }
-
-    // END TEMP CHANGE
-    const newTransactionsResults = await this.queryTransactions(
-      CONTRACTS.Relay,
-      ContractMethodNames.relay,
-      startTime,
-      endTime
-    );
-
-    interface Pair {
-      address: string | undefined;
-      transactionsResults: TLPTransaction[];
-    }
-    const jointTransactionResults: Pair[] = [
-      {
-        address: oldRelay?.address,
-        transactionsResults: oldTransactionsResults,
-      },
-      {
-        address: CONTRACTS.Relay.address,
-        transactionsResults: newTransactionsResults,
-      },
-    ];
 
     const finalizations: FinalizationData[] = [];
-    for (const txListPair of jointTransactionResults) {
-      const { address, transactionsResults } = txListPair;
-      const isOldRelay = oldRelay !== undefined && address === oldRelay.address;
-      const tmpFinalizations: FinalizationData[] = transactionsResults.map((tx) => {
+    for (const relay of this.relays()) {
+      const transactionsResults = await this.queryTransactions(relay, ContractMethodNames.relay, startTime, endTime);
+      for (const tx of transactionsResults) {
         const timestamp = tx.timestamp;
         const votingEpochId = EPOCH_SETTINGS().votingEpochForTimeSec(timestamp);
-        return {
+        finalizations.push({
           submitAddress: "0x" + tx.from_address,
           relativeTimestamp: timestamp - EPOCH_SETTINGS().votingEpochStartSec(votingEpochId),
           votingEpochIdFromTimestamp: votingEpochId,
@@ -123,10 +61,9 @@ export class IndexerClientForRewarding extends IndexerClient {
           blockNumber: tx.block_number,
           messages: tx.input,
           successfulOnChain: tx.status > 0,
-          isOldRelay,
-        } as FinalizationData;
-      });
-      finalizations.push(...tmpFinalizations);
+          relayAddress: relay.address,
+        } as FinalizationData);
+      }
     }
 
     return {

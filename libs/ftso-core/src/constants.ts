@@ -1,6 +1,6 @@
 import { RewardEpochStarted } from "../../contracts/src/events";
 import { EpochSettings } from "./utils/EpochSettings";
-import { networks } from "../../contracts/src/constants";
+import { CONTRACTS, networks } from "../../contracts/src/constants";
 
 // State names in indexer database
 export const LAST_CHAIN_INDEX_STATE = "last_chain_block";
@@ -268,3 +268,58 @@ export const isFip16Active = (rewardEpochId: number): boolean => {
 export const stakeWeightMultiplier = (rewardEpochId: number): bigint => {
   return isFip16Active(rewardEpochId) ? FIP16_STAKE_WEIGHT_MULTIPLIER : 1n;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Relay v2 — source bound signature digests
+// ---------------------------------------------------------------------------------------------------------------------
+// The Relay contract deployed with a `sourceChainId` verifies `keccak256(chainId ‖ message)` instead of
+// `keccak256(message)`. Every round of a reward epoch is signed for, and finalized on, the same contract, so the
+// epoch says how to read its signatures and a finalization is graded against the Relay it was actually sent to.
+// Both are observed from indexed data; no cutover epoch is configured anywhere.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** The Hardhat default, for local test runs that do not set CHAIN_ID. */
+const LOCAL_TEST_CHAIN_ID = 31337;
+
+/** The chain id bound into the digests Relay v2 verifies. */
+export const CHAIN_ID = (): number => {
+  const network = process.env.NETWORK as networks;
+  switch (network) {
+    case "flare":
+      return 14;
+    case "songbird":
+      return 19;
+    case "coston":
+      return 16;
+    case "coston2":
+      return 114;
+    case "from-env":
+    case "local-test": {
+      const rawValue = process.env.CHAIN_ID?.trim();
+      if (rawValue === undefined || rawValue === "") {
+        if (network === "local-test") {
+          return LOCAL_TEST_CHAIN_ID;
+        }
+        throw new Error("CHAIN_ID value is not provided");
+      }
+      if (!/^\d+$/.test(rawValue)) {
+        throw new Error("CHAIN_ID must be a non-negative integer");
+      }
+      return Number(rawValue);
+    }
+    default:
+      // Ensure exhaustive checking
+      ((_: never): void => {})(network);
+  }
+};
+
+/**
+ * The chain id bound into the digests the given Relay verifies, undefined for the ones before the source
+ * binding. Calldata sent to the wrong Relay therefore fails signer recovery and is discarded, which is what
+ * stops it being replayed against the other to collect grace-period rewards.
+ *
+ * Reward calculation data serialized before finalizations recorded their Relay carries no address, and
+ * everything in it predates the source binding, so it reads as the Relay before it rather than throwing.
+ */
+export const sourceChainIdForRelay = (relayAddress: string | undefined): number | undefined =>
+  relayAddress?.toLowerCase() === CONTRACTS.RelayV2.address.toLowerCase() ? CHAIN_ID() : undefined;

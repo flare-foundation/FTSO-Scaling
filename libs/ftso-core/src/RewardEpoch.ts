@@ -5,7 +5,7 @@ import {
   VotePowerBlockSelected,
 } from "../../contracts/src/events";
 import { rewardEpochFeedSequence } from "./ftso-calculation/feed-ordering";
-import { isFip16Active } from "./constants";
+import { isFip16Active, sourceChainIdForRelay } from "./constants";
 import { Address, Feed, RewardEpochId, VotingEpochId } from "./voting-types";
 import { RewardOffers } from "./data/RewardOffers";
 import { FullVoterRegistrationInfo } from "./data/FullVoterRegistrationInfo";
@@ -179,6 +179,24 @@ export class RewardEpoch {
 
       this.signingAddressToSigningWeight.set(voterSigningAddress, signingWeight);
     }
+  }
+
+  /**
+   * The chain id bound into the digests this epoch's voters sign, undefined while the Relay before the source
+   * binding is in force. A property of the reward epoch, not of any one round: every round of an epoch is
+   * signed for, and finalized on, the same Relay, so a round nobody finalized is read the same as its
+   * neighbours.
+   */
+  public get sourceChainId(): number | undefined {
+    return sourceChainIdForRelay(this.relayAddress);
+  }
+
+  /**
+   * The Relay this epoch's policy and finalizations live on. A finalization sent to any other Relay is not
+   * authoritative for the epoch, however the chain treated it.
+   */
+  public get relayAddress(): string {
+    return this.signingPolicy.epochRelayAddress;
   }
 
   public get rewardEpochId(): RewardEpochId {

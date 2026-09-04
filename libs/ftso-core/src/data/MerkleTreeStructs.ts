@@ -17,7 +17,9 @@ export interface FeedResult {
 
 export interface RandomResult {
   readonly votingRoundId: number;
-  readonly value: string; // 0x-prefixed bytes32 encoded uint256
+  // 0x-prefixed hex of the value as a uint256. Not zero-padded, so it is not a bytes32 word: abi encoding pads
+  // it for the leaf, but anything assembling calldata from it must pad it itself.
+  readonly value: string;
   readonly isSecure: boolean;
 }
 

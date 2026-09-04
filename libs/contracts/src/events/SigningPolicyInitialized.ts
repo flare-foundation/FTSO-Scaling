@@ -55,4 +55,11 @@ export class SigningPolicyInitialized extends RawEventConstructible implements I
   signingPolicyBytes: string;
   // Timestamp of the event
   timestamp: number;
+  /**
+   * The Relay this reward epoch is signed for and finalized on. Usually the contract that emitted the event,
+   * but not at the cutover: Relay v2 is deployed holding that epoch's policy and emits nothing for it, so the
+   * event comes from the Relay before it while the epoch is already signed against v2. IndexerClient resolves
+   * it while merging the two Relays' events, which is where the difference is visible.
+   */
+  epochRelayAddress = "";
 }
