@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-07
+
 ### Added
 
+- Support for the redeployed `Relay`, which binds the source chain id into every signed digest. Protocol messages
+  and signing policies are hashed as `keccak256(chainId ‖ content)` for the reward epochs served by the new
+  contract, and the legacy hashing is kept for every epoch before it, so historical reward epochs grade exactly as
+  they did. Which contract a reward epoch belongs to is resolved from indexed data rather than configuration:
+  signing policies and finalizations are read from both the old and the new `Relay`, a finalization is graded only
+  against the contract that epoch was signed for, and there is no activation epoch to set
+- The data provider serves the round's random number and its Merkle proof as `finalizationData` on the
+  `submitSignatures` response, which is what the new `Relay` requires appended to the `relay()` calldata of an FTSO
+  finalization. A round without it is still signed and submitted; only that provider's own finalization is lost.
 - FCC (Flare Confidential Compute) fee accounting, activating on Songbird at reward epoch 419 and on Coston and
   Coston2 at reward epoch 5877. The FCC contracts are configured for every network and the accounting is gated by
   the activation reward epoch alone; on Flare that epoch is far in the future, so FCC fees are not accounted for
@@ -34,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Legacy incremental reward calculation is no longer supported. The `-l` option and direct service entry point now
   reject the request; reward ranges run only through the latest completed epoch.
+
+### Fixed
+
+- The reward calculation worker closes its Nest application context after each task, instead of leaking one per
+  task.
+- The Docker build no longer misses the pnpm lockfile.
 
 ## [1.1.1] - 2026-07-16
 
