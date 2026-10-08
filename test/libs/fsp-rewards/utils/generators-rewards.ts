@@ -41,6 +41,7 @@ import { TLPEvents, TLPTransaction } from "../../../../libs/ftso-core/src/orm/en
 import { ILogger, emptyLogger } from "../../../../libs/ftso-core/src/utils/ILogger";
 import { EpochResult, Feed } from "../../../../libs/ftso-core/src/voting-types";
 import { TestVoter, generateEvent, generateState, generateTx } from "../../../utils/basic-generators";
+import { VOTER_REGISTERED_NEXT_FIELDS, voterRegistrationContracts } from "../../../utils/generators";
 import { MiniFinalizer } from "./mini-finalizer/MiniFinalizer";
 import { MiniFtsoCalculator } from "./mini-ftso-calculator/MiniFtsoCalculator";
 import { FSPSettings } from "../../../utils/test-epoch-settings";
@@ -440,10 +441,11 @@ export async function generateRewardEpochDataForRewardCalculation(
   );
 
   // Emulate Voter registration
+  const { voterRegistry, flareSystemsCalculator } = voterRegistrationContracts();
   for (const voter of voters) {
     entities.push(
       generateEvent(
-        CONTRACTS.FlareSystemsCalculator,
+        flareSystemsCalculator,
         VoterRegistrationInfo.eventName,
         new VoterRegistrationInfo({
           rewardEpochId,
@@ -461,19 +463,22 @@ export async function generateRewardEpochDataForRewardCalculation(
     );
     entities.push(
       generateEvent(
-        CONTRACTS.VoterRegistry,
+        voterRegistry,
         VoterRegistered.eventName,
-        new VoterRegistered({
-          voter: voter.identityAddress,
-          rewardEpochId,
-          signingPolicyAddress: voter.signingAddress,
-          delegationAddress: voter.delegationAddress,
-          submitAddress: voter.submitAddress,
-          submitSignaturesAddress: voter.submitSignaturesAddress,
-          registrationWeight: voter.registrationWeight,
-          publicKeyPart1: ZERO_BYTES32,
-          publicKeyPart2: ZERO_BYTES32,
-        }),
+        {
+          ...new VoterRegistered({
+            voter: voter.identityAddress,
+            rewardEpochId,
+            signingPolicyAddress: voter.signingAddress,
+            delegationAddress: voter.delegationAddress,
+            submitAddress: voter.submitAddress,
+            submitSignaturesAddress: voter.submitSignaturesAddress,
+            registrationWeight: voter.registrationWeight,
+            publicKeyPart1: ZERO_BYTES32,
+            publicKeyPart2: ZERO_BYTES32,
+          }),
+          ...VOTER_REGISTERED_NEXT_FIELDS,
+        },
         block,
         timestamp
       )

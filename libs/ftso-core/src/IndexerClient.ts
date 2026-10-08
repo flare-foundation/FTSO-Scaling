@@ -580,6 +580,13 @@ export class IndexerClient {
         flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
       }
     }
+    if (network === "from-env") {
+      // Deployments configured from env run the current contracts, which emit uint32 reward epoch ids
+      // @ts-expect-error workaround
+      voterRegistryContract.name = "VoterRegistryNext";
+      // @ts-expect-error workaround
+      flareSystemsCalculatorContract.name = "FlareSystemsCalculatorNext";
+    }
 
     const voterRegisteredResults = await this.queryEvents(
       voterRegistryContract,
