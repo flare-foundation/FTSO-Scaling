@@ -144,12 +144,33 @@ function generateRewards(offerCount: number, feeds: Feed[], rewardEpochId: numbe
   return events;
 }
 
+/**
+ * VoterRegistry and FlareSystemsCalculator definitions whose ABIs match the events of the configured network.
+ * from-env deployments run the current contracts, which emit the events of the Next ABIs.
+ */
+export function voterRegistrationContracts() {
+  if (process.env.NETWORK !== "from-env") {
+    return { voterRegistry: CONTRACTS.VoterRegistry, flareSystemsCalculator: CONTRACTS.FlareSystemsCalculator };
+  }
+  return {
+    voterRegistry: { ...CONTRACTS.VoterRegistry, name: "VoterRegistryNext" },
+    flareSystemsCalculator: { ...CONTRACTS.FlareSystemsCalculator, name: "FlareSystemsCalculatorNext" },
+  };
+}
+
+/** Fields only the Next VoterRegistered event has. Encoding with the older ABI ignores them. */
+export const VOTER_REGISTERED_NEXT_FIELDS = {
+  publicKey: { x: ZERO_BYTES32, y: ZERO_BYTES32 },
+  signature: { v: 0, r: ZERO_BYTES32, s: ZERO_BYTES32 },
+};
+
 function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: number): TLPEvents[] {
+  const { voterRegistry, flareSystemsCalculator } = voterRegistrationContracts();
   const events = [];
   for (const voter of voters) {
     events.push(
       generateEvent(
-        CONTRACTS.FlareSystemsCalculator,
+        flareSystemsCalculator,
         "VoterRegistrationInfo",
         new VoterRegistrationInfo({
           voter: voter.identityAddress,
@@ -167,7 +188,7 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
     );
     events.push(
       generateEvent(
-        CONTRACTS.VoterRegistry,
+        voterRegistry,
         "VoterRegistered",
         {
           voter: voter.identityAddress,
@@ -178,6 +199,7 @@ function registerVoters(voters: TestVoter[], rewardEpoch: number, timestamp: num
           publicKeyPart1: Bytes32.ZERO.toString(),
           publicKeyPart2: Bytes32.ZERO.toString(),
           registrationWeight: voter.registrationWeight,
+          ...VOTER_REGISTERED_NEXT_FIELDS,
         },
         1,
         timestamp

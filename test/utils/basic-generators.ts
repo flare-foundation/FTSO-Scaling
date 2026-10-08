@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 // IMPORTANT: This file should never import constants.ts
-import { AbiCoder, computeAddress, hexlify, randomBytes, toBeHex } from "ethers";
+import { AbiCoder, ParamType, computeAddress, hexlify, randomBytes, toBeHex } from "ethers";
 import { queryBytesFormat } from "../../libs/ftso-core/src/IndexerClient";
 import { TLPEvents, TLPState, TLPTransaction } from "../../libs/ftso-core/src/orm/entities";
 import { Bytes20 } from "../../libs/ftso-core/src/voting-types";
@@ -72,7 +72,8 @@ export function generateEvent(
   const topic0 = encodingUtils.getEventSignature(contract.name, eventName);
   const abi = encodingUtils.getEventAbiData(contract.name, eventName);
   const inputs = abi.abi.inputs;
-  const types = inputs.filter((x) => !x.indexed).map((x) => x.type);
+  // ParamType keeps tuple components, which the bare type name ("tuple") drops
+  const types = inputs.filter((x) => !x.indexed).map((x) => ParamType.from(x, true));
   const values = inputs.filter((x) => !x.indexed).map((x) => eventData[x.name]);
   const indexedTypes = inputs.filter((x) => x.indexed).map((x) => x.type);
   const indexedValues = inputs.filter((x) => x.indexed).map((x) => eventData[x.name]);

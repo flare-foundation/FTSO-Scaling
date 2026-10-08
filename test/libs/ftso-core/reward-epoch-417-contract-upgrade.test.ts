@@ -105,4 +105,15 @@ describe(`reward epoch 417 contract upgrade (${getTestFile(__filename)})`, () =>
       });
     });
   }
+
+  it("uses the current ABIs with the configured addresses on from-env", async () => {
+    process.env.NETWORK = "from-env" satisfies networks;
+
+    const client = new RecordingIndexerClient();
+    await client.getFullVoterRegistrationInfoEvents(1, 1, 2);
+    expect(client.queriedContracts).to.deep.equal([
+      { name: "VoterRegistryNext", address: CONTRACTS.VoterRegistry.address },
+      { name: "FlareSystemsCalculatorNext", address: CONTRACTS.FlareSystemsCalculator.address },
+    ]);
+  });
 });
