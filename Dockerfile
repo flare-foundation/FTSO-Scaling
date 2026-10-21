@@ -1,5 +1,5 @@
 #checkov:skip=CKV_DOCKER_2: Health check is handled by deployment orchestrator
-FROM node:24-slim@sha256:bf22df20270b654c4e9da59d8d4a3516cce6ba2852e159b27288d645b7a7eedc AS base
+FROM node:24.22.1-slim@sha256:1681862882da07ee5476fee047bcf34138833f1df42633bb25bcb0f438d5bf3d AS base
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ COPY . ./
 
 RUN pnpm exec nest build ftso-data-provider
 
-FROM node:24-slim@sha256:bf22df20270b654c4e9da59d8d4a3516cce6ba2852e159b27288d645b7a7eedc AS runtime
+FROM node:24.22.1-slim@sha256:1681862882da07ee5476fee047bcf34138833f1df42633bb25bcb0f438d5bf3d AS runtime
 
 WORKDIR /app
 
