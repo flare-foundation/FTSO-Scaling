@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- TLS connections reject certificates issued under the eight compromised eMudhra (emSign) intermediate CA keys, whichever root they chain to.
+
 ## [1.2.0] - 2026-09-07
 
 ### Added
