@@ -13,6 +13,7 @@ include:
   - component: gitlab.com/flarenetwork/ci-components-private/dependency-track@2
   - component: gitlab.com/flarenetwork/ci-components-private/lint-dockerfile@2
   - component: gitlab.com/flarenetwork/ci-components-private/lint-shell@2
+  - component: gitlab.com/flarenetwork/ci-components-private/lint-github-actions@2
   - template: Jobs/Secret-Detection.latest.gitlab-ci.yml
   - component: gitlab.com/flarenetwork/ci-components-private/lint-pnpm@2
     inputs:

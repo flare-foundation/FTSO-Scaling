@@ -12,24 +12,27 @@ jobs:
       contents: read
       packages: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         fetch-depth: 0
-    - uses: docker/setup-qemu-action@v3
-    - uses: docker/setup-buildx-action@v3
+        persist-credentials: false
+    - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+    - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
     - name: Set ALL_TAGS
       env:
         REPOSITORY: '${{ github.repository }}'
+        REF: '${{ github.ref }}'
+        REF_NAME: '${{ github.ref_name }}'
       run: |
         # tag main if main branch
-        if [[ "${{ github.ref_name }}" == "main" ]]; then
+        if [[ "$REF_NAME" == "main" ]]; then
           image_tags=("main")
         # tag with tag name if tag
-        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-          image_tags=("${{ github.ref_name }}")
+        elif [[ "$REF" == refs/tags/v* ]]; then
+          image_tags=("$REF_NAME")
           # tag with latest if tag is a new major, minor or patch version
-          if [[ "${{ github.ref_name}}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          if [[ "$REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             image_tags+=("latest")
           fi
         fi
@@ -37,23 +40,23 @@ jobs:
         lc_repo=${REPOSITORY,,}
 
         image_paths=()
-        for tag in ${image_tags[@]}; do
+        for tag in "${image_tags[@]}"; do
           image_paths+=("ghcr.io/$lc_repo:$tag")
         done
 
         # join with ',' and then skip first character
         ALL_TAGS=$(printf ',%s' "${image_paths[@]}")
-        echo "ALL_TAGS=${ALL_TAGS:1}" >>$GITHUB_ENV
+        echo "ALL_TAGS=${ALL_TAGS:1}" >>"$GITHUB_ENV"
 
     - name: Login to ghcr.io
-      uses: docker/login-action@v3
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push default image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
       with:
         context: . # Because GH actions are for kids and put protection on everything; https://stackoverflow.com/a/71159809/11276254
         platforms: linux/amd64,linux/arm64
